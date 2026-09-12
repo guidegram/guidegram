@@ -41,7 +41,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   onSelectPeer,
   onLoadMoreDialogs,
 }) => {
-  const { t, isRTL: isAppRtl, formatNumber, formatSendersCount } = useI18n()
+  const { t, isRTL: isAppRtl, formatNumber } = useI18n()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchFilter, setSearchFilter] = useState<SearchFilterCategory>('all')
   const [globalPeers, setGlobalPeers] = useState<DialogItem[]>([])
