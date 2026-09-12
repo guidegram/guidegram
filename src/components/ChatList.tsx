@@ -525,20 +525,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         }`}
       >
         <div className="flex items-center gap-3">
-          <div
-            className={`relative shrink-0 ${
-              dialog.isUser && !dialog.isBot
-                ? 'p-0.5 rounded-full ring-2 ring-primary-500/70 hover:ring-accent-violet transition-all cursor-pointer'
-                : ''
-            }`}
-            onClick={(e) => {
-              if (dialog.isUser && !dialog.isBot) {
-                e.stopPropagation()
-                setViewingStoryPeer({ id: dialog.id, title: dialog.title })
-              }
-            }}
-            title={dialog.isUser && !dialog.isBot ? 'View Stories (Stealth Mode)' : undefined}
-          >
+          <div className="relative shrink-0">
             <Avatar
               accountId={dialog.accountId}
               peerId={dialog.id}
