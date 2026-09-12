@@ -13,15 +13,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mtcute/convert": "0.32.1",
+    "@mtcute/core": "0.32.1",
+    "@mtcute/node": "0.32.1",
     "clsx": "^2.1.1",
     "lottie-web": "^5.13.0",
     "lucide-react": "^1.16.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "socks": "^2.8.4",
-    "tailwind-merge": "^3.0.1",
-    "telegram": "^2.26.16"
+    "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",

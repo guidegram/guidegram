@@ -1,4 +1,5 @@
 import net from 'net'
+import { SocksProxyTcpTransport, HttpProxyTcpTransport, MtProxyTcpTransport } from '@mtcute/node'
 import { ProxyConfig } from './types'
 
 export class ProxyManager {
@@ -31,7 +32,42 @@ export class ProxyManager {
   }
 
   /**
-   * Convert ProxyConfig into GramJS compatible proxy object
+   * Convert ProxyConfig into @mtcute compatible transport
+   */
+  public static toMtcuteTransport(proxy?: ProxyConfig): any {
+    if (!proxy || !proxy.enabled) return undefined
+
+    try {
+      if (proxy.type === 'socks5') {
+        return new SocksProxyTcpTransport({
+          host: proxy.host,
+          port: proxy.port,
+          user: proxy.username,
+          password: proxy.password,
+          version: 5,
+        })
+      } else if (proxy.type === 'http') {
+        return new HttpProxyTcpTransport({
+          host: proxy.host,
+          port: proxy.port,
+          user: proxy.username,
+          password: proxy.password,
+        })
+      } else if (proxy.type === 'mtproto' && proxy.secret) {
+        return new MtProxyTcpTransport({
+          host: proxy.host,
+          port: proxy.port,
+          secret: proxy.secret,
+        })
+      }
+    } catch (e) {
+      console.error('[ProxyManager] Failed to create @mtcute transport:', e)
+    }
+    return undefined
+  }
+
+  /**
+   * Convert ProxyConfig into GramJS compatible proxy object (legacy fallback)
    */
   public static toGramJsProxy(proxy?: ProxyConfig): any {
     if (!proxy || !proxy.enabled) return undefined
@@ -48,7 +84,7 @@ export class ProxyManager {
       return {
         ip: proxy.host,
         port: proxy.port,
-        socksType: 5, // fallback or http tunnel
+        socksType: 5,
         username: proxy.username,
         password: proxy.password,
       }
