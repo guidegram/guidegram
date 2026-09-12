@@ -156,7 +156,7 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
                 initials={fullName.charAt(0)}
                 avatarUrl={profile?.avatarUrl || account.avatarUrl}
                 size="xl"
-                className="w-24 h-24 text-3xl shadow-xl ring-2 ring-emerald-500/40"
+                className="w-24 h-24 text-3xl shadow-xl"
               />
               <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg border-2 border-[#17212b] group-hover:scale-110 transition-transform">
                 <Camera className="w-4 h-4" />

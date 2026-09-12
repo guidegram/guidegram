@@ -41,7 +41,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   onSelectPeer,
   onLoadMoreDialogs,
 }) => {
-  const { t, isRTL: isAppRtl, formatNumber, formatSendersCount } = useI18n()
+  const { t, isRTL: isAppRtl, formatNumber } = useI18n()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchFilter, setSearchFilter] = useState<SearchFilterCategory>('all')
   const [globalPeers, setGlobalPeers] = useState<DialogItem[]>([])
@@ -213,7 +213,8 @@ export const ChatList: React.FC<ChatListProps> = ({
   // Format time (e.g. 14:20 or Yesterday)
   const formatTime = (timestamp?: number) => {
     if (!timestamp) return ''
-    const date = new Date(timestamp)
+    const ms = timestamp < 1e11 ? timestamp * 1000 : timestamp
+    const date = new Date(ms)
     const now = new Date()
     if (date.toDateString() === now.toDateString()) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })

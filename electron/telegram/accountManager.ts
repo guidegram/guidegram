@@ -637,7 +637,7 @@ export class AccountManager {
         let lastMessageDate = 0
         if (d.lastMessage) {
           lastMessageText = d.lastMessage.text || ''
-          lastMessageDate = d.lastMessage.date ? Math.floor(d.lastMessage.date.getTime() / 1000) : 0
+          lastMessageDate = d.lastMessage.date ? d.lastMessage.date.getTime() : 0
         }
 
         const initials = title

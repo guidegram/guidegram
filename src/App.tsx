@@ -182,19 +182,24 @@ export const App: React.FC = () => {
         if (!message?.isOutgoing && !isChatMuted && configRef.current?.soundEnabled !== false) {
           playNotificationSound()
         }
-        if (chatId !== activeChatId) {
-          setDialogsByAccount((prev) => {
-            const list = prev[accountId] || []
-            return {
-              ...prev,
-              [accountId]: list.map((d) =>
-                d.id === chatId
-                  ? { ...d, unreadCount: d.unreadCount + 1, lastMessageText: message.text }
-                  : d
-              ),
-            }
-          })
-        }
+        setDialogsByAccount((prev) => {
+          const list = prev[accountId] || []
+          const msgDate = message?.date ? (message.date < 1e11 ? message.date * 1000 : message.date) : Date.now()
+          const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
+          return {
+            ...prev,
+            [accountId]: list.map((d) =>
+              d.id === chatId
+                ? {
+                    ...d,
+                    unreadCount: chatId !== activeChatId ? d.unreadCount + 1 : d.unreadCount,
+                    lastMessageText: msgText || d.lastMessageText,
+                    lastMessageDate: msgDate,
+                  }
+                : d
+            ),
+          }
+        })
       })
 
       // Real-time Account Status and Hydration Listener

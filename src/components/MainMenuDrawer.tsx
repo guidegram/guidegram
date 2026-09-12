@@ -119,7 +119,6 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                   initials={fullName.charAt(0)}
                   avatarUrl={activeAccount.avatarUrl}
                   size="lg"
-                  className="ring-2 ring-accent-cyan/40"
                 />
               </div>
 
