@@ -251,6 +251,20 @@ export const translations: Record<Language, TranslationDictionary> = {
     'settings.portable_syncing': 'Syncing data...',
     'settings.portable_sync_success': 'Successfully imported portable data! Please restart the app.',
     'settings.portable_sync_failed': 'Failed to import portable data: {error}',
+
+    // Support & Donation
+    'menu.support_guidegram': 'Support Guidegram',
+    'support.title': 'Support Guidegram',
+    'support.desc': 'Guidegram is free and open-source. Your voluntary support helps cover proxy infrastructure, performance optimizations, and continuous feature development.',
+    'support.gram_ton': 'GRAM (TON Blockchain)',
+    'support.tron': 'Tron (TRX / USDT TRC-20)',
+    'support.copy_address': 'Copy Address',
+    'support.copied': 'Copied to Clipboard!',
+    'support.network_ton_hint': 'Send only TON or Jettons (GRAM) on TON Network',
+    'support.network_tron_hint': 'Send only TRX or USDT on TRC-20 (Tron) Network',
+    'support.open_wallet': 'Open TON Wallet',
+    'support.scan_qr': 'Scan with your crypto wallet',
+    'support.thank_you': 'Thank you for supporting Guidegram! ❤️',
   },
   fa: {
     // App & Nav
@@ -498,5 +512,19 @@ export const translations: Record<Language, TranslationDictionary> = {
     'settings.portable_syncing': 'در حال انتقال اطلاعات...',
     'settings.portable_sync_success': 'اطلاعات پرتابل با موفقیت همگام شد! لطفاً برنامه را مجدداً باز کنید.',
     'settings.portable_sync_failed': 'خطا در انتقال اطلاعات پرتابل: {error}',
+
+    // Support & Donation
+    'menu.support_guidegram': 'حمایت از پروژه',
+    'support.title': 'حمایت مالی از گایدگرام',
+    'support.desc': 'گایدگرام پروژه‌ای آزاد و مستقل است. حمایت‌های داوطلبانه شما به ارتقای زیرساخت، بهینه‌سازی سرعت و توسعه پایدار قابلیت‌ها کمک شایانی می‌کند.',
+    'support.gram_ton': 'گرم / تون (شبکه TON)',
+    'support.tron': 'ترون (TRX / USDT بر بستر TRC-20)',
+    'support.copy_address': 'کپی آدرس کیف پول',
+    'support.copied': 'آدرس در کلیپ‌بورد کپی شد!',
+    'support.network_ton_hint': 'فقط ارزهای شبکه TON یا GRAM ارسال شود',
+    'support.network_tron_hint': 'فقط TRX یا USDT تحت شبکه ترون (TRC-20) ارسال شود',
+    'support.open_wallet': 'باز کردن در کیف پول',
+    'support.scan_qr': 'اسکن با اپلیکیشن کیف پول موبایل',
+    'support.thank_you': 'از اینکه به پایداری، امنیت و توسعه مستقل گایدگرام کمک می‌کنید صمیمانه متشکریم! ❤️',
   },
 }

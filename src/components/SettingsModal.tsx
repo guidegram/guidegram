@@ -64,6 +64,7 @@ import {
   QrCode,
   Paintbrush,
   Image as ImageIcon,
+  Heart,
 } from 'lucide-react'
 import { AppConfig, AccountInfo, CloseAction, UpdateInfo, UpdateProgress, PortableLocatorInfo, AutoDownloadConfig, CacheStats, PrivacySecuritySettings } from '../types/telegram'
 import { playNotificationSound } from '../utils/soundEffects'
@@ -77,6 +78,7 @@ interface SettingsModalProps {
   onLogoutAccount: (accountId: string) => Promise<void>
   onConfigUpdated?: (config: AppConfig) => void
   onUpdateFound?: (info: UpdateInfo) => void
+  onOpenSupport?: () => void
 }
 
 interface ToggleItemProps {
@@ -126,6 +128,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onLogoutAccount,
   onConfigUpdated,
   onUpdateFound,
+  onOpenSupport,
 }) => {
   const { t, language, setLanguage } = useI18n()
   const isPersian = language === 'fa'
@@ -702,6 +705,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <Power className="w-3.5 h-3.5" />
                       <span>Quit</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Project Support & Donation */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/5 to-transparent bg-dark-800 border border-pink-500/20 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-pink-500/20 text-pink-400 border border-pink-500/30 flex items-center justify-center shrink-0">
+                        <Heart className="w-5 h-5 fill-pink-500/30 text-pink-400" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
+                          <span>{t('support.title')}</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30">
+                            Community
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-gray-400 leading-snug mt-0.5">{t('support.desc')}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <span className="text-[11px] text-pink-300/80 font-mono">TON (GRAM) • Tron (TRX/USDT)</span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenSupport?.()}
+                      className="py-1.5 px-3.5 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Heart className="w-3.5 h-3.5 fill-white" />
+                      <span>{t('menu.support_guidegram')}</span>
                     </button>
                   </div>
                 </div>

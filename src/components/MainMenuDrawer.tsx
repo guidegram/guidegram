@@ -18,6 +18,7 @@ import {
   Radio,
   Gift,
   Laptop,
+  Heart,
 } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -37,6 +38,7 @@ interface MainMenuDrawerProps {
   onOpenProxyModal: () => void
   onOpenSavedMessages: () => void
   onOpenProfile: () => void
+  onOpenSupport?: () => void
   onOpenArchivedChats?: () => void
   onOpenNewGroup?: () => void
   onOpenNewChannel?: () => void
@@ -61,6 +63,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   onOpenProxyModal,
   onOpenSavedMessages,
   onOpenProfile,
+  onOpenSupport,
   onOpenArchivedChats,
   onOpenNewGroup,
   onOpenNewChannel,
@@ -391,6 +394,19 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 <span>{t('menu.proxy')}</span>
               </button>
 
+              {/* Support Guidegram */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenSupport?.()
+                }}
+                className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <Heart className="w-4 h-4 text-pink-400 fill-pink-400/20 group-hover:fill-pink-400/50 transition-all group-hover:scale-110" />
+                <span className="text-pink-300/90 group-hover:text-pink-300 font-semibold">{t('menu.support_guidegram')}</span>
+              </button>
+
               {/* Ghost Mode Toggle */}
               {onToggleGhostMode && (
                 <button
@@ -427,6 +443,19 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                   </div>
                 </button>
               </div>
+
+              {/* Support Guidegram (Guest) */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenSupport?.()
+                }}
+                className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <Heart className="w-4 h-4 text-pink-400 fill-pink-400/20 group-hover:fill-pink-400/50 transition-all group-hover:scale-110" />
+                <span className="text-pink-300/90 group-hover:text-pink-300 font-semibold">{t('menu.support_guidegram')}</span>
+              </button>
 
               {/* Proxy Settings */}
               <button

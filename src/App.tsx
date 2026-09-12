@@ -17,6 +17,7 @@ import { CreateChatModal } from './components/CreateChatModal'
 import { CloseConfirmModal } from './components/CloseConfirmModal'
 import { UpdateBanner } from './components/UpdateBanner'
 import { WhatsNewModal } from './components/WhatsNewModal'
+import { SupportModal } from './components/SupportModal'
 import {
   AccountInfo,
   DialogItem,
@@ -57,6 +58,7 @@ export const App: React.FC = () => {
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false)
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false)
   const [isContactsOpen, setIsContactsOpen] = useState(false)
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
   const [createChatState, setCreateChatState] = useState<{ isOpen: boolean; mode: 'group' | 'channel' }>({
     isOpen: false,
     mode: 'group',
@@ -1049,6 +1051,10 @@ export const App: React.FC = () => {
           setIsMainMenuOpen(false)
           setActiveTab('archived' as any)
         }}
+        onOpenSupport={() => {
+          setIsMainMenuOpen(false)
+          setIsSupportModalOpen(true)
+        }}
         archivedUnreadCount={archivedUnreadCount}
         unreadCountsByAccount={unreadCountsByAccount}
         isNightMode={config?.theme !== 'light'}
@@ -1115,6 +1121,12 @@ export const App: React.FC = () => {
         onLogoutAccount={handleLogoutAccount}
         onConfigUpdated={(newCfg) => setConfig(newCfg)}
         onUpdateFound={(info) => setUpdateInfo(info)}
+        onOpenSupport={() => setIsSupportModalOpen(true)}
+      />
+
+      <SupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
       />
 
       <CloseConfirmModal
