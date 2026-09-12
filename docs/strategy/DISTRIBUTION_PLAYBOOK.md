@@ -11,8 +11,8 @@
 ## Executive Summary & Strategic Architecture
 
 Guidegram is an open-source, truly portable desktop client for Telegram engineered with **React 19**, **TypeScript**, **Electron**, and **GramJS** (MTProto 2.0). It is purpose-built to eliminate the critical architectural limitations of the official Telegram Desktop client and existing C++/Qt forks:
-1. **Unlimited Multi-Account Dock**: Eliminates the rigid 3-account ceiling (or 6-account Telegram Premium limit) without requiring paid subscriptions.
-2. **Dedicated Per-Account Network Isolation**: Bypasses the single global proxy bottleneck by assigning independent SOCKS5, HTTP, or MTProto proxies to individual accounts, neutralizing cross-session correlation and chain-reaction IP bans.
+1. **Native Multi-Account Workflow & Session Isolation**: Delivers native multi-account workflow management and session isolation for admins and power users, managing 100+ concurrent accounts in an ergonomic vertical dock without duplicate client instances.
+2. **Dedicated Per-Account Network Isolation**: Neutralizes network-level IP linkage by assigning independent SOCKS5, HTTP, or MTProto proxies to individual accounts, eliminating socket cross-contamination and chain IP bans while respecting server-side behavioral rate limits.
 3. **Hardware Anti-Fingerprinting Engine**: Emulates 28+ authentic workstation device profiles (Dell XPS, Lenovo ThinkPad X1 Carbon, MacBook Pro) and randomizes OS build envelopes to protect legitimate operators against automated device-fingerprinting heuristics.
 4. **100% Truly Portable Architecture**: All sessions, settings, avatars, and media caches live in a self-contained local `./data/` directory. Zero Windows Registry modifications and zero `%APPDATA%` file sprawl.
 5. **Multi-Worker MTProto Media Acceleration**: Uses 4 parallel chunked workers (512KB chunks) to deliver up to 3x throughput on media larger than 2MB.
@@ -51,6 +51,7 @@ Guidegram is an open-source, truly portable desktop client for Telegram engineer
 ### 1.1 Curated Awesome Lists Submissions
 
 The curated Awesome list ecosystem (initiated by Sindre Sorhus) is one of the highest-converting, long-term organic discovery channels for open-source developer tooling. All submissions must strictly comply with the **Awesome Manifesto**:
+- **Repository Maturity & Submission Timing**: Submissions are scheduled for **Week 3 / Week 4** after the initial public launch once the repository achieves demonstrable community traction (>50 stars and stable binary releases). Submitting prematurely during closed alpha risks immediate curation rejection.
 - **Alphabetical Sorting**: Every entry must be placed in strict alphabetical order within its subcategory.
 - **Formatting Standards**: Use the exact bullet format and punctuation specified by each repository's style guide.
 - **Tone & Length**: Descriptions must be concise, factual, written in third-person, devoid of subjective superlatives ("the best", "revolutionary", "blazing fast"), and terminated with a period.
@@ -180,71 +181,76 @@ Adds Guidegram, an open-source desktop client for Telegram built with Electron a
 
 ---
 
-### 1.2 Ethical GitHub Issue & Discussion Participation
+### 1.2 Ethical Community Discussion & Question Participation (Strict Upstream Policy)
 
-Mass commenting on GitHub issues is an explicit violation of GitHub's Acceptable Use Policy (§ Abuse and Spam) and will result in repository shadowbanning. To engage ethically without triggering spam flags or alienating open-source maintainers, follow this strict protocol:
+#### ⚠️ Strict Operational Policy: Prohibiting Comments on Closed / Wontfix Upstream Issues
 
-#### 1. Issue Discovery & Filtering Criteria
-Only engage on issues in upstream or peer repositories (`telegramdesktop/tdesktop`, `64gram/64gram`, `kotatogram/kotatogram-desktop`) that satisfy **all four conditions**:
-1. **Direct Problem Alignment**: The issue explicitly requests one of Guidegram's solved capabilities:
-   - Multi-account expansion beyond the 3-account limit.
-   - Dedicated per-account proxy configuration.
-   - 100% portable mode without `%APPDATA%` or Windows Registry touches.
-   - Built-in desktop group analytics/statistics.
-2. **Definitively Closed / Wontfix**: The issue must be **closed** by the repository maintainer as `wontfix`, `not planned`, or `out of scope for official client`. Never participate in an open, actively triaged issue.
-3. **Maturity Threshold**: The issue must have been closed for at least **14 days**.
-4. **No Prior Guidegram Mention**: No other contributor has commented about Guidegram on that thread.
+**Zero "Issue Necromancy" Rule**: Operators and contributors are **strictly forbidden** from posting comments on closed, stale, or `wontfix` issues on upstream repositories (`telegramdesktop/tdesktop`, `64gram/64gram`, or other forks).
 
-#### 2. Rules of Engagement & Maintainer Disclosure
-- **Technical Answer First**: Explain the underlying architectural reason why the official C++/Qt client does not support the feature (e.g., Qt global network singleton in `lib_net`).
-- **Mandatory Affiliation Disclosure**: Explicitly disclose: `(Full disclosure: I am a contributor to Guidegram. Sharing strictly as an open-source reference for those blocked by this limitation.)`
-- **Zero Unsolicited Pings**: Never `@mention` maintainers or thread participants.
-- **Maximum Velocity**: Strictly limit comments to **1 to 2 issues per week across GitHub**.
+**Technical & Operational Rationale**:
+1. **Watch Notification Storms**: Closed issues on high-traffic repositories like TDesktop have hundreds or thousands of subscribed watchers. Posting promotional or alternative-solution comments on closed threads triggers immediate notification emails to all watchers.
+2. **Upstream Hostility & Maintainer Reports**: Upstream maintainers (@john-preston et al.) rightly perceive unsolicited alternative mentions as promotional spam. They possess administrative authority to mark comments as `Spam`, lock threads, and report the account and organization to GitHub Abuse Operations.
+3. **GitHub AUP Violation Risk**: GitHub's Acceptable Use Policy (§ Abuse and Spam) prohibits off-topic or promotional comments across issues. Violations risk immediate user account shadowbans, repository flagging, or domain restrictions.
+
+#### Approved Channels for Technical Participation
+Community outreach and technical guidance must be directed exclusively to legitimate, permissionless, and open channels:
+1. **Open Community Discussions (GitHub Discussions)**: Participating in open Q&A threads (in repos that enable Discussions) where developers or power users explicitly solicit recommendations for multi-account desktop clients or TypeScript MTProto architectures.
+2. **Open Reddit & Tech Forum Threads**: Engaging in active, topical discussions on `r/Telegram`, `r/opensource`, Stack Overflow, SuperUser, or Hacker News where users ask for solutions to multi-account proxy routing or desktop group analytics.
+3. **Guidegram Repository Discussions**: Hosting discussions natively on `github.com/guidegram/guidegram/discussions` and referencing technical documentation or architectural deep-dives.
+
+#### Rules of Engagement & Transparent Maintainer Disclosure
+Whenever participating in permitted open discussions:
+- **Technical Substantive Answer First**: Answer the underlying architectural inquiry thoroughly (e.g. explaining MTProto session multiplexing, proxy socket binding, or client-side message pagination).
+- **Mandatory Affiliation Disclosure**: Include a mandatory, transparent disclosure footer:
+  *(Full disclosure: I am a maintainer/contributor to Guidegram. Sharing strictly as an open-source technical reference.)*
+- **Zero Unsolicited Pings**: Never `@mention` maintainers or participants.
+- **Zero Naked Links**: Never drop raw URLs without substantial technical analysis and context.
+- **Strict Velocity Limit**: Limit active external forum contributions to 1–2 high-quality responses per week.
 
 ---
 
-#### Verbatim Ethical Issue Comment Templates
+#### Verbatim Open Community Discussion & Q&A Response Templates
 
-##### Scenario A: Multi-Account Limit (>3 Accounts) Closed as Wontfix
-*Target*: Issues requesting more than 3 accounts on Telegram Desktop.
+##### Scenario A: Community Q&A on Native Multi-Account Desktop Workflows
+*Target*: Open community forums or discussion threads asking how to manage multiple operational Telegram accounts on desktop without running multiple portable folders.
 
 ```markdown
-For context on why this is an architectural constraint in official TDesktop: the Qt client’s internal state machine couples the active window session with a fixed account array index (`Main::Domain`), where expanding beyond 3 accounts requires substantial structural rewrites of the window manager and memory pool.
+For context on why multi-account scalability is challenging in traditional C++/Qt desktop architectures: the internal state machine often couples active window rendering with a fixed account array index (`Main::Domain`), where supporting more than 3 accounts requires substantial refactoring of the window manager and memory structures.
 
-If you need to operate more than 3 accounts concurrently on desktop without running multiple separate portable directories, we implemented an unlimited session dock in an open-source client:
-👉 **Guidegram**: https://github.com/guidegram/guidegram (GPL-3.0, TypeScript/Electron/GramJS).
+If you are looking for an open-source client designed around native multi-account workflow and session isolation:
+👉 **Guidegram**: https://github.com/guidegram/guidegram (GPL-3.0, TypeScript / Electron / GramJS).
 
-Each account runs as an isolated MTProto client instance managed via `electron/telegram/accountManager.ts`, allowing instant switching with `Ctrl+1..9` and no artificial account ceilings.
+In Guidegram, each account runs as an isolated MTProto client instance managed via `electron/telegram/accountManager.ts`. Accounts are organized in a high-density vertical dock with instant keyboard switching (`Ctrl+1..9`), and each identity maintains its own isolated session and storage sandbox.
 
-*(Full disclosure: I am a contributor to Guidegram. Sharing strictly as a technical reference for users blocked by this constraint.)*
+*(Full disclosure: I am a contributor to Guidegram. Sharing strictly as a technical open-source reference for multi-account desktop workflows.)*
 ```
 
-##### Scenario B: Per-Account Proxy Isolation Closed as Wontfix
-*Target*: Issues requesting independent proxies per account to prevent IP linking.
+##### Scenario B: Community Q&A on Per-Account Proxy Routing
+*Target*: Open community questions regarding routing different Telegram accounts through separate proxy connections to eliminate IP cross-contamination.
 
 ```markdown
-To clarify the technical blocker in TDesktop: the network layer uses a global connection pool in `lib_net`. All active accounts share the exact same proxy socket configuration, which makes per-account routing difficult without rewriting how DC connections are multiplexed.
+In standard desktop clients, network sockets funnel through a global connection pool in the network layer (`lib_net`), meaning all logged-in accounts share the identical proxy socket and external IP.
 
-If you require dedicated proxies per account to prevent IP cross-contamination and chain-bans, this is natively supported in:
+If you need independent proxy routing per account to ensure network-level isolation:
 👉 **Guidegram**: https://github.com/guidegram/guidegram (GPL-3.0).
 
-In Guidegram, each account session instantiates an independent GramJS `TelegramClient` coupled with its own dedicated SOCKS5/HTTP/MTProto tunnel configuration and live latency ping monitor (`electron/telegram/proxyManager.ts`).
+Guidegram assigns dedicated SOCKS5, HTTP, or MTProto proxy transports to individual account sessions (`electron/telegram/proxyManager.ts`). Each account holds its own isolated socket connection, eliminating network-level IP linkage and chain bans. It also includes real-time TCP latency ping testing before initiating connections.
 
-*(Full disclosure: I am a contributor to Guidegram. Providing this strictly as an open-source reference.)*
+*(Full disclosure: I am a contributor to Guidegram. Providing this as an open-source architectural reference.)*
 ```
 
-##### Scenario C: Truly Portable / Zero-Registry Mode Closed as Wontfix
-*Target*: Issues requesting complete portability without `%APPDATA%` or Registry writes.
+##### Scenario C: Community Q&A on True Portable / Zero-Registry Mode
+*Target*: Questions regarding running Telegram in an isolated portable environment without leaving traces in `%APPDATA%` or Windows Registry.
 
 ```markdown
-While TDesktop offers a portable archive, Chromium webview components, update checks, and URL protocol handlers frequently leave artifacts in `%APPDATA%` and the Windows Registry.
+While standard portable desktop packages exist, webview caches, protocol handlers, and update registries frequently touch `%APPDATA%` and system registry paths.
 
-For a 100% self-contained portable implementation:
+For a completely self-contained portable implementation:
 👉 **Guidegram**: https://github.com/guidegram/guidegram (GPL-3.0).
 
-Guidegram overrides Electron's `userData` path directly at bootstrap to route all storage, LevelDB caches, media binaries, and session tokens into a single local `./data/` folder next to the binary (`electron/main.ts`). It makes zero registry calls and can be run entirely from an encrypted USB flash drive.
+Guidegram redirects Electron's `userData` path directly at bootstrap so that all leveldb caches, media binaries, and session tokens are strictly localized within `./data/` adjacent to the executable (`electron/main.ts`). It makes zero registry writes and can run directly from an encrypted USB flash drive.
 
-*(Full disclosure: I am a contributor to Guidegram. Documenting this here for users seeking fully isolated portable workflows.)*
+*(Full disclosure: I am a contributor to Guidegram. Documenting this for users seeking fully isolated, zero-registry desktop workflows.)*
 ```
 
 ---
@@ -368,7 +374,7 @@ I'm thrilled to introduce **Guidegram** — an open-source, truly portable deskt
 
 ### The Problem We Solved
 If you manage multiple Telegram communities, test bots, or separate work from personal communications, you've likely encountered two frustrating barriers in the official desktop app:
-1. **The 3-Account Ceiling**: You cannot run more than 3 accounts without paying for Telegram Premium (which still only gives you 6).
+1. **Multi-Account Fragmentation**: Managing more than 3 accounts requires running separate duplicate portable folders, cluttering the taskbar and wasting gigabytes of system RAM.
 2. **The Global Proxy Bottleneck**: All accounts share the exact same proxy IP. If one proxy disconnects or triggers a rate limit, all your accounts face disruption or chain-bans.
 
 ### What Guidegram Delivers
@@ -448,30 +454,31 @@ To succeed on Reddit, each post must strictly respect subreddit-specific rules, 
 #### 1. `r/Telegram` (~150k+ Members)
 - **Target Flair**: `Client` or `Third-Party`
 - **Rule Compliance**: Disclose unofficial status; confirm official Telegram API / MTProto usage; link directly to FOSS repository; zero download paywalls.
-- **Title**: `[Open Source] Guidegram: Portable desktop client with unlimited accounts, per-account proxies, and group analytics`
+- **Title**: `[Open Source] Guidegram: Portable desktop client with native multi-account workflow, per-account proxies, and group analytics`
 
 ##### Post Copy
 
 ```markdown
 Hey r/Telegram,
 
-If you manage multiple communities, test bots, or separate work from personal accounts, you've likely hit the 3-account ceiling in Telegram Desktop or dealt with the frustration of having only one global proxy for all active accounts.
+If you manage multiple communities, test bots, or separate work from personal accounts, you've likely experienced the difficulty of managing multiple identities in Telegram Desktop or dealt with the frustration of having only one global proxy for all active accounts.
 
-We built and open-sourced **Guidegram** to solve these desktop bottlenecks:
+We built and open-sourced **Guidegram** to streamline these desktop power-user workflows:
 
 **What it does:**
-- **Unlimited Accounts**: Bypass the 3-account ceiling without needing Premium. Switch instantly with `Ctrl + 1..9`.
+- **Native Multi-Account Workflow**: Native multi-account workflow management and session isolation for admins and power users. Switch instantly with `Ctrl + 1..9`.
 - **Per-Account Proxy Isolation**: Assign different SOCKS5/MTProto proxies to each account. If one proxy disconnects, your other accounts stay online.
-- **Hardware Anti-Fingerprinting**: Emulates authentic hardware profiles (Dell XPS, ThinkPad, MacBook Pro) per account to avoid false-positive multi-account spam flags.
+- **Hardware Anti-Fingerprinting**: Emulates authentic hardware profiles (Dell XPS, ThinkPad, MacBook Pro) per account to mitigate cross-account device linking.
 - **100% Portable**: No registry changes, no hidden AppData folders. All sessions live in a local `./data` directory next to the binary.
 - **In-Chat Group Analytics**: View member activity leaderboards and 24-hour message heatmaps directly in group headers.
 - **Media Acceleration**: 4-worker MTProto parallel chunk downloading for fast media transfers.
-- **Ghost Mode**: Read messages and view stories without read receipts.
+- **Story & Power Features**: Clean story viewing without tracking logs, unquoted forwards (`Alt+F`), and full chat/user/message ID inspection.
 
 **Security & Architecture:**
 - 100% Free & Open Source under GPLv3: https://github.com/guidegram/guidegram
 - Built with React 19, TypeScript, Electron, and GramJS (pure client-side MTProto 2.0).
-- All credentials and sessions are stored strictly on your local disk. Zero third-party servers or telemetry.
+- All credentials and sessions are stored strictly on your local disk in `./data/sessions/`. Zero third-party servers or telemetry.
+- Support for custom developer `api_id` / `api_hash` from my.telegram.org in settings.
 - You can inspect the source code or build it directly from source with `pnpm run build`.
 
 *Disclaimer: Guidegram is an independent open-source project and is not affiliated with or endorsed by Telegram FZ-LLC.*
@@ -554,7 +561,7 @@ Focus on the complete data isolation of `./data/`, making it portable across air
 
 Hacker News has a sophisticated, technically demanding audience. The submission must link directly to the GitHub repository, maintain strict title formatting (`Show HN: ...`), and provide a comprehensive, humble first comment from the maintainer.
 
-- **Submission Title**: `Show HN: Guidegram – Portable multi-account Telegram client with proxy isolation`
+- **Submission Title**: `Show HN: Guidegram – Portable Telegram client in React 19 & TypeScript with isolated proxies`
 - **Submission URL**: `https://github.com/guidegram/guidegram`
 - **Optimal Submission Window**: **Tuesday or Wednesday between 13:00 and 15:00 UTC** (06:00–08:00 PDT), maximizing simultaneous engagement from both European afternoon and US East Coast morning readers.
 
@@ -563,11 +570,11 @@ Hacker News has a sophisticated, technically demanding audience. The submission 
 ```markdown
 Hi HN,
 
-I built Guidegram (https://github.com/guidegram/guidegram), an open-source portable desktop client for Telegram that eliminates the 3-account ceiling and isolates network traffic with per-account proxies and hardware anti-fingerprinting.
+I built Guidegram (https://github.com/guidegram/guidegram), an open-source portable desktop client for Telegram with native multi-account workflow management, per-account proxy isolation, and hardware anti-fingerprinting.
 
 ### Why build this?
 The official Telegram Desktop (TDesktop) is an impressive C++/Qt application, but its architecture introduces rigid constraints for power users and community operators:
-1. **Account Ceiling**: It caps concurrent logins to 3 accounts (or 6 with Telegram Premium).
+1. **Multi-Account Bottleneck**: Standard desktop limits concurrent logins to 3 accounts (or 6 with Telegram Premium), forcing multi-tenant operators to run multiple duplicate portable installations.
 2. **Global Network Singleton**: All accounts share a single proxy configuration. If you manage distinct communities or test bot environments, routing all accounts through the same IP creates an immediate correlation vector and leads to chain-reaction rate limits.
 3. **No Native Group Analytics**: Administrators cannot see activity heatmaps or contributor rankings without inviting third-party bots.
 4. **Development Barrier**: Building TDesktop from source requires compiling a massive C++/Qt/CMake dependency tree with hundreds of megabytes of third-party libraries.
@@ -580,7 +587,7 @@ The official Telegram Desktop (TDesktop) is an impressive C++/Qt application, bu
 
 ### Security & Privacy
 - Pure client-side MTProto 2.0 directly to official Telegram DCs (DC1–DC5).
-- All session keys and configuration files remain strictly on your local disk in `./data/sessions/`.
+- Local Session Storage: GramJS StringSessions are stored locally in `./data/sessions/`, isolated strictly to your machine, protected by OS-level file access permissions and compatible with encrypted portable drives (BitLocker, VeraCrypt). An optional master-passphrase encrypted session vault (AES-GCM) is on the active roadmap.
 - Zero external telemetry, tracking, or developer servers.
 - Licensed under GPL-3.0.
 
@@ -598,7 +605,7 @@ Hacker News discussions frequently challenge Electron apps, multi-account legiti
 ##### Skepticism 1: "Why Electron instead of C++/Qt or Rust?"
 > **Rebuttal**: "A valid concern regarding memory overhead. TDesktop's C++ codebase is over 500,000 lines and takes significant time to configure and build, making community UI contributions and rapid feature delivery challenging. We chose React 19 + TypeScript + Electron to create an accessible, modular codebase where developers can easily inspect and build new components.
 >
-> In terms of resource usage: Guidegram consumes approximately 180MB RAM for 3 idle accounts. To further optimize performance, we included a dedicated 'Disable premium animations' toggle that disables GPU backdrop-filters and cuts idle CPU usage to ~0%. For our target users managing 10+ accounts on modern workstations, the memory trade-off is well worth the socket isolation and UI flexibility."
+> In terms of resource usage: Guidegram consumes approximately 180MB RAM for a single active account and ~350–500MB under multi-account workloads. To further optimize performance, we included a dedicated 'Disable premium animations' toggle that disables GPU backdrop-filters and cuts idle CPU usage to ~0%. For our target users managing 10+ accounts on modern workstations, the memory trade-off is well worth the socket isolation and UI flexibility."
 
 ##### Skepticism 2: "Isn't multi-account support just for spammers?"
 > **Rebuttal**: "Legitimate multi-account use cases are widespread and underserved:
@@ -606,10 +613,15 @@ Hacker News discussions frequently challenge Electron apps, multi-account legiti
 > 2. **Developers & QA**: Engineers testing bots, mini-apps, and webhook integrations across staging and production user roles.
 > 3. **Privacy & Identity Separation**: Users separating sensitive investigative work or personal communications from professional channels.
 >
-> The per-account proxy feature ensures these legitimate identities do not cross-contaminate networks or trigger false-positive anti-abuse heuristics."
+> The per-account proxy feature ensures these legitimate identities do not cross-contaminate networks or trigger false-positive anti-abuse heuristics. Furthermore, users remain subject to standard server-side behavioral rate limits, and Guidegram supports custom developer `api_id`/`api_hash` credentials."
 
 ##### Skepticism 3: "How secure is GramJS compared to official TDLib?"
 > **Rebuttal**: "GramJS implements official MTProto 2.0 cryptographic primitives (AES-IGE-256, Diffie-Hellman key exchange, SHA-256 integrity verification) directly in TypeScript. It establishes direct TCP connections to Telegram Data Centers without intermediate hops. TDLib is exceptionally performant, but compiling its C++ binaries across multiple operating systems adds significant build friction. GramJS allows us to maintain a clean, portable TypeScript codebase that is fully auditable in plain text."
+
+##### Skepticism 4: "How are credentials and auth keys stored locally? Are they encrypted?"
+> **Rebuttal**: "Auth keys are generated via standard MTProto 2.0 Diffie-Hellman key exchange directly between your client and Telegram's official Data Centers. In the current release, GramJS StringSessions are stored locally within `./data/sessions/` on your filesystem. They are never uploaded or synced to any remote service, and security is provided by OS-level user permissions and portable volume encryption (e.g. running from a VeraCrypt or BitLocker drive).
+>
+> We recognize that protecting against local infostealer malware requires defense-in-depth: we implement strict Electron context isolation (`contextIsolation: true`) and no `nodeIntegration` in the renderer, and an optional master-passphrase encrypted session vault (using AES-GCM / SQLCipher) is actively scheduled on our post-launch security roadmap."
 
 ---
 
@@ -723,9 +735,9 @@ To build an authentic, lasting user base without relying on external channels:
 ┌────────────────────────┬──────────────────────────────────────────┬───────────────────────────────────────────────────────┐
 │ Platform               │ Risk / Algorithmic Trigger               │ Operational Guardrail & Mitigation Protocol           │
 ├────────────────────────┼──────────────────────────────────────────┼───────────────────────────────────────────────────────┤
-│ **GitHub**             │ Automated/mass PRs to Awesome lists;     │ Max 1–2 PR submissions per 24 hours; customize every  │
-│                        │ repetitive comments across issues.       │ PR body; only engage on closed/wontfix issues (>14d); │
-│                        │ *Risk: Repository flag or shadowban.*    │ explicit maintainer disclosure; zero user pings.      │
+│ **GitHub**             │ Automated/mass PRs to Awesome lists;     │ Max 1–2 PR submissions per 24 hours; schedule Awesome │
+│                        │ commenting on upstream closed issues.    │ PRs in Week 3/4 (>50 stars); strictly avoid commenting│
+│                        │ *Risk: Repository flag or shadowban.*    │ on closed wontfix issues; engage in open Q&A only.    │
 ├────────────────────────┼──────────────────────────────────────────┼───────────────────────────────────────────────────────┤
 │ **Reddit**             │ Cross-posting identical text to >1 sub;  │ Enforce 72-hour delay between subreddits; use aged    │
 │                        │ young account (<30d, <100 karma) posting.│ account (>60d, >200 comment karma); maintain 9:1 karma│
@@ -759,24 +771,25 @@ To build an authentic, lasting user base without relying on external channels:
 │          │ • Prepare Product Hunt visual gallery (5 HD screenshots + 20s teaser demo GIF).                                  │
 │          │ • Ensure GitHub Releases page has precompiled Windows portable ZIP with checksums (`SHA256SUMS.txt`).           │
 ├──────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ **Week 2**│ **Curated Lists & Ethical GitHub Engagement**                                                                    │
-│          │ • Submit PR to `ebertti/awesome-telegram` (Day 1).                                                                │
-│          │ • Submit PR to `serhii-londar/awesome-telegram` (Day 3).                                                         │
-│          │ • Submit PR to `agarrharr/awesome-desktop-apps` (Day 5).                                                          │
-│          │ • Monitor closed/wontfix issues on TDesktop and provide ethical, technical disclosure comments (max 1–2/week).  │
+│ **Week 2**│ **Closed Alpha Hardening & Technical Preparation**                                                               │
+│          │ • Validate multi-session stability, proxy isolation, and memory efficiency across closed alpha cohort.           │
+│          │ • Prepare and format curated list PR branches locally (`ebertti`, `serhii-londar`, `agarrharr`).                 │
+│          │ • Monitor open community discussions and developer Q&A (strictly avoid closed upstream issue threads).          │
+│          │ • Tag and verify v1.0.0-alpha.2 hardening patch resolving early community feedback.                              │
 ├──────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ **Week 3**│ **Public Launch & Staggered Forum Rollout**                                                                      │
+│ **Week 3**│ **Public Launch, Staggered Reddit Waves & Curated Lists**                                                        │
 │          │ • Tuesday 08:01 UTC: Product Hunt Launch + Maker's Comment.                                                      │
 │          │ • Tuesday 09:00 UTC: Twitter/X 4-part thread broadcast.                                                          │
 │          │ • Wednesday 13:30 UTC: Hacker News "Show HN: Guidegram" submission + Founder's deep comment.                     │
-│          │ • Thursday: Submit to `r/opensource` with focus on React 19/GramJS architecture and Linux/macOS packagers.       │
-│          │ • Sunday (72h later): Submit to `r/Telegram` highlighting multi-account and proxy isolation features.             │
+│          │ • Thursday (Day 16): Reddit Wave 1 — Submit to `r/Telegram` (native multi-account workflow & proxy isolation).   │
+│          │ • Sunday (Day 19, 72h later): Reddit Wave 2 — Submit to `r/privacy` (hardware spoofing & zero-registry forensics).│
+│          │ • Submit first curated Awesome-list PR to `ebertti/awesome-telegram` once launch star traction exceeds >50 stars.│
 ├──────────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ **Week 4**│ **Privacy Deep-Dive & Community Expansion**                                                                      │
-│          │ • Post to `r/privacy` focusing on hardware spoofing and local `./data/` zero-registry forensics.                 │
-│          │ • Review community PRs, issues, and packaging requests on GitHub.                                               │
+│ **Week 4**│ **Ecosystem Expansion, Contributor Calls & Curated List Follow-Up**                                              │
+│          │ • Wednesday (Day 22, 72h later): Reddit Wave 3 — Submit to `r/opensource` (React 19 architecture & packager call)│
+│          │ • Submit Awesome-list PRs to `serhii-londar/awesome-telegram` and `agarrharr/awesome-desktop-apps`.               │
+│          │ • Review community PRs, issues, and packaging requests on GitHub (Linux Flatpak/AUR).                            │
 │          │ • Publish first community roadmap update on `@guidegram_app`.                                                    │
-│          │ • Initiate Linux Flatpak and Arch Linux AUR package definitions with community contributors.                     │
 └──────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -787,9 +800,9 @@ To build an authentic, lasting user base without relying on external channels:
 Before executing any phase of this distribution playbook, verify all items against this checklist:
 
 - [x] **AlternativeTo Character Count**: Short description is **142 characters**, strictly under the 150-character ceiling.
-- [x] **Awesome Manifesto Compliance**: All three curated list entries are sorted alphabetically, formatted with correct dashes/bullets, end with a period, and contain no subjective superlatives.
+- [x] **Awesome Manifesto Compliance**: All three curated list entries are sorted alphabetically, formatted with correct dashes/bullets, end with a period, and contain no subjective superlatives. Scheduled for Week 3/4 after initial public launch traction (>50 stars).
 - [x] **License Alignment**: All templates accurately declare GNU General Public License v3.0 (GPL-3.0).
 - [x] **Technical Stack Accuracy**: All materials accurately specify Electron, React 19, TypeScript, Vite, and GramJS (MTProto 2.0).
-- [x] **Ethical Issue Participation**: Strict safeguards requiring closed/wontfix issues (>14 days), maintainer disclosure, and zero unsolicited pings.
-- [x] **Skepticism Defenses**: Complete technical rebuttals provided for Electron RAM usage, multi-account legitimacy, and GramJS security.
-- [x] **OpSec Cadence**: Staggered schedule enforcing 72-hour subreddit cooldowns and 9:1 karma contribution ratios.
+- [x] **Ethical Community Participation**: Strict safeguards prohibiting commenting on closed upstream issues, requiring participation only in open discussions with maintainer disclosure and zero unsolicited pings.
+- [x] **Skepticism Defenses**: Complete technical rebuttals provided for Electron RAM usage, multi-account legitimacy, session storage security, and GramJS security.
+- [x] **OpSec Cadence**: Staggered schedule enforcing 72-hour subreddit cooldowns (r/Telegram ➔ r/privacy ➔ r/opensource) and 9:1 karma contribution ratios.

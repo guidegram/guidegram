@@ -43,8 +43,8 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
 │ PHASE 2: Soft Launch & Developer Alpha (Days 8–14)                                                   │
 │ • Release `v1.0.0-alpha.1` on GitHub Releases with signed standalone portable ZIP                   │
 │ • Seeded feedback from 15 trusted Telegram power users and bot developers                            │
-│ • Curated list PR submissions (`awesome-telegram`, `awesome-desktop-apps`)                           │
-│ • Ethical participation in closed/stale multi-account issues in upstream repositories                │
+│ • Closed alpha resource benchmarking & directory asset staging (AlternativeTo audited at 142 chars)  │
+│ • Open discussion monitoring & technical Q&A (strictly zero upstream closed-issue commenting)        │
 │ • Initial directory submission to AlternativeTo (compliance with <150 char rules)                    │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
          │ [Gate Criteria: 0 Critical Session Crashes, 50+ Alpha Downloads, AlternativeTo Approval]
@@ -53,7 +53,7 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
 │ PHASE 3: Public Multi-Channel Launch & Directory Expansion (Days 15–21)                              │
 │ • General Availability (GA) Release: `v1.0.0` Stable                                                 │
 │ • Hacker News "Show HN: Guidegram – ..." launch with technical founder first-comment                 │
-│ • Reddit 72-hour staggered campaign: r/Telegram ➔ r/privacy ➔ r/opensource                          │
+│ • Reddit 72-hour staggered campaign: r/Telegram (Day 16) ➔ r/privacy (Day 19) ➔ r/opensource (Day 22)│
 │ • Technical X/Twitter demo video thread showcasing multi-account dock & proxy isolation              │
 │ • Product Hunt listing launch & open-source directory syndication                                    │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -61,6 +61,7 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
          ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ PHASE 4: Sustainable Growth, Community Flywheel & Ecosystem Governance (Days 22–28)                  │
+│ • Curated Awesome-list PR submissions supported by >300 stars (awesome-telegram, awesome-desktop)   │
 │ • Community-led Linux (Flatpak/AppImage) and macOS (Universal) packaging sprints                     │
 │ • Launch of community translation initiative (Crowdin / Weblate setup for i18n)                     │
 │ • Bi-weekly MTProto security patch cycle and automated upstream layer drift detection                │
@@ -204,30 +205,17 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
   - Alpha Feedback Matrix recording tester machine specs, account counts, and bug reports.
 - **Transition Gate**: Zero reported session invalidations or MTProto authentication dropouts.
 
-#### Day 10: Curated Awesome-Lists PR Submissions
-- **Primary Objective**: Submit precise, non-promotional pull requests to top curated GitHub repositories adhering strictly to each project's formatting guidelines.
+#### Day 10: Closed Alpha Resource Profiling & Directory Asset Staging
+- **Primary Objective**: Benchmark memory efficiency, proxy latency, and local storage behavior under multi-account workloads, while staging and verifying directory submission packages locally.
 - **Concrete Tasks & Tooling**:
-  1. Fork `ebertti/awesome-telegram` (5,600+ stars):
-     - Edit `README.md` under `## Clients` -> `### Desktop`.
-     - Insert in exact alphabetical order:
-       ```markdown
-       * [Guidegram](https://github.com/guidegram/guidegram) – Open-source portable desktop client with unlimited multi-account, isolated per-account proxies, and group analytics.
-       ```
-     - Submit PR with title: `Add Guidegram to Desktop Clients` adhering to PR checklist.
-  2. Fork `serhii-londar/awesome-telegram`:
-     - Edit `README.md` under `## Apps` -> `### Desktop`.
-     - Insert in alphabetical order:
-       ```markdown
-       - [Guidegram](https://github.com/guidegram/guidegram) ([Source](https://github.com/guidegram/guidegram)) - Portable multi-account desktop client with per-account proxy isolation and hardware anti-fingerprinting.
-       ```
-     - Submit PR.
-  3. Fork `stevemao/awesome-desktop-apps`:
-     - Edit `README.md` under `## Communication`.
-     - Add Guidegram entry with repository and release link.
-  4. Enforce strict OpSec: limit PR submissions to maximum 2 repositories per 24 hours to prevent GitHub anti-abuse automated rate limiting.
+  1. Profile memory footprint with alpha testers operating 5, 10, and 15 active accounts with animations disabled (confirm RAM stays within 350MB–500MB).
+  2. Verify local session isolation: confirm each session file in `./data/sessions/` maintains isolated socket state without file descriptor leakage.
+  3. Prepare and audit AlternativeTo submission package: verify short description length locally to confirm strict compliance with the <150 character limit (audited at exactly 142 characters).
+  4. Pre-stage Git branches and commit messages locally for future curated Awesome-list submissions (`ebertti/awesome-telegram`, `serhii-londar/awesome-telegram`, `agarrharr/awesome-desktop-apps`) in preparation for Phase 4 (post-launch traction >50 stars). Do not submit PRs during closed alpha to prevent premature review rejection.
 - **Deliverables**:
-  - 3 submitted Pull Requests with verifiable links and clean CI checks.
-- **Transition Gate**: PRs adhere 100% to upstream contributing guidelines with zero marketing superlatives.
+  - Alpha Resource Benchmark Sheet confirming memory/socket scaling.
+  - Staged, validated metadata packages and screenshots for software directories.
+- **Transition Gate**: Memory overhead <50MB per idle account verified; zero session leakage across test identities.
 
 #### Day 11: AlternativeTo Submission Package Deployment
 - **Primary Objective**: Submit Guidegram to AlternativeTo.net, the premier consumer and power-user software alternative directory.
@@ -239,7 +227,7 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
      - License: `Open Source` -> `GNU General Public License v3.0 (GPLv3)`
      - Pricing: `Free`
      - Platforms: `Windows` (Portable)
-     - Short Description (strictly <150 chars, verified at 144 chars):
+     - Short Description (strictly <150 chars, verified at 142 chars):
        ```text
        Open-source portable Telegram client with unlimited accounts, isolated per-account proxies, hardware anti-fingerprinting, and group analytics.
        ```
@@ -251,19 +239,20 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
   - AlternativeTo submission confirmation ticket ID and tracking link.
 - **Transition Gate**: Submission accepted into moderator review queue with 0 format errors.
 
-#### Day 12: Ethical Upstream Issue Participation (Targeted Solutions)
-- **Primary Objective**: Provide helpful, technically detailed answers on closed/stale upstream issues where users seek multi-account or proxy isolation solutions.
+#### Day 12: Community Discussions & Technical Q&A Monitoring (Open Engagement)
+- **Primary Objective**: Monitor open community forums and discussions where users actively seek multi-account desktop workflows, while enforcing a strict ban against commenting on closed upstream issues.
 - **Concrete Tasks & Tooling**:
-  1. Search `telegramdesktop/tdesktop` and `64gram/64gram` issue trackers for closed/unplanned requests:
-     - Query: `is:issue is:closed "multiple accounts" label:"wontfix"`
-     - Query: `is:issue is:closed "proxy per account"`
-  2. Select 2 historical issues closed >30 days ago with high upvotes.
-  3. Post factual technical responses explaining the architectural constraint in Qt/TDesktop (single network pool in `lib_net`) and referencing Guidegram's open-source TypeScript implementation in `electron/telegram/accountManager.ts`.
-  4. Explicitly include maintainer disclosure in italicized footer.
-  5. Strictly avoid posting on active, open triage issues to prevent maintainer frustration or spam reports.
+  1. **Enforce Zero Issue Necromancy Rule**: Strictly avoid commenting on closed, stale, or `wontfix` issues on `telegramdesktop/tdesktop`, `64gram/64gram`, or upstream forks. Never trigger watch notification storms or risk GitHub AUP abuse flags.
+  2. Monitor legitimate, open channels for user questions:
+     - Open GitHub Discussions in ecosystem tooling repos that explicitly invite client recommendations.
+     - Active threads on `r/Telegram` and `r/opensource` where users discuss proxy routing or desktop multi-account limitations.
+     - Guidegram's own repository discussions (`github.com/guidegram/guidegram/discussions`).
+  3. When answering on open community forums: provide technically substantive explanations of MTProto session multiplexing, link to open-source code in `electron/telegram/accountManager.ts`, and always include transparent maintainer disclosure in the footer.
+  4. Limit external forum replies to maximum 1–2 high-quality contributions per week; zero unsolicited user mentions or naked URLs.
 - **Deliverables**:
-  - 2 verified, non-promotional technical comments posted on closed upstream issues.
-- **Transition Gate**: 0 spam flags or negative moderation responses on GitHub.
+  - Community discussion log documenting technical Q&A contributions.
+  - Zero unsolicited comments posted on closed upstream issue trackers.
+- **Transition Gate**: 0 spam flags or moderation disputes across all community touchpoints.
 
 #### Day 13: Alpha Triage & Rapid Hardening Patch (v1.0.0-alpha.2)
 - **Primary Objective**: Resolve all feedback, minor UI glitches, and edge-case bug reports identified during the closed alpha testing period.
@@ -324,11 +313,11 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
 - **Primary Objective**: Present Guidegram to the primary Telegram user community on Reddit (`r/Telegram`, 150k+ members).
 - **Concrete Tasks & Tooling**:
   1. **09:30 EST**: Post to `r/Telegram` using flair `Third-Party` / `Client`.
-  2. Title: `[Open Source] Guidegram: Portable desktop client with unlimited accounts, per-account proxies, and group analytics`
+  2. Title: `[Open Source] Guidegram: Portable desktop client with native multi-account workflow, per-account proxies, and group analytics`
   3. Post Body: Follow verified non-commercial template highlighting:
-     - Problem solved: 3-account ceiling and single global proxy limitation.
-     - Key features: Unlimited accounts, dedicated proxies, hardware anti-fingerprinting, 100% portable `./data/`, in-chat group analytics.
-     - Architecture & security: GPLv3, local session storage, pure client-side MTProto, custom `api_id`/`api_hash` support.
+     - Problem solved: Native multi-account workflow and session isolation for admins and power users, eliminating single global proxy bottlenecks.
+     - Key features: Native multi-account dock, dedicated per-account proxies, hardware anti-fingerprinting, 100% portable `./data/`, in-chat group analytics.
+     - Architecture & security: GPLv3, local session storage in `./data/sessions/`, pure client-side MTProto, custom `api_id`/`api_hash` support.
      - Official disclaimer regarding independent third-party status.
   4. Actively engage with community inquiries: address common questions about safety, session storage, and how proxy isolation works under the hood.
 - **Deliverables**:
@@ -449,22 +438,34 @@ Guidegram's rollout follows a gated four-phase progression designed to build com
   - Pull Request opened: `feat(packaging): add Linux AppImage and Flatpak configurations`.
 - **Transition Gate**: Linux build compiles cleanly in CI without dependency failures.
 
-#### Day 24: Internationalization (i18n) Framework & Crowdin Integration
-- **Primary Objective**: Establish a scalable internationalization framework to support Telegram's global multi-lingual user base.
+#### Day 24: Curated Awesome-Lists PR Submissions & i18n Integration
+- **Primary Objective**: Submit precise, non-promotional pull requests to top curated GitHub Awesome lists (`ebertti/awesome-telegram`, `serhii-londar/awesome-telegram`, `agarrharr/awesome-desktop-apps`), now backed by demonstrated post-launch traction (>300 stars), satisfying Awesome manifesto repository maturity criteria.
 - **Concrete Tasks & Tooling**:
-  1. Implement `react-i18next` configuration in `src/i18n/`.
-  2. Extract all UI strings from `AccountDock`, `ChatViewport`, `GroupStatsModal`, and `SettingsModal` into standard `locales/en/translation.json`.
-  3. Add language switcher dropdown in Settings supporting:
-     - English (`en`)
-     - Persian (`fa`) - native RTL support already established in codebase
-     - Russian (`ru`) - massive Telegram desktop community
-     - Spanish (`es`)
-     - Simplified Chinese (`zh-CN`)
-  4. Set up open translation project on Crowdin or Weblate; invite community translators from `t.me/guidegram_chat`.
+  1. Verify repository maturity gate: confirm GitHub star count >50 (target: >300 stars achieved post-launch) and stable release availability.
+  2. Fork `ebertti/awesome-telegram` (5,600+ stars):
+     - Edit `README.md` under `## Clients` -> `### Desktop`.
+     - Insert in exact alphabetical order:
+       ```markdown
+       * [Guidegram](https://github.com/guidegram/guidegram) – Open-source portable desktop client with unlimited multi-account, isolated per-account proxies, and group analytics.
+       ```
+     - Submit PR with title: `Add Guidegram to Desktop Clients`.
+  3. Fork `serhii-londar/awesome-telegram`:
+     - Edit `README.md` under `## Apps` -> `### Desktop`.
+     - Insert in exact alphabetical order:
+       ```markdown
+       - [Guidegram](https://github.com/guidegram/guidegram) ([Source](https://github.com/guidegram/guidegram)) - Portable multi-account desktop client with per-account proxy isolation and hardware anti-fingerprinting.
+       ```
+     - Submit PR with title: `Add Guidegram to Desktop Apps`.
+  4. Fork `agarrharr/awesome-desktop-apps` (11,000+ stars):
+     - Edit `README.md` under `## Communication` -> `### Chat`.
+     - Add Guidegram entry with repository and star badge link.
+     - Submit PR with title: `Add Guidegram to Communication / Chat`.
+  5. Enforce OpSec cadence: limit submissions to 1–2 repositories per 24 hours to prevent automated GitHub rate-limiting.
+  6. Deploy `react-i18next` internationalization framework in `src/i18n/` and extract UI strings for English, Persian, Russian, and Spanish.
 - **Deliverables**:
+  - 3 curated list Pull Requests submitted conforming strictly to upstream formatting guidelines.
   - Working i18n architecture committed to `main` branch.
-  - Public translation project link added to `README.md`.
-- **Transition Gate**: UI dynamically swaps languages without component remount errors or RTL layout breaks.
+- **Transition Gate**: Pull requests pass upstream CI format linters; UI dynamically swaps languages without layout breaks.
 
 #### Day 25: Telegram Native Ecosystem Integration & Developer Hub Outreach
 - **Primary Objective**: Engage ethically in developer-focused Telegram groups and channels by answering technical questions and providing code references.
@@ -546,11 +547,14 @@ GitHub strictly enforces its Acceptable Use Policy (§ Abuse and Spam) to preven
    - **Formatting Integrity**: Every PR must be crafted manually, strictly sorted alphabetically, and strictly free of marketing superlatives ("best", "revolutionary", "blazing fast").
    - **Checklist Compliance**: Complete every checklist item required by the maintainer. Never submit PRs with empty or generic descriptions.
 
-3. **Issue Tracker Etiquette (Zero Hijacking)**:
-   - **Rule**: Never comment on active, open bug reports or feature requests in upstream repositories (`telegramdesktop/tdesktop`, `64gram/64gram`) to advertise Guidegram.
-   - **Permissible Engagement**: Only comment on **closed, stale issues (>30 days old)** that have been explicitly marked as `wontfix` or `not planned` by maintainers.
-   - **Mandatory Disclosure**: Every comment must begin with a technical explanation of the underlying constraint and conclude with:  
-     `*(Full disclosure: I am a contributor to Guidegram. Sharing strictly as an open-source reference for those blocked by this limitation.)*`
+3. **Upstream Issue Tracker Policy (Strict Zero-Commenting Policy on Upstream Issues)**:
+   - **Strict Prohibition**: Strictly avoid commenting on closed, stale, or `wontfix` issues on upstream repositories (`telegramdesktop/tdesktop`, `64gram/64gram`, or other forks). Never engage in "issue necromancy", which generates unwanted notifications to thousands of issue watchers, provokes maintainer spam flags, and violates GitHub's Acceptable Use Policy (§ Abuse and Spam).
+   - **Permissible Engagement**: Confine technical outreach exclusively to open, permissionless channels:
+     - Open community discussions (GitHub Discussions) where users explicitly solicit multi-account client recommendations.
+     - Topical Reddit threads and developer forums (`r/Telegram`, `r/opensource`, Stack Overflow).
+     - Guidegram's native repository discussions (`github.com/guidegram/guidegram/discussions`).
+   - **Mandatory Disclosure**: Every comment in permitted open channels must provide substantial architectural context first and conclude with transparent disclosure:  
+     `*(Full disclosure: I am a contributor to Guidegram. Sharing strictly as an open-source technical reference.)*`
 
 ---
 
@@ -735,9 +739,9 @@ Before declaring any strategic phase complete, the maintainer must verify and si
 #### Phase 2: Soft Launch Sign-Off
 - [ ] Release `v1.0.0-alpha.1` live on GitHub Releases with verified SHA256 checksums.
 - [ ] 15 alpha testers onboarded with 0 reported session disconnects.
-- [ ] Pull requests submitted to `awesome-telegram` and `awesome-desktop-apps` in alphabetical order.
-- [ ] AlternativeTo listing submitted with short description <150 characters (144 chars).
-- [ ] Technical comments posted on 2 closed, stale upstream issues with full maintainer disclosure.
+- [ ] Closed alpha resource profiling and directory asset staging completed.
+- [ ] AlternativeTo listing submitted with short description <150 characters (142 chars).
+- [ ] Zero comments posted on closed upstream issues; open community Q&A monitored.
 - [ ] Stability release `v1.0.0-alpha.2` deployed.
 
 #### Phase 3: Public Launch Sign-Off
@@ -750,6 +754,7 @@ Before declaring any strategic phase complete, the maintainer must verify and si
 - [ ] Download count surpasses 1,500 portable zip downloads.
 
 #### Phase 4: Sustainable Growth Sign-Off
+- [ ] Pull requests submitted to `awesome-telegram` and `awesome-desktop-apps` backed by >300 stars.
 - [ ] Reddit Wave 3 (`r/opensource`) launched calling for Linux/macOS packagers.
 - [ ] Linux AppImage / Flatpak packaging pull request opened.
 - [ ] `react-i18next` internationalization framework merged with public translation platform.

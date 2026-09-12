@@ -162,7 +162,7 @@ Pillar 1 establishes Guidegram's competitive moat through an authoritative 9-dim
 *Full Reference: [`docs/strategy/DISTRIBUTION_PLAYBOOK.md`](./DISTRIBUTION_PLAYBOOK.md)*
 
 Pillar 2 defines a non-spam, high-conversion distribution architecture across the global developer and power-user software ecosystem:
-- **Curated Awesome Lists:** Detailed submission packages for `ebertti/awesome-telegram` (5,600+ stars), `serhii-londar/awesome-telegram`, and `awesome-desktop-apps`. Formatted strictly to the Sindresorhus Awesome Manifesto: alphabetical order, concise factual descriptions ending in a period, zero hype. Includes operational monitoring guidelines for `sindresorhus/awesome-electron` during its triage pause.
+- **Curated Awesome Lists:** Detailed submission packages for `ebertti/awesome-telegram` (5,600+ stars), `serhii-londar/awesome-telegram`, and `agarrharr/awesome-desktop-apps` (scheduled for Week 3/4 after >50 stars launch traction). Formatted strictly to the Sindresorhus Awesome Manifesto: alphabetical order, concise factual descriptions ending in a period, zero hype. Includes operational monitoring guidelines for `sindresorhus/awesome-electron` during its triage pause.
 - **Directory Submission Packages:** Complete AlternativeTo submission package with a strictly audited short description (**142 characters**, well within the 150-character ceiling) and long markdown copy mapping competitive advantages against TDesktop, 64gram, and Kotatogram.
 - **Launch Platforms:** Full 24-hour hour-by-hour launch schedule for Product Hunt (timed to 08:01 UTC daily reset) with a verified 59-character tagline, Maker's comment, and asset checklists. Syndication targets for Softpedia, FossHub, and Linux community packaging (AUR, Flatpak).
 - **Developer Hub Outreach:** Ethical engagement protocols for Telegram developer hubs (`@gramjschat`, `@tgdesktop`, `@twa_dev`) using the "problem-first" technical assistance model.
@@ -174,10 +174,10 @@ Pillar 3 provides eight verbatim, production-ready English communication assets 
 1. **Open-Source Web Developers Pitch:** Focuses on "Breaking the C++ Monopoly," React 19/TypeScript architecture, and sub-minute onboarding.
 2. **Community Managers & Operations Squads Pitch:** Focuses on eliminating chain bans, vertical dock scaling, dedicated proxies, and 64gram power tools.
 3. **Privacy Advocates & OpSec Enthusiasts Pitch:** Threat-modeled teardown of desktop device fingerprinting, registry leaks, and heuristic-safe stealth operations.
-4. **Hacker News "Show HN" Package:** Complete submission copy, founder first comment, and battle-tested defense scripts tackling Electron memory overhead (benchmarked at 10 accounts), spam skepticism, and GramJS cryptographic integrity.
-5. **Reddit `r/Telegram` Launch Post:** Community-centric launch post focusing on power tools, portability, and transparency.
+4. **Hacker News "Show HN" Package:** Complete submission copy, founder first comment, and battle-tested defense scripts tackling Electron memory overhead (benchmarked at 10 accounts), spam skepticism, session storage security, and GramJS cryptographic integrity.
+5. **Reddit `r/Telegram` Launch Post:** Community-centric launch post focusing on native multi-account workflow, portability, and transparency.
 6. **Curated Awesome-List PR Pitches:** Complete PR titles, Git diff snippets, and checklist-compliant bodies for top directories.
-7. **AlternativeTo Submission Package:** Audited 144-character short summary and full Markdown feature comparison matrix.
+7. **AlternativeTo Submission Package:** Audited 142-character short summary and full Markdown feature comparison matrix.
 8. **Twitter / X Technical Launch Thread:** 4-part viral thread with a complete 25-second video storyboard showcasing real-time account switching and group analytics.
 
 ### Pillar 4 (R4): Chronological 4-Week Roadmap & OpSec Guardrails
