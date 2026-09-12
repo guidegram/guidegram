@@ -616,7 +616,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             >
               {t('stats.week')}
             </button>
-            <button
+            {/* 30-day option temporarily disabled */}
+            {/* <button
               type="button"
               onClick={() => handleTimeframeChange('month')}
               className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
@@ -626,7 +627,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
               }`}
             >
               {t('stats.month')}
-            </button>
+            </button> */}
             <button
               type="button"
               onClick={() => handleTimeframeChange('all')}
