@@ -70,7 +70,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     // Chat List
     'chat.unread_messages': '{count} unread messages',
     'chat.unread_messages_from': '{count} unread messages from {senders}',
-    'chat.unread_muted': '{count} messages ({senders}) (Muted)',
+    'chat.unread_muted': '{count} messages (Muted)',
     'chat.sender_count_single': '1 person',
     'chat.sender_count_multiple': '{count} people',
     'chat.sender_count_several': 'several people',
@@ -317,7 +317,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     // Chat List
     'chat.unread_messages': '{count} پیام خوانده نشده',
     'chat.unread_messages_from': '{count} پیام خوانده نشده از {senders}',
-    'chat.unread_muted': '{count} پیام ({senders}) (بی‌صدا)',
+    'chat.unread_muted': '{count} پیام (بی‌صدا)',
     'chat.sender_count_single': '۱ نفر',
     'chat.sender_count_multiple': '{count} نفر',
     'chat.sender_count_several': 'چند نفر',
