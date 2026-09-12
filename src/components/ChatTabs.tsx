@@ -1,6 +1,7 @@
 import React from 'react'
 import { MessageSquare, Users, Radio, Bot, BellRing, Layers, CheckCheck, Folder, Archive } from 'lucide-react'
 import { CloudFolderItem } from '../types/telegram'
+import { useI18n } from '../i18n'
 
 export type TabCategory = 'all' | 'users' | 'groups' | 'channels' | 'bots' | 'unread' | string
 
@@ -25,6 +26,7 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
   onCloudFoldersLoaded,
   cloudFolders: cloudFoldersProp,
 }) => {
+  const { t, isRTL, formatNumber } = useI18n()
   const [isMarking, setIsMarking] = React.useState(false)
   const [cloudFolders, setCloudFolders] = React.useState<CloudFolderItem[]>([])
   const [tabContextMenu, setTabContextMenu] = React.useState<{
@@ -79,14 +81,14 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
   }, [])
 
   const standardTabs: { id: TabCategory; label: string; icon: React.ReactNode }[] = [
-    { id: 'all', label: 'All', icon: <Layers className="w-3.5 h-3.5" /> },
-    { id: 'users', label: 'Personal', icon: <MessageSquare className="w-3.5 h-3.5" /> },
-    { id: 'groups', label: 'Groups', icon: <Users className="w-3.5 h-3.5" /> },
-    { id: 'channels', label: 'Channels', icon: <Radio className="w-3.5 h-3.5" /> },
-    { id: 'bots', label: 'Bots', icon: <Bot className="w-3.5 h-3.5" /> },
-    { id: 'unread', label: 'Unread', icon: <BellRing className="w-3.5 h-3.5" /> },
+    { id: 'all', label: t('tab.all'), icon: <Layers className="w-3.5 h-3.5" /> },
+    { id: 'users', label: t('tab.personal'), icon: <MessageSquare className="w-3.5 h-3.5" /> },
+    { id: 'groups', label: t('tab.groups'), icon: <Users className="w-3.5 h-3.5" /> },
+    { id: 'channels', label: t('tab.channels'), icon: <Radio className="w-3.5 h-3.5" /> },
+    { id: 'bots', label: t('tab.bots'), icon: <Bot className="w-3.5 h-3.5" /> },
+    { id: 'unread', label: t('tab.unread'), icon: <BellRing className="w-3.5 h-3.5" /> },
     ...(activeTab === 'archived'
-      ? [{ id: 'archived', label: 'Archived', icon: <Archive className="w-3.5 h-3.5 text-teal-400" /> }]
+      ? [{ id: 'archived', label: t('tab.archived'), icon: <Archive className="w-3.5 h-3.5 text-teal-400" /> }]
       : []),
   ]
 
@@ -150,11 +152,11 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
               <span>{tab.label}</span>
               {count > 0 && (
                 <span
-                  className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  className={`${isRTL ? 'mr-1' : 'ml-1'} px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                     isActive ? 'bg-primary-500 text-white' : 'bg-dark-750 text-gray-400'
                   }`}
                 >
-                  {count}
+                  {formatNumber(count)}
                 </span>
               )}
             </button>
@@ -169,18 +171,18 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
           disabled={isMarking}
           title={
             activeTab !== 'all'
-              ? `Mark ${allTabs.find((t) => t.id === activeTab)?.label} as read`
-              : 'Mark all dialogs as read'
+              ? t('tab.mark_read_title', { label: allTabs.find((t) => t.id === activeTab)?.label || '' })
+              : t('tab.mark_all_chats_read')
           }
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-accent-cyan hover:text-white bg-accent-cyan/10 hover:bg-accent-cyan/20 border border-accent-cyan/20 transition-all shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <CheckCheck className={`w-3.5 h-3.5 ${isMarking ? 'animate-pulse text-gray-400' : ''}`} />
           <span className="text-[11px] hidden sm:inline">
             {isMarking
-              ? 'Marking...'
+              ? t('tab.marking')
               : activeTab !== 'all'
-              ? `Mark ${allTabs.find((t) => t.id === activeTab)?.label} Read`
-              : 'Mark All Read'}
+              ? t('tab.mark_read', { label: allTabs.find((t) => t.id === activeTab)?.label || '' })
+              : t('tab.mark_all_read')}
           </span>
         </button>
       )}
@@ -188,6 +190,7 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
       {/* Tab Context Menu */}
       {tabContextMenu && (
         <div
+          dir={isRTL ? 'rtl' : 'ltr'}
           style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
           className="fixed z-50 w-48 bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
           onClick={(e) => e.stopPropagation()}
@@ -195,18 +198,18 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
           <button
             type="button"
             onClick={() => handleMarkTab(tabContextMenu.tabId)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-accent-cyan hover:bg-accent-cyan/15 transition-colors text-left cursor-pointer"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-accent-cyan hover:bg-accent-cyan/15 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
           >
-            <CheckCheck className="w-3.5 h-3.5" />
-            <span>Mark '{tabContextMenu.tabLabel}' as read</span>
+            <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('tab.mark_read_title', { label: tabContextMenu.tabLabel })}</span>
           </button>
           <button
             type="button"
             onClick={() => handleMarkTab('all')}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
           >
-            <CheckCheck className="w-3.5 h-3.5" />
-            <span>Mark all chats as read</span>
+            <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('tab.mark_all_chats_read')}</span>
           </button>
         </div>
       )}

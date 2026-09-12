@@ -23,6 +23,7 @@ import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
 import { StarGiftsModal } from './StarGiftsModal'
 import { ActiveSessionsModal } from './ActiveSessionsModal'
+import { useI18n } from '../i18n'
 import logoImg from '../assets/logo.png'
 
 interface MainMenuDrawerProps {
@@ -72,6 +73,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   ghostMode = false,
   onToggleGhostMode,
 }) => {
+  const { t, isRTL, formatNumber } = useI18n()
   const [isAccountsExpanded, setIsAccountsExpanded] = useState(true)
   const [isStarGiftsOpen, setIsStarGiftsOpen] = useState(false)
   const [isActiveSessionsOpen, setIsActiveSessionsOpen] = useState(false)
@@ -88,7 +90,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   const fullName = [activeAccount?.firstName, activeAccount?.lastName].filter(Boolean).join(' ') || 'User'
 
   return (
-    <div className="fixed inset-0 z-50 flex select-none">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 z-50 flex select-none">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
@@ -235,7 +237,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               <div className="w-7 h-7 rounded-full bg-white/10 text-gray-300 flex items-center justify-center">
                 <Plus className="w-4 h-4" />
               </div>
-              <span>Add Account</span>
+              <span>{t('app.add_account')}</span>
             </button>
           </div>
         )}
@@ -255,11 +257,11 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <div className="flex items-center gap-4">
                   <Archive className="w-4 h-4 text-gray-400" />
-                  <span>Archived chats</span>
+                  <span>{t('app.archived_chats')}</span>
                 </div>
                 {archivedUnreadCount > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[11px] font-bold font-mono">
-                    {archivedUnreadCount}
+                    {formatNumber(archivedUnreadCount)}
                   </span>
                 )}
               </button>
@@ -274,7 +276,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <User className="w-4 h-4 text-gray-400" />
-                <span>My Profile</span>
+                <span>{t('app.my_profile')}</span>
               </button>
 
               <div className="my-1 border-t border-white/5" />
@@ -289,7 +291,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Users className="w-4 h-4 text-gray-400" />
-                <span>New Group</span>
+                <span>{t('app.new_group')}</span>
               </button>
 
               {/* New Channel */}
@@ -302,7 +304,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Megaphone className="w-4 h-4 text-gray-400" />
-                <span>New Channel</span>
+                <span>{t('app.new_channel')}</span>
               </button>
 
               {/* Contacts */}
@@ -315,7 +317,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <User className="w-4 h-4 text-gray-400" />
-                <span>Contacts</span>
+                <span>{t('app.contacts')}</span>
               </button>
 
               {/* Calls */}
@@ -328,7 +330,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Phone className="w-4 h-4 text-gray-400" />
-                <span>Calls</span>
+                <span>{t('app.calls')}</span>
               </button>
 
               {/* Saved Messages */}
@@ -341,7 +343,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Bookmark className="w-4 h-4 text-gray-400" />
-                <span>Saved Messages</span>
+                <span>{t('app.saved_messages')}</span>
               </button>
 
               {/* Star Gifts Shelf */}
@@ -351,7 +353,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Gift className="w-4 h-4 text-purple-400" />
-                <span>Star Gifts Shelf</span>
+                <span>{t('menu.star_gifts')}</span>
               </button>
 
               {/* Settings */}
@@ -364,7 +366,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Settings className="w-4 h-4 text-gray-400" />
-                <span>Settings</span>
+                <span>{t('app.settings')}</span>
               </button>
 
               {/* Devices & Sessions */}
@@ -374,7 +376,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Laptop className="w-4 h-4 text-emerald-400" />
-                <span>Devices & Sessions</span>
+                <span>{t('menu.devices')}</span>
               </button>
 
               {/* Proxy Settings */}
@@ -387,7 +389,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4 text-gray-400" />
-                <span>Proxy Settings</span>
+                <span>{t('menu.proxy')}</span>
               </button>
 
               {/* Ghost Mode Toggle */}
@@ -399,7 +401,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 >
                   <div className="flex items-center gap-4">
                     <Radio className={`w-4 h-4 ${ghostMode ? 'text-accent-emerald' : 'text-gray-400'}`} />
-                    <span>Ghost Mode</span>
+                    <span>{t('app.ghost_mode')}</span>
                   </div>
                   <div className={`w-2 h-2 rounded-full ${ghostMode ? 'bg-accent-emerald animate-pulse' : 'bg-gray-600'}`} />
                 </button>
@@ -421,8 +423,8 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                     <Plus className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col text-left min-w-0">
-                    <span className="text-xs font-bold text-gray-100">Connect Telegram Account</span>
-                    <span className="text-[10px] text-gray-400 truncate">Sign in via QR or phone</span>
+                    <span className="text-xs font-bold text-gray-100">{t('menu.connect_account')}</span>
+                    <span className="text-[10px] text-gray-400 truncate">{t('menu.connect_account_sub')}</span>
                   </div>
                 </button>
               </div>
@@ -437,7 +439,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4 text-accent-cyan" />
-                <span>Proxy Settings</span>
+                <span>{t('menu.proxy')}</span>
               </button>
 
               {/* Settings */}
@@ -450,21 +452,21 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
               >
                 <Settings className="w-4 h-4 text-gray-400" />
-                <span>Settings</span>
+                <span>{t('app.settings')}</span>
               </button>
             </>
           )}
 
           <div className="my-1 border-t border-white/5" />
 
-          {/* Night Mode Toggle (Screenshot 1 parity) */}
+          {/* Night Mode Toggle */}
           <div
             onClick={onToggleNightMode}
             className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
           >
             <div className="flex items-center gap-4">
               <Moon className="w-4 h-4 text-gray-400" />
-              <span>Night Mode</span>
+              <span>{t('app.night_mode')}</span>
             </div>
             <div
               className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center ${

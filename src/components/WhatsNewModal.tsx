@@ -1,5 +1,6 @@
 import React from 'react'
-import { Sparkles, ShieldCheck, Zap, Shield, Smartphone, ArrowRight, X } from 'lucide-react'
+import { Sparkles, ShieldCheck, Zap, Shield, Smartphone, ArrowRight, ArrowLeft, X } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 interface WhatsNewModalProps {
   isOpen: boolean
@@ -12,6 +13,8 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   version,
   onClose,
 }) => {
+  const { t, isRTL } = useI18n()
+
   if (!isOpen) return null
 
   const features = [
@@ -19,33 +22,30 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
       icon: Zap,
       color: 'from-amber-500 to-orange-500',
       bgColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      titleEn: 'Lightning 2s Atomic Updater',
-      titleFa: 'به‌روزرسانی صاعقه‌ای و آنی (زیر ۲ ثانیه)',
-      descEn: 'Instant background package staging and tree-kill swap. No hanging or waiting.',
-      descFa: 'استقرار اتمیک فایل‌ها در پس‌زمینه و جایگزینی فوری بدون قفل شدن فایل یا معطلی.',
+      title: t('whatsnew.feat_updater_title'),
+      desc: t('whatsnew.feat_updater_desc'),
     },
     {
       icon: Shield,
       color: 'from-emerald-500 to-teal-500',
       bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      titleEn: 'Multi-Account Hardware Isolation',
-      titleFa: 'ایزوله‌سازی پیشرفته پروفایل‌های سخت‌افزاری',
-      descEn: 'Anti-fingerprinting layer simulates unique device seeds per account to prevent bans.',
-      descFa: 'تفکیک کامل فینگرپرینت و مشخصات دستگاه برای هر اکانت جهت جلوگیری از مسدودسازی.',
+      title: t('whatsnew.feat_isolation_title'),
+      desc: t('whatsnew.feat_isolation_desc'),
     },
     {
       icon: Smartphone,
       color: 'from-cyan-500 to-blue-500',
       bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-      titleEn: 'Seamless QR & 2FA Login Flow',
-      titleFa: 'پایداری کامل ورود با QR Code و تایید دو مرحله‌ای',
-      descEn: 'Resilient MTProto socket reconnects, avoiding premature timeout and IPC drops.',
-      descFa: 'رفع قطعی‌های موقت سوکت و تضمین تولید پایدار کدهای ورود بدون خطاهای کاذب.',
+      title: t('whatsnew.feat_login_title'),
+      desc: t('whatsnew.feat_login_desc'),
     },
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 select-none">
+    <div
+      dir={isRTL ? 'rtl' : 'ltr'}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 select-none"
+    >
       <div className="relative w-full max-w-lg bg-[#0f141c]/95 border border-white/10 rounded-3xl p-6 md:p-7 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Background glow accents */}
         <div className="absolute -top-20 -right-20 w-44 h-44 bg-accent-cyan/15 rounded-full blur-3xl pointer-events-none" />
@@ -55,7 +55,8 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 p-1.5 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+          className={`absolute top-5 ${isRTL ? 'left-5' : 'right-5'} p-1.5 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer`}
+          title={t('app.close')}
         >
           <X className="w-5 h-5" />
         </button>
@@ -68,14 +69,14 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Guidegram Updated
+                {t('whatsnew.title')}
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[11px] border border-emerald-500/30">
                 v{version}
               </span>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5" dir="rtl">
-              گایدگرام با موفقیت به نسخه جدید ارتقا یافت!
+            <p className="text-xs text-gray-400 mt-0.5">
+              {t('whatsnew.subtitle')}
             </p>
           </div>
         </div>
@@ -87,10 +88,10 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
           </div>
           <div className="text-[11.5px] leading-snug">
             <p className="font-semibold text-emerald-300">
-              حفظ ۱۰۰٪ داده‌ها و اطلاعات کاربری
+              {t('whatsnew.data_safe_title')}
             </p>
             <p className="text-gray-400 mt-0.5 text-[10.5px]">
-              تمام سشن‌ها، تاریخچه چت‌ها، پروکسی‌ها و تنظیمات شما دست‌نخورده باقی مانده‌اند.
+              {t('whatsnew.data_safe_desc')}
             </p>
           </div>
         </div>
@@ -98,10 +99,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {/* Features List */}
         <div className="space-y-2.5 mb-6">
           <div className="text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-1 flex items-center justify-between">
-            <span>What's New in this Version</span>
-            <span className="font-normal text-[10px] text-gray-500" dir="rtl">
-              ویژگی‌های کلیدی این نسخه
-            </span>
+            <span>{t('whatsnew.section_title')}</span>
           </div>
 
           {features.map((feat, idx) => {
@@ -119,11 +117,11 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-2">
                     <h4 className="text-xs font-semibold text-gray-200">
-                      {feat.titleEn}
+                      {feat.title}
                     </h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed" dir="rtl">
-                    {feat.descFa}
+                  <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                    {feat.desc}
                   </p>
                 </div>
               </div>
@@ -137,8 +135,12 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
           onClick={onClose}
           className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-primary-600 via-primary-500 to-accent-cyan hover:from-primary-500 hover:to-accent-cyan text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(59,130,246,0.35)] hover:shadow-[0_0_35px_rgba(14,165,233,0.5)] transition-all cursor-pointer group"
         >
-          <span>شروع به کار با نسخه جدید</span>
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <span>{t('whatsnew.action_button')}</span>
+          {isRTL ? (
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          ) : (
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          )}
         </button>
       </div>
     </div>

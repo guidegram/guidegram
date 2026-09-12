@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Minimize2, Power, X, CheckSquare, Square } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 interface CloseConfirmModalProps {
   isOpen: boolean
@@ -12,13 +13,14 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t, isRTL } = useI18n()
   const [selectedAction, setSelectedAction] = useState<'minimize' | 'quit'>('minimize')
   const [remember, setRemember] = useState(true)
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-150" dir={isRTL ? 'rtl' : 'ltr'}>
       <div
         className="w-full max-w-md bg-dark-900 border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-5 select-none animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
@@ -30,8 +32,8 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
               <Power className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-100">Exit Guidegram</h3>
-              <p className="text-[11px] text-gray-400">Choose how Guidegram handles closing</p>
+              <h3 className="text-sm font-bold text-gray-100">{t('close.title')}</h3>
+              <p className="text-[11px] text-gray-400">{t('close.subtitle')}</p>
             </div>
           </div>
           <button
@@ -67,13 +69,13 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-100">Minimize to Background</span>
+                <span className="text-xs font-bold text-gray-100">{t('close.minimize_title')}</span>
                 <span className="text-[9px] px-1.5 py-0.2 bg-primary-500/20 text-primary-300 font-semibold rounded-md border border-primary-500/30">
-                  Recommended
+                  {t('close.minimize_badge')}
                 </span>
               </div>
               <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                Keeps your Telegram accounts connected in the background so you continue receiving incoming notifications.
+                {t('close.minimize_desc')}
               </p>
             </div>
             <Minimize2 className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
@@ -100,9 +102,9 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
               )}
             </div>
             <div className="flex-1">
-              <div className="text-xs font-bold text-gray-100">Quit Application Completely</div>
+              <div className="text-xs font-bold text-gray-100">{t('close.quit_title')}</div>
               <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                Closes all Telegram sessions and exits the application process.
+                {t('close.quit_desc')}
               </p>
             </div>
             <Power className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
@@ -120,7 +122,7 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
             <Square className="w-4 h-4 text-gray-500 shrink-0" />
           )}
           <span className="text-xs font-medium">
-            Remember my choice (You can change this anytime in Settings)
+            {t('close.remember')}
           </span>
         </div>
 
@@ -131,14 +133,14 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
-            Cancel
+            {t('app.cancel')}
           </button>
           <button
             type="button"
             onClick={() => onConfirm(selectedAction, remember)}
             className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
           >
-            Confirm
+            {t('close.confirm')}
           </button>
         </div>
       </div>

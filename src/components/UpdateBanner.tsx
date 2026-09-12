@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Sparkles, Download, X, ArrowUpRight, AlertCircle, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { UpdateInfo, UpdateProgress } from '../types/telegram'
+import { useI18n } from '../i18n'
 
 interface UpdateBannerProps {
   updateInfo: UpdateInfo
@@ -8,6 +9,7 @@ interface UpdateBannerProps {
 }
 
 export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismiss }) => {
+  const { t, isRTL, formatNumber } = useI18n()
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [progress, setProgress] = useState<UpdateProgress | null>(null)
@@ -57,7 +59,8 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 max-w-sm w-full bg-dark-900/95 rounded-3xl p-4 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200 select-none border ${
+      dir={isRTL ? 'rtl' : 'ltr'}
+      className={`fixed bottom-6 ${isRTL ? 'left-6' : 'right-6'} z-50 max-w-sm w-full bg-dark-900/95 rounded-3xl p-4 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200 select-none border ${
         isMandatory
           ? 'border-amber-500/50 shadow-[0_0_40px_rgba(245,158,11,0.2)] ring-1 ring-amber-500/30'
           : 'border-primary-500/40'
@@ -85,24 +88,24 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
               <span className="text-xs font-bold text-white">Guidegram v{updateInfo.latestVersion}</span>
               {isSecurity ? (
                 <span className="text-[9px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30 uppercase tracking-wider">
-                  Security Update
+                  {t('update.security_badge')}
                 </span>
               ) : isMandatory ? (
                 <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 uppercase tracking-wider">
-                  Required
+                  {t('update.required_badge')}
                 </span>
               ) : (
                 <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-accent-emerald/20 text-accent-emerald font-semibold border border-accent-emerald/30">
-                  New
+                  {t('update.new_badge')}
                 </span>
               )}
             </div>
             <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
               {isSecurity
-                ? 'Critical security patch. Installation is required to continue safely.'
+                ? t('update.security_patch')
                 : isMandatory
-                ? 'Major/minor protocol upgrade. Update is required to ensure compatibility.'
-                : 'An update is ready to install without touching your data.'}
+                ? t('update.required_upgrade')
+                : t('update.available')}
             </p>
           </div>
         </div>
@@ -130,10 +133,10 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
             >
               <RefreshCw className="w-3 h-3 animate-spin text-accent-cyan" />
               {progress?.stage === 'extracting'
-                ? 'Extracting update files...'
+                ? t('update.extracting')
                 : progress?.stage === 'restarting'
-                ? 'Restarting Guidegram...'
-                : `Downloading update... ${progress?.percent ? `${progress.percent}%` : ''}`}
+                ? t('update.restarting')
+                : t('update.downloading', { percent: formatNumber(progress?.percent ?? 0) })}
             </span>
             {progress && progress.totalBytes > 0 && (
               <span className="text-gray-400 font-mono text-[10px]">
@@ -154,7 +157,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
           </div>
 
           <p className="text-[10px] text-gray-500">
-            Guidegram will close and reopen automatically once ready.
+            {t('update.reopen_note')}
           </p>
         </div>
       )}
@@ -179,8 +182,8 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
           }}
           className="text-[11px] font-medium text-gray-400 hover:text-primary-300 transition-colors flex items-center gap-1 cursor-pointer"
         >
-          <span>Release Notes</span>
-          <ArrowUpRight className="w-3 h-3" />
+          <span>{t('update.release_notes')}</span>
+          <ArrowUpRight className={`w-3 h-3 ${isRTL ? '-scale-x-100' : ''}`} />
         </button>
 
         <div className="flex items-center gap-2">
@@ -190,7 +193,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
               onClick={onDismiss}
               className="px-3 py-1.5 rounded-xl text-[11px] font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer"
             >
-              Later
+              {t('update.later')}
             </button>
           )}
           <button
@@ -208,18 +211,18 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
                 <RefreshCw className="w-3 h-3 animate-spin" />
                 <span>
                   {progress?.stage === 'restarting'
-                    ? 'Restarting...'
+                    ? t('update.restarting')
                     : progress?.stage === 'extracting'
-                    ? 'Extracting...'
+                    ? t('update.extracting')
                     : progress?.percent !== undefined
-                    ? `${progress.percent}%`
-                    : 'Updating...'}
+                    ? `${formatNumber(progress.percent)}%`
+                    : '...'}
                 </span>
               </>
             ) : (
               <>
                 <Download className="w-3.5 h-3.5" />
-                <span>{isMandatory ? 'Update Now (Required)' : 'Update Now'}</span>
+                <span>{isMandatory ? t('update.now_required') : t('update.now')}</span>
               </>
             )}
           </button>

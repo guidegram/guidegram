@@ -96,9 +96,9 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
   const usernameText = profile?.username || account.username
   const phoneText = profile?.phone || account.phone
   const bioText = profile?.bio || 'No bio specified'
-  const giftsCount = profile?.stargiftsCount ?? 119
-  const channelTitle = profile?.personalChannelTitle || 'سرتوسر'
+  const channelTitle = profile?.personalChannelTitle || (profile?.personalChannelUsername ? `@${profile.personalChannelUsername}` : 'Channel')
   const botUsername = profile?.chatAutomationBot || '@DrGuidanceBot'
+  const giftsCount = profile?.stargiftsCount ?? 0
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end select-none">

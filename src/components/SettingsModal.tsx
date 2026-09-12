@@ -914,7 +914,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-2.5 pt-3 border-t border-white/5">
                   <div className="text-xs font-bold text-gray-300">Advanced Extended Privacy</div>
                   <ToggleItem
-                    title="Ghost Mode (حالت روح)"
+                    title={t('app.ghost_mode')}
                     desc="Read messages without sending read receipts or online status"
                     icon={<EyeOff className="w-3.5 h-3.5 text-accent-cyan" />}
                     checked={ghostMode}

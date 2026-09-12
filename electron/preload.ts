@@ -192,8 +192,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:search-public-peers', { accountId, query }),
   searchGlobal: (accountId: string, query: string, filterType?: string, limit?: number): Promise<MessageItem[]> =>
     ipcRenderer.invoke('telegram:search-global', { accountId, query, filterType, limit }),
-  getHistoricalMessages: (accountId: string, chatId: string, limit?: number, offsetDate?: number): Promise<MessageItem[]> =>
-    ipcRenderer.invoke('telegram:get-historical-messages', { accountId, chatId, limit, offsetDate }),
+  getHistoricalMessages: (accountId: string, chatId: string, limit?: number, offsetDate?: number, offsetId?: number): Promise<MessageItem[]> =>
+    ipcRenderer.invoke('telegram:get-historical-messages', { accountId, chatId, limit, offsetDate, offsetId }),
 
   // Forum Topics, Scheduled Messages, Reactions & Star Gifts
   getForumTopics: (accountId: string, chatId: string): Promise<ForumTopicItem[]> =>

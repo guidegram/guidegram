@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   X,
   BarChart2,
@@ -18,6 +18,7 @@ import {
   Share2,
   Check,
   RefreshCw,
+  Pause,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -61,7 +62,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   chatDetails,
   messages,
 }) => {
-  const { t, language, formatNumber } = useI18n()
+  const { t, language, formatNumber, isRTL } = useI18n()
   const isPersian = language === 'fa'
 
   const [timeframe, setTimeframe] = useState<Timeframe>('today')
@@ -82,6 +83,21 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     })
   }, [messages])
 
+  // Normalize timestamp to milliseconds (safely handle second vs millisecond formats)
+  const normalizeTimestamp = (ts?: number): number => {
+    if (!ts) return 0
+    return ts < 1e11 ? ts * 1000 : ts
+  }
+
+  // Format human date reached in backward scanning
+  const formatReachedDate = (ts: number) => {
+    if (!ts) return ''
+    const d = new Date(normalizeTimestamp(ts))
+    return isPersian
+      ? d.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
   // Compute required start timestamp for the selected timeframe
   const getTimeframeStartTime = (tf: Timeframe) => {
     const now = new Date()
@@ -93,21 +109,129 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     return 0 // all
   }
 
-  // Fetch older messages batch from MTProto server
-  const loadHistoryBatch = async (count = 200) => {
+  const oldestMessageDate = useMemo(() => {
+    if (allMessages.length === 0) return Date.now()
+    return Math.min(...allMessages.map((m) => normalizeTimestamp(m.date)))
+  }, [allMessages])
+
+  const requiredStart = useMemo(() => getTimeframeStartTime(timeframe), [timeframe])
+
+  const isTimeframeCovered = useMemo(() => {
+    if (timeframe === 'all') return !hasMoreHistory
+    return oldestMessageDate <= requiredStart || !hasMoreHistory
+  }, [timeframe, oldestMessageDate, requiredStart, hasMoreHistory])
+
+  const syncProgressPercent = useMemo(() => {
+    if (requiredStart === 0) return hasMoreHistory ? 60 : 100
+    const now = Date.now()
+    const totalSpan = now - requiredStart
+    if (totalSpan <= 0) return 100
+    const scannedSpan = Math.max(0, now - oldestMessageDate)
+    const ratio = scannedSpan / totalSpan
+    return Math.min(100, Math.max(8, Math.round(ratio * 100)))
+  }, [requiredStart, oldestMessageDate, hasMoreHistory])
+
+  const abortSyncRef = useRef(false)
+
+  const stopSync = () => {
+    abortSyncRef.current = true
+    setIsLoadingHistory(false)
+  }
+
+  // Progressive Backward Crawler: fetches batches until target boundary is reached
+  const ensureTimeframeHistory = async (tf: Timeframe) => {
+    if (!window.guidegram?.getHistoricalMessages || !chat?.accountId || isLoadingHistory) return
+    const targetStart = getTimeframeStartTime(tf)
+    if (targetStart === 0 && !hasMoreHistory) return
+
+    abortSyncRef.current = false
+    setIsLoadingHistory(true)
+
+    try {
+      let currentMessages = allMessages
+      let oldestDate = currentMessages.length > 0
+        ? Math.min(...currentMessages.map((m) => normalizeTimestamp(m.date)))
+        : Date.now()
+
+      let attempts = 0
+      const maxBatches = tf === 'month' ? 40 : tf === 'week' ? 20 : tf === 'yesterday' ? 10 : 8
+
+      while (
+        (targetStart === 0 || oldestDate > targetStart) &&
+        attempts < maxBatches &&
+        !abortSyncRef.current
+      ) {
+        attempts++
+
+        // Extract lowest message ID in current pool for reliable offsetId pagination
+        const oldestMsg = currentMessages.length > 0
+          ? currentMessages.reduce((min, m) => (m.id < min.id ? m : min), currentMessages[0])
+          : null
+        const offsetId = oldestMsg ? oldestMsg.id : 0
+        const offsetSeconds = Math.floor(oldestDate / 1000)
+
+        const older = await window.guidegram.getHistoricalMessages(
+          chat.accountId,
+          chat.id,
+          100,
+          offsetSeconds,
+          offsetId
+        )
+
+        if (!older || older.length === 0) {
+          setHasMoreHistory(false)
+          break
+        }
+
+        const map = new Map<number, MessageItem>()
+        for (const m of currentMessages) map.set(m.id, m)
+        let newlyAdded = 0
+        for (const m of older) {
+          if (!map.has(m.id)) {
+            map.set(m.id, m)
+            newlyAdded++
+          }
+        }
+
+        if (newlyAdded === 0) {
+          setHasMoreHistory(false)
+          break
+        }
+
+        currentMessages = Array.from(map.values())
+        setAllMessages(currentMessages)
+        oldestDate = Math.min(...currentMessages.map((m) => normalizeTimestamp(m.date)))
+
+        // Allow micro-render animation and avoid rate-limiting
+        await new Promise((r) => setTimeout(r, 100))
+      }
+    } catch (err) {
+      console.warn('Failed to ensure timeframe history:', err)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  // Fetch older messages batch manually
+  const loadHistoryBatch = async (count = 100) => {
     if (!window.guidegram?.getHistoricalMessages || !chat?.accountId || isLoadingHistory) return
     setIsLoadingHistory(true)
     try {
       const oldestDate = allMessages.length > 0
-        ? Math.min(...allMessages.map((m) => m.date))
+        ? Math.min(...allMessages.map((m) => normalizeTimestamp(m.date)))
         : Date.now()
+      const oldestMsg = allMessages.length > 0
+        ? allMessages.reduce((min, m) => (m.id < min.id ? m : min), allMessages[0])
+        : null
+      const offsetId = oldestMsg ? oldestMsg.id : 0
       const offsetSeconds = Math.floor(oldestDate / 1000)
 
       const older = await window.guidegram.getHistoricalMessages(
         chat.accountId,
         chat.id,
         count,
-        offsetSeconds
+        offsetSeconds,
+        offsetId
       )
 
       if (older && older.length > 0) {
@@ -124,47 +248,6 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
       console.error('Failed to load historical messages:', err)
     } finally {
       setIsLoadingHistory(false)
-    }
-  }
-
-  // Ensure message history covers the selected timeframe
-  const ensureTimeframeHistory = async (tf: Timeframe) => {
-    if (!window.guidegram?.getHistoricalMessages || !chat?.accountId) return
-    const requiredStart = getTimeframeStartTime(tf)
-
-    let currentMessages = allMessages
-    let oldestDate = currentMessages.length > 0 ? Math.min(...currentMessages.map((m) => m.date)) : Date.now()
-
-    if (oldestDate > requiredStart && hasMoreHistory) {
-      setIsLoadingHistory(true)
-      try {
-        let attempts = 0
-        // Fetch batches until oldest message is before the required timeframe start or 5 attempts reached
-        while (oldestDate > requiredStart && attempts < 5) {
-          attempts++
-          const offsetSeconds = Math.floor(oldestDate / 1000)
-          const older = await window.guidegram.getHistoricalMessages(
-            chat.accountId,
-            chat.id,
-            250,
-            offsetSeconds
-          )
-          if (!older || older.length === 0) {
-            setHasMoreHistory(false)
-            break
-          }
-          const map = new Map<number, MessageItem>()
-          for (const m of currentMessages) map.set(m.id, m)
-          for (const m of older) map.set(m.id, m)
-          currentMessages = Array.from(map.values())
-          setAllMessages(currentMessages)
-          oldestDate = Math.min(...currentMessages.map((m) => m.date))
-        }
-      } catch (err) {
-        console.warn('Failed to ensure timeframe history:', err)
-      } finally {
-        setIsLoadingHistory(false)
-      }
     }
   }
 
@@ -187,7 +270,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     const monthStart = now.getTime() - 30 * 24 * 3600 * 1000
 
     return allMessages.filter((m) => {
-      const msgTime = m.date
+      const msgTime = normalizeTimestamp(m.date)
       if (timeframe === 'today') return msgTime >= todayStart
       if (timeframe === 'yesterday') return msgTime >= yesterdayStart && msgTime < todayStart
       if (timeframe === 'week') return msgTime >= weekStart
@@ -214,7 +297,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
 
     for (const m of filteredMessages) {
       const senderId = m.senderId || m.senderName || 'unknown'
-      const senderName = m.senderName || (m.isOutgoing ? (isPersian ? 'شما' : 'You') : (isPersian ? 'عضو' : 'Member'))
+      const senderName = m.senderName || (m.isOutgoing ? t('stats.sender_you') : t('stats.sender_member'))
       const isAdmin = Boolean((m.senderId && adminIds.has(m.senderId)) || !!m.senderRank || m.senderName?.includes('Admin'))
 
       if (isAdmin) adminCount++
@@ -248,7 +331,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const { hourlyDistribution, peakHour, timeSegments } = useMemo(() => {
     const hours = new Array(24).fill(0)
     for (const m of filteredMessages) {
-      const h = new Date(m.date).getHours()
+      const h = new Date(normalizeTimestamp(m.date)).getHours()
       hours[h]++
     }
 
@@ -390,8 +473,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         joins.push({
           id: senderId,
           name: senderName,
-          date: m.date,
-          method: txt.includes('link') || txt.includes('لینک') ? 'با لینک دعوت (Invite Link)' : 'افزوده شده توسط کاربر/ادمین',
+          date: normalizeTimestamp(m.date),
+          method: txt.includes('link') || txt.includes('لینک') ? t('stats.join_method_link') : t('stats.join_method_admin'),
           isServiceAction: true,
         })
         seenUsers.add(senderId)
@@ -400,8 +483,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         joins.push({
           id: senderId,
           name: senderName,
-          date: m.date,
-          method: 'اولین پیام ثبت‌شده در تاریخچه',
+          date: normalizeTimestamp(m.date),
+          method: t('stats.join_method_first_seen'),
           isServiceAction: false,
         })
       }
@@ -453,6 +536,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        dir={isRTL ? 'rtl' : 'ltr'}
         className="glass-modal w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-white/10 shadow-2xl animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
@@ -557,26 +641,106 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
           </div>
         </div>
 
-        {/* Historical messages loader indicator & action */}
-        <div className="px-5 py-2 bg-dark-900/90 border-b border-white/5 flex items-center justify-between text-xs text-gray-400">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse" />
-            <span>
-              {t('stats.messages_analyzed', { count: formatNumber(allMessages.length) })}
-            </span>
+        {/* Historical Messages Crawler & Animated Progress UI */}
+        {isLoadingHistory ? (
+          <div className="px-5 py-3 bg-gradient-to-r from-dark-900 via-dark-850 to-dark-900 border-b border-white/10 flex flex-col gap-2.5 backdrop-blur-md transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-cyan opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-accent-cyan shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+                </span>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-white">
+                      {t('stats.syncing_timeframe', { timeframe: t(`stats.${timeframe}`) })}
+                    </span>
+                    <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm">
+                      {t('stats.auto_crawling_badge')}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-gray-400 mt-0.5">
+                    {t('stats.messages_crawled', { count: formatNumber(allMessages.length) })}
+                    {oldestMessageDate > 0 && ` • ${t('stats.reached_date', { date: formatReachedDate(oldestMessageDate) })}`}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={stopSync}
+                className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+              >
+                <Pause className="w-3.5 h-3.5" />
+                <span>{t('stats.stop_sync')}</span>
+              </button>
+            </div>
+
+            {/* Smooth Striped Gradient Progress Bar */}
+            <div className="w-full bg-dark-950/80 rounded-full h-2 p-0.5 border border-white/5 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-accent-cyan to-primary-400 transition-all duration-300 relative shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+                style={{ width: `${syncProgressPercent}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+              <span>{t('stats.timeframe_coverage', { percent: formatNumber(syncProgressPercent) })}</span>
+              <span>{t('stats.fetching_batch', { count: formatNumber(allMessages.length) })}</span>
+            </div>
           </div>
-          {hasMoreHistory && (
-            <button
-              type="button"
-              disabled={isLoadingHistory}
-              onClick={() => loadHistoryBatch(200)}
-              className="px-2.5 py-1 rounded-lg bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3 h-3 ${isLoadingHistory ? 'animate-spin' : ''}`} />
-              <span>{isLoadingHistory ? t('stats.loading_history') : t('stats.load_more_history', { count: formatNumber(200) })}</span>
-            </button>
-          )}
-        </div>
+        ) : (
+          <div className="px-5 py-2.5 bg-dark-900/90 border-b border-white/5 flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  isTimeframeCovered
+                    ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]'
+                    : 'bg-amber-400 animate-pulse'
+                }`}
+              />
+              <span className="font-medium text-gray-200">
+                {t('stats.messages_analyzed', { count: formatNumber(filteredMessages.length) })}
+              </span>
+              <span className="text-[11px] text-gray-500">
+                ({formatNumber(allMessages.length)} {t('stats.total_messages')})
+              </span>
+              {oldestMessageDate > 0 && (
+                <span className="text-[11px] text-gray-500 hidden sm:inline">
+                  • {t('stats.reached_date', { date: formatReachedDate(oldestMessageDate) })}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {!isTimeframeCovered && hasMoreHistory && (
+                <button
+                  type="button"
+                  onClick={() => ensureTimeframeHistory(timeframe)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>{t('stats.syncing_timeframe', { timeframe: t(`stats.${timeframe}`) })}</span>
+                </button>
+              )}
+              {hasMoreHistory && (
+                <button
+                  type="button"
+                  disabled={isLoadingHistory}
+                  onClick={() => loadHistoryBatch(100)}
+                  className="px-2.5 py-1 rounded-lg bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 active:scale-95"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+                  <span>{t('stats.load_more_history', { count: formatNumber(100) })}</span>
+                </button>
+              )}
+              {!hasMoreHistory && (
+                <span className="text-[11px] text-gray-500 italic">
+                  {t('stats.history_exhausted')}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <div className="flex border-b border-white/5 px-5 bg-dark-900/30 text-xs font-semibold text-gray-400 gap-6">
@@ -664,30 +828,30 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                 <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex flex-col">
                   <span className="text-[11px] text-gray-400 font-medium">{t('stats.total_messages')}</span>
                   <span className="text-xl font-bold text-white mt-1">{formatNumber(totalMessagesCount)}</span>
-                  <span className="text-[10px] text-primary-400 mt-0.5">{isPersian ? 'در این بازه' : 'In this period'}</span>
+                  <span className="text-[10px] text-primary-400 mt-0.5">{t('stats.in_this_period')}</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex flex-col">
                   <span className="text-[11px] text-gray-400 font-medium">{t('stats.unique_senders')}</span>
                   <span className="text-xl font-bold text-accent-cyan mt-1">{formatNumber(uniqueSendersCount)}</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">{isPersian ? 'ارسال‌کننده پیام' : 'Active senders'}</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">{t('stats.active_senders_sub')}</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex flex-col">
-                  <span className="text-[11px] text-gray-400 font-medium">{isPersian ? 'ساعت اوج چت' : 'Peak Chat Hour'}</span>
+                  <span className="text-[11px] text-gray-400 font-medium">{t('stats.peak_chat_hour')}</span>
                   <span className="text-xl font-bold text-amber-300 mt-1">
                     {peakHour.hour}:00
                   </span>
                   <span className="text-[10px] text-gray-400 mt-0.5">
-                    {isPersian ? `با ${formatNumber(peakHour.count)} پیام` : `With ${formatNumber(peakHour.count)} msgs`}
+                    {t('stats.peak_chat_hour_sub', { count: formatNumber(peakHour.count) })}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex flex-col">
-                  <span className="text-[11px] text-gray-400 font-medium">{isPersian ? 'میانگین طول پیام' : 'Avg Message Length'}</span>
+                  <span className="text-[11px] text-gray-400 font-medium">{t('stats.avg_message_length')}</span>
                   <span className="text-xl font-bold text-accent-violet mt-1">{formatNumber(avgChars)}</span>
                   <span className="text-[10px] text-gray-400 mt-0.5">
-                    {isPersian ? `کاراکتر (${formatNumber(avgWords)} کلمه)` : `chars (${formatNumber(avgWords)} words)`}
+                    {t('stats.avg_message_length_sub', { count: formatNumber(avgChars), words: formatNumber(avgWords) })}
                   </span>
                 </div>
               </div>
@@ -696,7 +860,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-2.5">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-gray-300">
-                    {isPersian ? 'سهم پیام‌های ادمین‌ها و اعضا' : 'Admins vs Members Ratio'}
+                    {t('stats.admins_vs_members')}
                   </span>
                   <span className="text-gray-400 font-mono text-[11px]">
                     {formatNumber(adminMessageCount)} Admin • {formatNumber(memberMessageCount)} Member
@@ -723,15 +887,15 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-accent-cyan" />
                     <span>
-                      {isPersian ? 'پیام‌های ادمین‌ها: ' : 'Admin Messages: '}
+                      {t('stats.admin_messages_ratio')}:{' '}
                       {formatNumber(totalMessagesCount > 0 ? Math.round((adminMessageCount / totalMessagesCount) * 100) : 0)}%
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-primary-500" />
                     <span>
-                      پیام‌های اعضا:{' '}
-                      {totalMessagesCount > 0 ? Math.round((memberMessageCount / totalMessagesCount) * 100) : 0}%
+                      {t('stats.member_messages_ratio')}:{' '}
+                      {formatNumber(totalMessagesCount > 0 ? Math.round((memberMessageCount / totalMessagesCount) * 100) : 0)}%
                     </span>
                   </div>
                 </div>
@@ -739,8 +903,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
 
               {/* Top 3 senders preview */}
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
-                <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider font-persian">
-                  فعال‌ترین اعضای گروه
+                <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                  {t('stats.top_members')}
                 </h4>
                 <div className="space-y-2">
                   {topSenders.slice(0, 3).map((sender, idx) => {
@@ -760,14 +924,16 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                           />
                           <span className="font-semibold text-gray-200 truncate">{sender.name}</span>
                           {sender.isAdmin && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-accent-cyan/15 text-accent-cyan font-bold border border-accent-cyan/20 shrink-0 font-persian">
-                              ادمین
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-accent-cyan/15 text-accent-cyan font-bold border border-accent-cyan/20 shrink-0">
+                              {t('stats.admin_tag')}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 shrink-0 font-mono">
                           <span className="text-gray-400 text-[11px]">{percent}%</span>
-                          <span className="font-bold text-white w-14 text-right">{sender.count} پیام</span>
+                          <span className="font-bold text-white w-16 text-right">
+                            {t('stats.messages_count', { count: formatNumber(sender.count) })}
+                          </span>
                         </div>
                       </div>
                     )
@@ -780,9 +946,9 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
           {/* TAB 2: TOP SENDERS */}
           {activeTab === 'senders' && (
             <div className="space-y-3">
-              <div className="text-xs text-gray-400 font-persian flex justify-between items-center">
-                <span>ترتیب بیشترین پیام‌های ارسالی توسط اعضا:</span>
-                <span className="font-mono">{topSenders.length} کاربر فعال</span>
+              <div className="text-xs text-gray-400 flex justify-between items-center">
+                <span>{t('stats.senders_order')}</span>
+                <span className="font-mono">{t('stats.active_users_count', { count: formatNumber(topSenders.length) })}</span>
               </div>
 
               <div className="space-y-2">
@@ -847,9 +1013,9 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-gray-200 font-persian">توزیع ۲۴ ساعته پیام‌ها</span>
-                  <span className="text-amber-300 font-semibold font-persian">
-                    بیشترین پیام در ساعت {peakHour.hour}:00 ({peakHour.count} پیام)
+                  <span className="font-bold text-gray-200">{t('stats.hourly_distribution')}</span>
+                  <span className="text-amber-300 font-semibold">
+                    {t('stats.peak_hour_banner', { hour: peakHour.hour, count: formatNumber(peakHour.count) })}
                   </span>
                 </div>
 
@@ -891,20 +1057,20 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
               {/* Day Segment Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 rounded-2xl bg-dark-850/80 border border-white/5">
-                  <div className="text-[11px] text-gray-400 font-persian">شب (00-06)</div>
-                  <div className="text-base font-bold text-white mt-1 font-mono">{timeSegments.night}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.time_night')}</div>
+                  <div className="text-base font-bold text-white mt-1 font-mono">{formatNumber(timeSegments.night)}</div>
                 </div>
                 <div className="p-3 rounded-2xl bg-dark-850/80 border border-white/5">
-                  <div className="text-[11px] text-gray-400 font-persian">صبح (06-12)</div>
-                  <div className="text-base font-bold text-white mt-1 font-mono">{timeSegments.morning}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.time_morning')}</div>
+                  <div className="text-base font-bold text-white mt-1 font-mono">{formatNumber(timeSegments.morning)}</div>
                 </div>
                 <div className="p-3 rounded-2xl bg-dark-850/80 border border-white/5">
-                  <div className="text-[11px] text-gray-400 font-persian">عصر (12-18)</div>
-                  <div className="text-base font-bold text-white mt-1 font-mono">{timeSegments.afternoon}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.time_afternoon')}</div>
+                  <div className="text-base font-bold text-white mt-1 font-mono">{formatNumber(timeSegments.afternoon)}</div>
                 </div>
                 <div className="p-3 rounded-2xl bg-dark-850/80 border border-white/5">
-                  <div className="text-[11px] text-gray-400 font-persian">غروب و شب (18-24)</div>
-                  <div className="text-base font-bold text-white mt-1 font-mono">{timeSegments.evening}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.time_evening')}</div>
+                  <div className="text-base font-bold text-white mt-1 font-mono">{formatNumber(timeSegments.evening)}</div>
                 </div>
               </div>
             </div>
@@ -915,22 +1081,22 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Top Words */}
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-200 font-persian">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
                   <MessageSquare className="w-4 h-4 text-primary-400" />
-                  <span>بیشترین کلمات استفاده‌شده (Top Words)</span>
+                  <span>{t('stats.top_words_title')}</span>
                 </div>
                 {topWords.length === 0 ? (
-                  <div className="text-xs text-gray-500 py-6 text-center font-persian">کلمه‌ای یافت نشد</div>
+                  <div className="text-xs text-gray-500 py-6 text-center">{t('stats.no_words')}</div>
                 ) : (
                   <div className="space-y-2">
                     {topWords.map(([word, count], idx) => (
                       <div key={word} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-mono text-gray-500 w-4">{idx + 1}</span>
-                          <span className="font-semibold text-gray-200 font-persian">{word}</span>
+                          <span className="font-semibold text-gray-200">{word}</span>
                         </div>
                         <span className="font-mono text-[11px] text-primary-400 bg-primary-950/40 px-2 py-0.5 rounded-lg border border-primary-500/20">
-                          {count}
+                          {formatNumber(count)}
                         </span>
                       </div>
                     ))}
@@ -940,12 +1106,12 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
 
               {/* Top Emojis */}
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-200 font-persian">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
                   <Smile className="w-4 h-4 text-amber-400" />
-                  <span>بیشترین ایموجی‌های استفاده‌شده (Top Emojis)</span>
+                  <span>{t('stats.top_emojis_title')}</span>
                 </div>
                 {topEmojis.length === 0 ? (
-                  <div className="text-xs text-gray-500 py-6 text-center font-persian">ایموجی‌ای یافت نشد</div>
+                  <div className="text-xs text-gray-500 py-6 text-center">{t('stats.no_emojis')}</div>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {topEmojis.map(([emoji, count]) => (
@@ -954,7 +1120,9 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                         className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center justify-between"
                       >
                         <span className="text-xl">{emoji}</span>
-                        <span className="font-mono text-xs text-gray-300 font-semibold">{count} بار</span>
+                        <span className="font-mono text-xs text-gray-300 font-semibold">
+                          {t('stats.emoji_times', { count: formatNumber(count) })}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -971,8 +1139,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <MessageSquare className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-white font-mono">{mediaStats.text}</div>
-                  <div className="text-[11px] text-gray-400 font-persian">پیام متنی</div>
+                  <div className="text-base font-bold text-white font-mono">{formatNumber(mediaStats.text)}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.media_text')}</div>
                 </div>
               </div>
 
@@ -981,8 +1149,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <Image className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-white font-mono">{mediaStats.photo}</div>
-                  <div className="text-[11px] text-gray-400 font-persian">عکس (Photo)</div>
+                  <div className="text-base font-bold text-white font-mono">{formatNumber(mediaStats.photo)}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.media_photo')}</div>
                 </div>
               </div>
 
@@ -991,8 +1159,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <Video className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-white font-mono">{mediaStats.video}</div>
-                  <div className="text-[11px] text-gray-400 font-persian">ویدئو (Video)</div>
+                  <div className="text-base font-bold text-white font-mono">{formatNumber(mediaStats.video)}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.media_video')}</div>
                 </div>
               </div>
 
@@ -1001,8 +1169,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <Mic className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-white font-mono">{mediaStats.voice}</div>
-                  <div className="text-[11px] text-gray-400 font-persian">ویس (Voice)</div>
+                  <div className="text-base font-bold text-white font-mono">{formatNumber(mediaStats.voice)}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.media_voice')}</div>
                 </div>
               </div>
 
@@ -1011,8 +1179,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-white font-mono">{mediaStats.document}</div>
-                  <div className="text-[11px] text-gray-400 font-persian">فایل و داکیومنت</div>
+                  <div className="text-base font-bold text-white font-mono">{formatNumber(mediaStats.document)}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.media_document')}</div>
                 </div>
               </div>
 
@@ -1021,8 +1189,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   <Smile className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-white font-mono">{mediaStats.sticker}</div>
-                  <div className="text-[11px] text-gray-400 font-persian">استیکر (Sticker)</div>
+                  <div className="text-base font-bold text-white font-mono">{formatNumber(mediaStats.sticker)}</div>
+                  <div className="text-[11px] text-gray-400">{t('stats.media_sticker')}</div>
                 </div>
               </div>
             </div>
@@ -1033,23 +1201,23 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             <div className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-bold text-white font-persian">
-                    عضویت‌های شناسایی‌شده در تاریخچه ({memberJoins.length})
+                  <div className="text-sm font-bold text-white">
+                    {t('stats.joins_detected', { count: formatNumber(memberJoins.length) })}
                   </div>
-                  <div className="text-[11px] text-gray-400 font-persian mt-0.5">
-                    بر اساس پیام‌های پیوستن و اولین تعاملات ثبت‌شده در تاریخچه محلی چت
+                  <div className="text-[11px] text-gray-400 mt-0.5">
+                    {t('stats.joins_desc')}
                   </div>
                 </div>
                 <div className="px-3 py-1.5 rounded-xl bg-primary-500/15 border border-primary-500/30 text-primary-300 font-mono text-xs font-bold">
-                  {memberJoins.length} عضو
+                  {t('stats.joins_members_badge', { count: formatNumber(memberJoins.length) })}
                 </div>
               </div>
 
               {memberJoins.length === 0 ? (
-                <div className="p-8 text-center text-xs text-gray-400 rounded-2xl bg-dark-850/50 border border-white/5 font-persian leading-relaxed">
-                  هیچ پیام پیوستن یا فعالیت جدیدی در این بازه زمانی در تاریخچه چت کاربر یافت نشد.
+                <div className="p-8 text-center text-xs text-gray-400 rounded-2xl bg-dark-850/50 border border-white/5 leading-relaxed">
+                  {t('stats.joins_empty')}
                   <br />
-                  (اگر پیام ورود کاربر در تاریخچه سرور یا کش وجود داشته باشد در این بخش ثبت می‌شود)
+                  {t('stats.joins_empty_hint')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1071,7 +1239,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                             <div className="text-xs font-semibold text-gray-200 truncate">
                               {j.name}
                             </div>
-                            <div className="text-[10px] text-gray-400 font-persian flex items-center gap-1 mt-0.5">
+                            <div className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
                               <span className={j.isServiceAction ? 'text-accent-cyan' : 'text-gray-400'}>
                                 {j.method}
                               </span>

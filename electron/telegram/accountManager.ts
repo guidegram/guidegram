@@ -1278,36 +1278,127 @@ export class AccountManager {
   public async getHistoricalMessages(
     accountId: string,
     chatId: string,
-    messageId: number,
-    limit = 30
+    limit = 100,
+    offsetDate?: number,
+    offsetId = 0
   ): Promise<MessageItem[]> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
       const inputPeer = toRawPeer(chatId)
+      let offsetDateSec = 0
+      if (typeof offsetDate === 'number' && offsetDate > 0) {
+        offsetDateSec = offsetDate > 1e11 ? Math.floor(offsetDate / 1000) : Math.floor(offsetDate)
+      }
+
       const res: any = await holder.client.call({
         _: 'messages.getHistory',
         peer: inputPeer,
-        offsetId: messageId,
-        offsetDate: 0,
-        addOffset: -Math.floor(limit / 2),
-        limit,
+        offsetId: offsetId || 0,
+        offsetDate: offsetDateSec,
+        addOffset: 0,
+        limit: Math.min(Math.max(limit, 1), 100),
         maxId: 0,
         minId: 0,
         hash: Long.ZERO,
       })
 
-      return (res.messages || [])
-        .filter((m: any) => m._ !== 'messageEmpty')
-        .map((m: any) => ({
-          id: m.id,
+      const rawMessages = res.messages || []
+      const users = new Map<number, any>()
+      const chats = new Map<number, any>()
+      if (res.users) res.users.forEach((u: any) => users.set(u.id, u))
+      if (res.chats) res.chats.forEach((c: any) => chats.set(c.id, c))
+
+      const items: MessageItem[] = []
+      for (const m of rawMessages) {
+        if (m._ === 'messageEmpty') continue
+        const id = m.id
+        const date = m.date ? (m.date < 1e11 ? m.date * 1000 : m.date) : Date.now()
+        const isOutgoing = m.out || false
+        const text = m.message || ''
+
+        let senderId = ''
+        let senderName = ''
+        if (m.fromId) {
+          if (m.fromId._ === 'peerUser') {
+            senderId = m.fromId.userId.toString()
+            const u = users.get(m.fromId.userId)
+            if (u) senderName = formatEntityName(u)
+          } else if (m.fromId._ === 'peerChannel') {
+            senderId = `-${m.fromId.channelId}`
+            const c = chats.get(m.fromId.channelId)
+            if (c) senderName = formatEntityName(c)
+          } else if (m.fromId._ === 'peerChat') {
+            senderId = `-${m.fromId.chatId}`
+            const c = chats.get(m.fromId.chatId)
+            if (c) senderName = formatEntityName(c)
+          }
+        }
+
+        let mediaType: any = undefined
+        let mediaFileName: string | undefined = undefined
+        let mediaFileSize: number | undefined = undefined
+        let mediaDuration: number | undefined = undefined
+        let isVoice = false
+        let isRoundVideo = false
+        let isSticker = false
+
+        if (m.media) {
+          if (m.media._ === 'messageMediaPhoto') {
+            mediaType = 'photo'
+          } else if (m.media._ === 'messageMediaDocument') {
+            const doc = m.media.document
+            if (doc && doc._ === 'document') {
+              mediaFileSize = Number(doc.size || 0)
+              mediaType = 'document'
+              if (doc.attributes) {
+                for (const attr of doc.attributes) {
+                  if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
+                  if (attr._ === 'documentAttributeAudio') {
+                    mediaDuration = attr.duration
+                    if (attr.voice) {
+                      isVoice = true
+                      mediaType = 'voice'
+                    }
+                  }
+                  if (attr._ === 'documentAttributeVideo') {
+                    mediaDuration = attr.duration
+                    if (attr.roundMessage) isRoundVideo = true
+                    mediaType = 'video'
+                  }
+                  if (attr._ === 'documentAttributeSticker') {
+                    isSticker = true
+                    mediaType = 'sticker'
+                  }
+                }
+              }
+            }
+          } else if (m.media._ === 'messageMediaWebPage') {
+            mediaType = 'webpage'
+          }
+        }
+
+        items.push({
+          id,
           chatId,
           accountId,
-          text: m.message || '',
-          date: m.date || 0,
-          isOutgoing: m.out || false,
-        }))
+          senderId,
+          senderName,
+          text,
+          date,
+          isOutgoing,
+          mediaType,
+          mediaFileName,
+          mediaFileSize,
+          mediaDuration,
+          isVoice,
+          isRoundVideo,
+          isSticker,
+        })
+      }
+
+      return items
     } catch (err) {
       Logger.error('[AccountManager] getHistoricalMessages error:', err)
       return []

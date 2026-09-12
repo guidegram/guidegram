@@ -1147,9 +1147,9 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:get-historical-messages', async (_event, { accountId, chatId, limit, offsetDate }) => {
+  ipcMain.handle('telegram:get-historical-messages', async (_event, { accountId, chatId, limit, offsetDate, offsetId }) => {
     try {
-      return await accountManager.getHistoricalMessages(accountId, chatId, limit, offsetDate)
+      return await accountManager.getHistoricalMessages(accountId, chatId, limit, offsetDate, offsetId)
     } catch (err: any) {
       Logger.warn(`[IPC] getHistoricalMessages error:`, err)
       return []

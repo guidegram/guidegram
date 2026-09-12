@@ -492,7 +492,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         {isLoadingMoreDialogs && (
           <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-accent-cyan font-medium animate-in fade-in duration-150">
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-accent-cyan" />
-            <span>بارگذاری چت‌های بیشتر...</span>
+            <span>{t('chat.loading_more')}</span>
           </div>
         )}
       </div>
@@ -595,13 +595,9 @@ export const ChatList: React.FC<ChatListProps> = ({
                   <span
                     title={
                       dialog.isMuted
-                        ? t('chat.unread_muted', {
+                        ? `${formatNumber(dialog.unreadCount)} (${t('chat.muted')})`
+                        : t('chat.unread_messages', {
                             count: formatNumber(dialog.unreadCount),
-                            senders: formatSendersCount(dialog.unreadSendersCount || 1),
-                          })
-                        : t('chat.unread_messages_from', {
-                            count: formatNumber(dialog.unreadCount),
-                            senders: formatSendersCount(dialog.unreadSendersCount || 1),
                           })
                     }
                     className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full transition-colors flex items-center gap-1 ${
@@ -613,11 +609,6 @@ export const ChatList: React.FC<ChatListProps> = ({
                     }`}
                   >
                     <span>{formatNumber(dialog.unreadCount)}</span>
-                    {dialog.isGroup && (
-                      <span className="text-[9px] opacity-90 font-normal">
-                        ({formatSendersCount(dialog.unreadSendersCount || 1)})
-                      </span>
-                    )}
                   </span>
                 )}
               </div>
