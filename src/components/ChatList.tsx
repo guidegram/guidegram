@@ -41,7 +41,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   onSelectPeer,
   onLoadMoreDialogs,
 }) => {
-  const { t, isRTL: isAppRtl, formatNumber } = useI18n()
+  const { t, isRTL: isAppRtl, formatNumber, formatSendersCount } = useI18n()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchFilter, setSearchFilter] = useState<SearchFilterCategory>('all')
   const [globalPeers, setGlobalPeers] = useState<DialogItem[]>([])
@@ -595,12 +595,14 @@ export const ChatList: React.FC<ChatListProps> = ({
                   <span
                     title={
                       dialog.isMuted
-                        ? `${formatNumber(dialog.unreadCount)} (${t('chat.muted')})`
+                        ? t('chat.unread_muted', {
+                            count: formatNumber(dialog.unreadCount),
+                          })
                         : t('chat.unread_messages', {
                             count: formatNumber(dialog.unreadCount),
                           })
                     }
-                    className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full transition-colors flex items-center gap-1 ${
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors flex items-center justify-center min-w-[18px] text-center ${
                       isSelected
                         ? 'bg-white text-dark-900 font-bold'
                         : dialog.isMuted
