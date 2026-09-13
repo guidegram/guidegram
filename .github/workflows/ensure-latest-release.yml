@@ -1,4 +1,4 @@
-name: Ensure v1.6.0 Is Latest Release
+name: Update & Ensure Latest Release
 
 on:
   push:
@@ -11,16 +11,18 @@ permissions:
 
 jobs:
   promote-latest:
-    name: 📌 Promote v1.6.0 to Latest Release
+    name: 📌 Update & Promote Release to Latest
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Update v1.6.0 Release As Latest
+      - name: Update v1.8.0 Release Body & Promote As Latest
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.6.0
+          tag_name: v1.8.0
+          name: Guidegram v1.8.0
+          body_path: RELEASE_NOTES.md
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
