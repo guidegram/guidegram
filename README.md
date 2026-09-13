@@ -7,8 +7,10 @@
 [![GitHub Release](https://img.shields.io/github/v/release/guidegram/guidegram?style=for-the-badge&color=22c55e&logo=github)](https://github.com/guidegram/guidegram/releases/latest)
 [![Windows](https://img.shields.io/badge/Platform-Windows%20x64-0078d4?style=for-the-badge&logo=windows)](https://github.com/guidegram/guidegram/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Electron](https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Electron](https://img.shields.io/badge/Electron-34.2-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg?style=for-the-badge)](https://github.com/guidegram/guidegram/issues)
 
 > A modern, lightning-fast, ultra-portable desktop client for Telegram engineered to eliminate the 3-account restriction, protect identities with isolated proxies and dedicated environment profiles, accelerate downloads with multi-worker MTProto, and deliver comprehensive group activity intelligence.
 
@@ -267,11 +269,20 @@ The compiled portable application will be output to the `release/win-unpacked` d
 
 ---
 
-## 🛡️ Security & Privacy
+## 🛡️ Security & Responsible Disclosure
 
 - **Local Session Storage**: All authentication credentials and session tokens remain on your local filesystem under `./data/sessions/`. No telemetry or third-party servers are involved.
 - **Open MTProto Implementation**: Direct cryptographic connection between your machine and official Telegram MTProto Data Centers (DCs).
 - **Custom API Credentials**: Guidegram ships with default Telegram Desktop credentials, but you can configure your own `api_id` and `api_hash` from [my.telegram.org](https://my.telegram.org) in the Preferences panel.
+- **Security Policy**: For vulnerability reporting and disclosure guidelines, please read [SECURITY.md](SECURITY.md).
+
+---
+
+## 🤝 Contributing & Community
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code standards, TypeScript guidelines, and our Pull Request workflow.
+
+For the long-term international launch strategy and competitive benchmarks, explore the [Strategy & Launch Documentation](docs/strategy/INDEX.md).
 
 ---
 
