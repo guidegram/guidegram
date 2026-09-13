@@ -1,0 +1,91 @@
+name: 💡 International Feedback & Feature Proposal
+description: Share an architectural suggestion, feature request, or usability feedback for Guidegram.
+title: "[Proposal]: "
+labels: ["enhancement", "community-feedback"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thank you for shaping the future of Guidegram! 🚀
+        Guidegram is built to give power users, community managers, and privacy advocates full desktop sovereignty.
+        Please provide clear, structured feedback to help us prioritize and implement your ideas.
+
+  - type: dropdown
+    id: user_persona
+    attributes:
+      label: 👤 Your Primary User Persona
+      description: Which profile best describes your workflow?
+      options:
+        - "Multi-Account Operator / Community Manager (Managing 5+ accounts)"
+        - "Privacy Advocate / Security Researcher (Focusing on network isolation & anti-fingerprinting)"
+        - "Group Administrator / Creator (Focusing on analytics, moderation, & engagement)"
+        - "Telegram Desktop Power User (Focusing on 64gram tooling, shortcuts, & ergonomics)"
+        - "Open-Source Developer / Contributor (TypeScript, React 19, MTProto architecture)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feedback_category
+    attributes:
+      label: 🎯 Feedback Category
+      description: Which component of Guidegram does this relate to?
+      options:
+        - "Multi-Account Dock & Identity Switching"
+        - "Proxy Manager & Per-Session Network Isolation"
+        - "Hardware Anti-Fingerprinting & Device Masking"
+        - "Group Activity Intelligence & Analytics Engine"
+        - "64gram Power Features (IDs, timestamps, direct forward)"
+        - "Media Pipeline & MTProto Download Acceleration"
+        - "Portability, Data Storage & Installer Safety"
+        - "Platform Support (Windows, macOS, Linux)"
+        - "Other / General Suggestion"
+    validations:
+      required: true
+
+  - type: input
+    id: client_version
+    attributes:
+      label: 🏷️ Guidegram Version & OS
+      description: Enter your current version and operating system (e.g., v1.7.0 Portable on Windows 11 x64).
+      placeholder: "v1.7.0 Portable / Windows 11 x64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: core_proposal
+    attributes:
+      label: 📝 Feature Description / Usability Feedback
+      description: A clear and concise description of the feature or improvement you would like to see.
+      placeholder: "Describe what capability is needed, how it should behave, and what problem it solves..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case_rationale
+    attributes:
+      label: 💡 Concrete Use Case & Rationale
+      description: Why is this important? How does this solve limitations present in official Telegram Desktop or other forks?
+      placeholder: "Explain your real-world workflow or problem..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: 🛠️ Proposed Solution or UI Design (Optional)
+      description: If you have a specific UX design, shortcut idea, or technical architecture in mind, detail it here.
+      placeholder: "e.g., Add a toggle in Settings > Privacy, or expose a new keyboard accelerator Ctrl+Shift+P..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: privacy_confirmation
+    attributes:
+      label: 🔒 Privacy & Operational Security Checklist
+      options:
+        - label: "I confirm that this issue contains NO sensitive credentials, Telegram session strings, phone numbers, or private API keys."
+          required: true
+        - label: "I have checked existing issues and confirmed this is not a duplicate proposal."
+          required: true

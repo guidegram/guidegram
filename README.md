@@ -54,7 +54,7 @@ No installation or developer tools required. Download the portable standalone re
 ### 6. 📊 Deep Group Statistics & Member Activity Intelligence (Exclusive Superpower)
 > **Missing in Official Telegram Desktop**: The official desktop client offers zero engagement analytics for group chats. Guidegram fills this major void by embedding a comprehensive, real-time analytics suite accessible right from any group's header (`BarChart3` icon):
 - **Active Members Leaderboard**: Real-time ranking of the most active group contributors, detailing exact message counts, percentage contribution to total conversation traffic, and direct user profile cards.
-- **Dynamic Timeframe Slicing with MTProto Auto-Sync**: Defaults to **Today** (امروز) and supports instant one-click switching to **Yesterday**, **Past 7 Days**, and **Past 30 Days**. If loaded memory doesn't yet cover the chosen window, Guidegram automatically queries and paginates MTProto server batches until the boundary timestamp is reached.
+- **Dynamic Timeframe Slicing with MTProto Auto-Sync**: Defaults to **Today** and supports instant one-click switching to **Yesterday**, **Past 7 Days**, and **Past 30 Days**. If loaded memory doesn't yet cover the chosen window, Guidegram automatically queries and paginates MTProto server batches until the boundary timestamp is reached.
 - **24-Hour Hourly Activity Heatmap**: Visual bar chart breakdown identifying peak conversation hours to optimize broadcast schedules, product drops, and community engagement.
 - **Media & Message Composition Matrix**: Categorized traffic metrics covering Text, Photos, Videos, Voice Notes, Documents, and Stickers.
 - **Word & Character Velocity**: Aggregate word count and average message density metrics.
