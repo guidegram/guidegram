@@ -78,6 +78,11 @@ export const ChatList: React.FC<ChatListProps> = ({
   // Filter local dialogs based on active tab & search query
   const cleanQuery = searchQuery.trim().toLowerCase().replace(/^@/, '')
   const filteredDialogs = dialogs.filter((dialog) => {
+    // Suppress proxy sponsor channels & promoted dialogs to keep chat list ad-free
+    if (dialog.isSponsored || dialog.isSponsorChannel) {
+      return false
+    }
+
     if (cleanQuery) {
       const matchTitle = dialog.title.toLowerCase().includes(cleanQuery)
       const matchMsg = dialog.lastMessageText?.toLowerCase().includes(cleanQuery)

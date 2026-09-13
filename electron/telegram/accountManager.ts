@@ -668,6 +668,8 @@ export class AccountManager {
           customEmojiStatusId: (peer as any).emojiStatus?.emojiId?.toString(),
           isPremium: (peer as any).isPremium,
           isForum: (peer as any).isForum,
+          isSponsored: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
+          isSponsorChannel: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
         }
         dialogs.push(item)
       }

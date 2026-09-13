@@ -1,6 +1,8 @@
 import net from 'net'
 import { SocksProxyTcpTransport, HttpProxyTcpTransport, MtProxyTcpTransport } from '@mtcute/node'
-import { ProxyConfig } from './types'
+import { ProxyConfig, AutoHarvestStatus, WarpStatus } from './types'
+import { ProxyHarvester } from './proxyHarvester'
+import { WarpManager } from './warpManager'
 
 export class ProxyManager {
   /**
@@ -29,6 +31,55 @@ export class ProxyManager {
         resolve(-1) // Timed out
       })
     })
+  }
+
+  /**
+   * Start 45-minute background proxy auto-harvesting
+   */
+  public static startAutoHarvest(intervalMs?: number): void {
+    ProxyHarvester.startAutoHarvest(intervalMs)
+  }
+
+  /**
+   * Stop background proxy auto-harvesting
+   */
+  public static stopAutoHarvest(): void {
+    ProxyHarvester.stopAutoHarvest()
+  }
+
+  /**
+   * Run immediate proxy harvest across all channels
+   */
+  public static async harvestNow(channels?: string[]): Promise<ProxyConfig[]> {
+    return ProxyHarvester.harvestNow(channels)
+  }
+
+  /**
+   * Get auto-harvest status
+   */
+  public static getHarvestStatus(): AutoHarvestStatus {
+    return ProxyHarvester.getStatus()
+  }
+
+  /**
+   * Distribute healthy harvested proxies across accounts
+   */
+  public static distributeProxiesToAccounts(accountIds: string[]): Map<string, ProxyConfig | undefined> {
+    return ProxyHarvester.distributeProxiesToAccounts(accountIds)
+  }
+
+  /**
+   * Toggle Cloudflare WARP tunnel
+   */
+  public static async toggleWarp(enable?: boolean): Promise<WarpStatus> {
+    return WarpManager.toggleWarp(enable)
+  }
+
+  /**
+   * Get Cloudflare WARP status
+   */
+  public static getWarpStatus(): WarpStatus {
+    return WarpManager.getStatus()
   }
 
   /**
@@ -99,3 +150,4 @@ export class ProxyManager {
     return undefined
   }
 }
+

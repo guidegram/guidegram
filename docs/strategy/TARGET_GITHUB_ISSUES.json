@@ -1,0 +1,119 @@
+[
+  {
+    "repo": "kotatogram/kotatogram-desktop",
+    "number": 327,
+    "title": "No sound after latest system update. Maybe incompatible ffmpeg.",
+    "state": "open",
+    "comments": 36,
+    "url": "https://github.com/kotatogram/kotatogram-desktop/issues/327",
+    "query": "multi account"
+  },
+  {
+    "repo": "kotatogram/kotatogram-desktop",
+    "number": 142,
+    "title": "Compatibility with latest Telegram",
+    "state": "closed",
+    "comments": 17,
+    "url": "https://github.com/kotatogram/kotatogram-desktop/issues/142",
+    "query": "multi account"
+  },
+  {
+    "repo": "kotatogram/kotatogram-desktop",
+    "number": 294,
+    "title": "Local folder is gone even though it is exist in config file",
+    "state": "closed",
+    "comments": 10,
+    "url": "https://github.com/kotatogram/kotatogram-desktop/issues/294",
+    "query": "multi account"
+  },
+  {
+    "repo": "kotatogram/kotatogram-desktop",
+    "number": 447,
+    "title": "Drag and Drop File Limit for premium users",
+    "state": "closed",
+    "comments": 1,
+    "url": "https://github.com/kotatogram/kotatogram-desktop/issues/447",
+    "query": "account limit"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 29332,
+    "title": "snap telegram-desktop=5.14.3 doesn't run in KUbuntu 25.04",
+    "state": "closed",
+    "comments": 257,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/29332",
+    "query": "multi account"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 1121,
+    "title": "Auto DPI scaling",
+    "state": "open",
+    "comments": 248,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/1121",
+    "query": "multi account"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 871,
+    "title": "Secret chat",
+    "state": "open",
+    "comments": 220,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/871",
+    "query": "multi account"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 26343,
+    "title": "Bad UI performance on Linux Wayland session",
+    "state": "closed",
+    "comments": 163,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/26343",
+    "query": "separate proxy"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 17316,
+    "title": "Proxy reconnect forever after updating to 3.2.6 beta",
+    "state": "closed",
+    "comments": 92,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/17316",
+    "query": "separate proxy"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 24953,
+    "title": "Web App not showing up on ubuntu i3",
+    "state": "closed",
+    "comments": 87,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/24953",
+    "query": "separate proxy"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 1587,
+    "title": "Messages on the left side when fullscreen",
+    "state": "closed",
+    "comments": 180,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/1587",
+    "query": "account limit"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 30733,
+    "title": "Обновить fingerprint MTPROTO FakeTLS",
+    "state": "closed",
+    "comments": 90,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/30733",
+    "query": "proxy per account"
+  },
+  {
+    "repo": "telegramdesktop/tdesktop",
+    "number": 1382,
+    "title": "Bulk download images",
+    "state": "closed",
+    "comments": 64,
+    "url": "https://github.com/telegramdesktop/tdesktop/issues/1382",
+    "query": "proxy per account"
+  }
+]

@@ -33,6 +33,8 @@ import {
   CacheStats,
   MyFullProfile,
   PrivacySecuritySettings,
+  AutoHarvestStatus,
+  WarpStatus,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -260,6 +262,18 @@ const guidegramAPI = {
   // Proxy & Settings
   testProxyPing: (proxy: ProxyConfig) =>
     ipcRenderer.invoke('telegram:test-proxy-ping', { proxy }),
+  startAutoHarvest: (intervalMs?: number): Promise<AutoHarvestStatus> =>
+    ipcRenderer.invoke('proxy:start-auto-harvest', { intervalMs }),
+  stopAutoHarvest: (): Promise<AutoHarvestStatus> =>
+    ipcRenderer.invoke('proxy:stop-auto-harvest'),
+  harvestNow: (channels?: string[]): Promise<ProxyConfig[]> =>
+    ipcRenderer.invoke('proxy:harvest-now', { channels }),
+  getHarvestStatus: (): Promise<AutoHarvestStatus> =>
+    ipcRenderer.invoke('proxy:get-harvest-status'),
+  toggleWarp: (enabled?: boolean): Promise<WarpStatus> =>
+    ipcRenderer.invoke('proxy:toggle-warp', { enabled }),
+  getWarpStatus: (): Promise<WarpStatus> =>
+    ipcRenderer.invoke('proxy:get-warp-status'),
   getConfig: () => ipcRenderer.invoke('telegram:get-config'),
   updateConfig: (partial: Partial<AppConfig>) =>
     ipcRenderer.invoke('telegram:update-config', { partial }),

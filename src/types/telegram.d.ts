@@ -43,6 +43,8 @@ import type {
   CacheStats,
   MyFullProfile,
   PrivacySecuritySettings,
+  AutoHarvestStatus,
+  WarpStatus,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -97,4 +99,6 @@ export type {
   CacheStats,
   MyFullProfile,
   PrivacySecuritySettings,
+  AutoHarvestStatus,
+  WarpStatus,
 }

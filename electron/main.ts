@@ -1116,6 +1116,32 @@ function setupIpcHandlers() {
     return ProxyManager.testProxyPing(proxy)
   })
 
+  ipcMain.handle('proxy:start-auto-harvest', async (_event, { intervalMs } = {}) => {
+    ProxyManager.startAutoHarvest(intervalMs)
+    return ProxyManager.getHarvestStatus()
+  })
+
+  ipcMain.handle('proxy:stop-auto-harvest', async () => {
+    ProxyManager.stopAutoHarvest()
+    return ProxyManager.getHarvestStatus()
+  })
+
+  ipcMain.handle('proxy:harvest-now', async (_event, { channels } = {}) => {
+    return await ProxyManager.harvestNow(channels)
+  })
+
+  ipcMain.handle('proxy:get-harvest-status', async () => {
+    return ProxyManager.getHarvestStatus()
+  })
+
+  ipcMain.handle('proxy:toggle-warp', async (_event, { enabled } = {}) => {
+    return await ProxyManager.toggleWarp(enabled)
+  })
+
+  ipcMain.handle('proxy:get-warp-status', async () => {
+    return ProxyManager.getWarpStatus()
+  })
+
   ipcMain.handle('telegram:get-config', async () => {
     return sessionStore.getConfig()
   })

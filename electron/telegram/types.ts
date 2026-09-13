@@ -12,6 +12,26 @@ export interface ProxyConfig {
   secret?: string // for MTProto proxy
   pingMs?: number
   lastChecked?: number
+  failCount?: number
+  channelSource?: string
+  isAutoHarvested?: boolean
+}
+
+export interface AutoHarvestStatus {
+  enabled: boolean
+  lastScanTime?: number
+  scannedChannels: string[]
+  healthyCount: number
+  totalHarvested: number
+  isScanning: boolean
+}
+
+export interface WarpStatus {
+  enabled: boolean
+  connected: boolean
+  clientIp?: string
+  endpoint?: string
+  pingMs?: number
 }
 
 export interface QrTokenPayload {
@@ -90,6 +110,8 @@ export interface DialogItem {
   customEmojiStatusId?: string
   isPremium?: boolean
   isForum?: boolean
+  isSponsored?: boolean
+  isSponsorChannel?: boolean
 }
 
 export interface InlineButton {
