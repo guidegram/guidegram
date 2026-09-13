@@ -96,15 +96,23 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
     ? cloudFoldersProp
     : cloudFolders
 
-  const folderTabs: { id: TabCategory; label: string; icon: React.ReactNode }[] = effectiveFolders.map((f) => ({
-    id: `folder:${f.id}`,
-    label: f.title,
-    icon: f.emoticon ? (
-      <span className="text-xs leading-none">{f.emoticon}</span>
-    ) : (
-      <Folder className="w-3.5 h-3.5 text-accent-cyan" />
-    ),
-  }))
+  const folderTabs: { id: TabCategory; label: string; icon: React.ReactNode }[] = effectiveFolders.map((f) => {
+    let titleStr = 'Folder'
+    if (typeof f.title === 'string') {
+      titleStr = f.title
+    } else if (f.title && typeof f.title === 'object') {
+      titleStr = (f.title as any).text || 'Folder'
+    }
+    return {
+      id: `folder:${f.id}`,
+      label: titleStr,
+      icon: f.emoticon ? (
+        <span className="text-xs leading-none">{f.emoticon}</span>
+      ) : (
+        <Folder className="w-3.5 h-3.5 text-accent-cyan" />
+      ),
+    }
+  })
 
   const allTabs = [...standardTabs, ...folderTabs]
 

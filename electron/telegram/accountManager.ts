@@ -4,6 +4,7 @@ import zlib from 'zlib'
 import { app, BrowserWindow, dialog } from 'electron'
 import { TelegramClient, MemoryStorage } from '@mtcute/node'
 import { tl, Long } from '@mtcute/core'
+import { writeStringSession } from '@mtcute/core/utils.js'
 import { convertFromGramjsSession } from '@mtcute/convert'
 import QRCode from 'qrcode'
 import { SessionStore } from './sessionStore'
@@ -217,7 +218,7 @@ export class AccountManager {
     const config = this.store.getConfig()
     let sessionString = this.store.getSessionString(savedAcc.id)
     if (!sessionString) {
-      Logger.warn(`[AccountManager] No session file found on disk for account `)
+      Logger.warn(`[AccountManager] No session file found on disk for account ${savedAcc.id}`)
       const unauthInfo: AccountInfo = { ...savedAcc, status: 'needs_auth' }
       this.clients.set(savedAcc.id, { info: unauthInfo })
       this.onEventCallback?.('telegram:account-updated', { account: unauthInfo })
@@ -228,8 +229,13 @@ export class AccountManager {
     if (sessionString.startsWith('1') && !sessionString.startsWith('1//')) {
       try {
         Logger.info(`[AccountManager] Migrating legacy GramJS session for account ${savedAcc.id}...`)
-        sessionString = convertFromGramjsSession(sessionString) as unknown as string
-        if (sessionString) this.store.saveSessionString(savedAcc.id, sessionString)
+        const converted = convertFromGramjsSession(sessionString)
+        const serialized = writeStringSession(converted)
+        if (serialized) {
+          sessionString = serialized
+          this.store.saveSessionString(savedAcc.id, sessionString)
+          Logger.info(`[AccountManager] Legacy GramJS session migrated to mtcute string for account ${savedAcc.id}`)
+        }
       } catch (convErr: any) {
         Logger.warn(`[AccountManager] Session conversion failed for ${savedAcc.id}:`, convErr)
       }
@@ -239,11 +245,10 @@ export class AccountManager {
     const antiFingerprinting = config.antiFingerprinting !== false
     const profile = savedAcc.deviceProfile || DeviceProfileManager.getProfileForAccount(savedAcc.id, antiFingerprinting)
 
-    const client = new TelegramClient({
+    const clientOptions: any = {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
-      transport: transport || undefined,
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
@@ -251,13 +256,18 @@ export class AccountManager {
         systemLangCode: profile.systemLangCode,
         langCode: profile.langCode,
       },
-    })
+    }
+    if (transport) {
+      clientOptions.transport = transport
+    }
+
+    const client = new TelegramClient(clientOptions)
 
     try {
       if (sessionString) {
         await client.importSession(sessionString)
       }
-      Logger.info(`[AccountManager] Connecting account  () [Device: ]...`)
+      Logger.info(`[AccountManager] Connecting saved account ${savedAcc.id} (${savedAcc.phone || savedAcc.firstName}) [Device: ${profile.deviceModel}]...`)
       await client.connect()
 
       const me: any = await client.getMe().catch(() => null)
@@ -281,18 +291,18 @@ export class AccountManager {
         const currentAccounts = this.store.getConfig().accounts.map((a) => (a.id === updatedInfo.id ? updatedInfo : a))
         this.store.updateConfig({ accounts: currentAccounts })
 
-        Logger.info(`[AccountManager] Account  connected successfully!`)
+        Logger.info(`[AccountManager] Account ${updatedInfo.id} connected successfully!`)
         this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
         return updatedInfo
       } else {
-        Logger.warn(`[AccountManager] Account  is not authorized (session expired).`)
+        Logger.warn(`[AccountManager] Account ${savedAcc.id} is not authorized (session expired).`)
         const unauthInfo: AccountInfo = { ...savedAcc, status: 'needs_auth' }
         this.clients.set(savedAcc.id, { client, session: sessionString, info: unauthInfo })
         this.onEventCallback?.('telegram:account-updated', { account: unauthInfo })
         return unauthInfo
       }
     } catch (err: any) {
-      Logger.warn(`[AccountManager] Connection failed for account :, err?.message || err`)
+      Logger.warn(`[AccountManager] Connection failed for account ${savedAcc.id}:`, err?.message || err)
       const disconnectedInfo: AccountInfo = { ...savedAcc, status: 'disconnected' }
       this.clients.set(savedAcc.id, { client, session: sessionString, info: disconnectedInfo })
       this.onEventCallback?.('telegram:account-updated', { account: disconnectedInfo, error: err?.message })
@@ -336,11 +346,10 @@ export class AccountManager {
     const antiFingerprinting = config.antiFingerprinting !== false
     const profile = DeviceProfileManager.getProfileForAccount(phone, antiFingerprinting)
 
-    const client = new TelegramClient({
+    const clientOptions: any = {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
-      transport: transport || undefined,
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
@@ -348,7 +357,12 @@ export class AccountManager {
         systemLangCode: profile.systemLangCode,
         langCode: profile.langCode,
       },
-    })
+    }
+    if (transport) {
+      clientOptions.transport = transport
+    }
+
+    const client = new TelegramClient(clientOptions)
 
     try {
       await client.connect()
@@ -442,11 +456,10 @@ export class AccountManager {
     const qrSeed = `qr_${Date.now()}_${Math.random()}`
     const profile = DeviceProfileManager.getProfileForAccount(qrSeed, antiFingerprinting)
 
-    const client = new TelegramClient({
+    const clientOptions: any = {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
-      transport: transport || undefined,
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
@@ -454,7 +467,12 @@ export class AccountManager {
         systemLangCode: profile.systemLangCode,
         langCode: profile.langCode,
       },
-    })
+    }
+    if (transport) {
+      clientOptions.transport = transport
+    }
+
+    const client = new TelegramClient(clientOptions)
 
     const abortController = new AbortController()
     const qrState: PendingQrAuth = {
@@ -676,7 +694,7 @@ export class AccountManager {
 
       return dialogs
     } catch (err: any) {
-      Logger.error(`[AccountManager] getDialogs error for :, err`)
+      Logger.error(`[AccountManager] getDialogs error for ${accountId}:`, err)
       return []
     }
   }
@@ -713,7 +731,17 @@ export class AccountManager {
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      let inputPeer: any
+      const numChatId = Number(chatId)
+      if (!isNaN(numChatId)) {
+        try {
+          inputPeer = await holder.client.resolvePeer(numChatId)
+        } catch (_) {}
+      }
+      if (!inputPeer) {
+        inputPeer = toRawPeer(chatId)
+      }
+
       const res: any = await holder.client.call({
         _: 'messages.getHistory',
         peer: inputPeer,
@@ -1410,9 +1438,19 @@ export class AccountManager {
 
   public async getChatDetails(accountId: string, chatId: string): Promise<ChatDetails> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
-    const inputPeer = toRawPeer(chatId)
+    let inputPeer: any
+    const numChatId = Number(chatId)
+    if (!isNaN(numChatId)) {
+      try {
+        inputPeer = await holder.client.resolvePeer(numChatId)
+      } catch (_) {}
+    }
+    if (!inputPeer) {
+      inputPeer = toRawPeer(chatId)
+    }
+
     let details: ChatDetails = {
       id: chatId,
       title: 'Chat',
@@ -1478,8 +1516,8 @@ export class AccountManager {
           isBot: false,
         }
       }
-    } catch (err) {
-      Logger.error('[AccountManager] getChatDetails error:', err)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getChatDetails warning for ${chatId}:`, err?.message || err)
     }
 
     return details
@@ -1644,21 +1682,31 @@ export class AccountManager {
 
   public async markAsRead(accountId: string, chatId: string): Promise<void> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    const client = holder.client
 
-    const inputPeer = toRawPeer(chatId)
-    if (inputPeer._ === 'inputPeerChannel') {
-      await holder.client.call({
-        _: 'channels.readHistory',
-        channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
-        maxId: 0,
-      })
-    } else {
-      await holder.client.call({
-        _: 'messages.readHistory',
-        peer: inputPeer,
-        maxId: 0,
-      })
+    try {
+      const numChatId = Number(chatId)
+      if (!isNaN(numChatId)) {
+        await client.readHistory(numChatId).catch(async () => {
+          const inputPeer = toRawPeer(chatId)
+          if (inputPeer._ === 'inputPeerChannel') {
+            await client.call({
+              _: 'channels.readHistory',
+              channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
+              maxId: 0,
+            })
+          } else {
+            await client.call({
+              _: 'messages.readHistory',
+              peer: inputPeer,
+              maxId: 0,
+            })
+          }
+        })
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] markAsRead warning for ${chatId}:`, err?.message || err)
     }
   }
 
@@ -1879,23 +1927,31 @@ export class AccountManager {
       const res: any = await holder.client.call({ _: 'messages.getDialogFilters' })
       const filters = res.filters || []
       return filters
-        .filter((f: any) => f._ === 'dialogFilter')
-        .map((f: any) => ({
-          id: f.id,
-          title: f.title,
-          emoticon: f.emoticon,
-          includePeerIds: (f.includePeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
-          excludePeerIds: (f.excludePeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
-          pinnedPeerIds: (f.pinnedPeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
-          contacts: f.contacts,
-          nonContacts: f.nonContacts,
-          groups: f.groups,
-          broadcasts: f.broadcasts,
-          bots: f.bots,
-          excludeMuted: f.excludeMuted,
-          excludeRead: f.excludeRead,
-          excludeArchived: f.excludeArchived,
-        }))
+        .filter((f: any) => f._ === 'dialogFilter' || f._ === 'dialogFilterChatlist')
+        .map((f: any) => {
+          let folderTitle = ''
+          if (typeof f.title === 'string') {
+            folderTitle = f.title
+          } else if (f.title && typeof f.title === 'object') {
+            folderTitle = f.title.text || ''
+          }
+          return {
+            id: f.id,
+            title: folderTitle || 'Folder',
+            emoticon: f.emoticon,
+            includePeerIds: (f.includePeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
+            excludePeerIds: (f.excludePeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
+            pinnedPeerIds: (f.pinnedPeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
+            contacts: f.contacts,
+            nonContacts: f.nonContacts,
+            groups: f.groups,
+            broadcasts: f.broadcasts,
+            bots: f.bots,
+            excludeMuted: f.excludeMuted,
+            excludeRead: f.excludeRead,
+            excludeArchived: f.excludeArchived,
+          }
+        })
     } catch (_) {
       return []
     }
