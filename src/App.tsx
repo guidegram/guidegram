@@ -140,7 +140,7 @@ export const App: React.FC = () => {
 
           // Check if newly updated to show What's New celebration
           try {
-            const currentVer = (await window.guidegram.getAppVersion?.()) || '1.7.0'
+            const currentVer = (await window.guidegram.getAppVersion?.()) || '1.8.0'
             const lastSeenKey = 'guidegram_last_seen_version'
             const lastSeenVer = localStorage.getItem(lastSeenKey)
             if (lastSeenVer && compareSemver(currentVer, lastSeenVer) > 0) {
@@ -253,7 +253,7 @@ export const App: React.FC = () => {
       const unsubscribeUpdateInstalled = window.guidegram.on(
         'app:update-installed',
         (marker: { version: string }) => {
-          setWhatsNewVersion(marker?.version || '1.7.0')
+          setWhatsNewVersion(marker?.version || '1.8.0')
         }
       )
 
@@ -1137,7 +1137,7 @@ export const App: React.FC = () => {
 
       <WhatsNewModal
         isOpen={!!whatsNewVersion}
-        version={whatsNewVersion || '1.7.0'}
+        version={whatsNewVersion || '1.8.0'}
         onClose={() => setWhatsNewVersion(null)}
       />
 

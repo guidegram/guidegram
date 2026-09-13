@@ -4,6 +4,22 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.8.0] — High-Performance Engine & Community Support (2026-09-13)
+
+### 🌟 What's New & Enhancements
+- **⚡ High-Performance Protocol Engine**: Migrated core client connectivity to a pure TypeScript protocol architecture, improving connection establishment, memory footprint, and media streaming reliability.
+- **📊 Progressive Group Analytics Crawler**: Interactive message history crawler with real-time sync progress tracking and responsive timeframe insights.
+- **💎 Multi-Chain Community Support**: Integrated community support modal with 1-click address copy and QR codes for TON, USDT, and TRON networks.
+- **✨ Interface & Timestamp Polish**: Synchronized real-time message date boundaries, normalized locale time formats, and refined unread sender counts.
+
+### 🐛 Bug Fixes & Stability
+- **Chat Viewport**: Corrected real-time date change separators and timestamp normalization during continuous chat sessions.
+- **Group Analytics**: Enhanced timeframe selection stability and background batch pagination.
+- **Navigation**: Cleaned up unread senders badge display on conversation items for improved readability.
+- **Maintenance**: Harmonized documentation, changelog entries, and release packages with user-centric standards.
+
+---
+
 ## [v1.7.0] — Seamless Updates & Brand Refresh (2026-09-12)
 
 ### 🌟 What's New & Enhancements
