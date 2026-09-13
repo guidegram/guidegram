@@ -80,11 +80,20 @@ registerPortableLocator(app.getPath('exe'), portableDataDir)
 // Initialize File Logging System
 Logger.initialize(portableDataDir)
 
-process.on('uncaughtException', (err) => {
+process.stdout?.on('error', (err: any) => {
+  if (err?.code === 'EPIPE') return
+})
+process.stderr?.on('error', (err: any) => {
+  if (err?.code === 'EPIPE') return
+})
+
+process.on('uncaughtException', (err: any) => {
+  if (err?.code === 'EPIPE') return
   Logger.error('[Process] Uncaught Exception in Main process:', err)
 })
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', (reason: any) => {
+  if (reason?.code === 'EPIPE') return
   Logger.error('[Process] Unhandled Rejection in Main process:', reason)
 })
 
