@@ -1859,20 +1859,31 @@ export class AccountManager {
 
     let uploaded: any
     if (options?.isVoice) {
-      // Handled with DocumentAttributeAudio voice parameters
+      // Ensure voice notes are cached in mediaDir before temporary file cleanup
+      const cacheKey = `voice_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const destPath = path.join(this.mediaDir, `${cacheKey}.ogg`)
+      try {
+        await fs.promises.copyFile(filePath, destPath)
+      } catch (e) {
+        Logger.warn('[AccountManager] Failed to cache voice note to mediaDir:', e)
+      }
+
+      // Handled with DocumentAttributeAudio voice parameters and 4 upload workers
       uploaded = await holder.client.sendMedia(chatId, filePath, {
         caption: options?.caption,
         replyTo: options?.replyToMsgId,
         silent: options?.silent,
         schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
-      })
+        workers: 4,
+      } as any)
     } else {
       uploaded = await holder.client.sendMedia(chatId, filePath, {
         caption: options?.caption,
         replyTo: options?.replyToMsgId,
         silent: options?.silent,
         schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
-      })
+        workers: 4,
+      } as any)
     }
 
     return {
