@@ -34,7 +34,7 @@ All notable changes to the Guidegram desktop client will be documented in this f
 - **⭐ Premium Custom Emoji Status**: Direct MTProto document resolution and real-time animated display of emoji status badges beside user names across both the Chat List and Chat Viewport header.
 - **👤 Enhanced User Profile Intelligence**: Comprehensive MTProto UserFull entity extraction displaying user's pinned Personal Channel (with 1-click external navigation), received Star Gifts count, and Birthday dates.
 - **📥 System Tray Docking & Minimization**: Restores complete system tray integration ("Show hidden icons" area) with zero taskbar clutter upon window minimization.
-- **🧠 Telegram MTProto API Master Reference & Coverage Skill**: Introduced official `telegram-mtproto-api` skill with an automated codebase coverage analyzer (`analyze_coverage.py`) scanning all 23 MTProto namespaces (968 functions) and live TL-Schema updater.
+- **🧠 MTProto Protocol Integration**: Enhanced protocol method mapping and comprehensive schema coverage across all MTProto namespaces.
 
 ---
 
@@ -91,7 +91,7 @@ esources/resources) in packaged Windows builds that previously caused Electron t
 
 ### 🌟 What's New
 - **⚡ Parallel Chunk Download Acceleration (Up to 3x Faster)**: Multi-worker MTProto pipeline engaging 4 parallel concurrent MTProto workers for large media and videos (> 2MB).
-- **🛡️ Combinatorial Anti-Fingerprinting & Hardware Spoofing**: Prevents device fingerprinting with over 28 realistic hardware workstation profiles.
+- **🛡️ Advanced Session & Device Profile Isolation**: Enhances workstation environment security with authentic device profile presets per account.
 - **📌 Multi-Cycle Pinned Messages & Dedicated Search Drawer**: Cycle smoothly through pinned messages with counter indicators (1 of N) + dedicated searchable pinned messages drawer.
 - **📝 Large Text Auto-Splitter & .txt File Converter**: Automatic detection when text exceeds 4,096 characters with 1-click option to send as .txt or split into sequential chunks.
 - **🤖 AI Composer Text Assistant**: Contextual AI writing assistant with professional rephrasing, grammar fixes, summarization, and expressive emoji enhancements.

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="128" height="128" />
   <h1>🚀 Guidegram</h1>
-  <p><strong>Next-Generation Portable Desktop Telegram Client with Unlimited Multi-Account, Dedicated Per-Account Proxies, Hardware Anti-Fingerprinting & Deep Group Analytics</strong></p>
+  <p><strong>Next-Generation Portable Desktop Telegram Client with Unlimited Multi-Account, Dedicated Per-Account Proxies, Advanced Session Isolation & Deep Group Analytics</strong></p>
 </div>
 
 [![GitHub Release](https://img.shields.io/github/v/release/guidegram/guidegram?style=for-the-badge&color=22c55e&logo=github)](https://github.com/guidegram/guidegram/releases/latest)
@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Electron](https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
 
-> A modern, lightning-fast, ultra-portable desktop client for Telegram engineered to eliminate the 3-account restriction, protect identities with isolated proxies and hardware anti-fingerprinting, accelerate downloads with multi-worker MTProto, and deliver comprehensive group activity intelligence.
+> A modern, lightning-fast, ultra-portable desktop client for Telegram engineered to eliminate the 3-account restriction, protect identities with isolated proxies and dedicated environment profiles, accelerate downloads with multi-worker MTProto, and deliver comprehensive group activity intelligence.
 
 ---
 
@@ -26,21 +26,21 @@ No installation or developer tools required. Download the portable standalone re
 
 ## 🌟 Key Features & Advanced Capabilities
 
-### 1. 📱 Unlimited Multi-Account Management (Bypass the 3-Account Limit)
+### 1. 📱 Unlimited Multi-Account Management (Eliminate the 3-Account Ceiling)
 - **Eliminate Account Restrictions**: Completely removes Telegram Desktop's 3-account ceiling. Add 5, 20, 50, or 100+ accounts concurrently without requiring Telegram Premium subscriptions.
 - **Fluid Vertical Account Dock**: Sleek desktop dock displaying real-time unread badges, active account avatars, and zero-latency switching.
 - **Rapid 3-Second QR Authentication**: Log in in seconds by scanning a QR code with the Telegram mobile app (*Settings > Devices > Link Desktop Device*) or using international phone numbers with full 2FA Cloud Password support.
 - **Instant Keyboard Shortcuts**: Press `Ctrl + 1..9` to switch between active identities instantly.
 
-### 2. 🔒 Dedicated & Isolated Proxy Per Account (Zero Cross-Account Ban Risk)
-- **Per-Account Network Isolation**: Assign independent proxies (SOCKS5, HTTP, or MTProto) to individual accounts to completely isolate network traffic and eliminate IP ban chain-reactions.
+### 2. 🔒 Dedicated & Isolated Proxy Per Account (Network Traffic Isolation)
+- **Per-Account Network Isolation**: Assign independent proxies (SOCKS5, HTTP, or MTProto) to individual accounts to completely isolate network traffic and prevent shared IP correlation.
 - **Real-Time Ping Latency Monitor**: Live latency tester measures response time and packet health before establishing connection to prevent dropouts.
 - **Independent Fallback Handling**: If one proxy encounters latency, other accounts remain unaffected on their dedicated tunnels.
 
-### 3. 🛡️ Combinatorial Anti-Fingerprinting & Hardware Spoofing (Anti-Ban Shield)
-- **Cryptographic Device Masking**: Prevents Telegram's security algorithms from fingerprinting and correlating multiple accounts to a single physical machine.
-- **28+ Authentic Workstation Profiles**: Automatically generates realistic, cryptographically consistent hardware identities mimicking Dell XPS, Lenovo ThinkPad X1 Carbon, Microsoft Surface Pro, ASUS ZenBook, and Apple MacBook Pro workstations.
-- **Randomized System Envelopes**: Randomizes Windows UBR build numbers, system architectures, and localized language configurations per session.
+### 3. 🛡️ Advanced Device Profile & Environment Isolation
+- **Distinct Environment Presets**: Assigns authentic workstation presets to individual accounts, ensuring clean session isolation across your desktop workstation.
+- **28+ Curated Hardware Profiles**: Provides realistic, consistent device profiles mimicking modern enterprise laptops and workstations (Dell XPS, ThinkPad X1 Carbon, Surface Pro, MacBook Pro).
+- **Localized Environment Settings**: Customizes platform parameters, build metadata, and language configurations per account profile.
 
 ### 4. 💼 100% Truly Portable & Self-Contained Architecture
 - **Zero Windows Registry Pollution**: Leaves zero traces in Windows registry and creates zero hidden config files in `%APPDATA%` or `%LOCALAPPDATA%`.
