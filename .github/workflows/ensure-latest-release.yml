@@ -23,6 +23,7 @@ jobs:
           tag_name: v1.8.0
           name: Guidegram v1.8.0
           body_path: RELEASE_NOTES.md
-          make_latest: true
+          prerelease: true
+          make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

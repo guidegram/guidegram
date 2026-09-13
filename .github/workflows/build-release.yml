@@ -37,8 +37,8 @@ jobs:
           name: ${{ github.event.inputs.release_title || format('Guidegram {0}', github.ref_name) }}
           body_path: RELEASE_NOTES.md
           draft: false
-          prerelease: false
-          make_latest: true
+          prerelease: true
+          make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
