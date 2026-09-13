@@ -171,6 +171,7 @@ export const App: React.FC = () => {
     let unsubscribeAccountUpdated: (() => void) | undefined
     let unsubscribeAccountsLoaded: (() => void) | undefined
     let unsubscribeMute: (() => void) | undefined
+    let unsubscribeReadHistory: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -314,6 +315,25 @@ export const App: React.FC = () => {
         }
       )
 
+      // Real-time read-history sync
+      unsubscribeReadHistory = window.guidegram.on(
+        'telegram:read-history',
+        (payload: { accountId: string; chatId: string; stillUnreadCount?: number }) => {
+          const { accountId, chatId, stillUnreadCount } = payload
+          setDialogsByAccount((prev) => {
+            const list = prev[accountId] || []
+            return {
+              ...prev,
+              [accountId]: list.map((d) =>
+                d.id === chatId
+                  ? { ...d, unreadCount: typeof stillUnreadCount === 'number' ? stillUnreadCount : 0 }
+                  : d
+              ),
+            }
+          })
+        }
+      )
+
       return () => {
         unsubscribeMsg?.()
         unsubscribeUpdate?.()
@@ -321,6 +341,7 @@ export const App: React.FC = () => {
         unsubscribeAccountsLoaded?.()
         unsubscribeMute?.()
         unsubscribeUpdateInstalled?.()
+        unsubscribeReadHistory?.()
       }
     }
   }, [])
@@ -460,7 +481,16 @@ export const App: React.FC = () => {
     try {
       const msgs = await window.guidegram.getMessages(accountId, chatId, 60)
       setMessagesByChat((prev) => ({ ...prev, [chatId]: msgs }))
-      window.guidegram.markAsRead(accountId, chatId)
+      const lastMsgId = msgs && msgs.length > 0 ? Math.max(...msgs.map((m) => m.id)) : undefined
+      window.guidegram.markAsRead(accountId, chatId, lastMsgId)
+      // Immediately clear unreadCount locally for this chat
+      setDialogsByAccount((prev) => {
+        const list = prev[accountId] || []
+        return {
+          ...prev,
+          [accountId]: list.map((d) => (d.id === chatId ? { ...d, unreadCount: 0 } : d)),
+        }
+      })
     } catch (err) {
       console.error('Failed to load messages:', err)
     }

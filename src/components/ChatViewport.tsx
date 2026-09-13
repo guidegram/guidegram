@@ -493,6 +493,28 @@ export function getTelegramPeerColorClass(peerId?: string, colorIndex?: number):
   return TELEGRAM_PEER_COLORS[num % TELEGRAM_PEER_COLORS.length]
 }
 
+export const TELEGRAM_PEER_BORDER_COLORS = [
+  'border-[#e17076]', // 0: red / coral
+  'border-[#faa774]', // 1: orange / gold
+  'border-[#a695e7]', // 2: violet / purple
+  'border-[#7bc862]', // 3: green
+  'border-[#6ec9cb]', // 4: cyan
+  'border-[#65aadd]', // 5: blue
+  'border-[#ee7aae]', // 6: pink
+]
+
+export function getTelegramPeerBorderClass(peerId?: string, colorIndex?: number): string {
+  if (colorIndex !== undefined && colorIndex >= 0 && colorIndex < TELEGRAM_PEER_BORDER_COLORS.length) {
+    return TELEGRAM_PEER_BORDER_COLORS[colorIndex]
+  }
+  if (!peerId) return 'border-accent-cyan'
+  let num = 0
+  for (let i = 0; i < peerId.length; i++) {
+    num = (num * 31 + peerId.charCodeAt(i)) >>> 0
+  }
+  return TELEGRAM_PEER_BORDER_COLORS[num % TELEGRAM_PEER_BORDER_COLORS.length]
+}
+
 export const ChatViewport: React.FC<ChatViewportProps> = ({
   chat,
   messages,
@@ -690,6 +712,58 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Multi-line input ref
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Group mention autocomplete state
+  const [mentionQuery, setMentionQuery] = useState<{ query: string; startPos: number } | null>(null)
+
+  const mentionCandidates = useMemo(() => {
+    if (!mentionQuery || (!chat?.isGroup && !chatDetails?.isGroup)) return []
+    const q = mentionQuery.query.toLowerCase()
+    const map = new Map<string, { id: string; name: string; username?: string; avatarUrl?: string }>()
+
+    if (chatDetails?.participants) {
+      for (const p of chatDetails.participants) {
+        if (p.name || p.username) {
+          map.set(p.id, { id: p.id, name: p.name, username: p.username, avatarUrl: p.avatarUrl })
+        }
+      }
+    }
+
+    for (const m of messages) {
+      if (m.senderId && (m.senderName || m.senderUsername)) {
+        if (!map.has(m.senderId)) {
+          map.set(m.senderId, { id: m.senderId, name: m.senderName || 'User', username: m.senderUsername })
+        } else if (m.senderUsername && !map.get(m.senderId)!.username) {
+          map.get(m.senderId)!.username = m.senderUsername
+        }
+      }
+    }
+
+    const all = Array.from(map.values())
+    if (!q) return all.slice(0, 6)
+    return all
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.username && c.username.toLowerCase().includes(q))
+      )
+      .slice(0, 6)
+  }, [mentionQuery, chat, chatDetails, messages])
+
+  const handleInsertMention = (candidate: { id: string; name: string; username?: string }) => {
+    if (!mentionQuery) return
+    const tagText = candidate.username ? `@${candidate.username} ` : `@${candidate.name} `
+    const before = inputText.slice(0, mentionQuery.startPos)
+    const after = inputText.slice(mentionQuery.startPos + mentionQuery.query.length + 1)
+    const newText = before + tagText + after
+    setInputText(newText)
+    setMentionQuery(null)
+    setTimeout(() => {
+      textareaRef.current?.focus()
+      const newPos = before.length + tagText.length
+      textareaRef.current?.setSelectionRange(newPos, newPos)
+    }, 20)
+  }
 
   // Floating Contextual Text Formatting Toolbar State (Telegram Desktop v7.0+)
   const [formatBar, setFormatBar] = useState<{
@@ -2489,9 +2563,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     // 1. Photo Card
     // 1. Sticker (Transparent, bubbleless image)
     if (msg.isSticker || msg.mediaType === 'sticker') {
-      if (!mediaUrl) {
-        requestMediaDownload(msg, false)
-      }
       return (
         <div className="my-1 max-w-[200px] max-h-[200px] flex items-center justify-center">
           {mediaUrl ? (
@@ -2503,16 +2574,25 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           ) : (
             <div
               onClick={() => requestMediaDownload(msg, false)}
-              className="w-36 h-36 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-gray-400 gap-2 cursor-pointer hover:bg-white/10 transition-colors"
+              className="relative w-36 h-36 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-gray-400 gap-2 cursor-pointer hover:bg-white/10 transition-colors overflow-hidden group"
             >
-              {loadingMediaIds[msg.id] ? (
-                <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Download className="w-6 h-6 text-primary-400" />
+              {msg.strippedThumb && (
+                <img
+                  src={msg.strippedThumb}
+                  alt="Sticker preview"
+                  className="absolute inset-0 w-full h-full object-contain filter blur-[6px] opacity-60 scale-95"
+                />
               )}
-              <span className="text-[10px] font-medium">
-                {loadingMediaIds[msg.id] ? 'Loading sticker...' : 'Load sticker'}
-              </span>
+              <div className="relative z-10 flex flex-col items-center gap-1.5">
+                {loadingMediaIds[msg.id] ? (
+                  <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Download className="w-6 h-6 text-primary-400 group-hover:scale-110 transition-transform" />
+                )}
+                <span className="text-[10px] font-medium text-white/90 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                  {loadingMediaIds[msg.id] ? 'Loading sticker...' : 'Load sticker'}
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -2520,30 +2600,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
 
     if (msg.mediaType === 'photo') {
-      const isChannel = !!chat?.isChannel
-      const isGroup = !!chat?.isGroup
-      const isPrivate = !isChannel && !isGroup
-
-      // Check auto-download policy
-      const shouldAutoDownloadPhoto = (() => {
-        const cfg = autoDownload || {
-          enabled: true,
-          photosInPrivate: true,
-          photosInGroups: true,
-          photosInChannels: false,
-        }
-        if (cfg.enabled === false) return false
-        if (isChannel) return !!cfg.photosInChannels
-        if (isGroup) return !!cfg.photosInGroups
-        if (isPrivate) return !!cfg.photosInPrivate
-        return false
-      })()
-
-      // Trigger lazy download ONLY if permitted by auto-download policy
-      if (!mediaUrl && shouldAutoDownloadPhoto) {
-        requestMediaDownload(msg, false)
-      }
-
       return (
         <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-900/50">
           {mediaUrl ? (
@@ -2562,18 +2618,35 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           ) : (
             <div
               onClick={() => requestMediaDownload(msg, false)}
-              className="w-72 h-48 bg-dark-850 flex flex-col items-center justify-center text-gray-400 gap-2 cursor-pointer hover:bg-dark-800 transition-colors group"
+              className="relative w-72 h-48 bg-dark-850 flex flex-col items-center justify-center text-gray-400 cursor-pointer overflow-hidden group"
             >
-              {loadingMediaIds[msg.id] ? (
-                <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <div className="w-9 h-9 rounded-xl bg-white/5 group-hover:bg-primary-500/20 text-gray-300 group-hover:text-primary-400 flex items-center justify-center transition-colors">
-                  <Download className="w-5 h-5" />
-                </div>
-              )}
-              <span className="text-[11px] font-medium text-gray-300">
-                {loadingMediaIds[msg.id] ? 'Loading image...' : 'Click to load image'}
-              </span>
+              {msg.strippedThumb ? (
+                <img
+                  src={msg.strippedThumb}
+                  alt="Thumbnail preview"
+                  className="absolute inset-0 w-full h-full object-cover filter blur-[8px] scale-105"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors flex flex-col items-center justify-center gap-2">
+                {loadingMediaIds[msg.id] ? (
+                  <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                    <Download className="w-5 h-5" />
+                  </div>
+                )}
+                {msg.mediaFileSize ? (
+                  <span className="text-[10px] font-medium text-white/90 bg-black/50 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+                    {formatFileSize(msg.mediaFileSize)}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-white/90">
+                    {loadingMediaIds[msg.id] ? 'Loading image...' : 'Click to load image'}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -2585,13 +2658,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       const fullVideoUrl =
         downloadedMedia[`${msg.id}`] ||
         (msg.mediaFilePath ? `guidegram-media://local/${encodeURIComponent(msg.mediaFilePath)}` : null)
-      const thumbUrl = downloadedMedia[`${msg.id}_thumb`] || msg.mediaUrl
+      const thumbUrl = downloadedMedia[`${msg.id}_thumb`] || msg.mediaUrl || msg.strippedThumb
       const isThisVideoPlaying = activeVideoId === msg.id
-
-      // Auto-fetch thumbnail if not yet available
-      if (!thumbUrl && !downloadedMedia[`${msg.id}_thumb`]) {
-        requestMediaDownload(msg, true)
-      }
 
       // If active video is playing and we have the video URL
       if (isThisVideoPlaying && fullVideoUrl) {
@@ -3035,13 +3103,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           </button>
 
           {/* Scheduled Messages Modal Trigger */}
-          <button
-            onClick={() => setIsScheduledListOpen(true)}
-            title={t('chat.scheduled_messages')}
-            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-violet border border-white/10 transition-colors cursor-pointer"
-          >
-            <Clock className="w-4 h-4 text-accent-violet" />
-          </button>
+          {(!chat.isChannel || chat.isGroup || chatDetails?.isGroup || chat.isSavedMessages || chat.canSendMessages || chatDetails?.canSendMessages || chatDetails?.isCreator) && (
+            <button
+              onClick={() => setIsScheduledListOpen(true)}
+              title={t('chat.scheduled_messages')}
+              className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-violet border border-white/10 transition-colors cursor-pointer"
+            >
+              <Clock className="w-4 h-4 text-accent-violet" />
+            </button>
+          )}
 
           {/* Group Statistics Modal Trigger */}
           {chat.isGroup && (
@@ -3547,6 +3617,20 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         >
                           {msg.senderName}
                         </span>
+                        {msg.senderUsername && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (msg.senderId) {
+                                handleOpenUserProfile(msg.senderId, msg.senderName)
+                              }
+                            }}
+                            className="text-[10px] text-gray-400/90 font-mono hover:underline cursor-pointer"
+                            title={`@${msg.senderUsername}`}
+                          >
+                            @{msg.senderUsername}
+                          </span>
+                        )}
                         {msg.senderEmojiStatusId && (
                           <CustomEmojiView
                             accountId={msg.accountId}
@@ -3579,24 +3663,73 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     )}
 
                     {/* Reply Quote Banner */}
-                    {msg.replyToMsgId && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleScrollToReply(msg.replyToMsgId!)
-                        }}
-                        dir={isRTL(msg.replyTo?.text) ? 'rtl' : 'ltr'}
-                        className="mb-2 p-1.5 px-2.5 rounded-xl bg-black/25 hover:bg-black/40 border-l-2 border-accent-cyan cursor-pointer transition-colors flex flex-col text-left"
-                      >
-                        <div className="text-[10px] font-bold text-accent-cyan flex items-center gap-1">
-                          <CornerUpLeft className="w-2.5 h-2.5 shrink-0" />
-                          <span>{msg.replyTo?.senderName || 'Reply'}</span>
+                    {msg.replyToMsgId && (() => {
+                      const repliedMsg = messages.find((m) => m.id === msg.replyToMsgId)
+                      const rName = msg.replyTo?.senderName || repliedMsg?.senderName || 'Reply'
+                      const rSenderId = msg.replyTo?.senderId || repliedMsg?.senderId
+                      const rText = msg.replyTo?.text || repliedMsg?.text
+                      const rMediaType = msg.replyTo?.mediaType || repliedMsg?.mediaType
+                      const rIsVoice = msg.replyTo?.isVoice || repliedMsg?.isVoice || rMediaType === 'voice'
+                      const rIsSticker = msg.replyTo?.isSticker || repliedMsg?.isSticker || rMediaType === 'sticker'
+                      const rThumb =
+                        msg.replyTo?.strippedThumb ||
+                        repliedMsg?.strippedThumb ||
+                        msg.replyTo?.mediaThumbnailUrl ||
+                        (repliedMsg ? downloadedMedia[`${repliedMsg.id}_thumb`] || downloadedMedia[repliedMsg.id] || repliedMsg.mediaUrl : undefined)
+
+                      const hasMediaThumb = Boolean(rThumb || rMediaType === 'photo' || rMediaType === 'video' || rIsSticker)
+                      const peerColorClass = getTelegramPeerColorClass(rSenderId)
+                      const peerBorderClass = getTelegramPeerBorderClass(rSenderId)
+
+                      return (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleScrollToReply(msg.replyToMsgId!)
+                          }}
+                          dir={isRTL(rText || '') ? 'rtl' : 'ltr'}
+                          className={`mb-2 p-1.5 px-2.5 rounded-xl bg-black/25 hover:bg-black/35 border-l-2 ${peerBorderClass} cursor-pointer transition-colors flex items-center gap-2.5 text-left`}
+                        >
+                          {/* Mini thumbnail if media exists */}
+                          {hasMediaThumb && (
+                            <div className="w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
+                              {rThumb ? (
+                                <img src={rThumb} alt="Reply media" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-3 h-3 border border-primary-400 border-t-transparent rounded-full animate-spin" />
+                              )}
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1 flex flex-col justify-center">
+                            <div className={`text-[10px] font-bold ${peerColorClass} flex items-center gap-1 truncate`}>
+                              <CornerUpLeft className="w-2.5 h-2.5 shrink-0" />
+                              <span>{rName}</span>
+                            </div>
+                            <div className="text-[11px] text-gray-300 truncate max-w-md font-normal">
+                              {rText ? (
+                                rText
+                              ) : rIsVoice ? (
+                                <span className="inline-flex items-center gap-1 text-accent-cyan font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan inline-block"></span>
+                                  <span>Voice message</span>
+                                </span>
+                              ) : rMediaType === 'photo' ? (
+                                <span className="text-gray-300">Photo</span>
+                              ) : rMediaType === 'video' ? (
+                                <span className="text-gray-300">Video</span>
+                              ) : rIsSticker ? (
+                                <span className="text-gray-300">Sticker</span>
+                              ) : rMediaType === 'document' ? (
+                                <span className="text-gray-300">Document</span>
+                              ) : (
+                                <span className="text-gray-400">Message</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-gray-300 truncate max-w-md">
-                          {msg.replyTo?.text || `Message #${msg.replyToMsgId}`}
-                        </div>
-                      </div>
-                    )}
+                      )
+                    })()}
 
                     {/* Media Card (Photo, Video, Document, etc.) */}
                     {renderMediaCard(msg)}
@@ -4023,9 +4156,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
               {/* Mini Thumbnail or Media Icon */}
               {(() => {
-                const thumbUrl = downloadedMedia[`${replyMessage.id}_thumb`] || downloadedMedia[replyMessage.id] || replyMessage.mediaUrl
-                if (replyMessage.mediaType === 'photo' || replyMessage.mediaType === 'video' || replyMessage.mediaType === 'sticker') {
-                  if (!thumbUrl) requestMediaDownload(replyMessage, true)
+                const thumbUrl =
+                  downloadedMedia[`${replyMessage.id}_thumb`] ||
+                  downloadedMedia[replyMessage.id] ||
+                  replyMessage.mediaUrl ||
+                  replyMessage.strippedThumb
+                if (
+                  replyMessage.mediaType === 'photo' ||
+                  replyMessage.mediaType === 'video' ||
+                  replyMessage.mediaType === 'sticker' ||
+                  thumbUrl
+                ) {
                   return (
                     <div className="w-9 h-9 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
                       {thumbUrl ? (
@@ -4372,70 +4513,70 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             ) : (
               <form onSubmit={handleSend} className="flex items-end gap-2">
                 {/* Bot Menu & Command Switcher */}
-                {(chat.isBot || chatDetails?.isBot) && (
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (chatDetails?.botInfo?.menuButton?.url) {
-                          handleSafeOpenUrl(chatDetails.botInfo.menuButton.url)
-                        } else {
-                          setIsBotMenuOpen((prev) => !prev)
-                        }
-                      }}
-                      className={`p-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-                        isBotMenuOpen
-                          ? 'bg-primary-500/25 text-primary-300 border border-primary-500/40 shadow-glow'
-                          : 'bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5'
-                      }`}
-                      title={chatDetails?.botInfo?.menuButton?.text || t('chat.bot_commands')}
-                    >
-                      <Bot className="w-4 h-4 text-primary-400" />
-                      <span className="font-bold text-xs">
-                        {chatDetails?.botInfo?.menuButton?.text || t('chat.bot_menu')}
-                      </span>
-                    </button>
-
-                    {isBotMenuOpen && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute bottom-full left-0 mb-2 w-64 max-h-72 overflow-y-auto bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs select-none"
+                {(chat.isBot || chatDetails?.isBot) &&
+                  Boolean(
+                    (chatDetails?.botInfo?.commands && chatDetails.botInfo.commands.length > 0) ||
+                    chatDetails?.botInfo?.menuButton
+                  ) && (
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (chatDetails?.botInfo?.menuButton?.url) {
+                            handleSafeOpenUrl(chatDetails.botInfo.menuButton.url)
+                          } else {
+                            setIsBotMenuOpen((prev) => !prev)
+                          }
+                        }}
+                        className={`p-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isBotMenuOpen
+                            ? 'bg-primary-500/25 text-primary-300 border border-primary-500/40 shadow-glow'
+                            : 'bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5'
+                        }`}
+                        title={chatDetails?.botInfo?.menuButton?.text || t('chat.bot_commands')}
                       >
-                        <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 flex items-center justify-between">
-                          <span>{t('chat.bot_commands')}</span>
-                          {chatDetails?.username && (
-                            <span className="text-primary-400 font-mono">@{chatDetails.username}</span>
-                          )}
-                        </div>
-                        {(chatDetails?.botInfo?.commands && chatDetails.botInfo.commands.length > 0
-                          ? chatDetails.botInfo.commands.map((c) => ({
-                              cmd: c.command.startsWith('/') ? c.command : `/${c.command}`,
-                              label: c.description,
-                            }))
-                          : [
-                              { cmd: '/start', label: t('chat.bot_cmd_restart') },
-                              { cmd: '/help', label: t('chat.bot_cmd_help') },
-                              { cmd: '/settings', label: t('chat.bot_cmd_settings') },
-                              { cmd: '/menu', label: t('chat.bot_cmd_menu') },
-                            ]
-                        ).map((item) => (
-                          <button
-                            key={item.cmd}
-                            type="button"
-                            onClick={() => {
-                              setIsBotMenuOpen(false)
-                              onSendMessage(item.cmd)
-                            }}
-                            className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-white/10 text-gray-200 hover:text-white transition-colors cursor-pointer text-left"
+                        <Bot className="w-4 h-4 text-primary-400" />
+                        <span className="font-bold text-xs">
+                          {chatDetails?.botInfo?.menuButton?.text || t('chat.bot_menu')}
+                        </span>
+                      </button>
+
+                      {isBotMenuOpen &&
+                        chatDetails?.botInfo?.commands &&
+                        chatDetails.botInfo.commands.length > 0 && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute bottom-full left-0 mb-2 w-64 max-h-72 overflow-y-auto bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs select-none"
                           >
-                            <span className="font-mono font-bold text-primary-400 shrink-0">{item.cmd}</span>
-                            <span className="text-[10px] text-gray-400 truncate text-right">{item.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                            <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 flex items-center justify-between">
+                              <span>{t('chat.bot_commands')}</span>
+                              {chatDetails?.username && (
+                                <span className="text-primary-400 font-mono">@{chatDetails.username}</span>
+                              )}
+                            </div>
+                            {chatDetails.botInfo.commands
+                              .map((c) => ({
+                                cmd: c.command.startsWith('/') ? c.command : `/${c.command}`,
+                                label: c.description,
+                              }))
+                              .map((item) => (
+                                <button
+                                  key={item.cmd}
+                                  type="button"
+                                  onClick={() => {
+                                    setIsBotMenuOpen(false)
+                                    onSendMessage(item.cmd)
+                                  }}
+                                  className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-white/10 text-gray-200 hover:text-white transition-colors cursor-pointer text-left"
+                                >
+                                  <span className="font-mono font-bold text-primary-400 shrink-0">{item.cmd}</span>
+                                  <span className="text-[10px] text-gray-400 truncate text-right">{item.label}</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                    </div>
+                  )}
 
                 {/* Paperclip Button with Attachment Popover Toggle */}
                 <button
@@ -4614,6 +4755,42 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     </div>
                   )}
 
+                  {/* Group Mention Autocomplete Popup */}
+                  {mentionCandidates.length > 0 && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute bottom-full left-0 mb-2 w-64 max-h-56 overflow-y-auto bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 z-50 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
+                    >
+                      <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 flex items-center justify-between">
+                        <span>Tag Member</span>
+                        <span className="text-accent-cyan font-mono">@{mentionQuery?.query}</span>
+                      </div>
+                      {mentionCandidates.map((cand) => (
+                        <button
+                          key={cand.id}
+                          type="button"
+                          onClick={() => handleInsertMention(cand)}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-white/10 text-gray-200 hover:text-white transition-colors cursor-pointer text-left w-full"
+                        >
+                          <Avatar
+                            accountId={chat?.accountId}
+                            peerId={cand.id}
+                            title={cand.name}
+                            avatarUrl={cand.avatarUrl}
+                            size="xs"
+                            className="shrink-0"
+                          />
+                          <div className="min-w-0 flex-1 flex flex-col">
+                            <span className="font-semibold text-xs text-white truncate">{cand.name}</span>
+                            {cand.username && (
+                              <span className="text-[10px] text-accent-cyan font-mono truncate">@{cand.username}</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <textarea
                     ref={textareaRef}
                     dir={isRTL(inputText) ? 'rtl' : 'ltr'}
@@ -4622,7 +4799,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     rows={1}
                     style={{ maxHeight: '160px' }}
                     onChange={(e) => {
-                      setInputText(e.target.value)
+                      const val = e.target.value
+                      setInputText(val)
+                      const cursorPos = e.target.selectionEnd || val.length
+                      const textBefore = val.slice(0, cursorPos)
+                      const match = textBefore.match(/@([a-zA-Z0-9_\u0600-\u06FF]*)$/)
+                      if (match && (chat?.isGroup || chatDetails?.isGroup)) {
+                        setMentionQuery({ query: match[1], startPos: cursorPos - match[0].length })
+                      } else {
+                        setMentionQuery(null)
+                      }
                     }}
                     onSelect={handleTextareaSelect}
                     onKeyUp={handleTextareaSelect}
@@ -4916,7 +5102,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   initials={chat.avatarInitials}
                   avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
                   size="xl"
-                  className="mb-3 cursor-pointer"
+                  className="mb-3 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={async () => {
+                    const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
+                    if (currentPhoto) {
+                      setLightboxUrl(currentPhoto)
+                    } else if (window.guidegram?.getProfilePhoto) {
+                      try {
+                        showToast('Loading full profile photo...')
+                        const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
+                        if (big) setLightboxUrl(big)
+                        else showToast('No profile photo available')
+                      } catch {
+                        showToast('Could not load profile photo')
+                      }
+                    }
+                  }}
                 />
 
                 <div className="flex items-center justify-center gap-1.5 mb-1 px-2">
@@ -5470,10 +5671,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   title={userProfileDetails?.title || 'User'}
                   avatarUrl={userProfileDetails?.avatarUrl}
                   size="xl"
-                  className="mb-3"
-                  onClick={() => {
+                  className="mb-3 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={async () => {
                     if (userProfileDetails?.avatarUrl) {
                       setLightboxUrl(userProfileDetails.avatarUrl)
+                    } else if (window.guidegram?.getProfilePhoto && userProfilePeerId) {
+                      try {
+                        showToast('Loading full profile photo...')
+                        const big = await window.guidegram.getProfilePhoto(chat.accountId, userProfilePeerId, true)
+                        if (big) setLightboxUrl(big)
+                        else showToast('No profile photo available')
+                      } catch {
+                        showToast('Could not load profile photo')
+                      }
                     }
                   }}
                 />

@@ -80,21 +80,38 @@ registerPortableLocator(app.getPath('exe'), portableDataDir)
 // Initialize File Logging System
 Logger.initialize(portableDataDir)
 
+function isPipeError(err: any): boolean {
+  if (!err) return false
+  const code = err.code || ''
+  const msg = String(err.message || '')
+  return code === 'EPIPE' || code === 'ERR_STREAM_DESTROYED' || msg.includes('EPIPE') || msg.includes('broken pipe')
+}
+
 process.stdout?.on('error', (err: any) => {
-  if (err?.code === 'EPIPE') return
+  if (isPipeError(err)) return
 })
 process.stderr?.on('error', (err: any) => {
-  if (err?.code === 'EPIPE') return
+  if (isPipeError(err)) return
 })
 
+let isHandlingUncaught = false
 process.on('uncaughtException', (err: any) => {
-  if (err?.code === 'EPIPE') return
-  Logger.error('[Process] Uncaught Exception in Main process:', err)
+  if (isPipeError(err) || isHandlingUncaught) return
+  isHandlingUncaught = true
+  try {
+    Logger.error('[Process] Uncaught Exception in Main process:', err)
+  } catch (_) {
+    // Prevent unhandled crashes inside uncaught handler
+  } finally {
+    isHandlingUncaught = false
+  }
 })
 
 process.on('unhandledRejection', (reason: any) => {
-  if (reason?.code === 'EPIPE') return
-  Logger.error('[Process] Unhandled Rejection in Main process:', reason)
+  if (isPipeError(reason)) return
+  try {
+    Logger.error('[Process] Unhandled Rejection in Main process:', reason)
+  } catch (_) {}
 })
 
 let mainWindow: BrowserWindow | null = null
@@ -1002,8 +1019,8 @@ function setupIpcHandlers() {
     }
   )
 
-  ipcMain.handle('telegram:mark-as-read', async (_event, { accountId, chatId }) => {
-    return accountManager.markAsRead(accountId, chatId)
+  ipcMain.handle('telegram:mark-as-read', async (_event, { accountId, chatId, maxId }) => {
+    return accountManager.markAsRead(accountId, chatId, maxId)
   })
 
   ipcMain.handle('telegram:mark-all-as-read', async (_event, { accountId }) => {
@@ -1027,9 +1044,9 @@ function setupIpcHandlers() {
     }
   )
 
-  ipcMain.handle('telegram:get-profile-photo', async (_event, { accountId, peerId }) => {
+  ipcMain.handle('telegram:get-profile-photo', async (_event, { accountId, peerId, isBig }) => {
     try {
-      return await accountManager.getProfilePhoto(accountId, peerId)
+      return await accountManager.getProfilePhoto(accountId, peerId, isBig)
     } catch (err: any) {
       Logger.warn(`[IPC] getProfilePhoto error:`, err)
       return null

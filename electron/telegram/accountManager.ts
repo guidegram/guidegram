@@ -173,6 +173,88 @@ export async function parallelDownloadDocument(
   })
 }
 
+export function strippedThumbToDataUrl(bytes: Uint8Array | Buffer): string | null {
+  if (!bytes || bytes.length < 3) return null
+  try {
+    const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes)
+    if (b[0] === 0x01) {
+      const header = Buffer.from([
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+        0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x28, 0x1c, 0x1e, 0x23, 0x1e, 0x19, 0x28,
+        0x23, 0x21, 0x23, 0x2d, 0x2b, 0x28, 0x30, 0x3c, 0x64, 0x41, 0x3c, 0x37, 0x37, 0x3c, 0x7b, 0x58,
+        0x5d, 0x49, 0x64, 0x91, 0x80, 0x99, 0x96, 0x8f, 0x80, 0x8c, 0x8a, 0xa0, 0xb4, 0xe6, 0xc3, 0xa0,
+        0xaa, 0xda, 0xad, 0x8a, 0x8c, 0xc8, 0xff, 0xcb, 0xda, 0xee, 0xf5, 0xff, 0xff, 0xff, 0x9b, 0xc1,
+        0xff, 0xff, 0xf7, 0xfa, 0xff, 0xe6, 0xff, 0xff, 0xff, 0xff, 0xc0, 0x00, 0x0b, 0x08, b[1], b[2],
+        0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x1f, 0x00, 0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        0x07, 0x08, 0x09, 0x0a, 0x0b, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
+      ])
+      const footer = Buffer.from([0xff, 0xd9])
+      const fullJpeg = Buffer.concat([header, b.subarray(3), footer])
+      return `data:image/jpeg;base64,${fullJpeg.toString('base64')}`
+    } else {
+      return `data:image/jpeg;base64,${b.toString('base64')}`
+    }
+  } catch (_) {
+    return null
+  }
+}
+
+export function extractStrippedThumb(mediaObj: any): string | undefined {
+  if (!mediaObj) return undefined
+  if (Array.isArray(mediaObj.sizes)) {
+    for (const s of mediaObj.sizes) {
+      if (s._ === 'photoStrippedSize' && s.bytes) {
+        const url = strippedThumbToDataUrl(s.bytes)
+        if (url) return url
+      }
+    }
+  }
+  if (Array.isArray(mediaObj.thumbs)) {
+    for (const t of mediaObj.thumbs) {
+      if (t._ === 'photoStrippedSize' && t.bytes) {
+        const url = strippedThumbToDataUrl(t.bytes)
+        if (url) return url
+      }
+    }
+  }
+  return undefined
+}
+
+export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] | undefined {
+  if (!rawEntities || !Array.isArray(rawEntities) || rawEntities.length === 0) return undefined
+  const result: MessageEntityItem[] = []
+  for (const ent of rawEntities) {
+    if (!ent) continue
+    const typeStr = (ent._ || '').replace(/^messageEntity/, '').toLowerCase()
+    let type = 'unknown'
+    if (ent._ === 'messageEntityBold') type = 'bold'
+    else if (ent._ === 'messageEntityItalic') type = 'italic'
+    else if (ent._ === 'messageEntityCode') type = 'code'
+    else if (ent._ === 'messageEntityPre') type = 'pre'
+    else if (ent._ === 'messageEntityTextUrl') type = 'text_url'
+    else if (ent._ === 'messageEntityUrl') type = 'url'
+    else if (ent._ === 'messageEntityMention') type = 'mention'
+    else if (ent._ === 'messageEntityMentionName' || ent._ === 'inputMessageEntityMentionName') type = 'mention'
+    else if (ent._ === 'messageEntityCustomEmoji') type = 'custom_emoji'
+    else if (ent._ === 'messageEntityStrike') type = 'strike'
+    else if (ent._ === 'messageEntitySpoiler') type = 'spoiler'
+    else if (ent._ === 'messageEntityUnderline') type = 'underline'
+    else if (ent._ === 'messageEntityBlockquote') type = 'blockquote'
+    else type = typeStr || 'unknown'
+
+    result.push({
+      type,
+      offset: ent.offset ?? 0,
+      length: ent.length ?? 0,
+      url: ent.url,
+      language: ent.language,
+      documentId: ent.documentId?.toString(),
+    })
+  }
+  return result.length > 0 ? result : undefined
+}
+
 export class AccountManager {
   private store: SessionStore
   private clients = new Map<string, ClientHolder>()
@@ -802,8 +884,12 @@ export class AccountManager {
       const rawMessages = res.messages || []
       const users = new Map<number, any>()
       const chats = new Map<number, any>()
+      const rawMsgMap = new Map<number, any>()
       if (res.users) res.users.forEach((u: any) => users.set(u.id, u))
       if (res.chats) res.chats.forEach((c: any) => chats.set(c.id, c))
+      for (const m of rawMessages) {
+        if (m.id) rawMsgMap.set(m.id, m)
+      }
 
       const items: MessageItem[] = []
       for (const m of rawMessages) {
@@ -815,15 +901,22 @@ export class AccountManager {
 
         let senderId = ''
         let senderName = ''
+        let senderUsername: string | undefined = undefined
         if (m.fromId) {
           if (m.fromId._ === 'peerUser') {
             senderId = m.fromId.userId.toString()
             const u = users.get(m.fromId.userId)
-            if (u) senderName = formatEntityName(u)
+            if (u) {
+              senderName = formatEntityName(u)
+              senderUsername = u.username
+            }
           } else if (m.fromId._ === 'peerChannel') {
             senderId = `-${m.fromId.channelId}`
             const c = chats.get(m.fromId.channelId)
-            if (c) senderName = formatEntityName(c)
+            if (c) {
+              senderName = formatEntityName(c)
+              senderUsername = c.username
+            }
           } else if (m.fromId._ === 'peerChat') {
             senderId = `-${m.fromId.chatId}`
             const c = chats.get(m.fromId.chatId)
@@ -835,6 +928,7 @@ export class AccountManager {
         let mediaFileName: string | undefined = undefined
         let mediaFileSize: number | undefined = undefined
         let mediaDuration: number | undefined = undefined
+        let strippedThumb: string | undefined = undefined
         let isVoice = false
         let isRoundVideo = false
         let isSticker = false
@@ -842,11 +936,13 @@ export class AccountManager {
         if (m.media) {
           if (m.media._ === 'messageMediaPhoto') {
             mediaType = 'photo'
+            strippedThumb = extractStrippedThumb(m.media.photo)
           } else if (m.media._ === 'messageMediaDocument') {
             const doc = m.media.document
             if (doc && doc._ === 'document') {
               mediaFileSize = Number(doc.size || 0)
               mediaType = 'document'
+              strippedThumb = extractStrippedThumb(doc)
               if (doc.attributes) {
                 for (const attr of doc.attributes) {
                   if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
@@ -883,21 +979,98 @@ export class AccountManager {
           }
         }
 
-        const replyMarkup: any = undefined
-        if (m.replyMarkup?._ === 'replyInlineMarkup') {
+        let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
+        if (m.replyMarkup?._ === 'replyInlineMarkup' && Array.isArray(m.replyMarkup.rows)) {
           const rows: InlineButton[][] = []
-          for (const row of m.replyMarkup.rows) {
+          for (let rIdx = 0; rIdx < m.replyMarkup.rows.length; rIdx++) {
+            const row = m.replyMarkup.rows[rIdx]
             const btnRow: InlineButton[] = []
-            for (const b of row.buttons) {
-              if (b._ === 'keyboardButtonUrl') {
-                btnRow.push({ text: b.text, url: b.url })
-              } else if (b._ === 'keyboardButtonCallback') {
-                btnRow.push({ text: b.text, data: Buffer.from(b.data).toString('base64') })
+            if (row?.buttons && Array.isArray(row.buttons)) {
+              for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
+                const b = row.buttons[cIdx]
+                if (b._ === 'keyboardButtonUrl') {
+                  btnRow.push({ text: b.text, url: b.url })
+                } else if (b._ === 'keyboardButtonCallback') {
+                  const b64 = Buffer.from(b.data).toString('base64')
+                  this.botButtonCache.set(`${chatId}_${id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
+                  btnRow.push({ text: b.text, data: b64 })
+                } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
+                  btnRow.push({ text: b.text, url: b.url })
+                }
               }
             }
             if (btnRow.length > 0) rows.push(btnRow)
           }
+          if (rows.length > 0) {
+            replyMarkup = { rows }
+          }
         }
+
+        let replyTo: ReplyInfo | undefined = undefined
+        if (m.replyTo?.replyToMsgId) {
+          const refMsg = rawMsgMap.get(m.replyTo.replyToMsgId)
+          if (refMsg) {
+            let refSenderName = ''
+            let refSenderId = ''
+            if (refMsg.fromId) {
+              if (refMsg.fromId._ === 'peerUser') {
+                refSenderId = refMsg.fromId.userId.toString()
+                const u = users.get(refMsg.fromId.userId)
+                if (u) refSenderName = formatEntityName(u)
+              } else if (refMsg.fromId._ === 'peerChannel') {
+                refSenderId = `-${refMsg.fromId.channelId}`
+                const c = chats.get(refMsg.fromId.channelId)
+                if (c) refSenderName = formatEntityName(c)
+              }
+            }
+            let refMediaType: any = undefined
+            let refThumb: string | undefined = undefined
+            let refIsVoice = false
+            let refIsSticker = false
+            if (refMsg.media) {
+              if (refMsg.media._ === 'messageMediaPhoto') {
+                refMediaType = 'photo'
+                refThumb = extractStrippedThumb(refMsg.media.photo)
+              } else if (refMsg.media._ === 'messageMediaDocument') {
+                refMediaType = 'document'
+                refThumb = extractStrippedThumb(refMsg.media.document)
+                if (refMsg.media.document?.attributes) {
+                  for (const a of refMsg.media.document.attributes) {
+                    if (a._ === 'documentAttributeAudio' && a.voice) {
+                      refIsVoice = true
+                      refMediaType = 'voice'
+                    }
+                    if (a._ === 'documentAttributeVideo') {
+                      refMediaType = 'video'
+                    }
+                    if (a._ === 'documentAttributeSticker') {
+                      refIsSticker = true
+                      refMediaType = 'sticker'
+                    }
+                  }
+                }
+              }
+            }
+            replyTo = {
+              replyToMsgId: m.replyTo.replyToMsgId,
+              senderName: refSenderName || 'Reply',
+              senderId: refSenderId,
+              text: refMsg.message || m.replyTo.quoteText || '',
+              mediaType: refMediaType,
+              strippedThumb: refThumb,
+              isVoice: refIsVoice,
+              isSticker: refIsSticker,
+            }
+          } else {
+            replyTo = {
+              replyToMsgId: m.replyTo.replyToMsgId,
+              text: m.replyTo.quoteText || '',
+              senderName: 'Reply',
+            }
+          }
+        }
+
+        const entities = parseMtprotoEntities(m.entities)
 
         items.push({
           id,
@@ -905,6 +1078,7 @@ export class AccountManager {
           accountId,
           senderId,
           senderName,
+          senderUsername,
           text,
           date,
           isOutgoing,
@@ -912,11 +1086,15 @@ export class AccountManager {
           mediaFileName,
           mediaFileSize,
           mediaDuration,
+          strippedThumb,
           isVoice,
           isRoundVideo,
           isSticker,
           reactions: reactions.length > 0 ? reactions : undefined,
           replyToMsgId: m.replyTo?.replyToMsgId,
+          replyTo,
+          replyMarkup,
+          entities,
         })
       }
 
@@ -928,17 +1106,17 @@ export class AccountManager {
   }
 
 
-  public async getProfilePhoto(accountId: string, peerId: string): Promise<string | null> {
+  public async getProfilePhoto(accountId: string, peerId: string, isBig = false): Promise<string | null> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
 
-    const cacheKey = `${accountId}_${peerId}`
+    const cacheKey = `${accountId}_${peerId}${isBig ? '_big' : ''}`
     if (this.avatarCache.has(cacheKey)) {
       return this.avatarCache.get(cacheKey)!
     }
 
     try {
-      const avatarFile = path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`)
+      const avatarFile = path.join(this.avatarsDir, `avatar_${accountId}_${peerId}${isBig ? '_big' : ''}.jpg`)
       if (fs.existsSync(avatarFile)) {
         const data = await fs.promises.readFile(avatarFile)
         const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
@@ -947,32 +1125,45 @@ export class AccountManager {
       }
 
       // Check if we have peer photo location cached from iterDialogs
-      let photoLoc = this.peerPhotos.get(cacheKey)
-
-      // If not in cache, resolve via client.getChat
-      if (!photoLoc) {
-        try {
-          const numId = parseInt(peerId, 10)
-          if (!isNaN(numId)) {
-            const chat = await holder.client.getChat(numId).catch(() => null)
-            if (chat?.photo?.small) {
-              photoLoc = chat.photo.small
-              this.peerPhotos.set(cacheKey, photoLoc)
-            }
-          }
-        } catch (_) {}
-      }
+      let photoLoc = isBig ? undefined : this.peerPhotos.get(`${accountId}_${peerId}`)
 
       if (photoLoc) {
         await holder.client.downloadToFile(avatarFile, photoLoc).catch(() => {})
-        if (fs.existsSync(avatarFile)) {
-          const data = await fs.promises.readFile(avatarFile)
-          const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
-          this.avatarCache.set(cacheKey, dataUrl)
-          return dataUrl
+      } else {
+        const inputPeer = toRawPeer(peerId)
+        if (inputPeer._ === 'inputPeerUser') {
+          const userPhotos: any = await holder.client.call({
+            _: 'photos.getUserPhotos',
+            userId: { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash },
+            offset: 0,
+            maxId: Long.ZERO,
+            limit: 1,
+          }).catch(() => null)
+          const firstPhoto = userPhotos?.photos?.[0]
+          if (firstPhoto && firstPhoto._ === 'photo') {
+            await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+          }
+        } else if (inputPeer._ === 'inputPeerChannel') {
+          const res: any = await holder.client.call({
+            _: 'channels.getFullChannel',
+            channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
+          }).catch(() => null)
+          const photo = res?.fullChat?.chatPhoto
+          if (photo && photo._ === 'photo') {
+            await holder.client.downloadToFile(avatarFile, photo).catch(() => {})
+          }
         }
       }
-    } catch (_) {}
+
+      if (fs.existsSync(avatarFile)) {
+        const data = await fs.promises.readFile(avatarFile)
+        const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+        this.avatarCache.set(cacheKey, dataUrl)
+        return dataUrl
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getProfilePhoto error for ${peerId}:`, err?.message || err)
+    }
 
     return null
   }
@@ -1419,14 +1610,18 @@ export class AccountManager {
         let isRoundVideo = false
         let isSticker = false
 
+        let strippedThumb: string | undefined = undefined
+
         if (m.media) {
           if (m.media._ === 'messageMediaPhoto') {
             mediaType = 'photo'
+            strippedThumb = extractStrippedThumb(m.media.photo)
           } else if (m.media._ === 'messageMediaDocument') {
             const doc = m.media.document
             if (doc && doc._ === 'document') {
               mediaFileSize = Number(doc.size || 0)
               mediaType = 'document'
+              strippedThumb = extractStrippedThumb(doc)
               if (doc.attributes) {
                 for (const attr of doc.attributes) {
                   if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
@@ -1454,6 +1649,8 @@ export class AccountManager {
           }
         }
 
+        const entities = parseMtprotoEntities(m.entities)
+
         items.push({
           id,
           chatId,
@@ -1467,9 +1664,11 @@ export class AccountManager {
           mediaFileName,
           mediaFileSize,
           mediaDuration,
+          strippedThumb,
           isVoice,
           isRoundVideo,
           isSticker,
+          entities,
         })
       }
 
@@ -1512,6 +1711,24 @@ export class AccountManager {
           id: { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash },
         })
         const u = res.users?.[0]
+        let botInfo: any = undefined
+        if (res.fullUser?.botInfo) {
+          const bi = res.fullUser.botInfo
+          let menuBtn: any = undefined
+          if (res.fullUser.botMenuButton) {
+            const bmb = res.fullUser.botMenuButton
+            if (bmb._ === 'botMenuButton' && bmb.text) {
+              menuBtn = { text: bmb.text, url: bmb.url }
+            } else if (bmb._ === 'botMenuButtonCommands') {
+              menuBtn = { text: 'Commands' }
+            }
+          }
+          botInfo = {
+            description: bi.description,
+            commands: bi.commands?.map((cmd: any) => ({ command: cmd.command, description: cmd.description })),
+            menuButton: menuBtn,
+          }
+        }
         details = {
           id: chatId,
           title: formatEntityName(u),
@@ -1526,6 +1743,7 @@ export class AccountManager {
           isBot: !!u?.bot,
           verified: !!u?.verified,
           customEmojiStatusId: u?.emojiStatus?.documentId?.toString(),
+          botInfo,
         }
       } else if (inputPeer._ === 'inputPeerChannel') {
         const res: any = await holder.client.call({
@@ -1639,12 +1857,23 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
-    const uploaded = await holder.client.sendMedia(chatId, filePath, {
-      caption: options?.caption,
-      replyTo: options?.replyToMsgId,
-      silent: options?.silent,
-      schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
-    })
+    let uploaded: any
+    if (options?.isVoice) {
+      // Handled with DocumentAttributeAudio voice parameters
+      uploaded = await holder.client.sendMedia(chatId, filePath, {
+        caption: options?.caption,
+        replyTo: options?.replyToMsgId,
+        silent: options?.silent,
+        schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
+      })
+    } else {
+      uploaded = await holder.client.sendMedia(chatId, filePath, {
+        caption: options?.caption,
+        replyTo: options?.replyToMsgId,
+        silent: options?.silent,
+        schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
+      })
+    }
 
     return {
       id: uploaded.id,
@@ -1725,27 +1954,30 @@ export class AccountManager {
     }
   }
 
-  public async markAsRead(accountId: string, chatId: string): Promise<void> {
+  public async markAsRead(accountId: string, chatId: string, maxId?: number): Promise<void> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
     const client = holder.client
 
     try {
       const numChatId = Number(chatId)
+      const targetMaxId = typeof maxId === 'number' && maxId > 0 ? maxId : undefined
+
       if (!isNaN(numChatId)) {
-        await client.readHistory(numChatId).catch(async () => {
+        await client.readHistory(numChatId, targetMaxId ? { maxId: targetMaxId } : undefined).catch(async () => {
           const inputPeer = toRawPeer(chatId)
+          const fallbackMaxId = targetMaxId || 2147483647 // INT32_MAX marks everything up to current message as read
           if (inputPeer._ === 'inputPeerChannel') {
             await client.call({
               _: 'channels.readHistory',
               channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
-              maxId: 0,
+              maxId: fallbackMaxId,
             })
           } else {
             await client.call({
               _: 'messages.readHistory',
               peer: inputPeer,
-              maxId: 0,
+              maxId: fallbackMaxId,
             })
           }
         })
@@ -2396,6 +2628,88 @@ export class AccountManager {
         if (chat?.photo?.small) {
           this.peerPhotos.set(`${accountId}_${chatId}`, chat.photo.small)
         }
+
+        let mediaType: any = undefined
+        let mediaFileName: string | undefined = undefined
+        let mediaFileSize: number | undefined = undefined
+        let mediaDuration: number | undefined = undefined
+        let strippedThumb: string | undefined = undefined
+        let isVoice = false
+        let isRoundVideo = false
+        let isSticker = false
+
+        if (msg.raw?.media) {
+          const rawM = msg.raw.media
+          if (rawM._ === 'messageMediaPhoto') {
+            mediaType = 'photo'
+            strippedThumb = extractStrippedThumb(rawM.photo)
+          } else if (rawM._ === 'messageMediaDocument') {
+            const doc = rawM.document
+            if (doc && doc._ === 'document') {
+              mediaFileSize = Number(doc.size || 0)
+              mediaType = 'document'
+              strippedThumb = extractStrippedThumb(doc)
+              if (doc.attributes) {
+                for (const attr of doc.attributes) {
+                  if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
+                  if (attr._ === 'documentAttributeAudio') {
+                    mediaDuration = attr.duration
+                    if (attr.voice) {
+                      isVoice = true
+                      mediaType = 'voice'
+                    }
+                  }
+                  if (attr._ === 'documentAttributeVideo') {
+                    mediaDuration = attr.duration
+                    if (attr.roundMessage) isRoundVideo = true
+                    mediaType = 'video'
+                  }
+                  if (attr._ === 'documentAttributeSticker') {
+                    isSticker = true
+                    mediaType = 'sticker'
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        const entities = parseMtprotoEntities(msg.raw?.entities)
+
+        let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
+        if (msg.raw?.replyMarkup?._ === 'replyInlineMarkup' && Array.isArray(msg.raw.replyMarkup.rows)) {
+          const rows: InlineButton[][] = []
+          for (let rIdx = 0; rIdx < msg.raw.replyMarkup.rows.length; rIdx++) {
+            const row = msg.raw.replyMarkup.rows[rIdx]
+            const btnRow: InlineButton[] = []
+            if (row?.buttons && Array.isArray(row.buttons)) {
+              for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
+                const b = row.buttons[cIdx]
+                if (b._ === 'keyboardButtonUrl') {
+                  btnRow.push({ text: b.text, url: b.url })
+                } else if (b._ === 'keyboardButtonCallback') {
+                  const b64 = Buffer.from(b.data).toString('base64')
+                  this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
+                  btnRow.push({ text: b.text, data: b64 })
+                } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
+                  btnRow.push({ text: b.text, url: b.url })
+                }
+              }
+            }
+            if (btnRow.length > 0) rows.push(btnRow)
+          }
+          if (rows.length > 0) replyMarkup = { rows }
+        }
+
+        let replyTo: ReplyInfo | undefined = undefined
+        if (msg.raw?.replyTo?.replyToMsgId) {
+          replyTo = {
+            replyToMsgId: msg.raw.replyTo.replyToMsgId,
+            text: msg.raw.replyTo.quoteText || '',
+            senderName: 'Reply',
+          }
+        }
+
         const item: MessageItem = {
           id: msg.id,
           chatId,
@@ -2404,7 +2718,20 @@ export class AccountManager {
           date: msg.date ? Math.floor(msg.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
           isOutgoing: msg.isOutgoing,
           senderName: msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName || '',
+          senderUsername: msg.sender?.username,
           senderId: msg.sender?.id?.toString(),
+          mediaType,
+          mediaFileName,
+          mediaFileSize,
+          mediaDuration,
+          strippedThumb,
+          isVoice,
+          isRoundVideo,
+          isSticker,
+          replyToMsgId: msg.raw?.replyTo?.replyToMsgId,
+          replyTo,
+          replyMarkup,
+          entities,
         }
         this.onEventCallback?.('telegram:new-message', {
           accountId,
@@ -2437,6 +2764,7 @@ export class AccountManager {
           text: msg.text || '',
           date: msg.date ? Math.floor(msg.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
           isOutgoing: msg.isOutgoing,
+          entities: parseMtprotoEntities(msg.raw?.entities),
         }
         this.onEventCallback?.('telegram:message-edited', { accountId, chatId, message: item })
       } catch (e) {
@@ -2452,6 +2780,20 @@ export class AccountManager {
       } catch (e) {
         Logger.warn('[AccountManager] Error processing delete message update:', e)
       }
+    })
+
+    client.onRawUpdate.add((update: any) => {
+      try {
+        if (update._ === 'updateReadHistoryInbox' || update._ === 'updateReadChannelInbox') {
+          const peerId = update.peer?.userId?.toString() || update.peer?.chatId?.toString() || (update.channelId ? `-${update.channelId}` : '')
+          this.onEventCallback?.('telegram:read-history', {
+            accountId,
+            chatId: peerId,
+            maxId: update.maxId,
+            stillUnreadCount: update.stillUnreadCount,
+          })
+        }
+      } catch (_) {}
     })
   }
 }

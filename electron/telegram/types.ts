@@ -142,7 +142,13 @@ export interface CustomEmojiPayload {
 export interface ReplyInfo {
   replyToMsgId: number
   senderName?: string
+  senderId?: string
   text?: string
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage'
+  mediaThumbnailUrl?: string
+  isVoice?: boolean
+  isSticker?: boolean
+  strippedThumb?: string
 }
 
 export interface MessageEntityItem {
@@ -160,6 +166,7 @@ export interface MessageItem {
   accountId: string
   senderId?: string
   senderName?: string
+  senderUsername?: string
   senderAvatarUrl?: string
   text: string
   date: number
@@ -176,6 +183,7 @@ export interface MessageItem {
   mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage'
   mediaUrl?: string
   mediaThumbnailUrl?: string
+  strippedThumb?: string
   mediaFileName?: string
   mediaFileSize?: number // bytes
   mediaDuration?: number // seconds

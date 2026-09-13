@@ -126,8 +126,8 @@ const guidegramAPI = {
       messageIds,
       options,
     }),
-  markAsRead: (accountId: string, chatId: string): Promise<void> =>
-    ipcRenderer.invoke('telegram:mark-as-read', { accountId, chatId }),
+  markAsRead: (accountId: string, chatId: string, maxId?: number): Promise<void> =>
+    ipcRenderer.invoke('telegram:mark-as-read', { accountId, chatId, maxId }),
   markAllAsRead: (accountId: string): Promise<{ success: boolean; count: number }> =>
     ipcRenderer.invoke('telegram:mark-all-as-read', { accountId }),
   deleteMessages: (
@@ -137,8 +137,8 @@ const guidegramAPI = {
     revoke?: boolean
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-messages', { accountId, chatId, messageIds, revoke }),
-  getProfilePhoto: (accountId: string, peerId: string): Promise<string | null> =>
-    ipcRenderer.invoke('telegram:get-profile-photo', { accountId, peerId }),
+  getProfilePhoto: (accountId: string, peerId: string, isBig?: boolean): Promise<string | null> =>
+    ipcRenderer.invoke('telegram:get-profile-photo', { accountId, peerId, isBig }),
   downloadMedia: (
     accountId: string,
     chatId: string,

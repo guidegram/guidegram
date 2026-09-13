@@ -45,39 +45,67 @@ export class Logger {
     return `[${timestamp}] [${level}] ${message}${metaStr}\n`
   }
 
+  private static safeConsole(fn: () => void) {
+    try {
+      fn()
+    } catch (_) {
+      // Safely ignore broken pipes (EPIPE) and closed standard streams in GUI mode
+    }
+  }
+
   public static info(message: string, meta?: any) {
     const line = this.formatMessage('INFO', message, meta)
-    console.log(`[INFO] ${message}`, meta || '')
+    this.safeConsole(() => console.log(`[INFO] ${message}`, meta || ''))
     this.append(this.logFile, line)
   }
 
   public static warn(message: string, meta?: any) {
     const line = this.formatMessage('WARN', message, meta)
-    console.warn(`[WARN] ${message}`, meta || '')
+    this.safeConsole(() => console.warn(`[WARN] ${message}`, meta || ''))
     this.append(this.logFile, line)
   }
 
   public static error(message: string, error?: any) {
     const line = this.formatMessage('ERROR', message, error)
-    console.error(`[ERROR] ${message}`, error || '')
+    this.safeConsole(() => console.error(`[ERROR] ${message}`, error || ''))
     this.append(this.logFile, line)
     this.append(this.errorFile, line)
   }
 
   public static debug(message: string, meta?: any) {
     const line = this.formatMessage('DEBUG', message, meta)
-    console.debug(`[DEBUG] ${message}`, meta || '')
+    this.safeConsole(() => console.debug(`[DEBUG] ${message}`, meta || ''))
     this.append(this.logFile, line)
   }
 
+  private static writeQueue: Map<string, string[]> = new Map()
+  private static isFlushing: boolean = false
 
   private static append(filePath: string, content: string) {
     if (!this.initialized || !filePath) return
-    try {
-      fs.appendFileSync(filePath, content, 'utf-8')
-    } catch (err) {
-      console.error('[Logger] Failed to write to log file:', err)
-    }
+    const queue = this.writeQueue.get(filePath) || []
+    queue.push(content)
+    this.writeQueue.set(filePath, queue)
+    this.scheduleFlush()
+  }
+
+  private static scheduleFlush() {
+    if (this.isFlushing) return
+    this.isFlushing = true
+    setImmediate(async () => {
+      try {
+        for (const [file, items] of this.writeQueue.entries()) {
+          if (items.length === 0) continue
+          const chunk = items.splice(0, items.length).join('')
+          await fs.promises.appendFile(file, chunk, 'utf-8').catch(() => {})
+        }
+      } finally {
+        this.isFlushing = false
+        if (Array.from(this.writeQueue.values()).some((q) => q.length > 0)) {
+          this.scheduleFlush()
+        }
+      }
+    })
   }
 
   public static getRecentLogs(maxLines: number = 200): string {
