@@ -420,6 +420,16 @@ app.whenReady().then(async () => {
     }
   })
 
+  ProxyManager.init(
+    (proxies) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('proxy:harvested-updated', { proxies })
+      }
+    },
+    () => accountManager.getActiveClient()
+  )
+  ProxyManager.startAutoHarvest()
+
   updateManager = new UpdateManager()
 
   setupIpcHandlers()

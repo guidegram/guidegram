@@ -34,6 +34,13 @@ export class ProxyManager {
   }
 
   /**
+   * Initialize ProxyHarvester with listeners and client provider
+   */
+  public static init(onUpdate?: (proxies: ProxyConfig[]) => void, clientGetter?: () => any): void {
+    ProxyHarvester.init(onUpdate, clientGetter)
+  }
+
+  /**
    * Start 45-minute background proxy auto-harvesting
    */
   public static startAutoHarvest(intervalMs?: number): void {

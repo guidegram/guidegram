@@ -23,13 +23,17 @@ export class ProxyHarvester {
   private static isScanning = false
   private static lastScanTime: number | null = null
   private static onUpdateCallback?: (proxies: ProxyConfig[]) => void
+  private static clientGetter?: () => any
 
   /**
-   * Initialize or register update listener
+   * Initialize or register update listener and optional client getter
    */
-  public static init(onUpdate?: (proxies: ProxyConfig[]) => void): void {
+  public static init(onUpdate?: (proxies: ProxyConfig[]) => void, clientGetter?: () => any): void {
     if (onUpdate) {
       this.onUpdateCallback = onUpdate
+    }
+    if (clientGetter) {
+      this.clientGetter = clientGetter
     }
   }
 
@@ -42,10 +46,12 @@ export class ProxyHarvester {
     }
 
     Logger.info(`[ProxyHarvester] Starting auto-harvest scheduler (every ${intervalMs / 60000} minutes)`)
-    // Run initial scan immediately in background
-    this.harvestNow().catch((err) => {
-      Logger.warn('[ProxyHarvester] Initial scan error:', err)
-    })
+    // Run initial scan after short delay to allow MTProto connection to establish
+    setTimeout(() => {
+      this.harvestNow().catch((err) => {
+        Logger.warn('[ProxyHarvester] Initial scan error:', err)
+      })
+    }, 4000)
 
     this.intervalTimer = setInterval(() => {
       Logger.info('[ProxyHarvester] Running 45-minute scheduled auto-harvest & two-strike cleanup')
@@ -73,7 +79,8 @@ export class ProxyHarvester {
     const candidates: RawProxyCandidate[] = []
     const seen = new Set<string>()
 
-    const addCandidate = (urlStr: string) => {
+    const addCandidate = (urlStr?: string) => {
+      if (!urlStr) return
       const parsed = this.parseProxyUrl(urlStr, sourceChannel)
       if (parsed) {
         const key = `${parsed.server}:${parsed.port}`
@@ -84,16 +91,11 @@ export class ProxyHarvester {
       }
     }
 
-    // 1. Layer 1: Entities (text_link & url) - Handles hyperlinked text like "پروکسی • پروکسی"
+    // 1. Layer 1: Entities (params.url for @mtcute, url for GramJS/raw)
     if (Array.isArray(msg?.entities)) {
       for (const ent of msg.entities) {
-        if (ent.type === 'text_link' && ent.url) {
-          addCandidate(ent.url)
-        } else if (ent._ === 'messageEntityTextUrl' && ent.url) {
-          addCandidate(ent.url)
-        } else if (ent.url) {
-          addCandidate(ent.url)
-        }
+        addCandidate(ent.params?.url)
+        addCandidate(ent.url)
       }
     }
 
@@ -103,9 +105,16 @@ export class ProxyHarvester {
         const buttons = row.buttons || row
         if (Array.isArray(buttons)) {
           for (const btn of buttons) {
-            if (btn.url) {
-              addCandidate(btn.url)
-            }
+            addCandidate(btn.url)
+          }
+        }
+      }
+    } else if (msg?.raw?.replyMarkup?.rows) {
+      for (const row of msg.raw.replyMarkup.rows) {
+        const buttons = row.buttons || row
+        if (Array.isArray(buttons)) {
+          for (const btn of buttons) {
+            addCandidate(btn.url)
           }
         }
       }
@@ -113,7 +122,7 @@ export class ProxyHarvester {
 
     // 3. Layer 3: Raw text & caption regex matching
     const fullText = `${msg?.text || ''} ${msg?.caption || ''} ${msg?.message || ''}`
-    const regex = /(?:tg:\/\/proxy\?|https?:\/\/(?:t\.me|telegram\.me)\/proxy\?)([^\s\)"'<>]+)/gi
+    const regex = /(?:tg:\/\/proxy\?|https?:\/\/(?:t\.me|telegram\.me)\/proxy\?)[^\s<>'"`\)]+/gi
     let match: RegExpExecArray | null
     while ((match = regex.exec(fullText)) !== null) {
       addCandidate(match[0])
@@ -244,12 +253,33 @@ export class ProxyHarvester {
     Logger.info(`[ProxyHarvester] Starting harvest across channels: ${channels.join(', ')}`)
 
     try {
-      // 1. Scrape raw candidates from channels in parallel
-      const scrapePromises = channels.map((ch) => this.scrapeWebChannel(ch))
-      const results = await Promise.all(scrapePromises)
-      const allCandidates = results.flat()
+      let allCandidates: RawProxyCandidate[] = []
+      const activeClient = this.clientGetter ? this.clientGetter() : null
 
-      Logger.info(`[ProxyHarvester] Extracted ${allCandidates.length} total proxy candidates from web preview`)
+      if (activeClient) {
+        Logger.info(`[ProxyHarvester] Fetching proxy channels via active Telegram MTProto client...`)
+        for (const ch of channels) {
+          try {
+            const clean = ch.replace(/^@/, '')
+            for await (const msg of activeClient.iterHistory(clean, { limit: 15 })) {
+              const cands = this.extractProxiesFromMessage(msg, `@${clean}`)
+              allCandidates.push(...cands)
+            }
+          } catch (chErr) {
+            Logger.warn(`[ProxyHarvester] Failed reading channel ${ch} via MTProto:`, chErr)
+          }
+        }
+        Logger.info(`[ProxyHarvester] Extracted ${allCandidates.length} proxy candidates via MTProto`)
+      }
+
+      // Fallback: If MTProto wasn't available or yielded 0 candidates, try web scrape
+      if (allCandidates.length === 0) {
+        Logger.info(`[ProxyHarvester] Attempting fallback web scrape...`)
+        const scrapePromises = channels.map((ch) => this.scrapeWebChannel(ch))
+        const results = await Promise.all(scrapePromises)
+        allCandidates = results.flat()
+        Logger.info(`[ProxyHarvester] Extracted ${allCandidates.length} total proxy candidates from web preview`)
+      }
 
       // 2. Add candidates to cache map or update existing entries
       for (const cand of allCandidates) {

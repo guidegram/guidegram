@@ -188,9 +188,32 @@ export const App: React.FC = () => {
           const list = prev[accountId] || []
           const msgDate = message?.date ? (message.date < 1e11 ? message.date * 1000 : message.date) : Date.now()
           const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
-          return {
-            ...prev,
-            [accountId]: list.map((d) =>
+          const exists = list.some((d) => d.id === chatId)
+
+          let updatedList: DialogItem[]
+          if (!exists) {
+            const chatInfo = (payload as any)?.chatInfo
+            const newDialog: DialogItem = {
+              id: chatId,
+              accountId,
+              title: chatInfo?.title || message?.senderName || 'Chat',
+              unreadCount: chatId !== activeChatId ? 1 : 0,
+              unreadMentionsCount: 0,
+              isMuted: isChatMuted,
+              isUser: chatInfo?.isUser ?? true,
+              isGroup: chatInfo?.isGroup ?? false,
+              isChannel: chatInfo?.isChannel ?? false,
+              isBroadcast: chatInfo?.isBroadcast ?? false,
+              isBot: chatInfo?.isBot ?? false,
+              isPinned: false,
+              isSavedMessages: chatId === accountId,
+              lastMessageText: msgText,
+              lastMessageDate: msgDate,
+              avatarInitials: (chatInfo?.title || message?.senderName || 'C').slice(0, 2).toUpperCase(),
+            }
+            updatedList = [newDialog, ...list]
+          } else {
+            updatedList = list.map((d) =>
               d.id === chatId
                 ? {
                     ...d,
@@ -199,7 +222,26 @@ export const App: React.FC = () => {
                     lastMessageDate: msgDate,
                   }
                 : d
-            ),
+            )
+          }
+
+          // Sort: pinned first, then unpinned by lastMessageDate descending
+          const pinned = updatedList.filter((d) => d.isPinned)
+          const unpinned = updatedList.filter((d) => !d.isPinned)
+          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+
+          const seen = new Set<string>()
+          const sortedDeduplicated: DialogItem[] = []
+          for (const d of [...pinned, ...unpinned]) {
+            if (!seen.has(d.id)) {
+              seen.add(d.id)
+              sortedDeduplicated.push(d)
+            }
+          }
+
+          return {
+            ...prev,
+            [accountId]: sortedDeduplicated,
           }
         })
       })
@@ -356,10 +398,17 @@ export const App: React.FC = () => {
       hasMoreDialogsRef.current = true
       loadCloudFoldersForAccount(accountId)
       const dialogs = await window.guidegram.getDialogs(accountId, 350)
-      setDialogsByAccount((prev) => ({ ...prev, [accountId]: dialogs }))
-      if (dialogs.length > 0 && !activeChatId) {
-        setActiveChatId(dialogs[0].id)
-        loadMessages(accountId, dialogs[0].id)
+      const uniqueMap = new Map<string, DialogItem>()
+      for (const d of dialogs) {
+        if (!uniqueMap.has(d.id)) {
+          uniqueMap.set(d.id, d)
+        }
+      }
+      const uniqueDialogs = Array.from(uniqueMap.values())
+      setDialogsByAccount((prev) => ({ ...prev, [accountId]: uniqueDialogs }))
+      if (uniqueDialogs.length > 0 && !activeChatId) {
+        setActiveChatId(uniqueDialogs[0].id)
+        loadMessages(accountId, uniqueDialogs[0].id)
       }
     } catch (err) {
       console.error('Failed to load dialogs:', err)

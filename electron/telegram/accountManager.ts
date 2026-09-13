@@ -190,6 +190,7 @@ export class AccountManager {
   private activeMediaDownloads = new Map<string, { abort: () => void; isCancelled: () => boolean }>()
   private customEmojiCache = new Map<string, string>()
   private botButtonCache = new Map<string, Buffer>()
+  private peerPhotos = new Map<string, any>()
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -287,6 +288,11 @@ export class AccountManager {
 
         this.clients.set(updatedInfo.id, { client, session: sessionString, info: updatedInfo })
         this.setupEventListeners(updatedInfo.id, client)
+        try {
+          client.startUpdatesLoop()
+        } catch (updErr) {
+          Logger.warn(`[AccountManager] startUpdatesLoop warning for ${updatedInfo.id}:`, updErr)
+        }
 
         const currentAccounts = this.store.getConfig().accounts.map((a) => (a.id === updatedInfo.id ? updatedInfo : a))
         this.store.updateConfig({ accounts: currentAccounts })
@@ -442,6 +448,9 @@ export class AccountManager {
     this.clients.set(accountId, { client, session: sessionString, info })
     this.pendingAuthClients.delete(phone)
     this.setupEventListeners(accountId, client)
+    try {
+      client.startUpdatesLoop()
+    } catch (_) {}
 
     return info
   }
@@ -605,7 +614,10 @@ export class AccountManager {
     this.clients.set(accountId, { client, session: sessionString, info })
     this.pendingQrAuth = undefined
     this.setupEventListeners(accountId, client)
-    Logger.info(`[AccountManager] finalizeQrLogin completed successfully for account  ()`)
+    try {
+      client.startUpdatesLoop()
+    } catch (_) {}
+    Logger.info(`[AccountManager] finalizeQrLogin completed successfully for account ${accountId}`)
     this.onEventCallback?.('telegram:qr-success', { account: info })
 
     return info
@@ -616,6 +628,7 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (holder?.client) {
       try {
+        try { holder.client.stopUpdatesLoop() } catch (_) {}
         await holder.client.call({ _: 'auth.logOut' }).catch(() => {})
         await holder.client.disconnect().catch(() => {})
       } catch (_) {}
@@ -636,9 +649,24 @@ export class AccountManager {
 
     try {
       const dialogs: DialogItem[] = []
-      for await (const d of holder.client.iterDialogs({ limit })) {
+      const seenIds = new Set<string>()
+
+      const iterParams: any = { limit }
+      if (offsetDate && offsetDate > 0) {
+        iterParams.offset = { date: offsetDate }
+      }
+
+      for await (const d of holder.client.iterDialogs(iterParams)) {
         const peer = d.peer as any
         const peerId = peer.id.toString()
+        if (seenIds.has(peerId)) continue
+        seenIds.add(peerId)
+
+        // Cache small photo location for instant avatar download
+        if (peer.photo?.small) {
+          this.peerPhotos.set(`${accountId}_${peerId}`, peer.photo.small)
+        }
+
         const isUser = peer._ === 'user' || typeof peer.firstName === 'string'
         const isBot = Boolean(peer.isBot)
         const isGroup = peer.chatType === 'group' || peer.chatType === 'supergroup' || Boolean(peer.isGroup)
@@ -648,8 +676,25 @@ export class AccountManager {
         const title = formatEntityName(peer, 'Unknown Chat')
         const unreadCount = d.unreadCount || 0
         const unreadMentionsCount = d.unreadMentionsCount || 0
-        const isPinned = d.isPinned || false
-        const isMuted = d.isMuted || false
+        const isPinned = Boolean(d.isPinned)
+
+        // Accurate isMuted calculation:
+        // 1. Explicit boolean value from mtcute
+        // 2. Peer notify settings check (muteUntil in future or silent)
+        // 3. Fallback: broadcast channels in Telegram are muted by default
+        let isMuted = false
+        if (typeof d.isMuted === 'boolean') {
+          isMuted = d.isMuted
+        } else {
+          const rawNotify = (d.raw as any)?.notifySettings
+          const muteUntil = rawNotify?.muteUntil
+          const silent = rawNotify?.silent
+          if (silent || (muteUntil && muteUntil > Date.now() / 1000)) {
+            isMuted = true
+          } else if (isBroadcast) {
+            isMuted = true // Broadcast channels in Telegram are muted by default unless explicitly unmuted
+          }
+        }
 
         let lastMessageText = ''
         let lastMessageDate = 0
@@ -901,21 +946,21 @@ export class AccountManager {
         return dataUrl
       }
 
-      const inputPeer = toRawPeer(peerId)
-      let photoLoc: any = null
+      // Check if we have peer photo location cached from iterDialogs
+      let photoLoc = this.peerPhotos.get(cacheKey)
 
-      if (inputPeer._ === 'inputPeerUser') {
-        const res: any = await holder.client.call({
-          _: 'users.getFullUser',
-          id: { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash },
-        }).catch(() => null)
-        photoLoc = res?.fullUser?.profilePhoto
-      } else if (inputPeer._ === 'inputPeerChannel') {
-        const res: any = await holder.client.call({
-          _: 'channels.getFullChannel',
-          channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
-        }).catch(() => null)
-        photoLoc = res?.fullChat?.chatPhoto
+      // If not in cache, resolve via client.getChat
+      if (!photoLoc) {
+        try {
+          const numId = parseInt(peerId, 10)
+          if (!isNaN(numId)) {
+            const chat = await holder.client.getChat(numId).catch(() => null)
+            if (chat?.photo?.small) {
+              photoLoc = chat.photo.small
+              this.peerPhotos.set(cacheKey, photoLoc)
+            }
+          }
+        } catch (_) {}
       }
 
       if (photoLoc) {
@@ -2334,10 +2379,23 @@ export class AccountManager {
     return accounts
   }
 
+  public getActiveClient(): TelegramClient | null {
+    for (const [, holder] of this.clients) {
+      if (holder.client && holder.info.status === 'connected') {
+        return holder.client
+      }
+    }
+    return null
+  }
+
   private setupEventListeners(accountId: string, client: TelegramClient): void {
     client.onNewMessage.add(async (msg: any) => {
       try {
-        const chatId = msg.chat?.id?.toString() || ''
+        const chat = msg.chat as any
+        const chatId = chat?.id?.toString() || ''
+        if (chat?.photo?.small) {
+          this.peerPhotos.set(`${accountId}_${chatId}`, chat.photo.small)
+        }
         const item: MessageItem = {
           id: msg.id,
           chatId,
@@ -2345,8 +2403,25 @@ export class AccountManager {
           text: msg.text || '',
           date: msg.date ? Math.floor(msg.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
           isOutgoing: msg.isOutgoing,
+          senderName: msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName || '',
+          senderId: msg.sender?.id?.toString(),
         }
-        this.onEventCallback?.('telegram:new-message', { accountId, chatId, message: item })
+        this.onEventCallback?.('telegram:new-message', {
+          accountId,
+          chatId,
+          message: item,
+          chatInfo: chat
+            ? {
+                id: chatId,
+                title: formatEntityName(chat, 'Chat'),
+                isUser: chat.chatType === 'private' || chat.chatType === 'bot',
+                isGroup: chat.chatType === 'group' || chat.chatType === 'supergroup',
+                isChannel: chat.chatType === 'channel',
+                isBroadcast: chat.chatType === 'channel',
+                isBot: chat.chatType === 'bot',
+              }
+            : undefined,
+        })
       } catch (e) {
         Logger.warn('[AccountManager] Error processing new message update:', e)
       }
