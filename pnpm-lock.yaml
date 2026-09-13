@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@mtcute/convert':
-        specifier: ^0.32.1
+        specifier: 0.32.1
         version: 0.32.1(@mtcute/node@0.32.1)
       '@mtcute/core':
-        specifier: ^0.32.1
+        specifier: 0.32.1
         version: 0.32.1
       '@mtcute/node':
-        specifier: ^0.32.1
+        specifier: 0.32.1
         version: 0.32.1
       clsx:
         specifier: ^2.1.1
