@@ -47,25 +47,8 @@ Guidegram v1.8.0 delivers an upgraded high-performance protocol foundation for f
 
 ---
 
-## 📊 Full Commit Log (v1.7.0...v1.8.0)
-- `387092b` - `docs(changelog): update version history and harmonize release entries`
-- `90e3209` - `docs(launch): finalize Phase 1 launch assets and submission package`
-- `58e05a9` - `docs(launch): add AlternativeTo submission package and master media kit`
-- `fe7b8b0` - `docs(release): harmonize changelog and release documentation with user-centric standards`
-- `643a731` - `docs(strategy): finalize global positioning matrix and outreach playbook`
-- `f75c934` - `feat(support): add crypto donation modal and navigation shortcuts`
-- `0ba3b4f` - `fix(ui): sanitize avatar rings, fix real-time message date updates, and normalize timestamps`
-- `975b013` - `feat(stats): temporarily disable 30-day timeframe option`
-- `7afa400` - `docs(strategy): add master strategy index and executive synthesis`
-- `2904e1f` - `fix(chat): remove unverified story ring and empty modal trigger from avatars`
-- `d1d2463` - `docs(strategy): add comprehensive communication assets and pitch templates`
-- `5ea4b9e` - `fix(chat): remove redundant unread senders badge from chat list items`
-- `50f2cdd` - `fix(i18n): localize chat list unread badge and sender counts`
-- `4f9dfab` - `docs(strategy): add 4-week execution roadmap and operational security playbook`
-- `e399c81` - `docs(strategy): add multi-channel distribution playbook and directory submissions`
-- `0bb947e` - `chore(chat): remove unused formatSendersCount import`
-- `264bd5f` - `feat(stats): implement progressive history crawler and animated sync UI`
-- `7f67362` - `feat(telegram): migrate MTProto client from GramJS to @mtcute`
+## 📝 Full Changelog
+https://github.com/guidegram/guidegram/compare/v1.7.0...v1.8.0
 
 ---
 
