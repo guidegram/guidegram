@@ -299,7 +299,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         : Date.now()
 
       let attempts = 0
-      const maxBatches = tf === 'month' ? 40 : tf === 'week' ? 20 : tf === 'yesterday' ? 10 : 8
+      const maxBatches = tf === 'month' ? 40 : tf === 'week' ? 25 : tf === 'yesterday' ? 20 : 15
 
       while (
         (targetStart === 0 || oldestDate > targetStart) &&
@@ -313,13 +313,12 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
           ? currentMessages.reduce((min, m) => (m.id < min.id ? m : min), currentMessages[0])
           : null
         const offsetId = oldestMsg ? oldestMsg.id : 0
-        const offsetSeconds = Math.floor(oldestDate / 1000)
 
         const older = await window.guidegram.getHistoricalMessages(
           chat.accountId,
           chat.id,
           100,
-          offsetSeconds,
+          0,
           offsetId
         )
 
@@ -369,13 +368,12 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         ? allMessages.reduce((min, m) => (m.id < min.id ? m : min), allMessages[0])
         : null
       const offsetId = oldestMsg ? oldestMsg.id : 0
-      const offsetSeconds = Math.floor(oldestDate / 1000)
 
       const older = await window.guidegram.getHistoricalMessages(
         chat.accountId,
         chat.id,
         count,
-        offsetSeconds,
+        0,
         offsetId
       )
 
@@ -739,9 +737,13 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
               <h2 className="text-base font-bold text-gray-100 flex items-center gap-2 truncate">
                 <span>{t('stats.title')}</span>
               </h2>
-              <p className="text-xs text-gray-400 truncate">
-                {chat.title} • {formatNumber(totalMessagesCount)} {t('stats.total_messages')}
-              </p>
+              <div className="text-xs text-gray-400 flex items-center gap-1.5 truncate">
+                <span className="truncate">{chat.title}</span>
+                <span className="opacity-50">•</span>
+                <span className="shrink-0 font-medium">
+                  {formatNumber(totalMessagesCount)} {t('stats.total_messages')}
+                </span>
+              </div>
             </div>
           </div>
 

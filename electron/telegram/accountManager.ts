@@ -758,7 +758,7 @@ export class AccountManager {
 
   public async getDialogs(
     accountId: string,
-    limit = 100,
+    limit = 350,
     offsetDate = 0,
     offsetId = 0
   ): Promise<DialogItem[]> {
@@ -793,7 +793,7 @@ export class AccountManager {
         const isBot = Boolean(peer.isBot)
         const isGroup = peer.chatType === 'group' || peer.chatType === 'supergroup' || Boolean(peer.isGroup)
         const isChannel = peer.chatType === 'channel' || (Boolean(peer.isChannel) && !peer.isGroup)
-        const isBroadcast = isChannel
+        const isBroadcast = isChannel && !isGroup
 
         const title = formatEntityName(peer, 'Unknown Chat')
         const unreadCount = d.unreadCount || 0
@@ -947,6 +947,63 @@ export class AccountManager {
         if (m.id) rawMsgMap.set(m.id, m)
       }
 
+      // Pre-fetch any missing replied messages so snippets and sender names can be resolved accurately
+      const missingReplyIds = Array.from(
+        new Set<number>(
+          rawMessages
+            .map((m: any) => m.replyTo?.replyToMsgId)
+            .filter((id: any) => typeof id === 'number' && id > 0 && !rawMsgMap.has(id))
+        )
+      )
+
+      if (missingReplyIds.length > 0) {
+        try {
+          let extraRes: any
+          if (inputPeer._ === 'inputPeerChannel') {
+            extraRes = await holder.client.call({
+              _: 'channels.getMessages',
+              channel: {
+                _: 'inputChannel',
+                channelId: inputPeer.channelId,
+                accessHash: inputPeer.accessHash || Long.ZERO,
+              },
+              id: missingReplyIds.map((id) => ({ _: 'inputMessageID', id })),
+            })
+          } else {
+            extraRes = await holder.client.call({
+              _: 'messages.getMessages',
+              id: missingReplyIds.map((id) => ({ _: 'inputMessageID', id })),
+            })
+          }
+
+          if (extraRes?.users) {
+            extraRes.users.forEach((u: any) => {
+              users.set(u.id, u)
+              if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+              const thumb = extractStrippedThumb(u.photo)
+              if (thumb) this.avatarCache.set(`${accountId}_${u.id}`, thumb)
+            })
+          }
+          if (extraRes?.chats) {
+            extraRes.chats.forEach((c: any) => {
+              chats.set(c.id, c)
+              if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+              const thumb = extractStrippedThumb(c.photo)
+              if (thumb) this.avatarCache.set(`${accountId}_-${c.id}`, thumb)
+            })
+          }
+          if (extraRes?.messages) {
+            for (const em of extraRes.messages) {
+              if (em && em.id) {
+                rawMsgMap.set(em.id, em)
+              }
+            }
+          }
+        } catch (e) {
+          Logger.warn(`[AccountManager] Failed to fetch missing reply messages for ${chatId}:`, e)
+        }
+      }
+
       const items: MessageItem[] = []
       for (const m of rawMessages) {
         if (m._ === 'messageEmpty') continue
@@ -959,14 +1016,26 @@ export class AccountManager {
         let senderName = ''
         let senderUsername: string | undefined = undefined
         let senderAvatarUrl: string | undefined = undefined
+        let senderEmojiStatusId: string | undefined = undefined
+        let senderColor: number | undefined = undefined
+        let senderIsPremium: boolean | undefined = undefined
+
         if (m.fromId) {
           if (m.fromId._ === 'peerUser') {
             senderId = m.fromId.userId.toString()
-            const u = users.get(m.fromId.userId)
-            if (u) {
-              senderName = formatEntityName(u)
-              senderUsername = u.username
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_${u.id}`) || extractStrippedThumb(u.photo)
+            const senderUser = users.get(m.fromId.userId)
+            if (senderUser) {
+              senderName = formatEntityName(senderUser)
+              senderUsername = senderUser.username
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_${senderUser.id}`) || extractStrippedThumb(senderUser.photo)
+              if (senderUser.emojiStatus?.documentId) {
+                senderEmojiStatusId = senderUser.emojiStatus.documentId.toString()
+              }
+              const senderColorVal = senderUser?.color?.color
+              senderColor = senderColorVal !== undefined
+                ? senderColorVal
+                : (senderUser.id ? Math.abs(Number(senderUser.id)) % 7 : undefined)
+              senderIsPremium = senderUser.premium === true
             }
           } else if (m.fromId._ === 'peerChannel') {
             senderId = `-${m.fromId.channelId}`
@@ -975,6 +1044,9 @@ export class AccountManager {
               senderName = formatEntityName(c)
               senderUsername = c.username
               senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+              if (c.color?.color !== undefined) {
+                senderColor = c.color.color
+              }
             }
           } else if (m.fromId._ === 'peerChat') {
             senderId = `-${m.fromId.chatId}`
@@ -1142,6 +1214,9 @@ export class AccountManager {
           senderName,
           senderUsername,
           senderAvatarUrl,
+          senderEmojiStatusId,
+          senderColor,
+          senderIsPremium,
           text,
           date,
           isOutgoing,
@@ -1915,15 +1990,51 @@ export class AccountManager {
           channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
         })
         const c = res.chats?.[0]
+        let availableReactions: string[] | undefined = undefined
+        let canReactWithStars = true
+        const chatReactions = res.fullChat?.availableReactions
+        if (chatReactions) {
+          if (chatReactions._ === 'chatReactionsNone' || chatReactions.className === 'ChatReactionsNone') {
+            availableReactions = []
+            canReactWithStars = false
+          } else if (chatReactions.reactions && Array.isArray(chatReactions.reactions)) {
+            availableReactions = []
+            for (const r of chatReactions.reactions) {
+              if (r.emoticon) availableReactions.push(r.emoticon)
+            }
+          }
+          if (chatReactions.allowCustom !== undefined) {
+            canReactWithStars = true
+          }
+        }
+
+        const notifySettings = res.fullChat?.notifySettings
+        let isMuted = false
+        const nowSec = Math.floor(Date.now() / 1000)
+        if (notifySettings) {
+          if (notifySettings.silent === true) {
+            isMuted = true
+          } else if (notifySettings.muteUntil !== undefined && notifySettings.muteUntil !== null) {
+            const muteVal = Number(notifySettings.muteUntil)
+            if (muteVal > nowSec || muteVal === 2147483647) {
+              isMuted = true
+            }
+          }
+        }
+
         details = {
           id: chatId,
           title: c?.title || 'Channel',
           about: res.fullChat?.about,
           membersCount: res.fullChat?.participantsCount,
           isChannel: !!c?.broadcast,
+          isBroadcast: !!c?.broadcast,
           isGroup: !c?.broadcast,
           isUser: false,
           isBot: false,
+          isMuted,
+          availableReactions,
+          canReactWithStars,
           verified: !!c?.verified,
           isForum: !!c?.forum,
         }
@@ -1933,6 +2044,38 @@ export class AccountManager {
           chatId: inputPeer.chatId,
         })
         const c = res.chats?.[0]
+        let availableReactions: string[] | undefined = undefined
+        let canReactWithStars = true
+        const chatReactions = res.fullChat?.availableReactions
+        if (chatReactions) {
+          if (chatReactions._ === 'chatReactionsNone' || chatReactions.className === 'ChatReactionsNone') {
+            availableReactions = []
+            canReactWithStars = false
+          } else if (chatReactions.reactions && Array.isArray(chatReactions.reactions)) {
+            availableReactions = []
+            for (const r of chatReactions.reactions) {
+              if (r.emoticon) availableReactions.push(r.emoticon)
+            }
+          }
+          if (chatReactions.allowCustom !== undefined) {
+            canReactWithStars = true
+          }
+        }
+
+        const notifySettings = res.fullChat?.notifySettings
+        let isMuted = false
+        const nowSec = Math.floor(Date.now() / 1000)
+        if (notifySettings) {
+          if (notifySettings.silent === true) {
+            isMuted = true
+          } else if (notifySettings.muteUntil !== undefined && notifySettings.muteUntil !== null) {
+            const muteVal = Number(notifySettings.muteUntil)
+            if (muteVal > nowSec || muteVal === 2147483647) {
+              isMuted = true
+            }
+          }
+        }
+
         details = {
           id: chatId,
           title: c?.title || 'Group',
@@ -1941,6 +2084,9 @@ export class AccountManager {
           isChannel: false,
           isUser: false,
           isBot: false,
+          isMuted,
+          availableReactions,
+          canReactWithStars,
         }
       }
     } catch (err: any) {

@@ -130,7 +130,7 @@ assert(
   'UpdateBanner must render security/required badge and shield icon'
 )
 assert(
-  bannerContent.includes('Update Now (Required)'),
+  bannerContent.includes('update.now_required') || bannerContent.includes('Update Now (Required)'),
   'Update action button must display explicit Required text when mandatory'
 )
 console.log('  ✅ UpdateBanner UI enforcement and dismiss suppression verified.')

@@ -580,21 +580,30 @@ export const App: React.FC = () => {
     }
   }
 
+  const handleUpdateUnreadCount = (chatId: string, unreadCount: number) => {
+    if (!activeAccountId) return
+    setDialogsByAccount((prev) => {
+      const list = prev[activeAccountId] || []
+      return {
+        ...prev,
+        [activeAccountId]: list.map((d) => (d.id === chatId ? { ...d, unreadCount } : d)),
+      }
+    })
+  }
+
   const loadMessages = async (accountId: string, chatId: string) => {
     if (!window.guidegram?.getMessages) return
     try {
-      const msgs = await window.guidegram.getMessages(accountId, chatId, 60)
+      const dialog = (dialogsByAccount[accountId] || []).find((d) => d.id === chatId)
+      const unreadCount = dialog?.unreadCount || 0
+      const fetchLimit = Math.min(100, Math.max(60, unreadCount + 20))
+      const msgs = await window.guidegram.getMessages(accountId, chatId, fetchLimit)
       setMessagesByChat((prev) => ({ ...prev, [chatId]: msgs }))
-      const lastMsgId = msgs && msgs.length > 0 ? Math.max(...msgs.map((m) => m.id)) : undefined
-      window.guidegram.markAsRead(accountId, chatId, lastMsgId)
-      // Immediately clear unreadCount locally for this chat
-      setDialogsByAccount((prev) => {
-        const list = prev[accountId] || []
-        return {
-          ...prev,
-          [accountId]: list.map((d) => (d.id === chatId ? { ...d, unreadCount: 0 } : d)),
-        }
-      })
+
+      if (unreadCount === 0 && msgs.length > 0) {
+        const lastMsgId = Math.max(...msgs.map((m) => m.id))
+        window.guidegram.markAsRead(accountId, chatId, lastMsgId)
+      }
     } catch (err) {
       console.error('Failed to load messages:', err)
     }
@@ -1216,6 +1225,7 @@ export const App: React.FC = () => {
             onToggleGhostMode={handleToggleGhostMode}
             onSelectUserOrChat={handleSelectUserOrChat}
             onMergeHistoricalMessages={handleMergeHistoricalMessages}
+            onUpdateUnreadCount={handleUpdateUnreadCount}
           />
         </div>
       )}

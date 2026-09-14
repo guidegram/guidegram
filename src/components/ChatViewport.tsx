@@ -120,6 +120,7 @@ interface ChatViewportProps {
   onToggleGhostMode: () => void
   onSelectUserOrChat?: (target: string) => void
   onMergeHistoricalMessages?: (newMessages: MessageItem[]) => void
+  onUpdateUnreadCount?: (chatId: string, unreadCount: number) => void
 }
 
 interface StagedAttachment {
@@ -583,6 +584,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onToggleGhostMode,
   onSelectUserOrChat,
   onMergeHistoricalMessages,
+  onUpdateUnreadCount,
 }) => {
   const [inputText, setInputText] = useState('')
   const [copiedChatId, setCopiedChatId] = useState(false)
@@ -980,6 +982,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     adjustTextareaHeight()
   }, [inputText, adjustTextareaHeight])
 
+  const lastMarkedReadIdRef = useRef<number>(0)
+  const markAsReadTimerRef = useRef<any>(null)
+
+  useEffect(() => {
+    lastMarkedReadIdRef.current = chat?.readInboxMaxId || 0
+  }, [chat?.id])
+
+  const firstUnreadMessageId = useMemo(() => {
+    if (!chat || !chat.unreadCount || chat.unreadCount <= 0 || messages.length === 0) return null
+    if (chat.readInboxMaxId && chat.readInboxMaxId > 0) {
+      const found = messages.find((m) => m.id > chat.readInboxMaxId! && !m.isOutgoing)
+      if (found) return found.id
+    }
+    const incoming = messages.filter((m) => !m.isOutgoing)
+    const target = incoming[Math.max(0, incoming.length - chat.unreadCount)]
+    return target?.id || null
+  }, [chat?.id, chat?.unreadCount, chat?.readInboxMaxId, messages])
+
   // Throttled scroll listener detecting > 300px from bottom (Feature 19) & Infinite scroll to top
   const handleScroll = useCallback(() => {
     if (isScrollingRef.current) return
@@ -992,6 +1012,35 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         setShowScrollBottom(isScrolledUp)
         if (distanceFromBottom <= 50) {
           setUnreadScrollCount(0)
+        }
+
+        // Dynamic Read Tracking: As user scrolls, detect the highest visible message and mark read progressively
+        const containerBottom = el.scrollTop + el.clientHeight
+        const msgNodes = el.querySelectorAll('[id^="msg-"]')
+        let maxVisibleId = 0
+        msgNodes.forEach((node) => {
+          const htmlEl = node as HTMLElement
+          if (htmlEl.offsetTop + htmlEl.offsetHeight <= containerBottom + 60) {
+            const rawId = parseInt(htmlEl.id.replace('msg-', ''), 10)
+            if (!isNaN(rawId) && rawId > maxVisibleId) {
+              maxVisibleId = rawId
+            }
+          }
+        })
+
+        if (maxVisibleId > lastMarkedReadIdRef.current) {
+          lastMarkedReadIdRef.current = maxVisibleId
+          if (!ghostMode && chat && window.guidegram?.markAsRead) {
+            if (markAsReadTimerRef.current) clearTimeout(markAsReadTimerRef.current)
+            markAsReadTimerRef.current = setTimeout(() => {
+              window.guidegram.markAsRead(chat.accountId, chat.id, maxVisibleId)
+            }, 300)
+          }
+
+          const remainingUnread = messages.filter((m) => !m.isOutgoing && m.id > maxVisibleId).length
+          if (chat && onUpdateUnreadCount) {
+            onUpdateUnreadCount(chat.id, remainingUnread)
+          }
         }
 
         // Infinite Scroll: Fetch older messages when near top (< 120px)
@@ -1040,12 +1089,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       }
       isScrollingRef.current = false
     })
-  }, [messages, chat, onMergeHistoricalMessages])
+  }, [messages, chat, onMergeHistoricalMessages, ghostMode, onUpdateUnreadCount])
 
   const handleScrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     setShowScrollBottom(false)
     setUnreadScrollCount(0)
+    if (!ghostMode && chat && window.guidegram?.markAsRead && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1]
+      lastMarkedReadIdRef.current = lastMsg.id
+      window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
+      onUpdateUnreadCount?.(chat.id, 0)
+    }
   }
 
   // Handle new incoming/outgoing messages and chat switching (Feature 19)
@@ -1061,9 +1116,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setReplyMessage(null)
       setStagedAttachments([])
       setDismissedComposerUrl(null)
+
       setTimeout(() => {
+        // If chat has unread messages, find the first unread message and scroll directly to it!
+        const unreadCount = chat?.unreadCount || 0
+        if (unreadCount > 0 && messages.length > 0) {
+          const incoming = messages.filter((m) => !m.isOutgoing)
+          const firstUnread = chat?.readInboxMaxId
+            ? messages.find((m) => m.id > chat.readInboxMaxId! && !m.isOutgoing)
+            : incoming[Math.max(0, incoming.length - unreadCount)]
+
+          if (firstUnread) {
+            const el = document.getElementById(`msg-${firstUnread.id}`)
+            if (el) {
+              el.scrollIntoView({ behavior: 'auto', block: 'start' })
+              setShowScrollBottom(true)
+              return
+            }
+          }
+        }
+
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
-      }, 50)
+      }, 60)
       return
     }
 
@@ -3509,11 +3583,20 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         ) : (
           filteredMessages.map((msg) => {
             const isSelected = selectedMessage?.id === msg.id
+            const isFirstUnread = msg.id === firstUnreadMessageId
 
             return (
-              <div
-                key={msg.id}
-                id={`msg-${msg.id}`}
+              <React.Fragment key={msg.id}>
+                {isFirstUnread && (
+                  <div className="flex items-center justify-center my-3 select-none sticky top-2 z-20">
+                    <div className="px-4 py-1 rounded-full bg-primary-600/30 text-primary-300 border border-primary-500/40 text-xs font-semibold shadow-md backdrop-blur-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse" />
+                      <span>{t('chat.unread_separator')}</span>
+                    </div>
+                  </div>
+                )}
+                <div
+                  id={`msg-${msg.id}`}
                 onMouseEnter={() => setHoveredMessage(msg)}
                 onMouseLeave={() => setHoveredMessage(null)}
                 onContextMenu={(e) => {
@@ -4331,8 +4414,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   )}
                 </div>
               </div>
-            )
-          })
+            </React.Fragment>
+          )
+        })
         )}
         <div ref={messagesEndRef} />
       </div>

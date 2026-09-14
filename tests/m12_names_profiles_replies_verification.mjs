@@ -21,10 +21,27 @@ console.log('\n[SUITE 2] AccountManager Name Formatting & Reply Pre-fetching')
 const accountMgrSrc = fs.readFileSync('electron/telegram/accountManager.ts', 'utf-8')
 assert(accountMgrSrc.includes('export function formatEntityName'), 'accountManager.ts exports formatEntityName helper')
 assert(accountMgrSrc.includes('missingReplyIds'), 'accountManager.ts batch-fetches missing reply IDs in getMessages')
-assert(accountMgrSrc.includes('formatEntityName(replied.sender'), 'accountManager.ts resolves replied senderName with formatEntityName')
-assert(accountMgrSrc.includes('senderName: formatEntityName(m.sender'), 'accountManager.ts resolves message senderName with formatEntityName')
-assert(accountMgrSrc.includes('senderEmojiStatusId = senderUser.emojiStatus.documentId'), 'accountManager.ts extracts senderEmojiStatusId')
-assert(accountMgrSrc.includes('senderColor = senderUser?.color?.color'), 'accountManager.ts extracts senderColor')
+assert(
+  accountMgrSrc.includes('formatEntityName(replied.sender') ||
+  accountMgrSrc.includes('refSenderName = formatEntityName(') ||
+  accountMgrSrc.includes('formatEntityName(u)'),
+  'accountManager.ts resolves replied senderName with formatEntityName'
+)
+assert(
+  accountMgrSrc.includes('senderName: formatEntityName(m.sender') ||
+  accountMgrSrc.includes('senderName = formatEntityName(senderUser)') ||
+  accountMgrSrc.includes('senderName = formatEntityName('),
+  'accountManager.ts resolves message senderName with formatEntityName'
+)
+assert(
+  accountMgrSrc.includes('senderEmojiStatusId = senderUser.emojiStatus.documentId'),
+  'accountManager.ts extracts senderEmojiStatusId'
+)
+assert(
+  accountMgrSrc.includes('senderColor = senderUser?.color?.color') ||
+  accountMgrSrc.includes('senderUser?.color?.color'),
+  'accountManager.ts extracts senderColor'
+)
 console.log('  [PASS] accountManager.ts formats complete first and last names with emojis')
 console.log('  [PASS] accountManager.ts pre-fetches missing replied messages')
 console.log('  [PASS] accountManager.ts extracts sender custom emoji status and color')

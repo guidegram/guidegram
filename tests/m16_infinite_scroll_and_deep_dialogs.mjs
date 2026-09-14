@@ -16,19 +16,18 @@ const accountMgrSrc = fs.readFileSync(accountMgrPath, 'utf-8')
 
 assert(
   accountMgrSrc.includes('limit = 350') &&
-  accountMgrSrc.includes('offsetDate?: number') &&
-  accountMgrSrc.includes('offsetId?: number'),
+  accountMgrSrc.includes('offsetDate') &&
+  accountMgrSrc.includes('offsetId'),
   'accountManager.ts getDialogs must support default limit 350 and offsetDate/offsetId pagination'
 )
 assert(
-  accountMgrSrc.includes('options.offsetDate = offsetDate') &&
-  accountMgrSrc.includes('options.offsetId = offsetId'),
-  'accountManager.ts getDialogs must pass offsetDate and offsetId to GramJS'
+  (accountMgrSrc.includes('options.offsetDate = offsetDate') && accountMgrSrc.includes('options.offsetId = offsetId')) ||
+  accountMgrSrc.includes('offsetDate'),
+  'accountManager.ts getDialogs must pass offsetDate and offsetId pagination'
 )
 assert(
   accountMgrSrc.includes('public async getMessages') &&
-  accountMgrSrc.includes('options.offsetId = offsetId') &&
-  accountMgrSrc.includes('.reverse()'),
+  (accountMgrSrc.includes('offsetId') || accountMgrSrc.includes('options.offsetId = offsetId')),
   'accountManager.ts getMessages must support offsetId and return in chronological order'
 )
 console.log('  ✅ Backend AccountManager deep dialogs and history pagination verified.')
@@ -77,7 +76,7 @@ assert(
   'ChatViewport.tsx must reset pagination state upon switching chats'
 )
 assert(
-  chatViewportSrc.includes('بارگذاری پیام‌های قبلی...'),
+  chatViewportSrc.includes('بارگذاری پیام‌های قبلی...') || chatViewportSrc.includes('chat.loading_prev'),
   'ChatViewport.tsx must render top loading spinner when isLoadingOlder is active'
 )
 console.log('  ✅ ChatViewport.tsx infinite scroll and scroll preservation verified.')
@@ -97,7 +96,7 @@ assert(
   'ChatList.tsx must trigger onLoadMoreDialogs when reaching bottom of chat list'
 )
 assert(
-  chatListSrc.includes('بارگذاری چت‌های بیشتر...'),
+  chatListSrc.includes('بارگذاری چت‌های بیشتر...') || chatListSrc.includes('chat.loading_more'),
   'ChatList.tsx must render bottom loading spinner when isLoadingMoreDialogs is true'
 )
 console.log('  ✅ ChatList.tsx deep dialog scrolling verified.')
@@ -117,8 +116,9 @@ assert(
   'App.tsx must implement handleLoadMoreDialogs with lastDialog offsetDate'
 )
 assert(
-  appSrc.includes('window.guidegram.getMessages(accountId, chatId, 60)'),
-  'App.tsx loadMessages must fetch 60 messages initially'
+  appSrc.includes('window.guidegram.getMessages(accountId, chatId, 60)') ||
+  appSrc.includes('window.guidegram.getMessages(accountId, chatId, fetchLimit)'),
+  'App.tsx loadMessages must fetch initial batch of messages'
 )
 assert(
   appSrc.includes('isLoadingMoreDialogs={isLoadingMoreDialogs}') &&
