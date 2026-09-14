@@ -62,6 +62,8 @@ import {
   StarsTransactionItem,
   SavedDialogItem,
   SavedReactionTagItem,
+  GroupCallInfo,
+  GroupCallParticipantItem,
 } from './types'
 
 export interface ClientHolder {
@@ -2345,6 +2347,12 @@ export class AccountManager {
           }
         }
 
+        const rawCall = res.fullChat?.call
+        const hasGroupCall = Boolean(rawCall && (rawCall._ === 'inputGroupCall' || rawCall.id))
+        const groupCallId = hasGroupCall ? rawCall.id?.toString() : undefined
+        const groupCallAccessHash = hasGroupCall ? rawCall.accessHash?.toString() : undefined
+        const groupCallParticipantsCount = hasGroupCall ? Number(rawCall.participantsCount || 0) : undefined
+
         details = {
           id: chatId,
           title: c?.title || 'Channel',
@@ -2360,6 +2368,10 @@ export class AccountManager {
           canReactWithStars,
           verified: !!c?.verified,
           isForum: !!c?.forum,
+          hasGroupCall,
+          groupCallId,
+          groupCallAccessHash,
+          groupCallParticipantsCount,
         }
       } else if (inputPeer._ === 'inputPeerChat') {
         const res: any = await holder.client.call({
@@ -2399,6 +2411,12 @@ export class AccountManager {
           }
         }
 
+        const rawGroupCall = res.fullChat?.call
+        const hasGroupCall = Boolean(rawGroupCall && (rawGroupCall._ === 'inputGroupCall' || rawGroupCall.id))
+        const groupCallId = hasGroupCall ? rawGroupCall.id?.toString() : undefined
+        const groupCallAccessHash = hasGroupCall ? rawGroupCall.accessHash?.toString() : undefined
+        const groupCallParticipantsCount = hasGroupCall ? Number(rawGroupCall.participantsCount || 0) : undefined
+
         details = {
           id: chatId,
           title: c?.title || 'Group',
@@ -2410,6 +2428,10 @@ export class AccountManager {
           isMuted,
           availableReactions,
           canReactWithStars,
+          hasGroupCall,
+          groupCallId,
+          groupCallAccessHash,
+          groupCallParticipantsCount,
         }
       }
     } catch (err: any) {
@@ -2984,6 +3006,214 @@ export class AccountManager {
     } catch (err) {
       Logger.warn('[AccountManager] getSavedReactionTags error:', err)
       return []
+    }
+  }
+
+  public async getGroupCall(
+    accountId: string,
+    chatId: string,
+    callId?: string,
+    accessHash?: string
+  ): Promise<{ call: GroupCallInfo; participants: GroupCallParticipantItem[] } | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      let activeCallId = callId
+      let activeAccessHash = accessHash
+
+      if (!activeCallId || !activeAccessHash) {
+        const details = await this.getChatDetails(accountId, chatId)
+        if (details?.hasGroupCall && details.groupCallId && details.groupCallAccessHash) {
+          activeCallId = details.groupCallId
+          activeAccessHash = details.groupCallAccessHash
+        }
+      }
+
+      if (!activeCallId || !activeAccessHash) {
+        return null
+      }
+
+      const res: any = await holder.client.call({
+        _: 'phone.getGroupCall',
+        call: { _: 'inputGroupCall', id: toLong(activeCallId), accessHash: toLong(activeAccessHash) },
+        limit: 100,
+      })
+
+      if (!res || !res.call) return null
+
+      const c = res.call
+      const callInfo: GroupCallInfo = {
+        id: c.id?.toString() || activeCallId,
+        accessHash: c.accessHash?.toString() || activeAccessHash,
+        title: c.title,
+        participantsCount: Number(c.participantsCount || res.participants?.length || 0),
+        canChangeJoinMuted: Boolean(c.canChangeJoinMuted),
+        joinMuted: Boolean(c.joinMuted),
+        canStartVideo: Boolean(c.canStartVideo),
+        rtmpStream: Boolean(c.rtmpStream),
+        version: c.version,
+        scheduleDate: c.scheduleDate ? c.scheduleDate * 1000 : undefined,
+        recordStartDate: c.recordStartDate ? c.recordStartDate * 1000 : undefined,
+      }
+
+      const userMap = new Map<string, any>()
+      if (Array.isArray(res.users)) {
+        for (const u of res.users) {
+          userMap.set(u.id?.toString(), u)
+        }
+      }
+
+      const participants: GroupCallParticipantItem[] = []
+      if (Array.isArray(res.participants)) {
+        for (const p of res.participants) {
+          let peerId = ''
+          if (p.peer?._ === 'peerUser') peerId = p.peer.userId?.toString()
+          else if (p.peer?._ === 'peerChannel') peerId = `-${p.peer.channelId}`
+          else if (p.peer?._ === 'peerChat') peerId = `-${p.peer.chatId}`
+
+          const u = userMap.get(peerId)
+          const name = u ? formatEntityName(u) : (p.about || 'Participant')
+
+          participants.push({
+            id: peerId,
+            name,
+            username: u?.username,
+            avatarUrl: this.avatarCache.get(`${accountId}_${peerId}`) || (u?.photo ? extractStrippedThumb(u.photo) : undefined),
+            isMuted: Boolean(p.muted),
+            isSelf: Boolean(p.self),
+            canSelfUnmute: Boolean(p.canSelfUnmute),
+            volume: p.volume,
+            raisedHand: Boolean(p.raiseHandRating),
+            hasVideo: Boolean(p.video),
+            hasPresentation: Boolean(p.presentation),
+            justJoined: Boolean(p.justJoined),
+          })
+        }
+      }
+
+      return { call: callInfo, participants }
+    } catch (err) {
+      Logger.warn('[AccountManager] getGroupCall error:', err)
+      return null
+    }
+  }
+
+  public async createGroupCall(
+    accountId: string,
+    chatId: string,
+    title?: string
+  ): Promise<GroupCallInfo | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const res: any = await holder.client.call({
+        _: 'phone.createGroupCall',
+        peer: inputPeer,
+        randomId: Math.floor(Math.random() * 100000000),
+        title: title || 'Group Voice Chat',
+      })
+
+      let callObj: any = null
+      if (res?.updates) {
+        for (const u of res.updates) {
+          if (u._ === 'updateGroupCall') callObj = u.call
+        }
+      }
+
+      if (callObj) {
+        return {
+          id: callObj.id?.toString(),
+          accessHash: callObj.accessHash?.toString(),
+          title: callObj.title || title || 'Group Voice Chat',
+          participantsCount: Number(callObj.participantsCount || 1),
+          canChangeJoinMuted: Boolean(callObj.canChangeJoinMuted),
+          joinMuted: Boolean(callObj.joinMuted),
+          canStartVideo: Boolean(callObj.canStartVideo),
+          rtmpStream: Boolean(callObj.rtmpStream),
+        }
+      }
+
+      return null
+    } catch (err) {
+      Logger.warn('[AccountManager] createGroupCall error:', err)
+      return null
+    }
+  }
+
+  public async joinGroupCall(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    muted = false
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      await holder.client.call({
+        _: 'phone.joinGroupCall',
+        call: { _: 'inputGroupCall', id: toLong(callId), accessHash: toLong(accessHash) },
+        joinAs: { _: 'inputPeerSelf' },
+        params: { _: 'dataJSON', data: JSON.stringify({ transport: 'webrtc' }) },
+        muted,
+      })
+      return true
+    } catch (err) {
+      Logger.warn('[AccountManager] joinGroupCall error:', err)
+      return false
+    }
+  }
+
+  public async leaveGroupCall(
+    accountId: string,
+    callId: string,
+    accessHash: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      await holder.client.call({
+        _: 'phone.leaveGroupCall',
+        call: { _: 'inputGroupCall', id: toLong(callId), accessHash: toLong(accessHash) },
+        source: 0,
+      })
+      return true
+    } catch (err) {
+      Logger.warn('[AccountManager] leaveGroupCall error:', err)
+      return false
+    }
+  }
+
+  public async editGroupCallParticipant(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    participantId: string,
+    muted?: boolean,
+    raiseHand?: boolean,
+    volume?: number
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const participantPeer = await this.resolveInputPeer(accountId, participantId)
+      await holder.client.call({
+        _: 'phone.editGroupCallParticipant',
+        call: { _: 'inputGroupCall', id: toLong(callId), accessHash: toLong(accessHash) },
+        participant: participantPeer,
+        muted,
+        raiseHand,
+        volume: volume !== undefined ? Math.max(1, Math.min(20000, volume * 100)) : undefined,
+      })
+      return true
+    } catch (err) {
+      Logger.warn('[AccountManager] editGroupCallParticipant error:', err)
+      return false
     }
   }
 

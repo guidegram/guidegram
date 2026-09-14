@@ -139,6 +139,8 @@ export type {
   StarsTransactionItem,
   SavedDialogItem,
   SavedReactionTagItem,
+  GroupCallInfo,
+  GroupCallParticipantItem,
 }
 
 

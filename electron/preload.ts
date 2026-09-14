@@ -48,6 +48,8 @@ import {
   StarsTransactionItem,
   SavedDialogItem,
   SavedReactionTagItem,
+  GroupCallInfo,
+  GroupCallParticipantItem,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -329,6 +331,44 @@ const guidegramAPI = {
     accountId: string
   ): Promise<SavedReactionTagItem[]> =>
     ipcRenderer.invoke('telegram:get-saved-reaction-tags', { accountId }),
+
+  // Telegram Group Calls / Live Streams (MTProto phone.*)
+  getGroupCall: (
+    accountId: string,
+    chatId: string,
+    callId?: string,
+    accessHash?: string
+  ): Promise<{ call: GroupCallInfo; participants: GroupCallParticipantItem[] } | null> =>
+    ipcRenderer.invoke('telegram:get-group-call', { accountId, chatId, callId, accessHash }),
+  createGroupCall: (
+    accountId: string,
+    chatId: string,
+    title?: string
+  ): Promise<GroupCallInfo | null> =>
+    ipcRenderer.invoke('telegram:create-group-call', { accountId, chatId, title }),
+  joinGroupCall: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    muted?: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:join-group-call', { accountId, callId, accessHash, muted }),
+  leaveGroupCall: (
+    accountId: string,
+    callId: string,
+    accessHash: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:leave-group-call', { accountId, callId, accessHash }),
+  editGroupCallParticipant: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    participantId: string,
+    muted?: boolean,
+    raiseHand?: boolean,
+    volume?: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:edit-group-call-participant', { accountId, callId, accessHash, participantId, muted, raiseHand, volume }),
 
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>

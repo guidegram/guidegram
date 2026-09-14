@@ -1566,6 +1566,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Telegram Group Calls / Live Streams (MTProto phone.*)
+  ipcMain.handle('telegram:get-group-call', async (_event, { accountId, chatId, callId, accessHash }) => {
+    try {
+      return await accountManager.getGroupCall(accountId, chatId, callId, accessHash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getGroupCall error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:create-group-call', async (_event, { accountId, chatId, title }) => {
+    try {
+      return await accountManager.createGroupCall(accountId, chatId, title)
+    } catch (err: any) {
+      Logger.warn(`[IPC] createGroupCall error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:join-group-call', async (_event, { accountId, callId, accessHash, muted }) => {
+    try {
+      return await accountManager.joinGroupCall(accountId, callId, accessHash, muted)
+    } catch (err: any) {
+      Logger.warn(`[IPC] joinGroupCall error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:leave-group-call', async (_event, { accountId, callId, accessHash }) => {
+    try {
+      return await accountManager.leaveGroupCall(accountId, callId, accessHash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] leaveGroupCall error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:edit-group-call-participant', async (_event, { accountId, callId, accessHash, participantId, muted, raiseHand, volume }) => {
+    try {
+      return await accountManager.editGroupCallParticipant(accountId, callId, accessHash, participantId, muted, raiseHand, volume)
+    } catch (err: any) {
+      Logger.warn(`[IPC] editGroupCallParticipant error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

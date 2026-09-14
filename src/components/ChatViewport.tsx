@@ -70,6 +70,7 @@ import {
   Image as ImageIcon,
   Star,
   Lock,
+  PhoneCall,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -86,6 +87,8 @@ import { MiniAppModal } from './MiniAppModal'
 import { AdminLogModal } from './AdminLogModal'
 import { PaidReactionModal } from './PaidReactionModal'
 import { SavedMessagesBar } from './SavedMessagesBar'
+import { GroupCallBar } from './GroupCallBar'
+import { GroupCallModal } from './GroupCallModal'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -784,6 +787,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [savedTagFilter, setSavedTagFilter] = useState<string | null>(null)
   const [savedSearchQuery, setSavedSearchQuery] = useState('')
   const [savedMediaFilter, setSavedMediaFilter] = useState<'all' | 'media' | 'files' | 'links' | 'voice'>('all')
+  // Group Voice & Video Call states
+  const [isGroupCallModalOpen, setIsGroupCallModalOpen] = useState(false)
+  const [isCallJoined, setIsCallJoined] = useState(false)
+  const [isCallMuted, setIsCallMuted] = useState(false)
   const [activeMiniApp, setActiveMiniApp] = useState<{
     url: string
     title: string
@@ -3597,6 +3604,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </button>
           )}
 
+          {/* Voice Chat / Live Stream Trigger */}
+          {(chat.isGroup || chat.isChannel) && (
+            <button
+              type="button"
+              onClick={() => setIsGroupCallModalOpen(true)}
+              title={chatDetails?.isBroadcast ? t('group_call.live_stream') : t('group_call.title')}
+              className={`p-2 rounded-xl border text-xs transition-all cursor-pointer ${
+                chatDetails?.hasGroupCall || isCallJoined
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-glow'
+                  : 'bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-emerald-400 border border-white/10'
+              }`}
+            >
+              <Radio className={`w-4 h-4 ${chatDetails?.hasGroupCall || isCallJoined ? 'text-emerald-400 animate-pulse' : ''}`} />
+            </button>
+          )}
+
           {/* In-Chat Search Toggle (Ctrl+F) */}
           <button
             onClick={() => setIsSearchOpen((prev) => !prev)}
@@ -3925,6 +3948,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           onMediaFilterChange={setSavedMediaFilter}
           totalCount={messages.length}
           filteredCount={filteredMessages.length}
+        />
+      )}
+
+      {/* Telegram Group Voice & Video Call Active Banner */}
+      {(chatDetails?.hasGroupCall || isCallJoined) && (
+        <GroupCallBar
+          chatTitle={chat.title}
+          isBroadcast={chatDetails?.isBroadcast}
+          participantsCount={chatDetails?.groupCallParticipantsCount || 1}
+          isJoined={isCallJoined}
+          isMuted={isCallMuted}
+          onJoin={() => {
+            setIsCallJoined(true)
+            setIsGroupCallModalOpen(true)
+          }}
+          onOpen={() => setIsGroupCallModalOpen(true)}
+          onLeave={() => setIsCallJoined(false)}
+          onToggleMute={() => setIsCallMuted(!isCallMuted)}
         />
       )}
 
@@ -7246,6 +7287,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               }).catch(() => {})
             }
           }}
+        />
+      )}
+
+      {/* 13. Telegram Group Voice & Video Call Modal */}
+      {isGroupCallModalOpen && chat && (
+        <GroupCallModal
+          isOpen={isGroupCallModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chat.title}
+          isBroadcast={chatDetails?.isBroadcast}
+          initialCallId={chatDetails?.groupCallId}
+          initialAccessHash={chatDetails?.groupCallAccessHash}
+          onClose={() => setIsGroupCallModalOpen(false)}
+          onLeaveCall={() => setIsCallJoined(false)}
         />
       )}
     </div>

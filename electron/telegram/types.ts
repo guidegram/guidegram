@@ -323,6 +323,10 @@ export interface ChatDetails {
   isMuted?: boolean
   availableReactions?: string[]
   canReactWithStars?: boolean
+  hasGroupCall?: boolean
+  groupCallId?: string
+  groupCallAccessHash?: string
+  groupCallParticipantsCount?: number
 }
 
 export interface ContactItem {
@@ -794,6 +798,36 @@ export interface SavedReactionTagItem {
   title?: string
   count: number
 }
+
+export interface GroupCallParticipantItem {
+  id: string
+  name: string
+  username?: string
+  avatarUrl?: string
+  isMuted: boolean
+  isSelf?: boolean
+  canSelfUnmute?: boolean
+  volume?: number
+  raisedHand?: boolean
+  hasVideo?: boolean
+  hasPresentation?: boolean
+  justJoined?: boolean
+}
+
+export interface GroupCallInfo {
+  id: string
+  accessHash: string
+  title?: string
+  participantsCount: number
+  canChangeJoinMuted?: boolean
+  joinMuted?: boolean
+  canStartVideo?: boolean
+  rtmpStream?: boolean
+  version?: number
+  scheduleDate?: number
+  recordStartDate?: number
+}
+
 
 
 
