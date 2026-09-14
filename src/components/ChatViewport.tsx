@@ -474,6 +474,47 @@ export const CustomEmojiView: React.FC<{
   return <span className="inline-block">{fallback || '⭐'}</span>
 }
 
+export const TelegramBlockquote: React.FC<{
+  children: React.ReactNode
+  isRtl: boolean
+  isExpandable?: boolean
+}> = ({ children, isRtl, isExpandable }) => {
+  const [collapsed, setCollapsed] = useState(false)
+
+  return (
+    <div
+      dir={isRtl ? 'rtl' : 'ltr'}
+      className={`my-2 p-3 rounded-xl bg-accent-cyan/10 border-l-[3.5px] border-accent-cyan rounded-l-xs rounded-r-xl pl-3.5 pr-3 text-gray-200 relative group/quote transition-all ${
+        isRtl ? 'text-right font-persian' : 'text-left font-latin'
+      } ${collapsed ? 'max-h-24 overflow-hidden' : ''}`}
+    >
+      <div className={`flex items-center gap-1.5 mb-1 text-accent-cyan select-none ${isRtl ? 'justify-start' : 'justify-start'}`}>
+        <span className="text-base font-serif font-black leading-none opacity-90">”</span>
+      </div>
+
+      <div className="text-xs leading-relaxed break-words whitespace-pre-wrap select-text">
+        {children}
+      </div>
+
+      {isExpandable && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setCollapsed(!collapsed)
+          }}
+          className={`mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-accent-cyan hover:text-cyan-300 cursor-pointer select-none ${
+            isRtl ? 'mr-auto' : 'ml-auto'
+          }`}
+        >
+          <span>{collapsed ? 'Show more' : 'Show less'}</span>
+          {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export const TELEGRAM_PEER_COLORS = [
   'text-[#e17076]', // 0: red / coral
   'text-[#faa774]', // 1: orange / gold
@@ -2164,13 +2205,20 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
-    // 1. If official Telegram entities are present, build rich element tree based on exact UTF-16 ranges
-    if (entities && entities.length > 0) {
-      const points = new Set<number>([0, text.length])
-      for (const ent of entities) {
+    // Helper to render inline entities inside a sub-range [startRange, endRange]
+    const renderInlineRange = (
+      startRange: number,
+      endRange: number,
+      inlineEnts: MessageEntityItem[],
+      keyPrefix: string
+    ): React.ReactNode[] => {
+      const points = new Set<number>([startRange, endRange])
+      for (const ent of inlineEnts) {
         if (typeof ent.offset === 'number' && typeof ent.length === 'number') {
-          points.add(Math.max(0, Math.min(text.length, ent.offset)))
-          points.add(Math.max(0, Math.min(text.length, ent.offset + ent.length)))
+          const eStart = Math.max(startRange, Math.min(endRange, ent.offset))
+          const eEnd = Math.max(startRange, Math.min(endRange, ent.offset + ent.length))
+          if (eStart < endRange && eStart > startRange) points.add(eStart)
+          if (eEnd < endRange && eEnd > startRange) points.add(eEnd)
         }
       }
 
@@ -2183,11 +2231,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         if (start >= end) continue
 
         const subText = text.slice(start, end)
-        const activeEnts = entities.filter(
+        const activeEnts = inlineEnts.filter(
           (e) => e.offset <= start && e.offset + e.length >= end
         )
 
-        let node: React.ReactNode = highlightQuery(subText, `ent-${start}-${end}`)
+        let node: React.ReactNode = highlightQuery(subText, `${keyPrefix}-${start}-${end}`)
 
         const customEmojiEnt = activeEnts.find((e) => e.type === 'custom_emoji' && e.documentId)
         if (customEmojiEnt) {
@@ -2201,7 +2249,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           )
         } else {
           for (const ent of activeEnts) {
-            const key = `ent-${ent.type}-${start}`
+            const key = `${keyPrefix}-${ent.type}-${start}`
             if (ent.type === 'bold') {
               node = <strong key={key} className="font-bold text-white">{node}</strong>
             } else if (ent.type === 'italic') {
@@ -2225,15 +2273,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   {node}
                 </span>
               )
-            } else if (ent.type === 'blockquote') {
-              node = (
-                <blockquote
-                  key={key}
-                  className="my-1.5 pl-3 border-l-2 border-primary-400 bg-white/5 py-1 px-2.5 rounded-r-xl text-gray-300 italic"
-                >
-                  {node}
-                </blockquote>
-              )
             } else if (ent.type === 'code') {
               node = (
                 <code
@@ -2243,16 +2282,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 >
                   {node}
                 </code>
-              )
-            } else if (ent.type === 'pre') {
-              node = (
-                <pre
-                  key={key}
-                  className="my-1.5 p-3 rounded-xl bg-black/50 text-accent-cyan font-mono text-xs overflow-x-auto border border-white/10 select-text"
-                  dir="ltr"
-                >
-                  <code>{node}</code>
-                </pre>
               )
             } else if (ent.type === 'text_url' || ent.type === 'url') {
               const url = ent.url || subText
@@ -2308,8 +2337,81 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
         segments.push(<React.Fragment key={`seg-${start}-${end}`}>{node}</React.Fragment>)
       }
+      return segments
+    }
 
+    // 1. If official Telegram entities are present, build rich element tree with unified block containers
+    if (entities && entities.length > 0) {
       const textIsRtl = isRTL(text)
+
+      const blockEntities = entities
+        .filter(
+          (e) =>
+            typeof e.offset === 'number' &&
+            typeof e.length === 'number' &&
+            (e.type === 'blockquote' || e.type === 'expandable_blockquote' || e.type === 'pre')
+        )
+        .sort((a, b) => a.offset - b.offset)
+
+      const inlineEntities = entities.filter(
+        (e) => e.type !== 'blockquote' && e.type !== 'expandable_blockquote' && e.type !== 'pre'
+      )
+
+      const topBlocks: React.ReactNode[] = []
+      let cursor = 0
+
+      for (let bIdx = 0; bIdx < blockEntities.length; bIdx++) {
+        const bEnt = blockEntities[bIdx]
+        const bStart = Math.max(0, Math.min(text.length, bEnt.offset))
+        const bEnd = Math.max(0, Math.min(text.length, bEnt.offset + bEnt.length))
+        if (bStart < cursor) continue
+
+        if (bStart > cursor) {
+          topBlocks.push(
+            <React.Fragment key={`top-norm-${cursor}-${bStart}`}>
+              {renderInlineRange(cursor, bStart, inlineEntities, `norm-${cursor}`)}
+            </React.Fragment>
+          )
+        }
+
+        if (bEnd > bStart) {
+          if (bEnt.type === 'blockquote' || bEnt.type === 'expandable_blockquote') {
+            const blockContent = renderInlineRange(bStart, bEnd, inlineEntities, `bq-${bStart}`)
+            const isExpandable = bEnt.type === 'expandable_blockquote' || bEnt.length > 280
+            topBlocks.push(
+              <TelegramBlockquote
+                key={`top-bq-${bStart}-${bEnd}`}
+                isRtl={textIsRtl}
+                isExpandable={isExpandable}
+              >
+                {blockContent}
+              </TelegramBlockquote>
+            )
+          } else if (bEnt.type === 'pre') {
+            const preContent = text.slice(bStart, bEnd)
+            topBlocks.push(
+              <pre
+                key={`top-pre-${bStart}-${bEnd}`}
+                className="my-1.5 p-3 rounded-xl bg-black/50 text-accent-cyan font-mono text-xs overflow-x-auto border border-white/10 select-text"
+                dir="ltr"
+              >
+                <code>{preContent}</code>
+              </pre>
+            )
+          }
+        }
+
+        cursor = bEnd
+      }
+
+      if (cursor < text.length) {
+        topBlocks.push(
+          <React.Fragment key={`top-norm-${cursor}-${text.length}`}>
+            {renderInlineRange(cursor, text.length, inlineEntities, `norm-${cursor}`)}
+          </React.Fragment>
+        )
+      }
+
       return (
         <div
           dir={textIsRtl ? 'rtl' : 'ltr'}
@@ -2317,7 +2419,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             textIsRtl ? 'text-right font-persian' : 'text-left font-latin'
           }`}
         >
-          {segments}
+          {topBlocks}
         </div>
       )
     }
@@ -2540,23 +2642,48 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       })
     }
 
-    const paragraphs = text.split('\n')
+    const lines = text.split('\n')
+    const groupedParagraphs: { isQuote: boolean; lines: string[] }[] = []
+    let currentGroup: { isQuote: boolean; lines: string[] } | null = null
+
+    for (const line of lines) {
+      const isQuoteLine = line.trimStart().startsWith('>')
+      if (!currentGroup || currentGroup.isQuote !== isQuoteLine) {
+        currentGroup = { isQuote: isQuoteLine, lines: [line] }
+        groupedParagraphs.push(currentGroup)
+      } else {
+        currentGroup.lines.push(line)
+      }
+    }
+
     return (
       <div className="space-y-1">
-        {paragraphs.map((para, pIdx) => {
-          if (!para) return <div key={pIdx} className="h-2" />
-          const paraIsRtl = isRTL(para)
-          return (
-            <div
-              key={pIdx}
-              dir={paraIsRtl ? 'rtl' : 'ltr'}
-              className={`leading-relaxed break-words ${
-                paraIsRtl ? 'text-right font-persian' : 'text-left font-latin'
-              }`}
-            >
-              {renderInlineTokens(para, `p-${pIdx}`)}
-            </div>
-          )
+        {groupedParagraphs.map((grp, gIdx) => {
+          if (grp.isQuote) {
+            const quoteContent = grp.lines.map((l) => l.replace(/^\s*>\s?/, '')).join('\n')
+            const quoteIsRtl = isRTL(quoteContent)
+            return (
+              <TelegramBlockquote key={`gq-${gIdx}`} isRtl={quoteIsRtl}>
+                {renderInlineTokens(quoteContent, `q-${gIdx}`)}
+              </TelegramBlockquote>
+            )
+          }
+
+          return grp.lines.map((para, pIdx) => {
+            if (!para) return <div key={`p-${gIdx}-${pIdx}`} className="h-2" />
+            const paraIsRtl = isRTL(para)
+            return (
+              <div
+                key={`p-${gIdx}-${pIdx}`}
+                dir={paraIsRtl ? 'rtl' : 'ltr'}
+                className={`leading-relaxed break-words ${
+                  paraIsRtl ? 'text-right font-persian' : 'text-left font-latin'
+                }`}
+              >
+                {renderInlineTokens(para, `p-${gIdx}-${pIdx}`)}
+              </div>
+            )
+          })
         })}
       </div>
     )
@@ -2654,7 +2781,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 <img
                   src={msg.strippedThumb}
                   alt="Thumbnail preview"
-                  className="absolute inset-0 w-full h-full object-cover filter blur-[8px] scale-105"
+                  onError={(e) => {
+                    ;(e.currentTarget as HTMLElement).style.display = 'none'
+                  }}
+                  className="absolute inset-0 w-full h-full object-cover filter blur-[10px] scale-110"
                 />
               ) : null}
               <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors flex flex-col items-center justify-center gap-2">
@@ -2735,8 +2865,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             {thumbUrl ? (
               <img
                 src={thumbUrl}
-                alt="Video Thumbnail"
-                className="w-full h-full object-cover group-hover/video:scale-105 transition-transform duration-300"
+                alt=""
+                onError={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.display = 'none'
+                }}
+                className={`w-full h-full object-cover transition-transform duration-300 group-hover/video:scale-105 ${
+                  thumbUrl === msg.strippedThumb ? 'filter blur-[8px] scale-110' : ''
+                }`}
               />
             ) : (
               <div className="absolute inset-0 bg-linear-to-br from-primary-900/40 via-dark-850 to-dark-900 flex items-center justify-center">
@@ -3598,8 +3733,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   {/* Group Sender Avatar */}
                   {!msg.isOutgoing && showSenderAvatar && chat.isGroup && (
                     <Avatar
-                      accountId={msg.accountId}
+                      accountId={msg.accountId || chat.accountId}
                       peerId={msg.senderId}
+                      avatarUrl={msg.senderAvatarUrl}
                       title={msg.senderName || 'Sender'}
                       initials={(msg.senderName || 'U').substring(0, 2).toUpperCase()}
                       size="sm"
@@ -3728,7 +3864,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           {hasMediaThumb && (
                             <div className="w-8 h-8 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
                               {rThumb ? (
-                                <img src={rThumb} alt="Reply media" className="w-full h-full object-cover" />
+                                <img
+                                  src={rThumb}
+                                  alt=""
+                                  onError={(e) => {
+                                    ;(e.currentTarget as HTMLElement).style.display = 'none'
+                                  }}
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
                                 <div className="w-3 h-3 border border-primary-400 border-t-transparent rounded-full animate-spin" />
                               )}
@@ -4237,7 +4380,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   return (
                     <div className="w-9 h-9 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
                       {thumbUrl ? (
-                        <img src={thumbUrl} alt="Reply preview" className="w-full h-full object-cover" />
+                        <img
+                          src={thumbUrl}
+                          alt=""
+                          onError={(e) => {
+                            ;(e.currentTarget as HTMLElement).style.display = 'none'
+                          }}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="w-3.5 h-3.5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                       )}

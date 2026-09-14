@@ -31,6 +31,10 @@ export const Avatar: React.FC<AvatarProps> = ({
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
+    setHasError(false)
+  }, [avatarUrl, currentUrl])
+
+  useEffect(() => {
     if (avatarUrl) {
       setCurrentUrl(avatarUrl)
       if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
