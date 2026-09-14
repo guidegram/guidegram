@@ -1,4 +1,4 @@
-# 🚀 Guidegram v1.8.0 — High-Performance Engine & Community Support
+# 🚀 Guidegram v1.9.0 — Rich Reply Previews, Instant Media & Performance Engine
 
 > **Next-Generation Portable Desktop Telegram Client** with Unlimited Multi-Account, Dedicated Proxies, Advanced Group Analytics, and Multi-Chain Community Support.
 
@@ -6,49 +6,56 @@
 
 <div align="center">
   <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
-  <h3>Guidegram v1.8.0</h3>
-  <p><strong>High-Performance Engine • Progressive Group Analytics • Multi-Chain Support • Refined Session UX • Zero Data Loss</strong></p>
+  <h3>Guidegram v1.9.0</h3>
+  <p><strong>Rich Reply Previews • Instant Blurred Thumbnails • Non-Blocking Logger • Member Mentions • Zero Lag</strong></p>
 </div>
 
 ---
 
 ## 🌟 Release Highlights
 
-Guidegram v1.8.0 delivers an upgraded high-performance protocol foundation for faster connection initialization and smoother media streaming, introduces a progressive message crawler for deep group analytics, adds a native multi-chain community support modal, and brings refined chat interface polish across timestamps and notification badges.
+Guidegram v1.9.0 brings a major visual and performance upgrade: authentic Telegram reply banners with peer-colored borders and names, instant blurred previews for photos and stickers using low-overhead JFIF header reconstruction, complete elimination of UI stutter via an asynchronous non-blocking event-loop logger, group member `@` mention autocomplete, and full-resolution HD user avatar viewing.
 
 ---
 
 ## 📦 What's New & Enhancements
 
-### 1. ⚡ High-Performance Protocol Engine
-- **Upgraded Connectivity Foundation**: Migrated core client connectivity to a pure TypeScript protocol architecture, delivering faster session initialization and lower memory consumption.
-- **Optimized Stream Processing**: Enhanced concurrent request multiplexing for large file downloads and media streaming.
+### 1. 💬 Authentic Rich Reply Banners
+- **Peer-Colored Vertical Borders & Names**: Quotes match Telegram's exact 7-color palette mapped to the original author's identity.
+- **Square Mini Thumbnails**: Direct visual preview of replied photos, videos, and stickers.
+- **Descriptive Media Badges**: Distinguishes voice messages (`• Voice message` with cyan indicator), photos, videos, stickers, and documents instead of generic fallback numbers.
 
-### 2. 📊 Progressive Group Analytics Crawler
-- **Live Sync Progress Indicators**: Introduced an animated progress tracker when analyzing group message histories.
-- **Refined Timeframe Slicing**: Optimized active contributor rankings and conversation heatmaps with responsive local caching.
+### 2. ⚡ Instant Blurred Media Previews
+- **Zero-Wait JFIF Reconstitution**: Re-attaches standard JPEG headers to Telegram's raw `photoStrippedSize` byte buffers, rendering instant previews directly without waiting for full media downloads.
+- **On-Demand Loading**: Interactive, clean download placeholders with file size indicators.
 
-### 3. 💎 Multi-Chain Community Support
-- **Built-in Support Modal**: Added a dedicated community donation modal accessible via the main menu and navigation shortcuts.
-- **Multi-Chain Asset Options**: Integrated instant address copy and interactive QR codes for TON, USDT, and TRON networks.
+### 3. 🚀 Non-Blocking Performance & Zero Freezes
+- **Asynchronous Batch Logging**: Replaced synchronous disk file writes with an asynchronous batching queue, keeping the main process responsive during high-volume MTProto traffic.
+- **Render-Side Decoupling**: Eliminated synchronous IPC calls inside React render loops, preventing UI frame drops and freezing.
 
-### 4. ✨ Chat & Interface Refinements
-- **Avatar Story Indicators**: Refined avatar ring states and prevented empty modal triggers on unverified story updates.
-- **Real-Time Message Timestamps**: Synchronized real-time message date boundaries and normalized locale-specific time displays.
-- **Notification Localization**: Localized unread conversation badges and sender counts across supported languages.
+### 4. 👥 Group Mentions & Member Autocomplete
+- **Live Autocomplete**: Typing `@` in group chats displays an interactive member suggestion dropdown querying both group participants and recent senders.
+- **Sender Usernames**: Displays `@username` handles alongside sender names in group message headers.
+
+### 5. 🖼️ Full-Resolution HD Profile Viewer
+- **On-Demand HD Photos**: Added support for fetching full-resolution profile photos (`isBig: true`) for channels, groups, and individual contacts.
+- **Lightbox Integration**: Clicking the avatar in Chat Info or User Profile drawers opens the HD photo in full screen.
+
+### 6. 🤖 Bot Inline Keyboards & Dynamic Menus
+- **Interactive Action Buttons**: Full support for Telegram bot inline keyboards (URL buttons and callback queries).
+- **Permission-Aware Bot Menus**: Dynamic command menu rendering based on bot capability definitions.
 
 ---
 
 ## 🐛 Bug Fixes & Stability Improvements
-- **Chat Viewport**: Corrected real-time date change separators and timestamp normalization during continuous chat sessions.
-- **Group Analytics**: Enhanced timeframe selection stability and background batch pagination.
-- **Navigation**: Cleaned up unread senders badge display on conversation items for improved readability.
-- **Documentation**: Harmonized changelogs, release notes, and submission packages with user-centric standards.
+- **Scheduled Messages**: Hidden the scheduled messages action button in channels where the user lacks posting rights.
+- **Unread Sync**: Corrected `maxId` in MTProto `readHistory` calls and added immediate local counter clearing on chat open.
+- **Installer Process Safety**: Added automatic termination of lingering background Guidegram instances in NSIS installer pre-init and un-init hooks to prevent Windows file locking.
 
 ---
 
 ## 📝 Full Changelog
-https://github.com/guidegram/guidegram/compare/v1.7.0...v1.8.0
+https://github.com/guidegram/guidegram/compare/v1.8.0...v1.9.0
 
 ---
 

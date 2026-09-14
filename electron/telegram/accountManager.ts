@@ -1729,6 +1729,29 @@ export class AccountManager {
             menuButton: menuBtn,
           }
         }
+        let stargiftsCount: number | undefined = undefined
+        let birthday: string | undefined = undefined
+        let personalChannelId: string | undefined = undefined
+        let personalChannelTitle: string | undefined = undefined
+
+        if (res.fullUser) {
+          const fu = res.fullUser
+          if (fu.stargiftsCount != null) {
+            stargiftsCount = Number(fu.stargiftsCount)
+          }
+          if (fu.birthday) {
+            const b = fu.birthday
+            birthday = b.year ? `${b.day}/${b.month}/${b.year}` : `${b.day}/${b.month}`
+          }
+          if (fu.personalChannelId) {
+            personalChannelId = fu.personalChannelId.toString()
+            if (res.chats && Array.isArray(res.chats)) {
+              const ch = res.chats.find((c: any) => c.id?.toString() === personalChannelId)
+              if (ch) personalChannelTitle = ch.title
+            }
+          }
+        }
+
         details = {
           id: chatId,
           title: formatEntityName(u),
@@ -1744,6 +1767,10 @@ export class AccountManager {
           verified: !!u?.verified,
           customEmojiStatusId: u?.emojiStatus?.documentId?.toString(),
           botInfo,
+          stargiftsCount,
+          birthday,
+          personalChannelId,
+          personalChannelTitle,
         }
       } else if (inputPeer._ === 'inputPeerChannel') {
         const res: any = await holder.client.call({

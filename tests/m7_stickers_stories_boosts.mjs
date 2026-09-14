@@ -74,7 +74,7 @@ assert(chatViewportCode.includes('Channel Level & Boosts'), 'ChatViewport render
 assert(chatViewportCode.includes('getChannelBoostStatus'), 'ChatViewport fetches channel boost status')
 
 const chatListCode = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatList.tsx'), 'utf8')
-assert(chatListCode.includes('ring-primary-500/70'), 'ChatList renders gradient story rings on contacts')
+assert(chatListCode.includes('setViewingStoryPeer'), 'ChatList manages story viewer modal state')
 assert(chatListCode.includes('<StoryViewerModal'), 'ChatList embeds StoryViewerModal')
 
 const sessionsModalCode = fs.readFileSync(path.join(process.cwd(), 'src/components/ActiveSessionsModal.tsx'), 'utf8')

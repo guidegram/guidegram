@@ -4,6 +4,10 @@
 ; ====================================================================
 
 !macro customInit
+  ; Terminate any existing Guidegram instances to prevent file locking & installer hang
+  nsExec::Exec 'taskkill /F /IM Guidegram.exe /T'
+  Sleep 300
+
   ; Runs at the very start of installer (.onInit)
   ; If an existing installation directory has data, snapshot it immediately before any uninstaller can run
   ${If} ${FileExists} "$INSTDIR\data\config.json"
@@ -21,7 +25,17 @@
   ${EndIf}
 !macroend
 
+!macro customUnInit
+  ; Ensure process is closed before uninstallation starts
+  nsExec::Exec 'taskkill /F /IM Guidegram.exe /T'
+  Sleep 300
+!macroend
+
 !macro customInstall
+  ; Ensure any lingering process is closed before file replacement
+  nsExec::Exec 'taskkill /F /IM Guidegram.exe /T'
+  Sleep 300
+
   ; Runs during install after new files are extracted
   DetailPrint "Guidegram Data Shield: Verifying data preservation and restoring sessions..."
   CreateDirectory "$INSTDIR\data"

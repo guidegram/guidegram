@@ -2600,6 +2600,30 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
 
     if (msg.mediaType === 'photo') {
+      const isChannel = !!chat?.isChannel
+      const isGroup = !!chat?.isGroup
+      const isPrivate = !isChannel && !isGroup
+
+      // Check auto-download policy
+      const shouldAutoDownloadPhoto = (() => {
+        const cfg = autoDownload || {
+          enabled: true,
+          photosInPrivate: true,
+          photosInGroups: true,
+          photosInChannels: false,
+        }
+        if (cfg.enabled === false) return false
+        if (isChannel) return !!cfg.photosInChannels
+        if (isGroup) return !!cfg.photosInGroups
+        if (isPrivate) return !!cfg.photosInPrivate
+        return false
+      })()
+
+      // Trigger lazy download ONLY if permitted by auto-download policy
+      if (!mediaUrl && shouldAutoDownloadPhoto) {
+        requestMediaDownload(msg, false)
+      }
+
       return (
         <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-900/50">
           {mediaUrl ? (

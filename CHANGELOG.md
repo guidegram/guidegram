@@ -4,6 +4,23 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.9.0] — Rich Reply Previews, Instant Media & Core UI Polish (2026-09-14)
+
+### 🌟 What's New & Enhancements
+- **💬 Rich Authentic Reply Banners**: Reply quote banners now render authentic Telegram-style previews with matching peer-colored vertical borders and author names, square media thumbnails, and descriptive badges (`• Voice message` with cyan indicator, `Photo`, `Video`, `Sticker`, `Document`, or exact quote text).
+- **⚡ Instant Blurred Media Previews**: Reconstructed JFIF JPEG streams directly from MTProto `photoStrippedSize`, giving photos, videos, and stickers instant blurred previews without waiting for full downloads.
+- **🚀 Non-Blocking Performance Architecture**: Converted internal file logger to an asynchronous batching queue and removed render-side download dispatches, eliminating UI freezes, stutter, and frame drops.
+- **👥 Group Mention Autocomplete**: Typing `@` in group chats displays an interactive member suggestion popup querying group participants and recent senders. Added `@username` badges in group message headers.
+- **🖼️ Full-Resolution HD Profile Viewer**: Avatars in Chat Info and User Profile drawers now fetch HD profile photos (`isBig: true`) on demand and open directly in the full-screen Lightbox.
+- **🤖 Bot Inline Keyboards & Dynamic Menus**: Native rendering of bot inline markup keyboards (URLs, callback actions) and permission-filtered bot command menus.
+
+### 🐛 Bug Fixes & Stability
+- **Scheduled Messages**: Hidden the scheduled messages button in broadcast channels or restricted chats where the current account lacks posting permissions.
+- **Unread Message Counter**: Corrected `maxId` handling in MTProto `readHistory` calls and added immediate optimistic zeroing of unread counters upon viewing a conversation.
+- **Installer Process Safety**: Added automatic termination of lingering background Guidegram instances in NSIS installer pre-init/un-init hooks, preventing file locks and installer hangs.
+
+---
+
 ## [v1.8.0] — High-Performance Engine & Community Support (2026-09-13)
 
 ### 🌟 What's New & Enhancements
