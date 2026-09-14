@@ -831,7 +831,7 @@ export const App: React.FC = () => {
         const dialogs = dialogsByAccount[activeAccountId] || []
         const toMark = dialogs.filter((d) => {
           if (d.unreadCount <= 0) return false
-          if (category === 'users') return d.isUser
+          if (category === 'users') return d.isUser && !d.isBot
           if (category === 'groups') return d.isGroup
           if (category === 'channels') return d.isChannel
           if (category === 'bots') return d.isBot
@@ -995,7 +995,7 @@ export const App: React.FC = () => {
   // Compute unread counts for tabs
   const unreadCounts: Record<TabCategory, number> = {
     all: currentDialogs.filter((d) => d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
-    users: currentDialogs.filter((d) => d.isUser && d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
+    users: currentDialogs.filter((d) => d.isUser && !d.isBot && d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
     groups: currentDialogs
       .filter((d) => (d.isGroup || (d.isChannel && !(d.isBroadcast ?? !d.isGroup))) && d.folderId !== 1 && !(d as any).archived)
       .reduce((acc, d) => acc + d.unreadCount, 0),

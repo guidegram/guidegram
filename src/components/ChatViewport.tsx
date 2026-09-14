@@ -3563,14 +3563,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               >
                 {chat.title}
               </span>
-              {(chatDetails?.customEmojiStatusId || chat.customEmojiStatusId) && (
+              {(chatDetails?.customEmojiStatusId || chat.customEmojiStatusId) ? (
                 <CustomEmojiView
                   accountId={chat.accountId}
                   documentId={chatDetails?.customEmojiStatusId || chat.customEmojiStatusId!}
                   fallback="⭐"
                   className="inline-block w-4 h-4 align-middle shrink-0"
                 />
-              )}
+              ) : (chatDetails?.isPremium || chat.isPremium) ? (
+                <Sparkles className="w-3.5 h-3.5 text-accent-cyan fill-accent-cyan shrink-0" />
+              ) : null}
               <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-primary-400 group-hover:translate-x-0.5 transition-all shrink-0" />
             </div>
 
@@ -5938,14 +5940,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   >
                     {chatDetails?.title || chat.title}
                   </h3>
-                  {chatDetails?.customEmojiStatusId && (
+                  {chatDetails?.customEmojiStatusId ? (
                     <CustomEmojiView
                       accountId={chat.accountId}
                       documentId={chatDetails.customEmojiStatusId}
                       fallback="⭐"
                       className="inline-block w-5 h-5 align-middle select-none shrink-0"
                     />
-                  )}
+                  ) : (chatDetails?.isPremium || chat.isPremium) ? (
+                    <Sparkles className="w-4 h-4 text-accent-cyan fill-accent-cyan shrink-0" />
+                  ) : null}
                 </div>
 
                 <div className="text-xs text-gray-400 flex items-center gap-1.5">
@@ -6530,14 +6534,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   >
                     {userProfileDetails?.title || 'User'}
                   </h3>
-                  {userProfileDetails?.customEmojiStatusId && (
+                  {userProfileDetails?.customEmojiStatusId ? (
                     <CustomEmojiView
                       accountId={chat.accountId}
                       documentId={userProfileDetails.customEmojiStatusId}
                       fallback="⭐"
                       className="inline-block w-5 h-5 align-middle select-none shrink-0"
                     />
-                  )}
+                  ) : userProfileDetails?.isPremium ? (
+                    <Sparkles className="w-4 h-4 text-accent-cyan fill-accent-cyan shrink-0" />
+                  ) : null}
                   {userProfileDetails?.verified && (
                     <span className="text-primary-400 text-xs" title="Verified">✓</span>
                   )}

@@ -368,7 +368,7 @@ export class AccountManager {
   private mediaCache = new Map<string, string>()
   private inFlightDownloads = new Map<string, Promise<string | null>>()
   private activeMediaDownloads = new Map<string, { abort: () => void; isCancelled: () => boolean }>()
-  private customEmojiCache = new Map<string, string>()
+  private customEmojiCache = new Map<string, CustomEmojiPayload>()
   private botButtonCache = new Map<string, Buffer>()
   private peerPhotos = new Map<string, any>()
   private peerAccessHashes = new Map<string, Long>()
@@ -1005,6 +1005,24 @@ export class AccountManager {
           this.peerPhotos.set(`${accountId}_${peerId}`, peer.photo.small)
         }
 
+        let avatarUrl: string | undefined = undefined
+        const avatarCacheKey = `${accountId}_${peerId}`
+        if (this.avatarCache.has(avatarCacheKey)) {
+          avatarUrl = this.avatarCache.get(avatarCacheKey)
+        } else if (peer.photo?.thumb) {
+          try {
+            const dataUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
+            avatarUrl = dataUrl
+            this.avatarCache.set(avatarCacheKey, dataUrl)
+          } catch (_) {}
+        } else if (peer.photo?.raw?.strippedThumb) {
+          const thumb = strippedThumbToDataUrl(peer.photo.raw.strippedThumb)
+          if (thumb) {
+            avatarUrl = thumb
+            this.avatarCache.set(avatarCacheKey, thumb)
+          }
+        }
+
         const isUser = peer._ === 'user' || typeof peer.firstName === 'string'
         const isBot = Boolean(peer.isBot)
         const isGroup = peer.chatType === 'group' || peer.chatType === 'supergroup' || Boolean(peer.isGroup)
@@ -1077,9 +1095,15 @@ export class AccountManager {
           lastMessageText,
           lastMessageDate,
           avatarInitials: initials,
+          avatarUrl,
           username: (peer as any).username,
-          customEmojiStatusId: (peer as any).emojiStatus?.emojiId?.toString(),
-          isPremium: (peer as any).isPremium,
+          customEmojiStatusId:
+            (peer as any).emojiStatus?.emoji?.toString() ||
+            (peer as any).emojiStatus?.raw?.documentId?.toString() ||
+            (peer as any).raw?.emojiStatus?.documentId?.toString() ||
+            (peer as any).emojiStatus?.documentId?.toString() ||
+            undefined,
+          isPremium: Boolean((peer as any).isPremium),
           isForum: (peer as any).isForum,
           isSponsored: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
           isSponsorChannel: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
@@ -1103,13 +1127,33 @@ export class AccountManager {
 
     try {
       const contacts = await holder.client.getContacts()
-      return contacts.map((c: any) => ({
-        id: c.id.toString(),
-        firstName: c.firstName || '',
-        lastName: c.lastName || undefined,
-        phone: c.phoneNumber || undefined,
-        username: c.username || undefined,
-      }))
+      return contacts.map((c: any) => {
+        const id = c.id.toString()
+        if (c.accessHash) {
+          this.peerAccessHashes.set(`${accountId}_${id}`, c.accessHash)
+        }
+        if (c.photo?.small) {
+          this.peerPhotos.set(`${accountId}_${id}`, c.photo.small)
+        }
+        let avatarUrl: string | undefined = undefined
+        const avatarCacheKey = `${accountId}_${id}`
+        if (this.avatarCache.has(avatarCacheKey)) {
+          avatarUrl = this.avatarCache.get(avatarCacheKey)
+        } else if (c.photo?.thumb) {
+          try {
+            avatarUrl = `data:image/jpeg;base64,${Buffer.from(c.photo.thumb).toString('base64')}`
+            this.avatarCache.set(avatarCacheKey, avatarUrl)
+          } catch (_) {}
+        }
+        return {
+          id,
+          firstName: c.firstName || '',
+          lastName: c.lastName || undefined,
+          phone: c.phoneNumber || undefined,
+          username: c.username || undefined,
+          avatarUrl,
+        }
+      })
     } catch (err: any) {
       Logger.error(`[AccountManager] getContacts error for :, err`)
       return []
@@ -1586,29 +1630,16 @@ export class AccountManager {
           await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
         }
       } else {
-        let inputPeer: any
-        const numId = Number(peerId)
-        if (!isNaN(numId)) {
-          try {
-            inputPeer = await holder.client.resolvePeer(numId)
-          } catch (_) {}
-        }
-        if (!inputPeer) {
-          const cachedHash = this.peerAccessHashes.get(`${accountId}_${peerId}`)
-          if (cachedHash && !isNaN(numId)) {
-            inputPeer = peerId.startsWith('-')
-              ? { _: 'inputPeerChannel', channelId: Math.abs(numId), accessHash: cachedHash }
-              : { _: 'inputPeerUser', userId: numId, accessHash: cachedHash }
-          }
-        }
-        if (!inputPeer) {
-          inputPeer = toRawPeer(peerId)
-        }
-
+        const inputPeer = await this.resolveInputPeer(accountId, peerId)
         if (inputPeer._ === 'inputPeerUser') {
+          let accessHash = inputPeer.accessHash || Long.ZERO
+          if (accessHash.isZero()) {
+            const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.userId}`)
+            if (cachedHash) accessHash = cachedHash
+          }
           const userPhotos: any = await holder.client.call({
             _: 'photos.getUserPhotos',
-            userId: { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash || Long.ZERO },
+            userId: { _: 'inputUser', userId: inputPeer.userId, accessHash },
             offset: 0,
             maxId: Long.ZERO,
             limit: 1,
@@ -1964,8 +1995,7 @@ export class AccountManager {
     if (!holder?.client) return null
 
     if (this.customEmojiCache.has(documentId)) {
-      const url = this.customEmojiCache.get(documentId)!
-      return { format: 'image', url }
+      return this.customEmojiCache.get(documentId)!
     }
 
     try {
@@ -1978,7 +2008,9 @@ export class AccountManager {
       const doc = res?.[0]
       if (!doc || doc._ !== 'document') return null
 
-      const ext = doc.mimeType === 'application/x-tgsticker' ? '.tgs' : '.webm'
+      const isLottie = doc.mimeType === 'application/x-tgsticker'
+      const isVideo = doc.mimeType === 'video/webm' || doc.mimeType === 'video/mp4'
+      const ext = isLottie ? '.tgs' : (isVideo ? '.webm' : '.webp')
       const filePath = path.join(this.mediaDir, `emoji_${documentId}${ext}`)
 
       if (!fs.existsSync(filePath)) {
@@ -1986,16 +2018,25 @@ export class AccountManager {
       }
 
       const streamUrl = `guidegram-media://${filePath.replace(/\\/g, '/')}`
-      this.customEmojiCache.set(documentId, streamUrl)
 
-      if (ext === '.tgs') {
-        const raw = await fs.promises.readFile(filePath)
-        const decompressed = zlib.gunzipSync(raw)
-        const parsedJson = JSON.parse(decompressed.toString('utf-8'))
-        return { format: 'lottie', data: parsedJson, url: streamUrl }
+      let payload: CustomEmojiPayload
+      if (isLottie) {
+        try {
+          const raw = await fs.promises.readFile(filePath)
+          const decompressed = zlib.gunzipSync(raw)
+          const parsedJson = JSON.parse(decompressed.toString('utf-8'))
+          payload = { format: 'lottie', data: parsedJson, url: streamUrl }
+        } catch (_) {
+          payload = { format: 'image', url: streamUrl }
+        }
+      } else if (isVideo) {
+        payload = { format: 'video', url: streamUrl }
+      } else {
+        payload = { format: 'image', url: streamUrl }
       }
 
-      return { format: ext === '.webm' ? 'video' : 'image', url: streamUrl }
+      this.customEmojiCache.set(documentId, payload)
+      return payload
     } catch (_) {
       return null
     }
@@ -2630,6 +2671,7 @@ export class AccountManager {
           isChannel: false,
           isBot: !!u?.bot,
           verified: !!u?.verified,
+          isPremium: !!u?.premium,
           customEmojiStatusId: u?.emojiStatus?.documentId?.toString(),
           botInfo,
           stargiftsCount,

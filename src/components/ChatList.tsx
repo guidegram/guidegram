@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw } from 'lucide-react'
+import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles } from 'lucide-react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
 import { Avatar } from './Avatar'
@@ -117,7 +117,7 @@ export const ChatList: React.FC<ChatListProps> = ({
     }
 
     // Normal tab category match
-    if (activeTab === 'users' && !dialog.isUser) return false
+    if (activeTab === 'users' && (!dialog.isUser || dialog.isBot)) return false
     if (activeTab === 'groups' && !isGroup) return false
     if (activeTab === 'channels' && !isBroadcast) return false
     if (activeTab === 'bots' && !dialog.isBot) return false
@@ -551,13 +551,16 @@ export const ChatList: React.FC<ChatListProps> = ({
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 min-w-0 pr-2">
                 <span className="text-xs font-bold text-gray-100 truncate">{dialog.title}</span>
-                {dialog.customEmojiStatusId && (
+                {dialog.customEmojiStatusId ? (
                   <CustomEmojiView
                     accountId={dialog.accountId}
                     documentId={dialog.customEmojiStatusId}
+                    fallback="⭐"
                     className="inline-block w-3.5 h-3.5 object-contain shrink-0"
                   />
-                )}
+                ) : dialog.isPremium ? (
+                  <Sparkles className="w-3.5 h-3.5 text-accent-cyan fill-accent-cyan shrink-0" />
+                ) : null}
                 {dialog.isPinned && (
                   <Pin className="w-3 h-3 text-primary-400 fill-current shrink-0" />
                 )}

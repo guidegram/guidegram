@@ -318,6 +318,7 @@ export interface ChatDetails {
     }
   }
   customEmojiStatusId?: string
+  isPremium?: boolean
   personalChannelId?: string
   personalChannelTitle?: string
   stargiftsCount?: number
