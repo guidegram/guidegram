@@ -3970,7 +3970,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )}
 
       {/* 2. Messages Feed Outer Relative Wrapper */}
-      <div className="flex-1 min-h-0 relative flex flex-col">
+      <div
+        className="flex-1 min-h-0 relative flex flex-col"
+        style={{
+          backgroundImage: 'var(--chat-wallpaper, none)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}
+      >
         <div
           ref={messagesContainerRef}
           onScroll={handleScroll}

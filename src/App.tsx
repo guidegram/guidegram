@@ -149,6 +149,31 @@ export const App: React.FC = () => {
             }
             localStorage.setItem(lastSeenKey, currentVer)
           } catch (_) {}
+
+          // Restore appearance preferences (Wallpaper, Theme, Font)
+          try {
+            const savedWp = localStorage.getItem('guidegram_chat_wallpaper')
+            if (savedWp) {
+              document.documentElement.style.setProperty('--chat-wallpaper', savedWp)
+            }
+            const savedTheme = localStorage.getItem('guidegram_theme_mode')
+            if (savedTheme) {
+              document.documentElement.setAttribute('data-chat-theme', savedTheme)
+            }
+            const savedFont = localStorage.getItem('guidegram_font_family')
+            if (savedFont && savedFont !== 'Default') {
+              const fontMap: Record<string, string> = {
+                Vazirmatn: "'Vazirmatn', sans-serif",
+                Inter: "'Inter', sans-serif",
+                Roboto: "'Roboto', sans-serif",
+                'Segoe UI': "'Segoe UI', sans-serif",
+                'Fira Code': "'Fira Code', monospace",
+              }
+              if (fontMap[savedFont]) {
+                document.body.style.fontFamily = fontMap[savedFont]
+              }
+            }
+          } catch (_) {}
         }
       } catch (err) {
         console.error('App init error:', err)

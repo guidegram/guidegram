@@ -69,6 +69,8 @@ import {
   MapPin,
   Link2,
   Plus,
+  ArrowLeft,
+  Search,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -89,6 +91,7 @@ import {
 import { playNotificationSound } from '../utils/soundEffects'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
+import { ActiveSessionsModal } from './ActiveSessionsModal'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -250,6 +253,133 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [autoNightMode, setAutoNightMode] = useState('Off')
   const [fontFamily, setFontFamily] = useState('Default')
   const [adaptiveLayoutWide, setAdaptiveLayoutWide] = useState(true)
+
+  // Sub-modal state for Privacy & Chat Settings
+  const [activeSubModal, setActiveSubModal] = useState<
+    | null
+    | 'activeSessions'
+    | 'twoFactor'
+    | 'autoDelete'
+    | 'localPasscode'
+    | 'passkeys'
+    | 'blockedUsers'
+    | 'connectedWebsites'
+    | 'privacyRule'
+    | 'nameColor'
+    | 'autoNight'
+    | 'fontFamily'
+    | 'customThemes'
+    | 'wallpaperGallery'
+    | 'quickAction'
+  >(null)
+
+  const [selectedPrivacyRule, setSelectedPrivacyRule] = useState<{
+    key: keyof PrivacySecuritySettings
+    title: string
+    subtitle: string
+    currentValue: string
+  } | null>(null)
+
+  const [chatListQuickAction, setChatListQuickAction] = useState<string>(
+    () => localStorage.getItem('guidegram_quick_action') || 'Change folder'
+  )
+  const [customWallpaper, setCustomWallpaper] = useState<string>(
+    () => localStorage.getItem('guidegram_chat_wallpaper') || ''
+  )
+  const [selectedNameColor, setSelectedNameColor] = useState<number>(
+    () => Number(localStorage.getItem('guidegram_name_color') || '4')
+  )
+  const [localPasscodeVal, setLocalPasscodeVal] = useState<string>(
+    () => localStorage.getItem('guidegram_local_passcode') || ''
+  )
+  const [localPasscodeEnabled, setLocalPasscodeEnabled] = useState<boolean>(
+    () => !!localStorage.getItem('guidegram_local_passcode')
+  )
+  const [passcodeTimeout, setPasscodeTimeout] = useState<string>(
+    () => localStorage.getItem('guidegram_passcode_timeout') || '5min'
+  )
+  const [twoFactorPassword, setTwoFactorPassword] = useState('')
+  const [twoFactorHint, setTwoFactorHint] = useState('')
+  const [twoFactorEmail, setTwoFactorEmail] = useState('')
+  const [blockedSearchQuery, setBlockedSearchQuery] = useState('')
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null)
+
+  const wallpaperFileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const showToast = (msg: string) => {
+    setFeedbackToast(msg)
+    setTimeout(() => setFeedbackToast(null), 2500)
+  }
+
+  const openPrivacyRule = (
+    key: keyof PrivacySecuritySettings,
+    title: string,
+    subtitle: string,
+    currentValue: string
+  ) => {
+    setSelectedPrivacyRule({ key, title, subtitle, currentValue })
+    setActiveSubModal('privacyRule')
+  }
+
+  const handleUpdatePrivacyRule = (val: string) => {
+    if (!selectedPrivacyRule) return
+    const key = selectedPrivacyRule.key
+    setPrivacyData((prev) => {
+      const updated = prev ? { ...prev, [key]: val } : ({ [key]: val } as any)
+      return updated
+    })
+    setSelectedPrivacyRule((prev) => (prev ? { ...prev, currentValue: val } : null))
+    localStorage.setItem(`guidegram_privacy_${key}`, val)
+    showToast(`Updated ${selectedPrivacyRule.title} to "${val}"`)
+  }
+
+  const handleSelectTheme = (theme: 'classic' | 'day' | 'tinted' | 'night') => {
+    setActiveTheme(theme)
+    localStorage.setItem('guidegram_theme_mode', theme)
+    document.documentElement.setAttribute('data-chat-theme', theme)
+    showToast(`Theme changed to ${theme.charAt(0).toUpperCase() + theme.slice(1)}`)
+  }
+
+  const handleSelectAccentColor = (id: number, hex: string) => {
+    setSelectedAccentColor(id)
+    localStorage.setItem('guidegram_accent_color', String(id))
+    document.documentElement.style.setProperty('--primary-accent', hex)
+    showToast(`Accent color updated`)
+  }
+
+  const handleSelectWallpaper = (wallpaperValue: string, name: string) => {
+    setCustomWallpaper(wallpaperValue)
+    if (wallpaperValue === 'default' || !wallpaperValue) {
+      localStorage.removeItem('guidegram_chat_wallpaper')
+      document.documentElement.style.removeProperty('--chat-wallpaper')
+    } else {
+      localStorage.setItem('guidegram_chat_wallpaper', wallpaperValue)
+      document.documentElement.style.setProperty('--chat-wallpaper', wallpaperValue)
+    }
+    showToast(`Wallpaper set to ${name}`)
+  }
+
+  const handleWallpaperFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      handleSelectWallpaper(`url("${dataUrl}")`, file.name)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleSelectFont = (fontName: string, cssFont: string) => {
+    setFontFamily(fontName)
+    localStorage.setItem('guidegram_font_family', fontName)
+    if (fontName === 'Default') {
+      document.body.style.fontFamily = ''
+    } else {
+      document.body.style.fontFamily = cssFont
+    }
+    showToast(`Font changed to ${fontName}`)
+  }
 
   // Log Viewer State
   const [showLogs, setShowLogs] = useState(false)
@@ -1336,67 +1466,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-1">
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Security</div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('twoFactor')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <ShieldCheck className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Two-Step Verification</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.twoStepVerification ? 'On' : 'On'}
+                      {privacyData?.twoStepVerification ? 'On' : 'Off'}
                     </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('autoDelete')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Auto-Delete Messages</span>
                     </div>
-                    <span className="text-xs font-medium text-[#50a2e9]">Off</span>
+                    <span className="text-xs font-medium text-[#50a2e9] capitalize">
+                      {privacyData?.autoDeleteMessages || 'Off'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('localPasscode')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Lock className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Local passcode</span>
                     </div>
-                    <span className="text-xs font-medium text-[#50a2e9]">On</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {localPasscodeEnabled ? 'On' : 'Off'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('passkeys')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Key className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Passkeys</span>
                     </div>
-                    <span className="text-xs font-medium text-[#50a2e9]">Off</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.passkeys ? 'On' : 'Off'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('blockedUsers')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Users className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Blocked users</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] font-mono">
-                      {privacyData?.blockedUsersCount ?? 208}
+                      {privacyData?.blockedUsersCount ?? 0}
                     </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('connectedWebsites')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Globe className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Connected websites</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] font-mono">
-                      {privacyData?.connectedWebsitesCount ?? 2}
+                      {privacyData?.connectedWebsitesCount ?? 0}
                     </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('activeSessions')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Monitor className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Active sessions</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] font-mono">
-                      {privacyData?.activeSessionsCount ?? 4}
+                      {privacyData?.activeSessionsCount ?? 1}
                     </span>
                   </div>
 
@@ -1409,70 +1566,214 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-1 pt-2 border-t border-white/5">
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Privacy</div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'phoneNumberPrivacy',
+                        'Phone number',
+                        'Who can see my phone number?',
+                        privacyData?.phoneNumberPrivacy || 'Nobody (+45)'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Phone number</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Nobody (+45)</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.phoneNumberPrivacy || 'Nobody (+45)'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'lastSeenPrivacy',
+                        'Last seen & online',
+                        'Who can see your Last Seen time?',
+                        privacyData?.lastSeenPrivacy || 'Nobody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Last seen & online</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Nobody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.lastSeenPrivacy || 'Nobody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'profilePhotosPrivacy',
+                        'Profile photos',
+                        'Who can see your profile photos and videos?',
+                        privacyData?.profilePhotosPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Profile photos</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.profilePhotosPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'forwardedMessagesPrivacy',
+                        'Forwarded messages',
+                        'Who can add a link to your account when forwarding your messages?',
+                        privacyData?.forwardedMessagesPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Forwarded messages</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.forwardedMessagesPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'callsPrivacy',
+                        'Calls',
+                        'Who can call you?',
+                        privacyData?.callsPrivacy || 'My contacts'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Calls</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">My contacts</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.callsPrivacy || 'My contacts'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'voiceMessagesPrivacy',
+                        'Voice messages',
+                        'Who can send you voice and video messages?',
+                        privacyData?.voiceMessagesPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-gray-200">Voice messages</span>
                       <Sparkles className="w-3 h-3 text-purple-400" />
                     </div>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.voiceMessagesPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'messagesPrivacy',
+                        'Messages',
+                        'Who can send you direct messages?',
+                        privacyData?.messagesPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-gray-200">Messages</span>
                       <Sparkles className="w-3 h-3 text-purple-400" />
                     </div>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.messagesPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'birthdayPrivacy',
+                        'Birthday',
+                        'Who can see your date of birth?',
+                        privacyData?.birthdayPrivacy || 'My contacts'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Birthday</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">My contacts</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.birthdayPrivacy || 'My contacts'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'giftsPrivacy',
+                        'Gifts',
+                        'Who can see gifts on your profile?',
+                        privacyData?.giftsPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Gifts</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.giftsPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'bioPrivacy',
+                        'Bio',
+                        'Who can see the Bio on your profile?',
+                        privacyData?.bioPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Bio</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.bioPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'savedMusicPrivacy',
+                        'Saved Music',
+                        'Who can see the music you have saved?',
+                        privacyData?.savedMusicPrivacy || 'Everybody'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Saved Music</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Everybody</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.savedMusicPrivacy || 'Everybody'}
+                    </span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() =>
+                      openPrivacyRule(
+                        'invitesPrivacy',
+                        'Invites',
+                        'Who can add you to groups and channels?',
+                        privacyData?.invitesPrivacy || 'Nobody (+1)'
+                      )
+                    }
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <span className="text-xs text-gray-200">Invites</span>
-                    <span className="text-xs font-medium text-[#50a2e9]">Nobody (+1)</span>
+                    <span className="text-xs font-medium text-[#50a2e9]">
+                      {privacyData?.invitesPrivacy || 'Nobody (+1)'}
+                    </span>
                   </div>
                 </div>
 
@@ -1511,7 +1812,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="grid grid-cols-4 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setActiveTheme('classic')}
+                    onClick={() => handleSelectTheme('classic')}
                     className={`rounded-2xl p-2.5 border transition-all flex flex-col items-center gap-2 cursor-pointer ${
                       activeTheme === 'classic'
                         ? 'border-[#50a2e9] bg-[#50a2e9]/10 ring-2 ring-[#50a2e9]/40'
@@ -1529,7 +1830,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setActiveTheme('day')}
+                    onClick={() => handleSelectTheme('day')}
                     className={`rounded-2xl p-2.5 border transition-all flex flex-col items-center gap-2 cursor-pointer ${
                       activeTheme === 'day'
                         ? 'border-[#50a2e9] bg-[#50a2e9]/10 ring-2 ring-[#50a2e9]/40'
@@ -1547,7 +1848,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setActiveTheme('tinted')}
+                    onClick={() => handleSelectTheme('tinted')}
                     className={`rounded-2xl p-2.5 border transition-all flex flex-col items-center gap-2 cursor-pointer ${
                       activeTheme === 'tinted'
                         ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/40'
@@ -1565,7 +1866,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setActiveTheme('night')}
+                    onClick={() => handleSelectTheme('night')}
                     className={`rounded-2xl p-2.5 border transition-all flex flex-col items-center gap-2 cursor-pointer ${
                       activeTheme === 'night'
                         ? 'border-[#50a2e9] bg-[#50a2e9]/10 ring-2 ring-[#50a2e9]/40'
@@ -1585,21 +1886,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* Accent Color Palette (10 colors) */}
                 <div className="flex items-center justify-between px-2 py-1">
                   {[
-                    { id: 0, bg: 'bg-[#50a2e9]' },
-                    { id: 1, bg: 'bg-[#29b6f6]' },
-                    { id: 2, bg: 'bg-[#4caf50]' },
-                    { id: 3, bg: 'bg-[#e91e63]' },
-                    { id: 4, bg: 'bg-[#ff9800]' },
-                    { id: 5, bg: 'bg-[#9c27b0]' },
-                    { id: 6, bg: 'bg-[#f44336]' },
-                    { id: 7, bg: 'bg-[#607d8b]' },
-                    { id: 8, bg: 'bg-[#009688]' }, // Tinted teal
-                    { id: 9, bg: 'bg-gradient-to-tr from-pink-500 via-amber-400 to-cyan-400' }, // Rainbow
+                    { id: 0, bg: 'bg-[#50a2e9]', hex: '#50a2e9' },
+                    { id: 1, bg: 'bg-[#29b6f6]', hex: '#29b6f6' },
+                    { id: 2, bg: 'bg-[#4caf50]', hex: '#4caf50' },
+                    { id: 3, bg: 'bg-[#e91e63]', hex: '#e91e63' },
+                    { id: 4, bg: 'bg-[#ff9800]', hex: '#ff9800' },
+                    { id: 5, bg: 'bg-[#9c27b0]', hex: '#9c27b0' },
+                    { id: 6, bg: 'bg-[#f44336]', hex: '#f44336' },
+                    { id: 7, bg: 'bg-[#607d8b]', hex: '#607d8b' },
+                    { id: 8, bg: 'bg-[#009688]', hex: '#009688' }, // Tinted teal
+                    { id: 9, bg: 'bg-gradient-to-tr from-pink-500 via-amber-400 to-cyan-400', hex: '#ec4899' }, // Rainbow
                   ].map((item) => (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setSelectedAccentColor(item.id)}
+                      onClick={() => handleSelectAccentColor(item.id, item.hex)}
                       className={`w-6 h-6 rounded-full ${item.bg} transition-transform cursor-pointer ${
                         selectedAccentColor === item.id
                           ? 'ring-2 ring-white ring-offset-2 ring-offset-dark-900 scale-110 shadow-lg'
@@ -1613,7 +1914,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-1 pt-2 border-t border-white/5">
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Theme settings</div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('nameColor')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Paintbrush className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Your name color</span>
@@ -1624,7 +1928,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('autoNight')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Moon className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Auto-night mode</span>
@@ -1632,7 +1939,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <span className="text-xs font-medium text-[#50a2e9]">{autoNightMode}</span>
                   </div>
 
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('fontFamily')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Type className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Font family</span>
@@ -1645,13 +1955,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-2 pt-2 border-t border-white/5">
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Custom themes</div>
                   <div className="flex items-center gap-3">
-                    <div className="w-20 h-20 rounded-2xl bg-dark-850 border border-white/10 flex flex-col items-center justify-center gap-1.5 p-2 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer">
-                      <Paintbrush className="w-5 h-5 text-accent-cyan" />
-                      <span className="text-[11px] font-medium">Night</span>
+                    <div
+                      onClick={() => handleSelectTheme('night')}
+                      className="w-20 h-20 rounded-2xl bg-dark-850 border border-white/10 flex flex-col items-center justify-center gap-1.5 p-2 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer group"
+                    >
+                      <Paintbrush className="w-5 h-5 text-accent-cyan group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-medium">Night Dark</span>
                     </div>
-                    <div className="w-20 h-20 rounded-2xl bg-dark-850 border border-white/10 flex flex-col items-center justify-center gap-1.5 p-2 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer">
-                      <Paintbrush className="w-5 h-5 text-accent-cyan" />
-                      <span className="text-[11px] font-medium">Night</span>
+                    <div
+                      onClick={() => handleSelectTheme('tinted')}
+                      className="w-20 h-20 rounded-2xl bg-dark-850 border border-white/10 flex flex-col items-center justify-center gap-1.5 p-2 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer group"
+                    >
+                      <Paintbrush className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-medium">Emerald Teal</span>
                     </div>
                   </div>
                 </div>
@@ -1660,10 +1976,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="space-y-2.5 pt-2 border-t border-white/5">
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Chat wallpaper</div>
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-[#0e1621] border border-white/10 shadow-inner shrink-0" />
+                    <div
+                      className="w-14 h-14 rounded-2xl border border-white/10 shadow-inner shrink-0 overflow-hidden bg-dark-900 flex items-center justify-center text-gray-500 relative"
+                      style={
+                        customWallpaper && customWallpaper !== 'default'
+                          ? {
+                              backgroundImage: customWallpaper.startsWith('url') ? customWallpaper : `url("${customWallpaper}")`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }
+                          : { background: 'radial-gradient(ellipse at top, #182533, #0f141c)' }
+                      }
+                    >
+                      <ImageIcon className="w-5 h-5 opacity-40 text-white" />
+                    </div>
                     <div className="space-y-1 text-xs">
-                      <button type="button" className="text-[#50a2e9] hover:underline cursor-pointer block">Choose from gallery</button>
-                      <button type="button" className="text-[#50a2e9] hover:underline cursor-pointer block">Choose from file</button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubModal('wallpaperGallery')}
+                        className="text-[#50a2e9] hover:underline cursor-pointer block text-left font-medium"
+                      >
+                        Choose from gallery
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => wallpaperFileInputRef.current?.click()}
+                        className="text-[#50a2e9] hover:underline cursor-pointer block text-left font-medium"
+                      >
+                        Choose from file
+                      </button>
+                      {customWallpaper && (
+                        <button
+                          type="button"
+                          onClick={() => handleSelectWallpaper('', 'Default')}
+                          className="text-rose-400 hover:underline cursor-pointer block text-[11px] text-left"
+                        >
+                          Reset to default
+                        </button>
+                      )}
+                      <input
+                        type="file"
+                        ref={wallpaperFileInputRef}
+                        onChange={handleWallpaperFileSelect}
+                        accept="image/*"
+                        className="hidden"
+                      />
                     </div>
                   </div>
                   <label className="flex items-center gap-2.5 px-1 py-1 cursor-pointer select-none">
@@ -1680,11 +2037,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* Section: Chat list quick action */}
                 <div className="space-y-1 pt-2 border-t border-white/5">
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Chat list quick action</div>
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={() => setActiveSubModal('quickAction')}
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Folder className="w-4 h-4 text-gray-400" />
-                      <span className="text-xs text-gray-200">Change folder</span>
+                      <span className="text-xs text-gray-200">{chatListQuickAction}</span>
                     </div>
+                    <ChevronRight className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="px-1 text-[11px] text-gray-500 leading-snug">
                     Choose the action you want to perform when you middle-click or swipe on the chat list.
@@ -2226,7 +2587,911 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       </div>
 
-      {/* Keyboard Shortcuts Reference Modal */}
+      {/* ACTIVE SESSIONS MODAL */}
+      {activeSubModal === 'activeSessions' && (
+        <ActiveSessionsModal
+          isOpen={true}
+          onClose={() => setActiveSubModal(null)}
+          accountId={accounts[0]?.id || ''}
+        />
+      )}
+
+      {/* TWO-STEP VERIFICATION MODAL */}
+      {activeSubModal === 'twoFactor' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <ShieldCheck className="w-4 h-4 text-accent-cyan" />
+                <span>Two-Step Verification (Cloud Password)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-primary-600/10 border border-primary-500/20 text-xs text-primary-300">
+              {privacyData?.twoStepVerification
+                ? 'Your Telegram account is currently protected with a two-step cloud password.'
+                : 'Set up an extra password that will be required when you log in on a new device.'}
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">New Password</label>
+                <input
+                  type="password"
+                  value={twoFactorPassword}
+                  onChange={(e) => setTwoFactorPassword(e.target.value)}
+                  placeholder="Enter cloud password"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">Password Hint (Optional)</label>
+                <input
+                  type="text"
+                  value={twoFactorHint}
+                  onChange={(e) => setTwoFactorHint(e.target.value)}
+                  placeholder="e.g. Favorite book title"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">Recovery Email (Optional)</label>
+                <input
+                  type="email"
+                  value={twoFactorEmail}
+                  onChange={(e) => setTwoFactorEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-white/5">
+              {privacyData?.twoStepVerification && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrivacyData((prev) => (prev ? { ...prev, twoStepVerification: false } : null))
+                    showToast('Two-step verification disabled')
+                    setActiveSubModal(null)
+                  }}
+                  className="text-xs text-rose-400 hover:underline cursor-pointer"
+                >
+                  Turn Off Password
+                </button>
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubModal(null)}
+                  className="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrivacyData((prev) => (prev ? { ...prev, twoStepVerification: true } : null))
+                    showToast('Cloud password updated successfully')
+                    setActiveSubModal(null)
+                  }}
+                  className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
+                >
+                  Save Password
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AUTO-DELETE MESSAGES MODAL */}
+      {activeSubModal === 'autoDelete' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Clock className="w-4 h-4 text-accent-cyan" />
+                <span>Auto-Delete Messages</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              Automatically delete messages sent in all new chats after a selected time period.
+            </div>
+
+            <div className="space-y-1.5">
+              {[
+                { id: 'off', label: 'Off', desc: 'Messages will not be deleted automatically' },
+                { id: '1d', label: 'After 1 Day (24 Hours)', desc: 'Delete messages 24 hours after sending' },
+                { id: '1w', label: 'After 1 Week (7 Days)', desc: 'Delete messages 7 days after sending' },
+                { id: '1m', label: 'After 1 Month', desc: 'Delete messages 30 days after sending' },
+              ].map((opt) => {
+                const isSelected = (privacyData?.autoDeleteMessages || 'off') === opt.id
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => {
+                      setPrivacyData((prev) => (prev ? { ...prev, autoDeleteMessages: opt.id as any } : null))
+                      showToast(`Auto-delete set to ${opt.label}`)
+                      setActiveSubModal(null)
+                    }}
+                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-primary-600/15 border-primary-500/30 text-white'
+                        : 'bg-dark-900 border-white/5 text-gray-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">{opt.label}</div>
+                      <div className="text-[11px] text-gray-400">{opt.desc}</div>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-primary-400 shrink-0" />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LOCAL PASSCODE MODAL */}
+      {activeSubModal === 'localPasscode' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Lock className="w-4 h-4 text-accent-cyan" />
+                <span>Local Passcode Lock</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              When a passcode is set, a lock icon appears at the top of your chat list. Click it to lock Guidegram when leaving your PC.
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div
+                onClick={() => setLocalPasscodeEnabled(!localPasscodeEnabled)}
+                className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between cursor-pointer"
+              >
+                <span className="font-semibold text-gray-200">Enable Passcode Lock</span>
+                <div
+                  className={`w-9 h-5 rounded-full p-0.5 transition-colors flex items-center ${
+                    localPasscodeEnabled ? 'bg-primary-600 justify-end' : 'bg-dark-950 justify-start border border-white/10'
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
+                </div>
+              </div>
+
+              {localPasscodeEnabled && (
+                <>
+                  <div>
+                    <label className="block text-gray-400 mb-1 font-medium">Passcode (PIN or Password)</label>
+                    <input
+                      type="password"
+                      value={localPasscodeVal}
+                      onChange={(e) => setLocalPasscodeVal(e.target.value)}
+                      placeholder="Enter 4-digit PIN"
+                      className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-gray-100 text-center tracking-widest text-sm focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-400 mb-1 font-medium">Auto-lock If Away For</label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[
+                        { id: '1min', label: '1m' },
+                        { id: '5min', label: '5m' },
+                        { id: '1hour', label: '1h' },
+                        { id: '5hours', label: '5h' },
+                      ].map((tItem) => (
+                        <button
+                          key={tItem.id}
+                          type="button"
+                          onClick={() => setPasscodeTimeout(tItem.id)}
+                          className={`py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                            passcodeTimeout === tItem.id
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-dark-900 text-gray-400 hover:text-gray-200 border border-white/5'
+                          }`}
+                        >
+                          {tItem.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (localPasscodeEnabled && localPasscodeVal) {
+                    localStorage.setItem('guidegram_local_passcode', localPasscodeVal)
+                    localStorage.setItem('guidegram_passcode_timeout', passcodeTimeout)
+                    showToast('Passcode lock activated')
+                  } else {
+                    localStorage.removeItem('guidegram_local_passcode')
+                    showToast('Passcode lock disabled')
+                  }
+                  setActiveSubModal(null)
+                }}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PASSKEYS MODAL */}
+      {activeSubModal === 'passkeys' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Key className="w-4 h-4 text-accent-cyan" />
+                <span>Passkeys & Biometrics</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              Passkeys allow you to securely sign in using Windows Hello, fingerprint, or FIDO2 hardware security keys without waiting for SMS codes.
+            </div>
+
+            <div className="p-3 rounded-xl bg-dark-900 border border-white/5 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300 font-semibold">Windows Hello / Passkey</span>
+                <span className="text-emerald-400 font-medium">Ready</span>
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Cryptographic key pair linked to this device for instant zero-SMS login.
+              </p>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacyData((prev) => (prev ? { ...prev, passkeys: true } : null))
+                  showToast('Passkey registered for this device')
+                  setActiveSubModal(null)
+                }}
+                className="w-full py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
+              >
+                Register Passkey for this PC
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BLOCKED USERS MODAL */}
+      {activeSubModal === 'blockedUsers' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Users className="w-4 h-4 text-accent-cyan" />
+                <span>Blocked Users ({privacyData?.blockedUsersCount ?? 0})</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={blockedSearchQuery}
+                onChange={(e) => setBlockedSearchQuery(e.target.value)}
+                placeholder="Search blocked users or bots..."
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500"
+              />
+            </div>
+
+            <div className="space-y-1.5 max-h-56 overflow-y-auto">
+              {[
+                { id: '1', name: 'Spam Bot @promo_telegram', date: 'Blocked 2 weeks ago' },
+                { id: '2', name: 'Crypto Advisor @invest_2024', date: 'Blocked 1 month ago' },
+              ].map((u) => (
+                <div
+                  key={u.id}
+                  className="p-2.5 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <div className="font-semibold text-gray-200">{u.name}</div>
+                    <div className="text-[10px] text-gray-500">{u.date}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrivacyData((prev) =>
+                        prev
+                          ? { ...prev, blockedUsersCount: Math.max(0, (prev.blockedUsersCount || 1) - 1) }
+                          : null
+                      )
+                      showToast(`Unblocked ${u.name}`)
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-primary-400 font-semibold text-[11px] cursor-pointer transition-colors"
+                  >
+                    Unblock
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-between items-center border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => showToast('Select a user or chat to block')}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-gray-200 transition-all cursor-pointer"
+              >
+                + Block User
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONNECTED WEBSITES MODAL */}
+      {activeSubModal === 'connectedWebsites' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Globe className="w-4 h-4 text-accent-cyan" />
+                <span>Connected Websites & Mini Apps</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              Websites and bots where you logged in with your Telegram account via Telegram Login Widget.
+            </div>
+
+            <div className="space-y-2 text-xs">
+              {[
+                { domain: 'fragment.com', desc: 'Telegram Fragment Marketplace', ip: '172.67.142.12', active: 'Today at 11:20' },
+                { domain: 'web.telegram.org', desc: 'Telegram Web Application', ip: '104.21.55.91', active: 'Yesterday at 16:40' },
+              ].map((site, idx) => (
+                <div key={idx} className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-gray-200">{site.domain}</div>
+                    <div className="text-[11px] text-gray-400">{site.desc}</div>
+                    <div className="text-[10px] text-gray-500 font-mono mt-0.5">IP: {site.ip} • {site.active}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrivacyData((prev) =>
+                        prev
+                          ? { ...prev, connectedWebsitesCount: Math.max(0, (prev.connectedWebsitesCount || 1) - 1) }
+                          : null
+                      )
+                      showToast(`Disconnected ${site.domain}`)
+                    }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-between items-center border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrivacyData((prev) => (prev ? { ...prev, connectedWebsitesCount: 0 } : null))
+                  showToast('Disconnected all website sessions')
+                  setActiveSubModal(null)
+                }}
+                className="text-xs text-rose-400 hover:underline font-semibold cursor-pointer"
+              >
+                Disconnect All Websites
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DYNAMIC PRIVACY RULE PICKER MODAL */}
+      {activeSubModal === 'privacyRule' && selectedPrivacyRule && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <ShieldCheck className="w-4 h-4 text-accent-cyan" />
+                <span>{selectedPrivacyRule.title}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-300 font-medium">
+              {selectedPrivacyRule.subtitle}
+            </div>
+
+            <div className="space-y-1.5">
+              {[
+                { id: 'Everybody', label: 'Everybody', desc: 'Anyone on Telegram' },
+                { id: 'My contacts', label: 'My contacts', desc: 'Only people in your contact list' },
+                { id: 'Nobody', label: 'Nobody', desc: 'No one unless added as exception' },
+              ].map((item) => {
+                const isSelected = selectedPrivacyRule.currentValue.toLowerCase().startsWith(item.id.toLowerCase())
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      handleUpdatePrivacyRule(item.label)
+                      setActiveSubModal(null)
+                    }}
+                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-primary-600/15 border-primary-500/30 text-white shadow-sm'
+                        : 'bg-dark-900 border-white/5 text-gray-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">{item.label}</div>
+                      <div className="text-[11px] text-gray-400">{item.desc}</div>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-primary-400 shrink-0" />}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-white/5 text-xs">
+              <div className="font-semibold text-gray-400">Exceptions</div>
+              <div className="p-2.5 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between text-gray-300">
+                <span>Always allow</span>
+                <span className="text-primary-400 font-mono">0 users</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between text-gray-300">
+                <span>Never allow</span>
+                <span className="text-primary-400 font-mono">0 users</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* YOUR NAME COLOR MODAL */}
+      {activeSubModal === 'nameColor' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Paintbrush className="w-4 h-4 text-accent-cyan" />
+                <span>Your Name Color</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Live Message Bubble Preview */}
+            <div className="p-3.5 rounded-2xl bg-dark-900 border border-white/10 space-y-2">
+              <div className="text-[11px] text-gray-400 font-medium">Preview</div>
+              <div className="p-3 rounded-2xl bg-dark-800 border border-white/5 max-w-[260px] space-y-1">
+                <div
+                  className={`text-xs font-bold ${
+                    [
+                      'text-red-400',
+                      'text-orange-400',
+                      'text-purple-400',
+                      'text-emerald-400',
+                      'text-cyan-400',
+                      'text-blue-400',
+                      'text-pink-400',
+                    ][selectedNameColor] || 'text-cyan-400'
+                  }`}
+                >
+                  {accounts[0]?.firstName || 'Your Name'}
+                </div>
+                <div className="text-xs text-gray-300">
+                  This is how your name appears in group replies, forwarded quotes, and links.
+                </div>
+              </div>
+            </div>
+
+            {/* 7 Color Palette */}
+            <div className="space-y-1.5">
+              <div className="text-xs font-semibold text-gray-400">Choose Name Accent Color</div>
+              <div className="grid grid-cols-7 gap-2 pt-1">
+                {[
+                  { id: 0, bg: 'bg-red-500', name: 'Red' },
+                  { id: 1, bg: 'bg-orange-500', name: 'Orange' },
+                  { id: 2, bg: 'bg-purple-500', name: 'Violet' },
+                  { id: 3, bg: 'bg-emerald-500', name: 'Green' },
+                  { id: 4, bg: 'bg-cyan-500', name: 'Cyan' },
+                  { id: 5, bg: 'bg-blue-500', name: 'Blue' },
+                  { id: 6, bg: 'bg-pink-500', name: 'Pink' },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedNameColor(c.id)
+                      localStorage.setItem('guidegram_name_color', String(c.id))
+                      showToast(`Name color changed to ${c.name}`)
+                    }}
+                    className={`h-9 rounded-xl ${c.bg} flex items-center justify-center transition-transform cursor-pointer ${
+                      selectedNameColor === c.id
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-dark-900 scale-110 shadow-lg'
+                        : 'hover:scale-105'
+                    }`}
+                  >
+                    {selectedNameColor === c.id && <Check className="w-3.5 h-3.5 text-white" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AUTO-NIGHT MODE MODAL */}
+      {activeSubModal === 'autoNight' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Moon className="w-4 h-4 text-accent-cyan" />
+                <span>Auto-Night Mode</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              Automatically switch between Day and Night color themes according to your preference.
+            </div>
+
+            <div className="space-y-1.5">
+              {[
+                { id: 'Off', label: 'Disabled (Off)', desc: 'Keep the currently selected theme at all times' },
+                { id: 'System', label: 'Match System', desc: 'Sync automatically with Windows dark/light mode' },
+                { id: 'Scheduled', label: 'Scheduled', desc: 'Switch to night theme from sunset to sunrise' },
+                { id: 'Adaptive', label: 'Adaptive', desc: 'Switch dynamically based on screen brightness' },
+              ].map((opt) => {
+                const isSelected = autoNightMode === opt.id
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => {
+                      setAutoNightMode(opt.id)
+                      showToast(`Auto-night mode set to ${opt.label}`)
+                      setActiveSubModal(null)
+                    }}
+                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-primary-600/15 border-primary-500/30 text-white'
+                        : 'bg-dark-900 border-white/5 text-gray-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">{opt.label}</div>
+                      <div className="text-[11px] text-gray-400">{opt.desc}</div>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-primary-400 shrink-0" />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FONT FAMILY MODAL */}
+      {activeSubModal === 'fontFamily' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Type className="w-4 h-4 text-accent-cyan" />
+                <span>Font Family</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-dark-900 border border-white/5 text-xs text-gray-300 space-y-1">
+              <div className="font-semibold text-primary-400">Sample Preview:</div>
+              <p>Guidegram Desktop Client: Fast, secure, and modern.</p>
+              <p className="font-persian">گایدگرام: پیام‌رسان سریع، سبک و امن برای ویندوز</p>
+            </div>
+
+            <div className="space-y-1.5 max-h-56 overflow-y-auto">
+              {[
+                { name: 'Default', css: '', desc: 'Open Sans & Vazirmatn System' },
+                { name: 'Vazirmatn', css: "'Vazirmatn', sans-serif", desc: 'بهینه‌سازی شده برای متون فارسی و دوزبانه' },
+                { name: 'Inter', css: "'Inter', sans-serif", desc: 'Modern Minimalist Sans' },
+                { name: 'Roboto', css: "'Roboto', sans-serif", desc: 'Google Clean & Crisp' },
+                { name: 'Segoe UI', css: "'Segoe UI', sans-serif", desc: 'Windows Fluent Native' },
+                { name: 'Fira Code', css: "'Fira Code', monospace", desc: 'Monospace Developer Font' },
+              ].map((f) => {
+                const isSelected = fontFamily === f.name
+                return (
+                  <div
+                    key={f.name}
+                    onClick={() => {
+                      handleSelectFont(f.name, f.css)
+                      setActiveSubModal(null)
+                    }}
+                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-primary-600/15 border-primary-500/30 text-white'
+                        : 'bg-dark-900 border-white/5 text-gray-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">{f.name}</div>
+                      <div className="text-[11px] text-gray-400">{f.desc}</div>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-primary-400 shrink-0" />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WALLPAPER GALLERY MODAL */}
+      {activeSubModal === 'wallpaperGallery' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <ImageIcon className="w-4 h-4 text-accent-cyan" />
+                <span>Chat Wallpaper Gallery</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              Choose from curated Telegram patterns or pick your own custom background.
+            </div>
+
+            <div className="grid grid-cols-4 gap-2.5">
+              {[
+                { id: 'default', name: 'Default Dark', bg: 'radial-gradient(ellipse at top, #182533, #0f141c)' },
+                { id: 'space', name: 'Cosmic Nebula', bg: 'radial-gradient(circle at 20% 20%, #201a3c 0%, #0c0d18 50%, #05050a 100%)' },
+                { id: 'emerald', name: 'Emerald Matrix', bg: 'linear-gradient(135deg, #092019 0%, #04100c 100%)' },
+                { id: 'midnight', name: 'Midnight Navy', bg: 'linear-gradient(to bottom, #111e33, #0a0f1d)' },
+                { id: 'sunset', name: 'Deep Sunset', bg: 'linear-gradient(135deg, #2b1322 0%, #150918 100%)' },
+                { id: 'obsidian', name: 'Obsidian Minimal', bg: 'linear-gradient(to bottom, #18191d, #0d0e10)' },
+                { id: 'amoled', name: 'AMOLED Pitch', bg: '#000000' },
+                { id: 'cyber', name: 'Cyber Teal', bg: 'radial-gradient(circle at 80% 80%, #082d33 0%, #041216 100%)' },
+              ].map((wp) => {
+                const isSelected = customWallpaper === wp.bg || (!customWallpaper && wp.id === 'default')
+                return (
+                  <div
+                    key={wp.id}
+                    onClick={() => {
+                      handleSelectWallpaper(wp.id === 'default' ? '' : wp.bg, wp.name)
+                    }}
+                    className={`h-24 rounded-2xl border flex flex-col items-center justify-end p-2 cursor-pointer relative overflow-hidden transition-all group ${
+                      isSelected
+                        ? 'border-primary-400 ring-2 ring-primary-500/40 scale-105'
+                        : 'border-white/10 hover:border-white/25 hover:scale-102'
+                    }`}
+                    style={{ background: wp.bg }}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 bg-primary-600 rounded-full p-0.5 shadow-md">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    <span className="text-[10px] font-semibold text-white/90 bg-black/40 px-1.5 py-0.5 rounded-md backdrop-blur-sm truncate w-full text-center">
+                      {wp.name}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="pt-2 flex justify-between items-center border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => wallpaperFileInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-primary-400 transition-all cursor-pointer"
+              >
+                Choose from PC...
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHAT LIST QUICK ACTION MODAL */}
+      {activeSubModal === 'quickAction' && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-100">
+                <Folder className="w-4 h-4 text-accent-cyan" />
+                <span>Chat List Quick Action</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubModal(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-400 leading-relaxed">
+              Choose the action to perform when you middle-click or swipe horizontally on a chat row in the chat list.
+            </div>
+
+            <div className="space-y-1.5">
+              {[
+                { id: 'Change folder', label: 'Change folder', desc: 'Move dialog to a specific cloud chat folder' },
+                { id: 'Mark as read', label: 'Mark as read / unread', desc: 'Toggle read state of all unread messages' },
+                { id: 'Pin / Unpin', label: 'Pin / Unpin chat', desc: 'Quickly pin or unpin dialog at top' },
+                { id: 'Mute / Unmute', label: 'Mute / Unmute notifications', desc: 'Toggle chat notification sounds' },
+                { id: 'Archive', label: 'Archive chat', desc: 'Move chat into the Archive folder' },
+              ].map((act) => {
+                const isSelected = chatListQuickAction === act.label
+                return (
+                  <div
+                    key={act.id}
+                    onClick={() => {
+                      setChatListQuickAction(act.label)
+                      localStorage.setItem('guidegram_quick_action', act.label)
+                      showToast(`Quick action set to "${act.label}"`)
+                      setActiveSubModal(null)
+                    }}
+                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-primary-600/15 border-primary-500/30 text-white'
+                        : 'bg-dark-900 border-white/5 text-gray-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">{act.label}</div>
+                      <div className="text-[11px] text-gray-400">{act.desc}</div>
+                    </div>
+                    {isSelected && <Check className="w-4 h-4 text-primary-400 shrink-0" />}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING FEEDBACK TOAST */}
+      {feedbackToast && (
+        <div className="fixed bottom-6 right-6 z-[70] bg-dark-850 text-white px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <CheckCheck className="w-4 h-4 text-emerald-400" />
+          <span className="text-xs font-medium">{feedbackToast}</span>
+        </div>
+      )}
       {showShortcutsModal && (
         <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-dark-850 rounded-2xl border border-white/10 shadow-2xl p-5 space-y-4">
