@@ -94,6 +94,8 @@ interface ChatViewportProps {
   suppressLinkWarning?: boolean
   autoDownload?: AutoDownloadConfig
   chatFontSize?: number
+  bubbleRadius?: number
+  bubblePadding?: number
   onSendMessage: (
     text: string,
     replyToMsgId?: number,
@@ -529,6 +531,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   suppressLinkWarning = false,
   autoDownload,
   chatFontSize = 14,
+  bubbleRadius = 16,
+  bubblePadding = 10,
   onSendMessage,
   onSendMedia,
   onOpenDirectForward,
@@ -3613,13 +3617,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       className={`transition-all ${
                       msg.isSticker || msg.mediaType === 'sticker'
                         ? 'bg-transparent p-0'
-                        : `rounded-2xl px-4 py-2.5 text-xs shadow-sm ${
+                        : `text-xs shadow-sm ${
                             msg.isOutgoing
                               ? 'bg-primary-600 text-white rounded-br-sm'
                               : 'bg-dark-800 text-gray-200 border border-white/5 rounded-bl-sm'
                           }`
                     } ${isSelected ? 'ring-2 ring-primary-400' : ''}`}
-                      style={{ fontSize: msg.isSticker || msg.mediaType === 'sticker' ? undefined : `${chatFontSize}px` }}
+                      style={{
+                        fontSize: msg.isSticker || msg.mediaType === 'sticker' ? undefined : `${chatFontSize}px`,
+                        borderRadius: msg.isSticker || msg.mediaType === 'sticker' ? undefined : `${bubbleRadius}px`,
+                        padding: msg.isSticker || msg.mediaType === 'sticker' ? undefined : `${bubblePadding}px ${Math.round(bubblePadding * 1.4)}px`,
+                      }}
                     >
                     {/* Group Sender Name with 64Gram Admin Badges */}
                     {!msg.isOutgoing && chat.isGroup && msg.senderName && (

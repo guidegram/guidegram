@@ -352,6 +352,8 @@ export interface AppConfig {
   alwaysAskDownloadPath?: boolean
   // Appearance & Chat Scale
   chatFontSize?: number
+  bubbleRadius?: number
+  bubblePadding?: number
 }
 
 export interface CacheStats {

@@ -183,8 +183,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [downloadsPath, setDownloadsPath] = useState('')
   const [alwaysAskDownloadPath, setAlwaysAskDownloadPath] = useState(false)
 
-  // Chat Font Size
+  // Chat Font Size & Bubble Customization
   const [chatFontSize, setChatFontSize] = useState(14)
+  const [bubbleRadius, setBubbleRadius] = useState(16)
+  const [bubblePadding, setBubblePadding] = useState(10)
 
   // Cache & Storage Usage
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null)
@@ -273,6 +275,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setDownloadsPath(cfg.downloadsPath || '')
         setAlwaysAskDownloadPath(cfg.alwaysAskDownloadPath ?? false)
         setChatFontSize(cfg.chatFontSize || 14)
+        setBubbleRadius(cfg.bubbleRadius ?? 16)
+        setBubblePadding(cfg.bubblePadding ?? 10)
         if (cfg.autoDownload) {
           setAutoDownload(cfg.autoDownload)
         }
@@ -425,6 +429,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       downloadsPath,
       alwaysAskDownloadPath,
       chatFontSize,
+      bubbleRadius,
+      bubblePadding,
     })
     setConfig(updated)
     onConfigUpdated?.(updated)
@@ -1252,6 +1258,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           {size}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Bubble Theming (Radius & Padding) */}
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                        <Paintbrush className="w-4 h-4 text-accent-cyan" />
+                        <span>Chat Bubble Geometry & Rhythm</span>
+                      </div>
+                    </div>
+
+                    {/* Corner Radius Slider */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-300">Corner Radius</span>
+                        <span className="font-mono text-accent-cyan font-bold bg-accent-cyan/10 px-2 py-0.5 rounded-md border border-accent-cyan/20">
+                          {bubbleRadius}px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={4}
+                        max={28}
+                        step={2}
+                        value={bubbleRadius}
+                        onChange={(e) => setBubbleRadius(Number(e.target.value))}
+                        className="w-full accent-primary-500 cursor-pointer h-1.5 bg-dark-900 rounded-lg appearance-none"
+                      />
+                      <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                        <span>Crisp (4px)</span>
+                        <span>Telegram Classic (16px)</span>
+                        <span>Super Rounded (28px)</span>
+                      </div>
+                    </div>
+
+                    {/* Bubble Padding Slider */}
+                    <div className="space-y-1.5 pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-300">Bubble Padding & Breathing Room</span>
+                        <span className="font-mono text-accent-cyan font-bold bg-accent-cyan/10 px-2 py-0.5 rounded-md border border-accent-cyan/20">
+                          {bubblePadding}px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={6}
+                        max={20}
+                        step={2}
+                        value={bubblePadding}
+                        onChange={(e) => setBubblePadding(Number(e.target.value))}
+                        className="w-full accent-primary-500 cursor-pointer h-1.5 bg-dark-900 rounded-lg appearance-none"
+                      />
+                      <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                        <span>Compact (6px)</span>
+                        <span>Balanced (10px)</span>
+                        <span>Spacious (20px)</span>
+                      </div>
                     </div>
                   </div>
 

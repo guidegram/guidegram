@@ -23,6 +23,7 @@ import {
   DialogItem,
   MessageItem,
   AppConfig,
+  ProxyConfig,
   UpdateInfo,
   SendMessageOptions,
   SendMediaOptions,
@@ -787,6 +788,15 @@ export const App: React.FC = () => {
     loadDialogsForAccount(newAccount.id)
   }
 
+  const handleUpdateAccountProxy = async (accountId: string, proxy?: ProxyConfig) => {
+    if (!window.guidegram) return
+    const updatedAccounts = accounts.map((acc) =>
+      acc.id === accountId ? { ...acc, proxyConfig: proxy } : acc
+    )
+    setAccounts(updatedAccounts)
+    await window.guidegram.updateConfig({ accounts: updatedAccounts })
+  }
+
   const handleLogoutAccount = async (accountId: string) => {
     if (!window.guidegram) return
     await window.guidegram.logoutAccount(accountId)
@@ -1069,6 +1079,8 @@ export const App: React.FC = () => {
             suppressLinkWarning={config?.suppressLinkWarning ?? false}
             autoDownload={config?.autoDownload}
             chatFontSize={config?.chatFontSize || 14}
+            bubbleRadius={config?.bubbleRadius ?? 16}
+            bubblePadding={config?.bubblePadding ?? 10}
             onSendMessage={handleSendMessage}
             onSendMedia={handleSendMedia}
             onOpenDirectForward={(msg) => setForwardMessage(msg)}
@@ -1190,7 +1202,7 @@ export const App: React.FC = () => {
         isOpen={isProxyModalOpen}
         accounts={accounts}
         onClose={() => setIsProxyModalOpen(false)}
-        onUpdateAccountProxy={() => {}}
+        onUpdateAccountProxy={handleUpdateAccountProxy}
       />
 
       <SettingsModal

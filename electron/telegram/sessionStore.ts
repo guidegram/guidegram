@@ -85,6 +85,8 @@ export class SessionStore {
       downloadsPath: path.join(this.dataDir, 'downloads'),
       alwaysAskDownloadPath: false,
       chatFontSize: 14,
+      bubbleRadius: 16,
+      bubblePadding: 10,
     }
 
     try {

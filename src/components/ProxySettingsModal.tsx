@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Shield, Plus, RefreshCw, Check, Trash2, Globe, Radio, Zap, Sparkles, AlertCircle } from 'lucide-react'
+import { X, Shield, Plus, RefreshCw, Check, Trash2, Globe, Radio, Zap, Sparkles, AlertCircle, User, Share2, Layers, CheckCircle2 } from 'lucide-react'
 import { ProxyConfig, AccountInfo, AutoHarvestStatus, WarpStatus } from '../types/telegram'
 
 interface ProxySettingsModalProps {
@@ -116,6 +116,37 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     } finally {
       setIsTogglingWarp(false)
     }
+  }
+
+  const [isDistributing, setIsDistributing] = useState(false)
+  const [distributionSuccess, setDistributionSuccess] = useState<string | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || '')
+
+  const handleDistributeToAccounts = async () => {
+    if (accounts.length === 0) return
+    setIsDistributing(true)
+    setDistributionSuccess(null)
+    try {
+      if ((window.guidegram as any).distributeProxiesToAccounts) {
+        await (window.guidegram as any).distributeProxiesToAccounts()
+        setDistributionSuccess(`Round-robin proxies distributed across ${accounts.length} account(s)!`)
+        setTimeout(() => setDistributionSuccess(null), 4000)
+      }
+    } catch (e) {
+      console.error('Failed to distribute proxies:', e)
+    } finally {
+      setIsDistributing(false)
+    }
+  }
+
+  const handleAssignProxyToAccount = (proxy: ProxyConfig) => {
+    const targetId = selectedAccountId || accounts[0]?.id
+    if (!targetId) return
+    onUpdateAccountProxy(targetId, proxy)
+    const acc = accounts.find((a) => a.id === targetId)
+    const name = acc?.firstName || acc?.phone || 'Account'
+    setDistributionSuccess(`Assigned ${proxy.name} to ${name}!`)
+    setTimeout(() => setDistributionSuccess(null), 3000)
   }
 
   const handleTestPing = async (proxy: ProxyConfig) => {
@@ -267,7 +298,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+                <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs flex-wrap gap-2">
                   <div className="flex items-center gap-4 text-gray-300">
                     <div>
                       Healthy:{' '}
@@ -282,15 +313,57 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <button
-                    onClick={handleScanNow}
-                    disabled={isScanningNow}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan text-xs font-bold transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${isScanningNow ? 'animate-spin' : ''}`} />
-                    <span>{isScanningNow ? 'Scanning Channels...' : 'Scan Now'}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {accounts.length > 0 && (
+                      <button
+                        onClick={handleDistributeToAccounts}
+                        disabled={isDistributing || harvestStatus.healthyCount === 0}
+                        title="Distribute healthy proxies across accounts with round-robin"
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer"
+                      >
+                        <Share2 className={`w-3 h-3 ${isDistributing ? 'animate-spin' : ''}`} />
+                        <span>{isDistributing ? 'Distributing...' : 'Distribute to Accounts'}</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={handleScanNow}
+                      disabled={isScanningNow}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isScanningNow ? 'animate-spin' : ''}`} />
+                      <span>{isScanningNow ? 'Scanning...' : 'Scan Now'}</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Account Binding Bar */}
+                {accounts.length > 1 && (
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
+                    <span className="text-gray-400 flex items-center gap-1">
+                      <User className="w-3.5 h-3.5 text-accent-cyan" />
+                      Target Account:
+                    </span>
+                    <select
+                      value={selectedAccountId}
+                      onChange={(e) => setSelectedAccountId(e.target.value)}
+                      className="bg-dark-850 border border-white/10 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none"
+                    >
+                      {accounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.firstName || acc.phone || acc.id} ({acc.proxyConfig?.enabled ? 'Proxy ON' : 'Direct'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Distribution Success Toast */}
+                {distributionSuccess && (
+                  <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>{distributionSuccess}</span>
+                  </div>
+                )}
               </div>
 
               {/* Harvested Proxies List */}
@@ -348,14 +421,27 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                               <span>{isHealthy ? `${p.pingMs}ms` : 'Failed'}</span>
                             </div>
 
-                            <button
-                              onClick={() => handleTestPing(p)}
-                              disabled={isChecking}
-                              title="Test Latency"
-                              className="p-2 rounded-xl bg-dark-750 hover:bg-dark-700 text-gray-300 hover:text-white transition-colors"
-                            >
-                              <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {accounts.length > 0 && isHealthy && (
+                                <button
+                                  onClick={() => handleAssignProxyToAccount(p)}
+                                  title="Assign this proxy to target account"
+                                  className="px-2.5 py-1.5 rounded-xl bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  <span>Use</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => handleTestPing(p)}
+                                disabled={isChecking}
+                                title="Test Latency"
+                                className="p-2 rounded-xl bg-dark-750 hover:bg-dark-700 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? 'animate-spin' : ''}`} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )

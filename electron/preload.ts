@@ -268,6 +268,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('proxy:stop-auto-harvest'),
   harvestNow: (channels?: string[]): Promise<ProxyConfig[]> =>
     ipcRenderer.invoke('proxy:harvest-now', { channels }),
+  distributeProxiesToAccounts: (accountIds?: string[]): Promise<AccountInfo[]> =>
+    ipcRenderer.invoke('proxy:distribute-to-accounts', { accountIds }),
   getHarvestStatus: (): Promise<AutoHarvestStatus> =>
     ipcRenderer.invoke('proxy:get-harvest-status'),
   toggleWarp: (enabled?: boolean): Promise<WarpStatus> =>

@@ -1189,6 +1189,24 @@ function setupIpcHandlers() {
     return await ProxyManager.harvestNow(channels)
   })
 
+  ipcMain.handle('proxy:distribute-to-accounts', async (_event, { accountIds }: { accountIds?: string[] } = {}) => {
+    const config = sessionStore.getConfig()
+    const targetIds = accountIds && accountIds.length > 0 ? accountIds : config.accounts.map((a) => a.id)
+    const distributionMap = ProxyManager.distributeProxiesToAccounts(targetIds)
+    const updatedAccounts = config.accounts.map((acc) => {
+      if (distributionMap.has(acc.id)) {
+        const assignedProxy = distributionMap.get(acc.id)
+        return {
+          ...acc,
+          proxyConfig: assignedProxy,
+        }
+      }
+      return acc
+    })
+    sessionStore.updateConfig({ accounts: updatedAccounts })
+    return updatedAccounts
+  })
+
   ipcMain.handle('proxy:get-harvest-status', async () => {
     return ProxyManager.getHarvestStatus()
   })
