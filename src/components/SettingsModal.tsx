@@ -65,8 +65,27 @@ import {
   Paintbrush,
   Image as ImageIcon,
   Heart,
+  Briefcase,
+  MapPin,
+  Link2,
+  Plus,
 } from 'lucide-react'
-import { AppConfig, AccountInfo, CloseAction, UpdateInfo, UpdateProgress, PortableLocatorInfo, AutoDownloadConfig, CacheStats, PrivacySecuritySettings } from '../types/telegram'
+import {
+  AppConfig,
+  AccountInfo,
+  CloseAction,
+  UpdateInfo,
+  UpdateProgress,
+  PortableLocatorInfo,
+  AutoDownloadConfig,
+  CacheStats,
+  PrivacySecuritySettings,
+  BusinessProfile,
+  BusinessChatLink,
+  BusinessWorkHours,
+  BusinessLocation,
+  BusinessIntro,
+} from '../types/telegram'
 import { playNotificationSound } from '../utils/soundEffects'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
@@ -119,7 +138,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </div>
 )
 
-type SettingsTab = 'profile' | 'general' | 'notifications' | 'privacy' | 'chat' | 'advanced'
+type SettingsTab = 'profile' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -237,6 +256,139 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [logText, setLogText] = useState('')
   const [logPath, setLogPath] = useState('')
   const [loadingLogs, setLoadingLogs] = useState(false)
+
+  // Telegram Business Hub State
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null)
+  const [isLoadingBusiness, setIsLoadingBusiness] = useState(false)
+  const [businessIntroTitle, setBusinessIntroTitle] = useState('')
+  const [businessIntroDesc, setBusinessIntroDesc] = useState('')
+  const [businessAddress, setBusinessAddress] = useState('')
+  const [businessLat, setBusinessLat] = useState<number | undefined>(undefined)
+  const [businessLong, setBusinessLong] = useState<number | undefined>(undefined)
+  const [businessTimezone, setBusinessTimezone] = useState('UTC')
+  const [businessWeeklyOpen, setBusinessWeeklyOpen] = useState<{ day: number; name: string; enabled: boolean; start: string; end: string }[]>([
+    { day: 1, name: 'Monday', enabled: true, start: '09:00', end: '18:00' },
+    { day: 2, name: 'Tuesday', enabled: true, start: '09:00', end: '18:00' },
+    { day: 3, name: 'Wednesday', enabled: true, start: '09:00', end: '18:00' },
+    { day: 4, name: 'Thursday', enabled: true, start: '09:00', end: '18:00' },
+    { day: 5, name: 'Friday', enabled: true, start: '09:00', end: '18:00' },
+    { day: 6, name: 'Saturday', enabled: false, start: '10:00', end: '15:00' },
+    { day: 0, name: 'Sunday', enabled: false, start: '10:00', end: '15:00' },
+  ])
+  const [businessLinks, setBusinessLinks] = useState<BusinessChatLink[]>([])
+  const [newLinkTitle, setNewLinkTitle] = useState('')
+  const [newLinkMessage, setNewLinkMessage] = useState('')
+  const [isCreatingLink, setIsCreatingLink] = useState(false)
+  const [businessToast, setBusinessToast] = useState<string | null>(null)
+  const [copiedLink, setCopiedLink] = useState<string | null>(null)
+
+  const loadBusinessProfile = async () => {
+    if (!accounts[0]?.id || !window.guidegram?.getBusinessProfile) return
+    setIsLoadingBusiness(true)
+    try {
+      const p = await window.guidegram.getBusinessProfile(accounts[0].id)
+      setBusinessProfile(p)
+      if (p.intro) {
+        setBusinessIntroTitle(p.intro.title || '')
+        setBusinessIntroDesc(p.intro.description || '')
+      }
+      if (p.location) {
+        setBusinessAddress(p.location.address || '')
+        setBusinessLat(p.location.lat)
+        setBusinessLong(p.location.long)
+      }
+      if (p.workHours) {
+        setBusinessTimezone(p.workHours.timezoneId || 'UTC')
+      }
+      setBusinessLinks(p.links || [])
+    } catch (err) {
+      console.warn('[Settings] Failed to load business profile:', err)
+    } finally {
+      setIsLoadingBusiness(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'business') {
+      loadBusinessProfile()
+    }
+  }, [isOpen, activeTab, accounts])
+
+  const handleSaveBusinessIntro = async () => {
+    if (!accounts[0]?.id || !window.guidegram?.updateBusinessIntro) return
+    const success = await window.guidegram.updateBusinessIntro(accounts[0].id, {
+      title: businessIntroTitle,
+      description: businessIntroDesc,
+    })
+    if (success) {
+      setBusinessToast(t('business.saved_success'))
+      setTimeout(() => setBusinessToast(null), 3000)
+    }
+  }
+
+  const handleSaveBusinessHours = async () => {
+    if (!accounts[0]?.id || !window.guidegram?.updateBusinessWorkHours) return
+    const weeklyOpenItems: { startMinute: number; endMinute: number }[] = []
+    businessWeeklyOpen.forEach((item) => {
+      if (!item.enabled) return
+      const [sh, sm] = item.start.split(':').map(Number)
+      const [eh, em] = item.end.split(':').map(Number)
+      const dayOffset = item.day === 0 ? 6 * 1440 : (item.day - 1) * 1440
+      const startMin = dayOffset + (sh * 60 + (sm || 0))
+      const endMin = dayOffset + (eh * 60 + (em || 0))
+      weeklyOpenItems.push({ startMinute: startMin, endMinute: endMin })
+    })
+
+    const success = await window.guidegram.updateBusinessWorkHours(accounts[0].id, {
+      timezoneId: businessTimezone,
+      weeklyOpen: weeklyOpenItems,
+    })
+    if (success) {
+      setBusinessToast(t('business.saved_success'))
+      setTimeout(() => setBusinessToast(null), 3000)
+    }
+  }
+
+  const handleSaveBusinessLocation = async () => {
+    if (!accounts[0]?.id || !window.guidegram?.updateBusinessLocation) return
+    const success = await window.guidegram.updateBusinessLocation(accounts[0].id, {
+      address: businessAddress,
+      lat: businessLat,
+      long: businessLong,
+    })
+    if (success) {
+      setBusinessToast(t('business.saved_success'))
+      setTimeout(() => setBusinessToast(null), 3000)
+    }
+  }
+
+  const handleCreateBusinessLink = async () => {
+    if (!accounts[0]?.id || !newLinkMessage.trim() || !window.guidegram?.createBusinessChatLink) return
+    setIsCreatingLink(true)
+    try {
+      const created = await window.guidegram.createBusinessChatLink(accounts[0].id, {
+        message: newLinkMessage.trim(),
+        title: newLinkTitle.trim() || undefined,
+      })
+      setBusinessLinks((prev) => [created, ...prev])
+      setNewLinkMessage('')
+      setNewLinkTitle('')
+      setBusinessToast(t('business.saved_success'))
+      setTimeout(() => setBusinessToast(null), 3000)
+    } catch (err) {
+      console.warn('[Settings] Failed to create business link:', err)
+    } finally {
+      setIsCreatingLink(false)
+    }
+  }
+
+  const handleDeleteBusinessLink = async (slug: string) => {
+    if (!accounts[0]?.id || !window.guidegram?.deleteBusinessChatLink) return
+    const success = await window.guidegram.deleteBusinessChatLink(accounts[0].id, slug)
+    if (success) {
+      setBusinessLinks((prev) => prev.filter((l) => l.slug !== slug))
+    }
+  }
 
   useEffect(() => {
     if (!window.guidegram?.on) return
@@ -509,6 +661,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               type="button"
+              onClick={() => setActiveTab('business')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'business'
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              <span className="truncate">{t('settings.telegram_business')}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('general')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'general'
@@ -622,6 +787,363 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: TELEGRAM BUSINESS */}
+            {activeTab === 'business' && (
+              <div className="space-y-6 animate-in fade-in duration-100">
+                {/* Header Banner */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-900/30 via-primary-800/10 to-transparent border border-primary-500/20 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold text-gray-100 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-primary-400" />
+                      <span>{t('business.title')}</span>
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 border border-primary-500/30">
+                        PRO
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 max-w-xl">
+                      {t('business.subtitle')}
+                    </div>
+                  </div>
+                  {isLoadingBusiness && (
+                    <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                  )}
+                </div>
+
+                {businessToast && (
+                  <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>{businessToast}</span>
+                  </div>
+                )}
+
+                {/* Section 1: Business Intro */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-gray-200">{t('business.intro_title')}</div>
+                      <div className="text-[11px] text-gray-400">{t('business.intro_desc')}</div>
+                    </div>
+                    <MessageSquare className="w-4 h-4 text-primary-400" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-400 mb-1">
+                          {t('business.intro_heading')}
+                        </label>
+                        <input
+                          type="text"
+                          value={businessIntroTitle}
+                          onChange={(e) => setBusinessIntroTitle(e.target.value)}
+                          placeholder={t('business.intro_heading_placeholder')}
+                          className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-400 mb-1">
+                          {t('business.intro_text')}
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={businessIntroDesc}
+                          onChange={(e) => setBusinessIntroDesc(e.target.value)}
+                          placeholder={t('business.intro_text_placeholder')}
+                          className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors resize-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveBusinessIntro}
+                        className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                      >
+                        {t('business.save_changes')}
+                      </button>
+                    </div>
+
+                    {/* Live Preview Bubble */}
+                    <div className="p-3.5 rounded-xl bg-dark-900/80 border border-white/5 flex flex-col justify-center">
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mb-2">
+                        {t('business.preview')}
+                      </div>
+                      <div className="p-3 rounded-2xl bg-dark-800 border border-white/10 space-y-1.5 shadow-md">
+                        <div className="text-xs font-bold text-gray-100">
+                          {businessIntroTitle || t('business.intro_heading_placeholder')}
+                        </div>
+                        <div className="text-[11px] text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {businessIntroDesc || t('business.intro_text_placeholder')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Opening Hours (Work Schedule) */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-gray-200 flex items-center gap-2">
+                        <span>{t('business.hours_title')}</span>
+                        {businessProfile?.workHours?.openNow && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            {t('business.hours_open_now')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-gray-400">{t('business.hours_desc')}</div>
+                    </div>
+                    <Clock className="w-4 h-4 text-primary-400" />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="text-[11px] font-medium text-gray-400">
+                      {t('business.hours_timezone')}:
+                    </label>
+                    <select
+                      value={businessTimezone}
+                      onChange={(e) => setBusinessTimezone(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-primary-500 cursor-pointer"
+                    >
+                      <option value="UTC">UTC</option>
+                      <option value="Asia/Tehran">Asia/Tehran (GMT+3:30)</option>
+                      <option value="Europe/London">Europe/London (GMT+0)</option>
+                      <option value="Europe/Berlin">Europe/Berlin (GMT+1)</option>
+                      <option value="America/New_York">America/New_York (EST)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+                      <option value="Asia/Dubai">Asia/Dubai (GMT+4)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    {businessWeeklyOpen.map((item, idx) => (
+                      <div
+                        key={item.day}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-dark-900/60 border border-white/5 text-xs"
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={item.enabled}
+                            onChange={(e) => {
+                              const updated = [...businessWeeklyOpen]
+                              updated[idx].enabled = e.target.checked
+                              setBusinessWeeklyOpen(updated)
+                            }}
+                            className="rounded border-white/10 text-primary-600 focus:ring-0 w-3.5 h-3.5 bg-dark-800"
+                          />
+                          <span className={`font-medium ${item.enabled ? 'text-gray-100' : 'text-gray-500'}`}>
+                            {item.name}
+                          </span>
+                        </label>
+
+                        {item.enabled ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={item.start}
+                              onChange={(e) => {
+                                const updated = [...businessWeeklyOpen]
+                                updated[idx].start = e.target.value
+                                setBusinessWeeklyOpen(updated)
+                              }}
+                              className="px-2 py-1 rounded-lg bg-dark-800 border border-white/10 text-[11px] text-gray-200 focus:outline-none"
+                            />
+                            <span className="text-gray-500 text-[11px]">-</span>
+                            <input
+                              type="time"
+                              value={item.end}
+                              onChange={(e) => {
+                                const updated = [...businessWeeklyOpen]
+                                updated[idx].end = e.target.value
+                                setBusinessWeeklyOpen(updated)
+                              }}
+                              className="px-2 py-1 rounded-lg bg-dark-800 border border-white/10 text-[11px] text-gray-200 focus:outline-none"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-gray-500">{t('business.hours_closed')}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveBusinessHours}
+                    className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  >
+                    {t('business.save_changes')}
+                  </button>
+                </div>
+
+                {/* Section 3: Location & Address */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-gray-200">{t('business.location_title')}</div>
+                      <div className="text-[11px] text-gray-400">{t('business.location_desc')}</div>
+                    </div>
+                    <MapPin className="w-4 h-4 text-primary-400" />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-400 mb-1">
+                        {t('business.location_address')}
+                      </label>
+                      <input
+                        type="text"
+                        value={businessAddress}
+                        onChange={(e) => setBusinessAddress(e.target.value)}
+                        placeholder={t('business.location_address_placeholder')}
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-400 mb-1">
+                          {t('business.location_lat')}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={businessLat ?? ''}
+                          onChange={(e) => setBusinessLat(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          placeholder="35.6892"
+                          className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-400 mb-1">
+                          {t('business.location_long')}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={businessLong ?? ''}
+                          onChange={(e) => setBusinessLong(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          placeholder="51.3890"
+                          className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveBusinessLocation}
+                      className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                    >
+                      {t('business.save_changes')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section 4: Chat Links */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-gray-200">{t('business.links_title')}</div>
+                      <div className="text-[11px] text-gray-400">{t('business.links_desc')}</div>
+                    </div>
+                    <Link2 className="w-4 h-4 text-primary-400" />
+                  </div>
+
+                  {/* Create New Link Card */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-3">
+                    <div className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5 text-primary-400" />
+                      <span>{t('business.create_link')}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newLinkTitle}
+                        onChange={(e) => setNewLinkTitle(e.target.value)}
+                        placeholder={t('business.link_title_placeholder')}
+                        className="w-full px-3 py-1.5 rounded-xl bg-dark-800 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                      />
+                      <textarea
+                        rows={2}
+                        value={newLinkMessage}
+                        onChange={(e) => setNewLinkMessage(e.target.value)}
+                        placeholder={t('business.link_msg_placeholder')}
+                        className="w-full px-3 py-1.5 rounded-xl bg-dark-800 border border-white/10 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors resize-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isCreatingLink || !newLinkMessage.trim()}
+                      onClick={handleCreateBusinessLink}
+                      className="px-3.5 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{t('business.create_link')}</span>
+                    </button>
+                  </div>
+
+                  {/* Links List */}
+                  <div className="space-y-2.5">
+                    {businessLinks.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-gray-500 font-medium">
+                        {t('business.no_links')}
+                      </div>
+                    ) : (
+                      businessLinks.map((bl, idx) => (
+                        <div
+                          key={bl.slug || idx}
+                          className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-100 truncate">
+                                {bl.title || bl.link}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-gray-400 font-mono">
+                                {bl.views} {t('business.views')}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-primary-400 font-mono select-all">
+                              {bl.link}
+                            </div>
+                            {bl.message && (
+                              <div className="text-[11px] text-gray-400 line-clamp-1 italic">
+                                "{bl.message}"
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                copyTextToClipboard(bl.link)
+                                setCopiedLink(bl.slug || bl.link)
+                                setTimeout(() => setCopiedLink(null), 2000)
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/10 transition-colors cursor-pointer flex items-center gap-1 text-[11px]"
+                            >
+                              <Copy className="w-3 h-3" />
+                              <span>{copiedLink === (bl.slug || bl.link) ? t('business.copied') : t('business.copy_link')}</span>
+                            </button>
+                            {bl.slug && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteBusinessLink(bl.slug!)}
+                                className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                                title={t('business.delete_link')}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}

@@ -55,6 +55,12 @@ import type {
   AdminLogActionType,
   AdminLogItem,
   AdminLogResponse,
+  BusinessWorkHoursItem,
+  BusinessWorkHours,
+  BusinessLocation,
+  BusinessIntro,
+  BusinessChatLink,
+  BusinessProfile,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -121,4 +127,11 @@ export type {
   AdminLogActionType,
   AdminLogItem,
   AdminLogResponse,
+  BusinessWorkHoursItem,
+  BusinessWorkHours,
+  BusinessLocation,
+  BusinessIntro,
+  BusinessChatLink,
+  BusinessProfile,
 }
+

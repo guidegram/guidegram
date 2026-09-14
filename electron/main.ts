@@ -1458,6 +1458,60 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-business-profile', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getBusinessProfile(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getBusinessProfile error:`, err)
+      return { links: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:update-business-intro', async (_event, { accountId, intro }) => {
+    try {
+      return await accountManager.updateBusinessIntro(accountId, intro)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateBusinessIntro error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-business-work-hours', async (_event, { accountId, workHours }) => {
+    try {
+      return await accountManager.updateBusinessWorkHours(accountId, workHours)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateBusinessWorkHours error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-business-location', async (_event, { accountId, location }) => {
+    try {
+      return await accountManager.updateBusinessLocation(accountId, location)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateBusinessLocation error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:create-business-chat-link', async (_event, { accountId, link }) => {
+    try {
+      return await accountManager.createBusinessChatLink(accountId, link)
+    } catch (err: any) {
+      Logger.warn(`[IPC] createBusinessChatLink error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:delete-business-chat-link', async (_event, { accountId, slug }) => {
+    try {
+      return await accountManager.deleteBusinessChatLink(accountId, slug)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteBusinessChatLink error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-star-gifts', async (_event, { accountId, userId }) => {
     try {
       return await accountManager.getSavedStarGifts(accountId, userId)

@@ -714,3 +714,41 @@ export interface AdminLogResponse {
   events: AdminLogItem[]
   hasMore: boolean
 }
+
+export interface BusinessWorkHoursItem {
+  startMinute: number
+  endMinute: number
+}
+
+export interface BusinessWorkHours {
+  timezoneId: string
+  weeklyOpen: BusinessWorkHoursItem[]
+  openNow?: boolean
+}
+
+export interface BusinessLocation {
+  address: string
+  lat?: number
+  long?: number
+}
+
+export interface BusinessIntro {
+  title: string
+  description: string
+}
+
+export interface BusinessChatLink {
+  link: string
+  message: string
+  title?: string
+  views: number
+  slug?: string
+}
+
+export interface BusinessProfile {
+  workHours?: BusinessWorkHours
+  location?: BusinessLocation
+  intro?: BusinessIntro
+  links: BusinessChatLink[]
+}
+

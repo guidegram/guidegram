@@ -53,6 +53,11 @@ import {
   AdminLogItem,
   AdminLogResponse,
   AdminLogActionType,
+  BusinessProfile,
+  BusinessChatLink,
+  BusinessWorkHours,
+  BusinessLocation,
+  BusinessIntro,
 } from './types'
 
 export interface ClientHolder {
@@ -3111,6 +3116,218 @@ export class AccountManager {
     } catch (err: any) {
       Logger.warn(`[AccountManager] getAdminLog error for ${channelId}:`, err)
       return { events: [], hasMore: false }
+    }
+  }
+
+  public async getBusinessProfile(accountId: string): Promise<BusinessProfile> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { links: [] }
+
+    try {
+      const fullRes: any = await holder.client.call({
+        _: 'users.getFullUser',
+        id: { _: 'inputUserSelf' },
+      })
+
+      const full = fullRes.fullUser
+      let intro: BusinessIntro | undefined
+      if (full?.businessIntro) {
+        intro = {
+          title: full.businessIntro.title || '',
+          description: full.businessIntro.description || '',
+        }
+      }
+
+      let location: BusinessLocation | undefined
+      if (full?.businessLocation) {
+        location = {
+          address: full.businessLocation.address || '',
+          lat: full.businessLocation.geoPoint?.lat,
+          long: full.businessLocation.geoPoint?.long,
+        }
+      }
+
+      let workHours: BusinessWorkHours | undefined
+      if (full?.businessWorkHours) {
+        workHours = {
+          timezoneId: full.businessWorkHours.timezoneId || 'UTC',
+          openNow: Boolean(full.businessWorkHours.openNow),
+          weeklyOpen: Array.isArray(full.businessWorkHours.weeklyOpen)
+            ? full.businessWorkHours.weeklyOpen.map((w: any) => ({
+                startMinute: w.startMinute,
+                endMinute: w.endMinute,
+              }))
+            : [],
+        }
+      }
+
+      let links: BusinessChatLink[] = []
+      try {
+        const linksRes: any = await holder.client.call({
+          _: 'account.getBusinessChatLinks',
+        })
+        if (linksRes && Array.isArray(linksRes.links)) {
+          links = linksRes.links.map((l: any) => {
+            let slug = ''
+            if (typeof l.link === 'string') {
+              const parts = l.link.split('/')
+              slug = parts[parts.length - 1] || ''
+            }
+            return {
+              link: l.link,
+              message: l.message || '',
+              title: l.title,
+              views: l.views || 0,
+              slug,
+            }
+          })
+        }
+      } catch (err) {
+        Logger.warn('[AccountManager] getBusinessChatLinks error:', err)
+      }
+
+      return {
+        intro,
+        location,
+        workHours,
+        links,
+      }
+    } catch (err: any) {
+      Logger.error('[AccountManager] getBusinessProfile error:', err)
+      return { links: [] }
+    }
+  }
+
+  public async updateBusinessIntro(
+    accountId: string,
+    intro: { title: string; description: string } | null
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.updateBusinessIntro',
+        intro: intro
+          ? {
+              _: 'inputBusinessIntro',
+              title: intro.title,
+              description: intro.description,
+            }
+          : undefined,
+      })
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] updateBusinessIntro error:', err)
+      return false
+    }
+  }
+
+  public async updateBusinessWorkHours(
+    accountId: string,
+    workHours: BusinessWorkHours | null
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.updateBusinessWorkHours',
+        businessWorkHours: workHours
+          ? {
+              _: 'businessWorkHours',
+              timezoneId: workHours.timezoneId,
+              weeklyOpen: workHours.weeklyOpen.map((w) => ({
+                _: 'businessWeeklyOpen',
+                startMinute: w.startMinute,
+                endMinute: w.endMinute,
+              })),
+            }
+          : undefined,
+      })
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] updateBusinessWorkHours error:', err)
+      return false
+    }
+  }
+
+  public async updateBusinessLocation(
+    accountId: string,
+    location: { address: string; lat?: number; long?: number } | null
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.updateBusinessLocation',
+        address: location?.address,
+        geoPoint:
+          location?.lat !== undefined && location?.long !== undefined
+            ? {
+                _: 'inputGeoPoint',
+                lat: location.lat,
+                long: location.long,
+              }
+            : undefined,
+      })
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] updateBusinessLocation error:', err)
+      return false
+    }
+  }
+
+  public async createBusinessChatLink(
+    accountId: string,
+    link: { message: string; title?: string }
+  ): Promise<BusinessChatLink> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.createBusinessChatLink',
+        link: {
+          _: 'inputBusinessChatLink',
+          message: link.message,
+          title: link.title || undefined,
+        },
+      })
+
+      let slug = ''
+      if (typeof res.link === 'string') {
+        const parts = res.link.split('/')
+        slug = parts[parts.length - 1] || ''
+      }
+
+      return {
+        link: res.link,
+        message: res.message || '',
+        title: res.title,
+        views: res.views || 0,
+        slug,
+      }
+    } catch (err) {
+      Logger.error('[AccountManager] createBusinessChatLink error:', err)
+      throw err
+    }
+  }
+
+  public async deleteBusinessChatLink(accountId: string, slug: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.deleteBusinessChatLink',
+        slug,
+      })
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] deleteBusinessChatLink error:', err)
+      return false
     }
   }
 

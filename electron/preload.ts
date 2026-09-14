@@ -39,6 +39,11 @@ import {
   SharedMediaResponse,
   DraftItem,
   AdminLogResponse,
+  BusinessProfile,
+  BusinessChatLink,
+  BusinessWorkHours,
+  BusinessLocation,
+  BusinessIntro,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -269,6 +274,30 @@ const guidegramAPI = {
       limit,
       maxId,
     }),
+  getBusinessProfile: (accountId: string): Promise<BusinessProfile> =>
+    ipcRenderer.invoke('telegram:get-business-profile', { accountId }),
+  updateBusinessIntro: (
+    accountId: string,
+    intro: { title: string; description: string } | null
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-business-intro', { accountId, intro }),
+  updateBusinessWorkHours: (
+    accountId: string,
+    workHours: BusinessWorkHours | null
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-business-work-hours', { accountId, workHours }),
+  updateBusinessLocation: (
+    accountId: string,
+    location: { address: string; lat?: number; long?: number } | null
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-business-location', { accountId, location }),
+  createBusinessChatLink: (
+    accountId: string,
+    link: { message: string; title?: string }
+  ): Promise<BusinessChatLink> =>
+    ipcRenderer.invoke('telegram:create-business-chat-link', { accountId, link }),
+  deleteBusinessChatLink: (accountId: string, slug: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-business-chat-link', { accountId, slug }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
 
