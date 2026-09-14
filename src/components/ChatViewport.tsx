@@ -2826,6 +2826,34 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           )
         }
 
+        // Private channel link: t.me/c/1234567890/123
+        const tMePrivateMatch = cleanPart.match(/^(?:https?:\/\/)?t\.me\/c\/([0-9]+)(?:\/([0-9]+))?$/)
+        if (tMePrivateMatch) {
+          const channelBareId = tMePrivateMatch[1]
+          const targetMsgId = tMePrivateMatch[2]
+          const channelPeerId = `-100${channelBareId}`
+          return (
+            <React.Fragment key={partKey}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onSelectUserOrChat) {
+                    onSelectUserOrChat(channelPeerId)
+                  } else {
+                    window.guidegram?.openExternal?.(cleanPart.startsWith('http') ? cleanPart : `https://${cleanPart}`)
+                  }
+                }}
+                className="text-accent-cyan underline hover:text-cyan-300 transition-colors font-medium inline cursor-pointer"
+                title={`Open Channel ${channelBareId}${targetMsgId ? ` message #${targetMsgId}` : ''}`}
+              >
+                {cleanPart}
+              </button>
+              {trailingPunct}
+            </React.Fragment>
+          )
+        }
+
         const tMeMatch = cleanPart.match(/^(?:https?:\/\/)?t\.me\/([a-zA-Z0-9_]{3,32})(?:\/([0-9]+))?$/)
         if (tMeMatch) {
           const username = tMeMatch[1]

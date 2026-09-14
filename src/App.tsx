@@ -865,8 +865,8 @@ export const App: React.FC = () => {
     }
   }
 
-  // 64Gram Feature: Select chat by username or numeric ID
   const handleSelectUserOrChat = async (target: string) => {
+    if (!activeAccountId) return
     const dialogs = dialogsByAccount[activeAccountId] || []
     const cleanTarget = target.replace(/^@/, '').trim()
     const targetDigits = cleanTarget.replace(/^-100/, '').replace(/^-/, '')
