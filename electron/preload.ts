@@ -69,6 +69,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:start-phone-auth', { phone, proxy }),
   completePhoneAuth: (phone: string, code: string, password?: string) =>
     ipcRenderer.invoke('telegram:complete-phone-auth', { phone, code, password }),
+  loginBot: (token: string, proxy?: ProxyConfig): Promise<AccountInfo> =>
+    ipcRenderer.invoke('telegram:login-bot', { token, proxy }),
   startQrAuth: (proxy?: ProxyConfig): Promise<QrTokenPayload> =>
     ipcRenderer.invoke('telegram:start-qr-auth', { proxy }),
   cancelQrAuth: (): Promise<void> =>

@@ -967,6 +967,16 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:login-bot', async (_event, { token, proxy }) => {
+    Logger.info('[IPC] telegram:login-bot')
+    try {
+      return await accountManager.startBotAuth(token, proxy)
+    } catch (err: any) {
+      Logger.error('[IPC] startBotAuth failed:', err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:start-qr-auth', async (_event, { proxy }) => {
     Logger.info('[IPC] telegram:start-qr-auth')
     try {

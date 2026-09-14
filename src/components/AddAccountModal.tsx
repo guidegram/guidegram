@@ -12,6 +12,7 @@ import {
   Loader2,
   ArrowLeft,
   Smartphone,
+  Bot,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { ProxyConfig, AccountInfo, QrTokenPayload } from '../types/telegram'
@@ -27,8 +28,13 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   onClose,
   onAccountAdded,
 }) => {
-  // Method selection: 'qr' (default) vs 'phone'
-  const [loginMethod, setLoginMethod] = useState<'qr' | 'phone'>('qr')
+  // Method selection: 'qr' (default) vs 'phone' vs 'bot'
+  const [loginMethod, setLoginMethod] = useState<'qr' | 'phone' | 'bot'>('qr')
+
+  // Bot Token states
+  const [botToken, setBotToken] = useState('')
+  const [botLoading, setBotLoading] = useState(false)
+  const [botSuccess, setBotSuccess] = useState(false)
 
   // QR Flow states
   const [qrState, setQrState] = useState<'loading' | 'qr' | 'scanned' | '2fa' | 'success'>('loading')
@@ -131,6 +137,9 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
       setErrorMessage(null)
       setQrPassword('')
       setQr2FaHint('')
+      setBotToken('')
+      setBotLoading(false)
+      setBotSuccess(false)
       return
     }
 
@@ -192,18 +201,46 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
 
   if (!isOpen) return null
 
-  const handleSwitchTab = async (method: 'qr' | 'phone') => {
+  const handleSwitchTab = async (method: 'qr' | 'phone' | 'bot') => {
     if (method === loginMethod) return
     setErrorMessage(null)
-    if (method === 'phone') {
+    if (method === 'phone' || method === 'bot') {
       await window.guidegram.cancelQrAuth().catch(() => {})
-      setLoginMethod('phone')
+      setLoginMethod(method)
     } else {
       setQrState('loading')
       setQrPayload(null)
       setQrPassword('')
       setQr2FaHint('')
       setLoginMethod('qr')
+    }
+  }
+
+  const handleConnectBot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = botToken.trim()
+    if (!token) return
+
+    if (!/^\d+:[A-Za-z0-9_-]+$/.test(token)) {
+      setErrorMessage('Invalid bot token format. It must follow the pattern: 123456789:ABCdef...')
+      return
+    }
+
+    setBotLoading(true)
+    setErrorMessage(null)
+
+    try {
+      const proxy = getProxyConfig()
+      const account = await window.guidegram.loginBot(token, proxy)
+      setBotSuccess(true)
+      setTimeout(() => {
+        onAccountAdded(account)
+        onClose()
+      }, 1200)
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to login with bot token. Check token or proxy settings.')
+    } finally {
+      setBotLoading(false)
     }
   }
 
@@ -286,7 +323,13 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-primary-600/20 text-primary-400 flex items-center justify-center border border-primary-500/20">
-              {loginMethod === 'qr' ? <QrCode className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+              {loginMethod === 'qr' ? (
+                <QrCode className="w-4 h-4" />
+              ) : loginMethod === 'phone' ? (
+                <Phone className="w-4 h-4" />
+              ) : (
+                <Bot className="w-4 h-4" />
+              )}
             </div>
             <div className="text-sm font-bold text-gray-100">Add Telegram Account</div>
           </div>
@@ -298,33 +341,46 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Switcher: Quick QR Code vs Phone Number */}
-        <div className="flex p-1 bg-dark-850/80 rounded-2xl border border-white/5 mx-6 mt-4">
+        {/* Tab Switcher: QR Code vs Phone vs Bot Token */}
+        <div className="flex p-1 bg-dark-850/80 rounded-2xl border border-white/5 mx-6 mt-4 gap-1">
           <button
             type="button"
             onClick={() => handleSwitchTab('qr')}
             className={clsx(
-              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
+              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
               loginMethod === 'qr'
                 ? 'bg-primary-600 text-white shadow-glow'
                 : 'text-gray-400 hover:text-gray-200'
             )}
           >
             <QrCode className="w-3.5 h-3.5" />
-            <span>Quick QR Code</span>
+            <span>QR Code</span>
           </button>
           <button
             type="button"
             onClick={() => handleSwitchTab('phone')}
             className={clsx(
-              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
+              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
               loginMethod === 'phone'
                 ? 'bg-primary-600 text-white shadow-glow'
                 : 'text-gray-400 hover:text-gray-200'
             )}
           >
             <Phone className="w-3.5 h-3.5" />
-            <span>Phone Number</span>
+            <span>Phone</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchTab('bot')}
+            className={clsx(
+              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
+              loginMethod === 'bot'
+                ? 'bg-primary-600 text-white shadow-glow'
+                : 'text-gray-400 hover:text-gray-200'
+            )}
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>Bot Token</span>
           </button>
         </div>
 
@@ -792,6 +848,126 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
                     Your session is saved portably and ready to use.
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* =================== TAB 3: BOT TOKEN AUTH =================== */}
+          {loginMethod === 'bot' && (
+            <div>
+              {botSuccess ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <CheckCircle2 className="w-12 h-12 text-accent-emerald mb-3 animate-bounce" />
+                  <div className="text-sm font-bold text-gray-100">Bot Connected Successfully!</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Your bot session is authenticated and ready to use.
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleConnectBot} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                      Telegram Bot Token
+                    </label>
+                    <div className="relative">
+                      <Bot className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ..."
+                        value={botToken}
+                        onChange={(e) => setBotToken(e.target.value)}
+                        required
+                        className="w-full bg-dark-800 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-100 font-mono placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                      Enter the HTTP API token provided by{' '}
+                      <span className="text-primary-400 font-medium">@BotFather</span>.
+                      The bot will be connected as an active MTProto account.
+                    </p>
+                  </div>
+
+                  {/* Per-Account Proxy Settings */}
+                  <div className="pt-2 border-t border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setUseProxy(!useProxy)}
+                      className="flex items-center gap-2 text-xs font-medium text-accent-cyan hover:underline"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>{useProxy ? 'Remove dedicated proxy' : '+ Assign dedicated proxy to this bot'}</span>
+                    </button>
+
+                    {useProxy && (
+                      <div className="mt-3 p-3 rounded-2xl bg-dark-850 border border-white/5 space-y-2.5 text-xs">
+                        <div className="flex gap-2">
+                          <select
+                            value={proxyType}
+                            onChange={(e) => setProxyType(e.target.value as any)}
+                            className="bg-dark-800 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-gray-200"
+                          >
+                            <option value="socks5">SOCKS5</option>
+                            <option value="http">HTTP</option>
+                            <option value="mtproto">MTProto</option>
+                          </select>
+
+                          <input
+                            type="text"
+                            placeholder="Host (e.g. 127.0.0.1)"
+                            value={proxyHost}
+                            onChange={(e) => setProxyHost(e.target.value)}
+                            className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-gray-200"
+                          />
+
+                          <input
+                            type="number"
+                            placeholder="Port"
+                            value={proxyPort}
+                            onChange={(e) => setProxyPort(Number(e.target.value))}
+                            className="w-20 bg-dark-800 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-gray-200"
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Username (optional)"
+                            value={proxyUser}
+                            onChange={(e) => setProxyUser(e.target.value)}
+                            className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-gray-200"
+                          />
+                          <input
+                            type="password"
+                            placeholder="Password (optional)"
+                            value={proxyPass}
+                            onChange={(e) => setProxyPass(e.target.value)}
+                            className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-gray-200"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={botLoading || !botToken.trim()}
+                      className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-glow transition-all flex items-center justify-center gap-1.5"
+                    >
+                      {botLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Connecting Bot...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Connect Bot</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
           )}

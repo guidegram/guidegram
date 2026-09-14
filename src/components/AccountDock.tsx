@@ -63,7 +63,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
             <div key={acc.id} className="relative group">
               <button
                 onClick={() => onSelectAccount(acc.id)}
-                title={`${safeFirst} (${acc.phone || 'No phone'})`}
+                title={`${safeFirst} (${acc.isBot ? 'Bot' : acc.phone || 'No phone'})`}
                 className={`relative w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-dark-900 shadow-glow'
@@ -90,6 +90,16 @@ export const AccountDock: React.FC<AccountDockProps> = ({
                       : 'bg-gray-500'
                   }`}
                 />
+
+                {/* Bot Indicator */}
+                {acc.isBot && (
+                  <span
+                    title="Bot Account"
+                    className="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-primary-600 text-white ring-1 ring-dark-900 flex items-center justify-center text-[9px] leading-none select-none"
+                  >
+                    🤖
+                  </span>
+                )}
 
                 {/* Proxy Indicator */}
                 {acc.proxyConfig?.enabled && (

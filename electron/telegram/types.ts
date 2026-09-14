@@ -57,6 +57,7 @@ export interface AccountInfo {
   unreadTotal: number
   proxyConfig?: ProxyConfig
   isPremium?: boolean
+  isBot?: boolean
   sessionString?: string
   deviceProfile?: {
     deviceModel: string

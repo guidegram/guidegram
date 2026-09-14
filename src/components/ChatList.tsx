@@ -260,8 +260,13 @@ export const ChatList: React.FC<ChatListProps> = ({
               size="sm"
             />
             <div className="truncate">
-              <div className="text-xs font-bold text-gray-200 truncate">
-                {account.firstName || 'User'} {account.lastName || ''}
+              <div className="text-xs font-bold text-gray-200 truncate flex items-center gap-1.5">
+                <span className="truncate">{account.firstName || 'User'} {account.lastName || ''}</span>
+                {account.isBot && (
+                  <span className="shrink-0 text-[9px] px-1 py-0.5 rounded bg-primary-500/20 text-primary-300 font-semibold uppercase tracking-wider border border-primary-500/30">
+                    BOT
+                  </span>
+                )}
               </div>
               <div className="text-[11px] text-gray-400 truncate">{account.phone || ''}</div>
             </div>

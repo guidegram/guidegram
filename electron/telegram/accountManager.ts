@@ -451,16 +451,20 @@ export class AccountManager {
 
       const me: any = await client.getMe().catch(() => null)
       if (me && me.id) {
+        const isBot = Boolean(me.isBot || (me as any).bot || savedAcc.isBot)
         const updatedInfo: AccountInfo = {
           id: me.id.toString(),
-          phone: me.phoneNumber ? (me.phoneNumber.startsWith('+') ? me.phoneNumber : '+' + me.phoneNumber) : savedAcc.phone,
-          firstName: me.firstName || savedAcc.firstName || 'User',
+          phone: me.phoneNumber
+            ? (me.phoneNumber.startsWith('+') ? me.phoneNumber : '+' + me.phoneNumber)
+            : (savedAcc.phone || (me.username ? `@${me.username}` : `Bot ${me.id}`)),
+          firstName: me.firstName || savedAcc.firstName || (isBot ? 'Bot' : 'User'),
           lastName: me.lastName || savedAcc.lastName,
           username: me.username || savedAcc.username,
           status: 'connected',
           unreadTotal: savedAcc.unreadTotal || 0,
           proxyConfig: savedAcc.proxyConfig,
           isPremium: me.isPremium || false,
+          isBot,
           deviceProfile: profile,
         }
 
@@ -632,6 +636,92 @@ export class AccountManager {
     } catch (_) {}
 
     return info
+  }
+
+  public async startBotAuth(token: string, proxy?: ProxyConfig): Promise<AccountInfo> {
+    const cleanToken = (token || '').trim()
+    if (!cleanToken) {
+      throw new Error('Bot token is required.')
+    }
+    const botTokenRegex = /^\d+:[A-Za-z0-9_-]+$/
+    if (!botTokenRegex.test(cleanToken)) {
+      throw new Error('Invalid Bot Token format. It should look like: 123456789:ABCdefGHI...')
+    }
+
+    const botIdPrefix = cleanToken.split(':')[0]
+    Logger.info(`[AccountManager] Starting bot auth for bot ID prefix: ${botIdPrefix}`)
+    const config = this.store.getConfig()
+    const transport = ProxyManager.toMtcuteTransport(proxy)
+    const antiFingerprinting = config.antiFingerprinting !== false
+    const botSeed = `bot_${botIdPrefix}`
+    const profile = DeviceProfileManager.getProfileForAccount(botSeed, antiFingerprinting)
+
+    const clientOptions: any = {
+      apiId: config.apiId,
+      apiHash: config.apiHash,
+      storage: new MemoryStorage(),
+      connectionCount: (kind: any) => (kind === 'download' ? 8 : (kind === 'upload' ? 8 : 4)),
+      initConnectionOptions: {
+        deviceModel: profile.deviceModel,
+        systemVersion: profile.systemVersion,
+        appVersion: profile.appVersion,
+        systemLangCode: profile.systemLangCode,
+        langCode: profile.langCode,
+      },
+    }
+    if (transport) {
+      clientOptions.transport = transport
+    }
+
+    const client = new TelegramClient(clientOptions)
+
+    try {
+      await client.connect()
+      Logger.info(`[AccountManager] Connected to DC. Signing in with bot token...`)
+      await client.signInBot(cleanToken)
+      Logger.info(`[AccountManager] Bot signed in successfully!`)
+
+      const me: any = await client.getMe()
+      const sessionString = await client.exportSession()
+      const accountId = me.id.toString()
+      const botPhone = me.username ? `@${me.username}` : `Bot ${me.id}`
+
+      const info: AccountInfo = {
+        id: accountId,
+        phone: botPhone,
+        firstName: me.firstName || 'Bot',
+        lastName: me.lastName || undefined,
+        username: me.username || undefined,
+        status: 'connected',
+        unreadTotal: 0,
+        proxyConfig: proxy,
+        isPremium: false,
+        isBot: true,
+        deviceProfile: profile || DeviceProfileManager.getProfileForAccount(accountId, antiFingerprinting),
+      }
+
+      this.store.saveSessionString(accountId, sessionString)
+
+      const currentAccounts = config.accounts.filter((a) => a.id !== accountId)
+      currentAccounts.push(info)
+      this.store.updateConfig({ accounts: currentAccounts })
+
+      this.clients.set(accountId, { client, session: sessionString, info })
+      this.setupEventListeners(accountId, client)
+      try {
+        client.startUpdatesLoop()
+      } catch (_) {}
+
+      Logger.info(`[AccountManager] Bot account ${accountId} (${botPhone}) registered successfully!`)
+      this.onEventCallback?.('telegram:account-updated', { account: info })
+      return info
+    } catch (err: any) {
+      Logger.error(`[AccountManager] startBotAuth failed:`, err)
+      try {
+        await client.disconnect()
+      } catch (_) {}
+      throw err
+    }
   }
 
   public async startQrAuth(proxy?: ProxyConfig): Promise<QrTokenPayload> {
