@@ -1,4 +1,4 @@
-# 🚀 Guidegram v1.9.0 — Rich Reply Previews, Instant Media & Performance Engine
+# 🚀 Guidegram v1.10.0 — Group Calls, Mini Apps Host, Saved Messages 2.0 & Telegram Business
 
 > **Next-Generation Portable Desktop Telegram Client** with Unlimited Multi-Account, Dedicated Proxies, Advanced Group Analytics, and Multi-Chain Community Support.
 
@@ -6,56 +6,70 @@
 
 <div align="center">
   <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
-  <h3>Guidegram v1.9.0</h3>
-  <p><strong>Rich Reply Previews • Instant Blurred Thumbnails • Non-Blocking Logger • Member Mentions • Zero Lag</strong></p>
+  <h3>Guidegram v1.10.0</h3>
+  <p><strong>Group Voice & Video Calls • Telegram Mini Apps (TWA) • Saved Messages 2.0 • Telegram Business • Turbo Engine</strong></p>
 </div>
 
 ---
 
 ## 🌟 Release Highlights
 
-Guidegram v1.9.0 brings a major visual and performance upgrade: authentic Telegram reply banners with peer-colored borders and names, instant blurred previews for photos and stickers using low-overhead JFIF header reconstruction, complete elimination of UI stutter via an asynchronous non-blocking event-loop logger, group member `@` mention autocomplete, and full-resolution HD user avatar viewing.
+Guidegram v1.10.0 is one of our largest milestone releases yet, introducing native **Group Voice & Video Calls** with active speaker visualization, an in-app **Telegram Mini Apps (TWA)** host with standalone window support, **Saved Messages 2.0** with dual-pane source filtering, **Telegram Business** management suite, channel/supergroup **Admin Log**, **Interactive Polls & Quizzes**, **Telegram Stars & Paid Media**, **Cloud Drafts** cross-session sync, **5-bit MTProto voice waveform decoder**, and an ultra-fast **Multi-DC Turbo Download Engine**.
 
 ---
 
 ## 📦 What's New & Enhancements
 
-### 1. 💬 Authentic Rich Reply Banners
-- **Peer-Colored Vertical Borders & Names**: Quotes match Telegram's exact 7-color palette mapped to the original author's identity.
-- **Square Mini Thumbnails**: Direct visual preview of replied photos, videos, and stickers.
-- **Descriptive Media Badges**: Distinguishes voice messages (`• Voice message` with cyan indicator), photos, videos, stickers, and documents instead of generic fallback numbers.
+### 1. 📞 Group Voice & Video Calls UI
+- **Real-Time Active Speaker Visualizer**: Dynamic animated audio wave ripples indicating current active speakers.
+- **Fluid Multi-Participant Video Grid**: Adaptive layout rendering screen shares and camera streams.
+- **Persistent Header Status Bar**: Floating call bar (`GroupCallBar`) with instant audio toggles, participant counter, and one-click return.
 
-### 2. ⚡ Instant Blurred Media Previews
-- **Zero-Wait JFIF Reconstitution**: Re-attaches standard JPEG headers to Telegram's raw `photoStrippedSize` byte buffers, rendering instant previews directly without waiting for full media downloads.
-- **On-Demand Loading**: Interactive, clean download placeholders with file size indicators.
+### 2. 🌐 Telegram Mini Apps (TWA) Host
+- **In-App Modal & Multi-Window Execution**: Run Telegram Mini Apps seamlessly inside an overlay modal or detach them into independent OS windows.
+- **MTProto Protocol Bridge**: Direct integration with `messages.requestWebView` and theme synchronization.
 
-### 3. 🚀 Non-Blocking Performance & Zero Freezes
-- **Asynchronous Batch Logging**: Replaced synchronous disk file writes with an asynchronous batching queue, keeping the main process responsive during high-volume MTProto traffic.
-- **Render-Side Decoupling**: Eliminated synchronous IPC calls inside React render loops, preventing UI frame drops and freezing.
+### 3. 💾 Saved Messages 2.0
+- **Dual-Pane Source Filtering**: Filter saved messages by original chats, channels, bots, or personal notes with one click.
+- **Reaction Tags & Fast Search**: Organize notes with visual emoji reaction tags and dedicated source drawer.
 
-### 4. 👥 Group Mentions & Member Autocomplete
-- **Live Autocomplete**: Typing `@` in group chats displays an interactive member suggestion dropdown querying both group participants and recent senders.
-- **Sender Usernames**: Displays `@username` handles alongside sender names in group message headers.
+### 4. 💼 Telegram Business Suite
+- **Comprehensive Business Hub**: Configure greeting messages, away hours schedules, business location pins, and custom chat links directly in Settings.
 
-### 5. 🖼️ Full-Resolution HD Profile Viewer
-- **On-Demand HD Photos**: Added support for fetching full-resolution profile photos (`isBig: true`) for channels, groups, and individual contacts.
-- **Lightbox Integration**: Clicking the avatar in Chat Info or User Profile drawers opens the HD photo in full screen.
+### 5. 🛡️ Channel & Supergroup Admin Log
+- **Chronological Action Timeline**: Audit recent administrator actions, member kicks/bans, permission modifications, and message edits with event category filters.
 
-### 6. 🤖 Bot Inline Keyboards & Dynamic Menus
-- **Interactive Action Buttons**: Full support for Telegram bot inline keyboards (URL buttons and callback queries).
-- **Permission-Aware Bot Menus**: Dynamic command menu rendering based on bot capability definitions.
+### 6. 📊 Interactive Polls & Quizzes
+- **Native Voting & Creation**: Full support for single and multiple-choice polls, quiz mode with customizable solution explanations, and real-time result percentages.
+
+### 7. ⭐ Telegram Stars & Paid Media
+- **Exclusive Content Unlocks**: Display locked media previews and unlock paid posts using Telegram Stars.
+- **Star Reactions Picker**: Send star reactions with custom quantity selection modal.
+
+### 8. ☁️ Cloud Drafts Cross-Session Synchronization
+- **Real-Time Input Sync**: Unsent text drafts automatically sync across all MTProto devices with debounce auto-save.
+- **Chat List Draft Indicators**: Highlight conversations with active drafts directly in the chat list.
+
+### 9. 🎙️ 5-Bit MTProto Voice Waveform Decoder
+- **Authentic Telegram Waveforms**: Unpacks 5-bit compressed audio waveforms for voice messages.
+- **Interactive Scrubber & Sticky Player**: Drag-to-seek playback scrubber and top persistent audio player banner.
+
+### 10. 🚀 Turbo Multi-DC Download Engine & Userspace WARP
+- **Parallel Multi-Connection Pipeline**: Concurrently fetches chunk streams from optimal Telegram DCs.
+- **Direct Cloudflare WARP Data-Plane**: Built-in userspace WARP tunnel for censorship-resistant connectivity.
 
 ---
 
 ## 🐛 Bug Fixes & Stability Improvements
-- **Scheduled Messages**: Hidden the scheduled messages action button in channels where the user lacks posting rights.
-- **Unread Sync**: Corrected `maxId` in MTProto `readHistory` calls and added immediate local counter clearing on chat open.
-- **Installer Process Safety**: Added automatic termination of lingering background Guidegram instances in NSIS installer pre-init and un-init hooks to prevent Windows file locking.
+- **Reply Pre-Fetching**: Restored and accelerated reply message pre-fetching in message loading streams.
+- **UI & Layout Consistency**: Unified quote styles, group sender avatars, and blurred thumbnail generation.
+- **Streaming Media**: Added HTTP 206 byte-range slicing for smooth seeking in large audio and video files.
+- **Network Resilience**: Upgraded per-account proxy routing and reconnect backoff algorithms.
 
 ---
 
 ## 📝 Full Changelog
-https://github.com/guidegram/guidegram/compare/v1.8.0...v1.9.0
+https://github.com/guidegram/guidegram/compare/v1.9.0...v1.10.0
 
 ---
 

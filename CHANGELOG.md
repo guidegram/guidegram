@@ -4,6 +4,32 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.10.0] — Group Voice & Video Calls, Mini Apps Host, Saved Messages 2.0 & Telegram Business (2026-09-14)
+
+### 🌟 What's New & Enhancements
+- **📞 Group Voice & Video Calls UI**: Real-time group calls interface with interactive active-speaker visualizer, fluid grid layout for video feeds, microphone/camera controls, and persistent top status bar (`GroupCallBar`).
+- **🌐 Telegram Mini Apps (TWA) Host**: Native in-app WebView modal (`MiniAppModal`) and standalone multi-window support for Telegram Mini Apps, fully integrated with MTProto `messages.requestWebView`.
+- **💾 Saved Messages 2.0**: Dual-pane source filtering, chat tags navigation, and reactive source drawer (`SavedMessagesBar`) for organizing and finding saved notes and forwarded media.
+- **💼 Telegram Business Suite**: Integrated Business management dashboard in Settings with greetings, away hours scheduler, location pin, and custom business chat links.
+- **🛡️ Channel & Supergroup Admin Log**: Dedicated Admin Log modal (`AdminLogModal`) with chronological event timeline, filter tabs, and admin action audit history via MTProto `channels.getAdminLog`.
+- **📊 Interactive Polls & Quizzes**: Full native support for voting on polls and quizzes, creating multiple-choice polls with anonymous and quiz modes, and viewing solution explanations.
+- **⭐ Telegram Stars & Paid Media**: Direct visual rendering for paid media posts and star reactions with custom reaction counter modal (`PaidReactionModal`).
+- **☁️ Cloud Drafts Synchronization**: Live synchronization of uncompleted message drafts across MTProto sessions with debounce auto-saving and visual draft indicators in the chat list.
+- **🎙️ 5-Bit MTProto Voice Waveform Decoder**: Native unpacking of Telegram's 5-bit compressed audio waveforms, interactive seeking scrubber, and sticky audio player banner.
+- **📁 Shared Media Gallery Drawer**: Complete 5-tab gallery drawer (Media, Files, Links, Music, Voice) with infinite scrolling and MTProto filter mapping.
+- **🚀 Multi-DC Turbo Download Engine**: High-concurrency parallel downloading across Telegram data centers, optimizing transfer speeds for large files and videos.
+- **🔒 Userspace Cloudflare WARP Bridge**: Integrated direct userspace WARP data-plane tunnel with automatic fallback and per-account proxy distribution.
+- **📝 Anti-Delete Audit Log & Message Edit History**: Client-side audit tracking for deleted messages and live historical revision inspector for edited messages.
+- **⚡ Advanced No-Quote Forwarding & Analytics Export**: Forward messages without quote attribution and export group analytics datasets directly to JSON/CSV.
+
+### 🐛 Bug Fixes & Stability
+- **Messages**: Restored and optimized reply context pre-fetching in `getMessages` to eliminate missing quote references.
+- **UI & Chat Viewport**: Harmonized blockquote styles, unified group sender avatars, and restored instant blurred media previews.
+- **Media Streaming**: Implemented HTTP 206 byte-range slicing in media protocol fallback for smoother seeking.
+- **Network Resilience**: Enhanced per-account proxy isolation, dynamic bubble geometry theming, and reconnect exponential backoff.
+
+---
+
 ## [v1.9.0] — Rich Reply Previews, Instant Media & Core UI Polish (2026-09-14)
 
 ### 🌟 What's New & Enhancements

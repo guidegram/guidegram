@@ -1,6 +1,6 @@
 {
   "name": "guidegram",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Guidegram",
   "author": "DoctorGuidance",
   "main": "dist-electron/main.js",
@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:portable": "tsc && vite build && electron-builder --win dir",
-    "test": "node tests/m1_stress_verification.mjs && node tests/m2_stress_verification.mjs && node tests/m3_stress_verification.mjs && node tests/m4_premium_emoji_verification.mjs && node tests/m5_mtproto_features.mjs && node tests/m6_mtproto_features.mjs && node tests/m7_stickers_stories_boosts.mjs && node tests/m8_auto_download_control.mjs && node tests/m9_updater_and_instance_lock.mjs && node tests/m10_storage_notifications_shortcuts.mjs && node tests/m11_data_shield_and_installer_safety.mjs && node tests/m12_names_profiles_replies_verification.mjs && node tests/m13_core_chat_parity_and_reactions.mjs && node tests/m14_official_tdesktop_parity.mjs && node tests/m15_tiered_update_enforcement.mjs && node tests/m16_infinite_scroll_and_deep_dialogs.mjs && node tests/m17_group_stats_timeframes.mjs",
+    "test": "node tests/m1_stress_verification.mjs && node tests/m2_stress_verification.mjs && node tests/m3_stress_verification.mjs && node tests/m4_premium_emoji_verification.mjs && node tests/m5_mtproto_features.mjs && node tests/m6_mtproto_features.mjs && node tests/m7_stickers_stories_boosts.mjs && node tests/m8_auto_download_control.mjs && node tests/m9_updater_and_instance_lock.mjs && node tests/m10_storage_notifications_shortcuts.mjs && node tests/m11_data_shield_and_installer_safety.mjs && node tests/m12_names_profiles_replies_verification.mjs && node tests/m13_core_chat_parity_and_reactions.mjs && node tests/m14_official_tdesktop_parity.mjs && node tests/m15_tiered_update_enforcement.mjs && node tests/m16_infinite_scroll_and_deep_dialogs.mjs && node tests/m17_group_stats_timeframes.mjs && node tests/m17_shared_media_verification.mjs && node tests/m18_polls_quizzes_verification.mjs && node tests/m19_cloud_drafts_verification.mjs && node tests/m20_mini_apps_verification.mjs && node tests/m21_voice_waveform_verification.mjs && node tests/m22_admin_log_verification.mjs && node tests/m23_business_verification.mjs && node tests/m24_stars_verification.mjs && node tests/m25_saved_messages_verification.mjs && node tests/m26_group_calls_verification.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
