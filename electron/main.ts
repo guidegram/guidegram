@@ -1521,6 +1521,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:send-paid-reaction', async (_event, { accountId, chatId, messageId, count, isPrivate }) => {
+    try {
+      return await accountManager.sendPaidReaction(accountId, chatId, messageId, count, isPrivate)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendPaidReaction error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-stars-status', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getStarsStatus(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStarsStatus error:`, err)
+      return { balance: 0 }
+    }
+  })
+
+  ipcMain.handle('telegram:get-stars-transactions', async (_event, { accountId, offset, limit }) => {
+    try {
+      return await accountManager.getStarsTransactions(accountId, offset, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStarsTransactions error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

@@ -68,6 +68,8 @@ import {
   RefreshCw,
   History,
   Image as ImageIcon,
+  Star,
+  Lock,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -82,6 +84,7 @@ import { PollWidget } from './PollWidget'
 import { CreatePollModal } from './CreatePollModal'
 import { MiniAppModal } from './MiniAppModal'
 import { AdminLogModal } from './AdminLogModal'
+import { PaidReactionModal } from './PaidReactionModal'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -771,6 +774,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false)
   const [isAdminLogOpen, setIsAdminLogOpen] = useState(false)
+  const [paidReactionModalState, setPaidReactionModalState] = useState<{
+    isOpen: boolean
+    messageId: number | null
+  }>({ isOpen: false, messageId: null })
   const [activeMiniApp, setActiveMiniApp] = useState<{
     url: string
     title: string
@@ -2944,6 +2951,42 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
+    // 2.5 Paid Media Card (Telegram Stars)
+    if (msg.mediaType === 'paid_media') {
+      const stars = msg.paidMediaStars || 1
+      const count = msg.paidMediaCount || 1
+      return (
+        <div className="my-1.5 p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-dark-800 to-amber-600/10 border border-amber-500/30 max-w-sm select-none shadow-lg">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shadow-glow">
+                <Star className="w-4 h-4 fill-current" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>{t('paid_media.title')}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">
+                    {count} {t('paid_media.items')}
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-400">{t('paid_media.locked')}</div>
+              </div>
+            </div>
+            <Lock className="w-4 h-4 text-amber-400/80" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPaidReactionModalState({ isOpen: true, messageId: msg.id })}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-dark-950 font-bold text-xs shadow-glow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Star className="w-3.5 h-3.5 fill-current" />
+            <span>{t('paid_media.unlock_for')} {stars} ⭐️</span>
+          </button>
+        </div>
+      )
+    }
+
     if (msg.mediaType === 'photo') {
       const isChannel = !!chat?.isChannel
       const isGroup = !!chat?.isGroup
@@ -4332,10 +4375,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleToggleReaction(msg, rx.emoji)
+                                if (rx.isPaid || rx.emoji === '⭐️') {
+                                  setPaidReactionModalState({ isOpen: true, messageId: msg.id })
+                                } else {
+                                  handleToggleReaction(msg, rx.emoji)
+                                }
                               }}
                               className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-all hover:scale-105 active:scale-95 select-none cursor-pointer ${
-                                rx.chosen
+                                rx.isPaid || rx.emoji === '⭐️'
+                                  ? 'bg-amber-500/20 border-amber-400/50 text-amber-300 shadow-glow'
+                                  : rx.chosen
                                   ? 'bg-primary-500/25 border-primary-400 text-primary-200'
                                   : 'bg-black/30 border-white/10 text-gray-200 hover:bg-black/40'
                               }`}
@@ -4577,6 +4626,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                     +{allowedReactions.length - 6}
                                   </button>
                                 )}
+                                {/* Star / Paid Reaction button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveReactionPickerMsgId(null)
+                                    setPaidReactionModalState({ isOpen: true, messageId: msg.id })
+                                  }}
+                                  className="p-1 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 text-xs font-bold transition-all hover:scale-125 cursor-pointer flex items-center justify-center shadow-xs"
+                                  title={t('stars.send_star_reaction')}
+                                >
+                                  ⭐️
+                                </button>
                               </div>
                             </div>
                           )}
@@ -7094,6 +7155,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chatId={chat.id}
           chatTitle={chat.title}
           onClose={() => setIsAdminLogOpen(false)}
+        />
+      )}
+
+      {/* 12. Telegram Stars Paid Reaction Modal */}
+      {paidReactionModalState.isOpen && paidReactionModalState.messageId && chat && (
+        <PaidReactionModal
+          isOpen={paidReactionModalState.isOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          messageId={paidReactionModalState.messageId}
+          onClose={() => setPaidReactionModalState({ isOpen: false, messageId: null })}
+          onSuccess={() => {
+            showToast(t('stars.reaction_sent_success'))
+            if (chat) {
+              window.guidegram?.getMessages(chat.accountId, chat.id, 30).then((msgs) => {
+                if (msgs && onMergeHistoricalMessages) {
+                  onMergeHistoricalMessages(msgs)
+                }
+              }).catch(() => {})
+            }
+          }}
         />
       )}
     </div>

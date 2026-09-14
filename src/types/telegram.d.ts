@@ -61,6 +61,8 @@ import type {
   BusinessIntro,
   BusinessChatLink,
   BusinessProfile,
+  StarsStatusPayload,
+  StarsTransactionItem,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -133,5 +135,8 @@ export type {
   BusinessIntro,
   BusinessChatLink,
   BusinessProfile,
+  StarsStatusPayload,
+  StarsTransactionItem,
 }
+
 

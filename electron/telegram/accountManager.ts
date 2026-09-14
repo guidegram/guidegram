@@ -58,6 +58,8 @@ import {
   BusinessWorkHours,
   BusinessLocation,
   BusinessIntro,
+  StarsStatusPayload,
+  StarsTransactionItem,
 } from './types'
 
 export interface ClientHolder {
@@ -1168,6 +1170,8 @@ export class AccountManager {
         let isSticker = false
         let voiceWaveform: number[] | undefined = undefined
         let poll: PollItem | undefined = undefined
+        let paidMediaStars: number | undefined = undefined
+        let paidMediaCount: number | undefined = undefined
 
         if (m.media) {
           if (m.media._ === 'messageMediaPhoto') {
@@ -1209,6 +1213,10 @@ export class AccountManager {
           } else if (m.media._ === 'messageMediaPoll') {
             mediaType = 'poll'
             poll = parsePollFromMedia(m.media, id)
+          } else if (m.media._ === 'messageMediaPaidMedia') {
+            mediaType = 'paid_media'
+            paidMediaStars = m.media.starsAmount ? Number(m.media.starsAmount) : 0
+            paidMediaCount = Array.isArray(m.media.extendedMedia) ? m.media.extendedMedia.length : 1
           }
         }
 
@@ -1217,6 +1225,8 @@ export class AccountManager {
           for (const r of m.reactions.results) {
             if (r.reaction?._ === 'reactionEmoji') {
               reactions.push({ emoji: r.reaction.emoticon, count: r.count, chosen: r.chosen || false })
+            } else if (r.reaction?._ === 'reactionPaid') {
+              reactions.push({ emoji: '⭐️', count: r.count, chosen: r.chosen || false, isPaid: true })
             }
           }
         }
@@ -1338,6 +1348,8 @@ export class AccountManager {
           isRoundVideo,
           isSticker,
           poll,
+          paidMediaStars,
+          paidMediaCount,
           reactions: reactions.length > 0 ? reactions : undefined,
           replyToMsgId: m.replyTo?.replyToMsgId,
           replyTo,
@@ -2085,6 +2097,8 @@ export class AccountManager {
 
         let strippedThumb: string | undefined = undefined
         let poll: PollItem | undefined = undefined
+        let paidMediaStars: number | undefined = undefined
+        let paidMediaCount: number | undefined = undefined
 
         if (m.media) {
           if (m.media._ === 'messageMediaPhoto') {
@@ -2126,6 +2140,10 @@ export class AccountManager {
           } else if (m.media._ === 'messageMediaPoll') {
             mediaType = 'poll'
             poll = parsePollFromMedia(m.media, id)
+          } else if (m.media._ === 'messageMediaPaidMedia') {
+            mediaType = 'paid_media'
+            paidMediaStars = m.media.starsAmount ? Number(m.media.starsAmount) : 0
+            paidMediaCount = Array.isArray(m.media.extendedMedia) ? m.media.extendedMedia.length : 1
           }
         }
 
@@ -2151,6 +2169,8 @@ export class AccountManager {
           isRoundVideo,
           isSticker,
           poll,
+          paidMediaStars,
+          paidMediaCount,
           entities,
         })
       }
@@ -2737,6 +2757,88 @@ export class AccountManager {
       return true
     } catch (_) {
       return false
+    }
+  }
+
+  public async sendPaidReaction(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    count = 1,
+    isPrivate?: boolean
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.call({
+        _: 'messages.sendPaidReaction',
+        peer: inputPeer,
+        msgId: messageId,
+        count: Math.max(1, count),
+        randomId: toLong(Math.floor(Math.random() * 10000000000)),
+        private: isPrivate ? { _: 'paidReactionPrivacyAnonymous' } : { _: 'paidReactionPrivacyDefault' },
+      })
+      return true
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendPaidReaction error:', err)
+      return false
+    }
+  }
+
+  public async getStarsStatus(accountId: string): Promise<StarsStatusPayload> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { balance: 0 }
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getStarsStatus',
+        peer: { _: 'inputPeerSelf' },
+      })
+
+      const balance = res.balance ? Number(res.balance.amount || res.balance) : 0
+      return {
+        balance,
+        subscriptions: Array.isArray(res.subscriptions) ? res.subscriptions : [],
+      }
+    } catch (err) {
+      Logger.warn('[AccountManager] getStarsStatus error:', err)
+      return { balance: 0 }
+    }
+  }
+
+  public async getStarsTransactions(
+    accountId: string,
+    offset?: string,
+    limit = 20
+  ): Promise<StarsTransactionItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getStarsTransactions',
+        peer: { _: 'inputPeerSelf' },
+        offset: offset || '',
+        limit: Math.min(100, Math.max(1, limit)),
+      })
+
+      if (!res || !Array.isArray(res.history)) return []
+
+      return res.history.map((tx: any) => ({
+        id: tx.id?.toString() || Math.random().toString(),
+        stars: tx.stars ? Number(tx.stars.amount || tx.stars) : 0,
+        date: tx.date ? tx.date * 1000 : Date.now(),
+        title: tx.title || 'Telegram Stars Transaction',
+        description: tx.description,
+        isRefund: Boolean(tx.refund),
+        isPending: Boolean(tx.pending),
+        isFailed: Boolean(tx.failed),
+      }))
+    } catch (err) {
+      Logger.warn('[AccountManager] getStarsTransactions error:', err)
+      return []
     }
   }
 

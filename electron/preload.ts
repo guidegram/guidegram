@@ -44,6 +44,8 @@ import {
   BusinessWorkHours,
   BusinessLocation,
   BusinessIntro,
+  StarsStatusPayload,
+  StarsTransactionItem,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -300,6 +302,22 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:delete-business-chat-link', { accountId, slug }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
+  sendPaidReaction: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    count: number,
+    isPrivate?: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-paid-reaction', { accountId, chatId, messageId, count, isPrivate }),
+  getStarsStatus: (accountId: string): Promise<StarsStatusPayload> =>
+    ipcRenderer.invoke('telegram:get-stars-status', { accountId }),
+  getStarsTransactions: (
+    accountId: string,
+    offset?: string,
+    limit?: number
+  ): Promise<StarsTransactionItem[]> =>
+    ipcRenderer.invoke('telegram:get-stars-transactions', { accountId, offset, limit }),
 
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>

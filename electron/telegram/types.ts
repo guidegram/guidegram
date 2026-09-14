@@ -71,6 +71,7 @@ export interface MessageReactionItem {
   emoji: string
   count: number
   chosen?: boolean
+  isPaid?: boolean
 }
 
 export interface PinnedMessageItem {
@@ -178,7 +179,7 @@ export interface MessageEditRevision {
   text: string
   date: number
   entities?: MessageEntityItem[]
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media'
   mediaThumbnailUrl?: string
   strippedThumb?: string
 }
@@ -223,7 +224,9 @@ export interface MessageItem {
   isRoundVideo?: boolean
   voiceWaveform?: number[]
   reactions?: MessageReactionItem[]
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media'
+  paidMediaStars?: number
+  paidMediaCount?: number
   poll?: PollItem
   mediaUrl?: string
   mediaThumbnailUrl?: string
@@ -751,4 +754,21 @@ export interface BusinessProfile {
   intro?: BusinessIntro
   links: BusinessChatLink[]
 }
+
+export interface StarsStatusPayload {
+  balance: number
+  subscriptions?: any[]
+}
+
+export interface StarsTransactionItem {
+  id: string
+  stars: number
+  date: number
+  title: string
+  description?: string
+  isRefund?: boolean
+  isPending?: boolean
+  isFailed?: boolean
+}
+
 
