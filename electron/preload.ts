@@ -37,6 +37,7 @@ import {
   WarpStatus,
   SharedMediaFilterType,
   SharedMediaResponse,
+  DraftItem,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -226,6 +227,15 @@ const guidegramAPI = {
     }
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:create-poll', { accountId, chatId, question, answers, options }),
+  saveDraft: (
+    accountId: string,
+    chatId: string,
+    message: string,
+    replyToMsgId?: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:save-draft', { accountId, chatId, message, replyToMsgId }),
+  getAllDrafts: (accountId: string): Promise<Record<string, DraftItem>> =>
+    ipcRenderer.invoke('telegram:get-all-drafts', { accountId }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
 

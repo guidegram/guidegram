@@ -51,6 +51,7 @@ import type {
   SharedMediaResponse,
   PollOptionItem,
   PollItem,
+  DraftItem,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -113,4 +114,5 @@ export type {
   SharedMediaResponse,
   PollOptionItem,
   PollItem,
+  DraftItem,
 }

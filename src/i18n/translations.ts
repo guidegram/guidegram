@@ -68,6 +68,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     'search.clear_all': 'Clear All',
 
     // Chat List
+    'chat.draft': 'Draft:',
     'chat.unread_messages': '{count} unread messages',
     'chat.unread_messages_from': '{count} unread messages from {senders}',
     'chat.unread_muted': '{count} messages (Muted)',
@@ -380,6 +381,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     'search.clear_all': 'پاکسازی همه',
 
     // Chat List
+    'chat.draft': 'پیش‌نویس:',
     'chat.unread_messages': '{count} پیام خوانده نشده',
     'chat.unread_messages_from': '{count} پیام خوانده نشده از {senders}',
     'chat.unread_muted': '{count} پیام (بی‌صدا)',

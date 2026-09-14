@@ -1323,6 +1323,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:save-draft', async (_event, { accountId, chatId, message, replyToMsgId }) => {
+    try {
+      return await accountManager.saveDraft(accountId, chatId, message, replyToMsgId)
+    } catch (err: any) {
+      Logger.error(`[IPC] saveDraft error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-all-drafts', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAllDrafts(accountId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getAllDrafts error:`, err)
+      return {}
+    }
+  })
+
   ipcMain.handle('telegram:get-star-gifts', async (_event, { accountId, userId }) => {
     try {
       return await accountManager.getSavedStarGifts(accountId, userId)

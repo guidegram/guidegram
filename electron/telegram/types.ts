@@ -117,6 +117,13 @@ export interface DialogItem {
   isForum?: boolean
   isSponsored?: boolean
   isSponsorChannel?: boolean
+  draft?: DraftItem
+}
+
+export interface DraftItem {
+  text: string
+  date?: number
+  replyToMsgId?: number
 }
 
 export interface InlineButton {

@@ -622,6 +622,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setIsMuted(!!chat?.isMuted || !!chatDetails?.isMuted)
   }, [chat?.id, chat?.isMuted, chatDetails?.isMuted])
 
+  // Cloud Drafts Sync: populate draft when opening chat
+  useEffect(() => {
+    if (chat?.draft?.text) {
+      setInputText(chat.draft.text)
+    } else {
+      setInputText('')
+    }
+  }, [chat?.id, chat?.accountId])
+
   // Forum Topics (MTProto channels.getForumTopics)
   const [forumTopics, setForumTopics] = useState<ForumTopicItem[]>([])
   const [activeTopicId, setActiveTopicId] = useState<number | null>(null)
@@ -732,6 +741,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Reply bar state
   const [replyMessage, setReplyMessage] = useState<MessageItem | null>(null)
+
+  // Debounced cloud draft synchronization
+  const draftDebounceRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    if (!chat) return
+    if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
+
+    draftDebounceRef.current = setTimeout(() => {
+      if (window.guidegram?.saveDraft) {
+        window.guidegram.saveDraft(
+          chat.accountId,
+          chat.id,
+          inputText,
+          replyMessage?.id
+        ).catch(() => {})
+      }
+    }, 800)
+
+    return () => {
+      if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
+    }
+  }, [inputText, chat?.id, chat?.accountId, replyMessage?.id])
 
   // Attachment popover menu & staging state
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
@@ -1922,6 +1953,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setStagedAttachments([])
       setInputText('')
       setReplyMessage(null)
+      if (chat && window.guidegram?.saveDraft) {
+        window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
+      }
 
       setUploadProgress({
         isUploading: true,
@@ -1979,6 +2013,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setInputText('')
     setReplyMessage(null)
     setDismissedComposerUrl(null)
+    if (chat && window.guidegram?.saveDraft) {
+      window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
+    }
   }
 
   // MTProto Native Send Sticker

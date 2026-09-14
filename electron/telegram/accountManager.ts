@@ -49,6 +49,7 @@ import {
   SharedMediaResponse,
   PollItem,
   PollOptionItem,
+  DraftItem,
 } from './types'
 
 export interface ClientHolder {
@@ -889,6 +890,16 @@ export class AccountManager {
           .toUpperCase()
           .slice(0, 2)
 
+        let draft: DraftItem | undefined = undefined
+        const rawDraft = (d.raw as any)?.draft || (d as any).draft
+        if (rawDraft && rawDraft._ === 'draftMessage' && rawDraft.message) {
+          draft = {
+            text: rawDraft.message,
+            date: rawDraft.date ? rawDraft.date * 1000 : undefined,
+            replyToMsgId: rawDraft.replyTo?.replyToMsgId || rawDraft.replyToMsgId,
+          }
+        }
+
         const item: DialogItem = {
           id: peerId,
           accountId,
@@ -913,6 +924,7 @@ export class AccountManager {
           isForum: (peer as any).isForum,
           isSponsored: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
           isSponsorChannel: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
+          draft,
         }
         dialogs.push(item)
       }
@@ -2785,6 +2797,74 @@ export class AccountManager {
     } catch (err: any) {
       Logger.error(`[AccountManager] createPoll error:`, err)
       throw err
+    }
+  }
+
+  public async saveDraft(
+    accountId: string,
+    chatId: string,
+    message: string,
+    replyToMsgId?: number
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const callParams: any = {
+        _: 'messages.saveDraft',
+        peer: inputPeer,
+        message: message || '',
+      }
+      if (replyToMsgId) {
+        callParams.replyTo = {
+          _: 'inputReplyToMessage',
+          replyToMsgId,
+        }
+      }
+      await holder.client.call(callParams)
+      return true
+    } catch (err: any) {
+      Logger.error(`[AccountManager] saveDraft error:`, err)
+      return false
+    }
+  }
+
+  public async getAllDrafts(accountId: string): Promise<Record<string, DraftItem>> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const res = (await holder.client.call({
+        _: 'messages.getAllDrafts',
+      })) as any
+
+      const drafts: Record<string, DraftItem> = {}
+      const updates = Array.isArray(res?.updates)
+        ? res.updates
+        : res?._ === 'updates'
+        ? res.updates
+        : []
+      for (const u of updates) {
+        if (u?._ === 'updateDraftMessage' && u.draft && u.draft._ === 'draftMessage') {
+          let peerId = ''
+          if (u.peer?._ === 'peerUser') peerId = u.peer.userId.toString()
+          else if (u.peer?._ === 'peerChat') peerId = `-${u.peer.chatId}`
+          else if (u.peer?._ === 'peerChannel') peerId = `-${u.peer.channelId}`
+
+          if (peerId && u.draft.message) {
+            drafts[peerId] = {
+              text: u.draft.message,
+              date: u.draft.date ? u.draft.date * 1000 : undefined,
+              replyToMsgId: u.draft.replyTo?.replyToMsgId || u.draft.replyToMsgId,
+            }
+          }
+        }
+      }
+      return drafts
+    } catch (err: any) {
+      Logger.error(`[AccountManager] getAllDrafts error:`, err)
+      return {}
     }
   }
 

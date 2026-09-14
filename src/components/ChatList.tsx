@@ -564,7 +564,14 @@ export const ChatList: React.FC<ChatListProps> = ({
 
             <div className="flex items-center justify-between gap-1">
               <div className="text-[11px] text-gray-400 truncate flex-1 leading-snug">
-                {dialog.lastMessageText || '...'}
+                {dialog.draft?.text ? (
+                  <>
+                    <span className="text-red-400 font-semibold mr-1">{t('chat.draft') || 'Draft:'}</span>
+                    <span className="text-gray-300">{dialog.draft.text}</span>
+                  </>
+                ) : (
+                  dialog.lastMessageText || '...'
+                )}
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
