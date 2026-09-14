@@ -121,6 +121,18 @@ export class ProxyManager {
     } catch (e) {
       console.error('[ProxyManager] Failed to create @mtcute transport:', e)
     }
+
+    // Direct Cloudflare WARP Data-Plane Tunnel Bridge Fallback
+    const warpStatus = WarpManager.getStatus()
+    if (warpStatus.enabled && warpStatus.connected) {
+      const port = WarpManager.getSocksPort ? WarpManager.getSocksPort() : 24080
+      return new SocksProxyTcpTransport({
+        host: '127.0.0.1',
+        port: port || 24080,
+        version: 5,
+      })
+    }
+
     return undefined
   }
 

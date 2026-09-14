@@ -32,6 +32,10 @@ export interface WarpStatus {
   clientIp?: string
   endpoint?: string
   pingMs?: number
+  port?: number
+  bytesSent?: number
+  bytesReceived?: number
+  error?: string
 }
 
 export interface QrTokenPayload {
