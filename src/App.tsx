@@ -5,7 +5,7 @@ import { AccountDock } from './components/AccountDock'
 import { ChatTabs, TabCategory } from './components/ChatTabs'
 import { ChatList } from './components/ChatList'
 import { ChatViewport } from './components/ChatViewport'
-import { DirectForwardModal } from './components/DirectForwardModal'
+import { DirectForwardModal, DirectForwardPayload } from './components/DirectForwardModal'
 import { AddAccountModal } from './components/AddAccountModal'
 import { ProxySettingsModal } from './components/ProxySettingsModal'
 import { SettingsModal } from './components/SettingsModal'
@@ -707,17 +707,41 @@ export const App: React.FC = () => {
   }
 
   const handleDirectForward = async (
-    targetChatIds: string[],
-    withoutQuote: boolean,
-    silent: boolean
+    targetChatIdsOrPayload: string[] | DirectForwardPayload,
+    withoutQuoteArg?: boolean,
+    silentArg?: boolean,
+    extraOptions?: { dropMediaCaptions?: boolean; newCaption?: string }
   ) => {
     if (!activeAccountId || !forwardMessage || !window.guidegram) return
+    const isPayload = !Array.isArray(targetChatIdsOrPayload) && typeof targetChatIdsOrPayload === 'object' && targetChatIdsOrPayload !== null
+    const targetChatIds = isPayload
+      ? (targetChatIdsOrPayload as DirectForwardPayload).toChatIds
+      : (targetChatIdsOrPayload as string[])
+    const withoutQuote = isPayload
+      ? (targetChatIdsOrPayload as DirectForwardPayload).withoutQuote
+      : (withoutQuoteArg ?? true)
+    const silent = isPayload
+      ? (targetChatIdsOrPayload as DirectForwardPayload).silent
+      : (silentArg ?? false)
+    const dropMediaCaptions = isPayload
+      ? (targetChatIdsOrPayload as DirectForwardPayload).dropMediaCaptions
+      : extraOptions?.dropMediaCaptions
+    const newCaption = isPayload
+      ? (targetChatIdsOrPayload as DirectForwardPayload).newCaption
+      : extraOptions?.newCaption
+
     await window.guidegram.forwardMessages(
       activeAccountId,
       targetChatIds,
       forwardMessage.chatId,
       [forwardMessage.id],
-      { withoutQuote, silent }
+      {
+        withoutQuote,
+        silent,
+        dropMediaCaptions,
+        newCaption,
+        caption: newCaption,
+      }
     )
   }
 

@@ -19,6 +19,10 @@ import {
   Check,
   RefreshCw,
   Pause,
+  Download,
+  FileSpreadsheet,
+  FileJson,
+  ChevronDown,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -55,6 +59,146 @@ const STOPWORDS = new Set([
   'these', 'give', 'day', 'most', 'us', 'is', 'are', 'was', 'were', 'am', 'been',
 ])
 
+export interface GroupStatsExportPayload {
+  chat: { id: string; title: string }
+  timeframe: string
+  totalMessagesCount: number
+  uniqueSendersCount: number
+  peakHour: { hour: number; count: number }
+  avgChars: number
+  avgWords: number
+  topSenders: Array<{ id: string; name: string; count: number; isAdmin?: boolean }>
+  hourlyDistribution: number[]
+  topWords: Array<[string, number]>
+  topEmojis: Array<[string, number]>
+  mediaStats: { text: number; photo: number; video: number; voice: number; document: number; sticker: number }
+}
+
+export function generateGroupStatsCsv(data: GroupStatsExportPayload): string {
+  const escapeCsv = (val: any): string => {
+    if (val === null || val === undefined) return '""'
+    const str = String(val)
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+    return `"${str}"`
+  }
+
+  const lines: string[] = []
+
+  // 1. Group Overview
+  lines.push('--- GROUP OVERVIEW ---')
+  lines.push('Chat Name,Chat ID,Analyzed Message Count,Timeframe,Export Timestamp,Unique Senders,Peak Hour')
+  lines.push(
+    [
+      escapeCsv(data.chat.title),
+      escapeCsv(data.chat.id),
+      escapeCsv(data.totalMessagesCount),
+      escapeCsv(data.timeframe),
+      escapeCsv(new Date().toISOString()),
+      escapeCsv(data.uniqueSendersCount),
+      escapeCsv(`${data.peakHour.hour}:00 (${data.peakHour.count} msgs)`),
+    ].join(',')
+  )
+  lines.push('')
+
+  // 2. Active User Engagement
+  lines.push('--- ACTIVE USER ENGAGEMENT ---')
+  lines.push('Rank,User Name,User ID,Message Count,Percentage')
+  data.topSenders.forEach((sender, idx) => {
+    const percentage = data.totalMessagesCount > 0 ? ((sender.count / data.totalMessagesCount) * 100).toFixed(2) + '%' : '0%'
+    lines.push(
+      [
+        idx + 1,
+        escapeCsv(sender.name),
+        escapeCsv(sender.id),
+        sender.count,
+        escapeCsv(percentage),
+      ].join(',')
+    )
+  })
+  lines.push('')
+
+  // 3. Hourly Message Volume
+  lines.push('--- HOURLY MESSAGE VOLUME ---')
+  lines.push('Hour,Message Count,Percentage,Peak Flag')
+  data.hourlyDistribution.forEach((count, hour) => {
+    const formattedHour = `${hour.toString().padStart(2, '0')}:00`
+    const percentage = data.totalMessagesCount > 0 ? ((count / data.totalMessagesCount) * 100).toFixed(2) + '%' : '0%'
+    const isPeak = hour === data.peakHour.hour && count > 0 ? 'Yes' : 'No'
+    lines.push([escapeCsv(formattedHour), count, escapeCsv(percentage), escapeCsv(isPeak)].join(','))
+  })
+  lines.push('')
+
+  // 4. Word Cloud Frequency
+  lines.push('--- WORD CLOUD FREQUENCY ---')
+  lines.push('Rank,Word,Frequency')
+  data.topWords.forEach(([word, freq], idx) => {
+    lines.push([idx + 1, escapeCsv(word), freq].join(','))
+  })
+  lines.push('')
+
+  // 5. Emoji Distribution
+  lines.push('--- EMOJI DISTRIBUTION ---')
+  lines.push('Rank,Emoji,Count')
+  data.topEmojis.forEach(([emoji, count], idx) => {
+    lines.push([idx + 1, escapeCsv(emoji), count].join(','))
+  })
+  lines.push('')
+
+  // 6. Media Breakdown
+  lines.push('--- MEDIA BREAKDOWN ---')
+  lines.push('Media Type,Count')
+  lines.push(`Text Messages,${data.mediaStats.text}`)
+  lines.push(`Photos,${data.mediaStats.photo}`)
+  lines.push(`Videos,${data.mediaStats.video}`)
+  lines.push(`Voice Notes,${data.mediaStats.voice}`)
+  lines.push(`Documents,${data.mediaStats.document}`)
+  lines.push(`Stickers,${data.mediaStats.sticker}`)
+
+  return '\uFEFF' + lines.join('\r\n')
+}
+
+export function generateGroupStatsJson(data: GroupStatsExportPayload): any {
+  return {
+    groupOverview: {
+      chatName: data.chat.title,
+      chatId: data.chat.id,
+      analyzedMessageCount: data.totalMessagesCount,
+      timeframe: data.timeframe,
+      exportTimestamp: new Date().toISOString(),
+      uniqueSendersCount: data.uniqueSendersCount,
+      peakHour: { hour: `${data.peakHour.hour}:00`, count: data.peakHour.count },
+      avgMessageLength: { chars: data.avgChars, words: data.avgWords },
+    },
+    activeUserEngagement: data.topSenders.map((s, idx) => ({
+      rank: idx + 1,
+      userName: s.name,
+      userId: s.id,
+      messageCount: s.count,
+      percentage: data.totalMessagesCount > 0 ? Number(((s.count / data.totalMessagesCount) * 100).toFixed(2)) : 0,
+      isAdmin: !!s.isAdmin,
+    })),
+    hourlyDistribution: data.hourlyDistribution.map((count, hour) => ({
+      hour: `${hour.toString().padStart(2, '0')}:00`,
+      messageCount: count,
+      percentage: data.totalMessagesCount > 0 ? Number(((count / data.totalMessagesCount) * 100).toFixed(2)) : 0,
+      isPeak: hour === data.peakHour.hour && count > 0,
+    })),
+    wordCloud: data.topWords.map(([word, frequency], idx) => ({
+      rank: idx + 1,
+      word,
+      frequency,
+    })),
+    emojiDistribution: data.topEmojis.map(([emoji, count], idx) => ({
+      rank: idx + 1,
+      emoji,
+      count,
+    })),
+    mediaBreakdown: data.mediaStats,
+  }
+}
+
 export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   isOpen,
   onClose,
@@ -68,6 +212,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const [timeframe, setTimeframe] = useState<Timeframe>('today')
   const [activeTab, setActiveTab] = useState<'overview' | 'senders' | 'hours' | 'words' | 'media' | 'joins'>('overview')
   const [copied, setCopied] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   // Accumulate local + server historical messages so stats can evaluate yesterday, week, month
   const [allMessages, setAllMessages] = useState<MessageItem[]>(messages)
@@ -529,6 +674,51 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const getExportPayload = (): GroupStatsExportPayload => ({
+    chat: { id: chat.id, title: chat.title },
+    timeframe,
+    totalMessagesCount,
+    uniqueSendersCount,
+    peakHour,
+    avgChars,
+    avgWords,
+    topSenders,
+    hourlyDistribution,
+    topWords,
+    topEmojis,
+    mediaStats,
+  })
+
+  // 1-Click CSV Export (Prepends UTF-8 BOM \uFEFF for Excel Persian/English compatibility)
+  const handleExportCsv = () => {
+    const payload = getExportPayload()
+    const csvContent = generateGroupStatsCsv(payload)
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `group_stats_${chat.id}_${Date.now()}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // Structured JSON Export
+  const handleExportJson = () => {
+    const payload = getExportPayload()
+    const jsonContent = JSON.stringify(generateGroupStatsJson(payload), null, 2)
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `group_stats_${chat.id}_${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div
       onClick={onClose}
@@ -556,6 +746,67 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 1-Click Export Analytics Button & Format Selector */}
+            <div className="relative">
+              <div className="flex items-center rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all shadow-sm">
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="px-3 py-2 flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+                  title="Export Analytics (Excel / UTF-8 BOM CSV)"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Export Analytics</span>
+                  <span className="sm:hidden">Export</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu((prev) => !prev)}
+                  className="px-1.5 py-2 border-l border-white/20 hover:bg-white/10 rounded-r-xl transition-colors cursor-pointer"
+                  title="Choose Export Format (CSV or JSON)"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {showExportMenu && (
+                <div
+                  className="absolute right-0 mt-1.5 w-52 rounded-2xl bg-dark-900 border border-white/10 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportCsv()
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full px-3 py-2 rounded-xl text-left flex items-center gap-2.5 text-xs text-gray-200 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-accent-emerald shrink-0" />
+                    <div>
+                      <div className="font-semibold">Export CSV</div>
+                      <div className="text-[10px] text-gray-400">Excel / Persian UTF-8 BOM</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportJson()
+                      setShowExportMenu(false)
+                    }}
+                    className="w-full px-3 py-2 rounded-xl text-left flex items-center gap-2.5 text-xs text-gray-200 hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <FileJson className="w-4 h-4 text-accent-cyan shrink-0" />
+                    <div>
+                      <div className="font-semibold">Export JSON</div>
+                      <div className="text-[10px] text-gray-400">Complete Structured Metrics</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={handleCopyStats}

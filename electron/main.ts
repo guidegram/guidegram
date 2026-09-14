@@ -1031,10 +1031,10 @@ function setupIpcHandlers() {
 
   ipcMain.handle(
     'telegram:forward-messages',
-    async (_event, { accountId, toChatId, toChatIds, fromChatId, messageIds, options }) => {
+    async (_event, { accountId, fromChatId, toChatId, toChatIds, messageIds, options }) => {
       try {
         const target = toChatIds || toChatId
-        return await accountManager.forwardMessages(accountId, target, fromChatId, messageIds, options)
+        return await accountManager.forwardMessages(accountId, fromChatId, target, messageIds, options)
       } catch (err: any) {
         Logger.error(`[IPC] forwardMessages failed:`, err)
         throw err

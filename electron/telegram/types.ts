@@ -93,6 +93,7 @@ export interface DialogItem {
   accountId: string
   title: string
   unreadCount: number
+  readInboxMaxId?: number
   unreadMentionsCount?: number
   unreadSendersCount?: number
   isMuted?: boolean
@@ -298,6 +299,8 @@ export interface ForwardOptions {
   silent?: boolean
   withoutQuote?: boolean // Drops original author header
   caption?: string
+  newCaption?: string
+  dropMediaCaptions?: boolean
 }
 
 export type CloseAction = 'ask' | 'minimize' | 'quit'

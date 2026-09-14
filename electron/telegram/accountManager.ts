@@ -723,6 +723,39 @@ export class AccountManager {
     Logger.info(`[AccountManager] Account ${accountId} logged out successfully.`)
   }
 
+  public async resolveInputPeer(accountId: string, peerId: string | number): Promise<tl.TypeInputPeer> {
+    const holder = this.clients.get(accountId)
+    const s = String(peerId).trim()
+    if (s === 'self' || s === 'me') return { _: 'inputPeerSelf' }
+
+    if (holder?.client) {
+      try {
+        const num = Number(s)
+        const target = !isNaN(num) ? num : s
+        const resolved: any = await holder.client.resolvePeer(target)
+        if (resolved) {
+          if (resolved.accessHash) {
+            this.peerAccessHashes.set(`${accountId}_${s}`, resolved.accessHash)
+          }
+          return resolved
+        }
+      } catch (_) {}
+    }
+
+    const cachedHash = this.peerAccessHashes.get(`${accountId}_${s}`)
+    if (cachedHash) {
+      if (s.startsWith('-100')) {
+        const channelId = parseInt(s.slice(4), 10)
+        return { _: 'inputPeerChannel', channelId, accessHash: cachedHash }
+      } else if (!s.startsWith('-')) {
+        const userId = parseInt(s, 10)
+        return { _: 'inputPeerUser', userId, accessHash: cachedHash }
+      }
+    }
+
+    return toRawPeer(s)
+  }
+
   public async getDialogs(
     accountId: string,
     limit = 100,
@@ -747,6 +780,10 @@ export class AccountManager {
         if (seenIds.has(peerId)) continue
         seenIds.add(peerId)
 
+        if (peer.accessHash) {
+          this.peerAccessHashes.set(`${accountId}_${peerId}`, peer.accessHash)
+        }
+
         // Cache small photo location for instant avatar download
         if (peer.photo?.small) {
           this.peerPhotos.set(`${accountId}_${peerId}`, peer.photo.small)
@@ -760,6 +797,7 @@ export class AccountManager {
 
         const title = formatEntityName(peer, 'Unknown Chat')
         const unreadCount = d.unreadCount || 0
+        const readInboxMaxId = (d.raw as any)?.readInboxMaxId || 0
         const unreadMentionsCount = d.unreadMentionsCount || 0
         const isPinned = Boolean(d.isPinned)
 
@@ -800,6 +838,7 @@ export class AccountManager {
           accountId,
           title,
           unreadCount,
+          readInboxMaxId,
           unreadMentionsCount,
           isMuted,
           isUser,
@@ -1625,7 +1664,7 @@ export class AccountManager {
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       let offsetDateSec = 0
       if (typeof offsetDate === 'number' && offsetDate > 0) {
         offsetDateSec = offsetDate > 1e11 ? Math.floor(offsetDate / 1000) : Math.floor(offsetDate)
@@ -1635,7 +1674,7 @@ export class AccountManager {
         _: 'messages.getHistory',
         peer: inputPeer,
         offsetId: offsetId || 0,
-        offsetDate: offsetDateSec,
+        offsetDate: offsetId > 0 ? 0 : offsetDateSec,
         addOffset: 0,
         limit: Math.min(Math.max(limit, 1), 100),
         maxId: 0,
@@ -2025,26 +2064,70 @@ export class AccountManager {
   public async forwardMessages(
     accountId: string,
     fromChatId: string,
-    toChatId: string,
+    toChatId: string | string[],
     messageIds: number[],
     options?: ForwardOptions
-  ): Promise<void> {
+  ): Promise<boolean | void> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const targets = Array.isArray(toChatId) ? toChatId : [toChatId]
+    if (targets.length === 0) return true
 
     const fromPeer = toRawPeer(fromChatId)
-    const toPeer = toRawPeer(toChatId)
-    const randomIds = messageIds.map(() => toLong(Math.floor(Math.random() * 10000000000)))
+    const customCaption = options?.newCaption ?? options?.caption
 
-    await holder.client.call({
-      _: 'messages.forwardMessages',
-      fromPeer,
-      toPeer,
-      id: messageIds,
-      randomId: randomIds,
-      silent: options?.silent,
-      dropAuthor: options?.withoutQuote,
-    })
+    let firstError: any = null
+    let successCount = 0
+
+    for (let i = 0; i < targets.length; i++) {
+      const targetId = targets[i]
+      try {
+        const toPeer = toRawPeer(targetId)
+        const randomIds = messageIds.map(() => toLong(Math.floor(Math.random() * 10000000000)))
+
+        await holder.client.call({
+          _: 'messages.forwardMessages',
+          fromPeer,
+          toPeer,
+          id: messageIds,
+          randomId: randomIds,
+          silent: options?.silent,
+          dropAuthor: options?.withoutQuote,
+          dropMediaCaptions: options?.dropMediaCaptions,
+        })
+
+        if (customCaption && customCaption.trim().length > 0) {
+          try {
+            const sendRandomId = toLong(Math.floor(Math.random() * 10000000000))
+            await holder.client.call({
+              _: 'messages.sendMessage',
+              peer: toPeer,
+              message: customCaption.trim(),
+              randomId: sendRandomId,
+              silent: options?.silent,
+            })
+          } catch (captionErr) {
+            Logger.warn(`[AccountManager] Failed to dispatch custom caption for forward to ${targetId}:`, captionErr)
+          }
+        }
+
+        successCount++
+      } catch (err: any) {
+        Logger.error(`[AccountManager] Failed to forward to target ${targetId}:`, err)
+        if (!firstError) firstError = err
+      }
+
+      if (i < targets.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+    }
+
+    if (targets.length > 0 && successCount === 0 && firstError) {
+      throw firstError
+    }
+
+    return true
   }
 
   public async deleteMessages(
@@ -2096,26 +2179,20 @@ export class AccountManager {
     const client = holder.client
 
     try {
-      const numChatId = Number(chatId)
-      const targetMaxId = typeof maxId === 'number' && maxId > 0 ? maxId : undefined
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const targetMaxId = typeof maxId === 'number' && maxId > 0 ? maxId : 2147483647
 
-      if (!isNaN(numChatId)) {
-        await client.readHistory(numChatId, targetMaxId ? { maxId: targetMaxId } : undefined).catch(async () => {
-          const inputPeer = toRawPeer(chatId)
-          const fallbackMaxId = targetMaxId || 2147483647 // INT32_MAX marks everything up to current message as read
-          if (inputPeer._ === 'inputPeerChannel') {
-            await client.call({
-              _: 'channels.readHistory',
-              channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
-              maxId: fallbackMaxId,
-            })
-          } else {
-            await client.call({
-              _: 'messages.readHistory',
-              peer: inputPeer,
-              maxId: fallbackMaxId,
-            })
-          }
+      if (inputPeer._ === 'inputPeerChannel') {
+        await client.call({
+          _: 'channels.readHistory',
+          channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
+          maxId: targetMaxId,
+        })
+      } else {
+        await client.call({
+          _: 'messages.readHistory',
+          peer: inputPeer,
+          maxId: targetMaxId,
         })
       }
     } catch (err: any) {
