@@ -413,10 +413,33 @@ app.whenReady().then(async () => {
         }
         const contentType = mimeTypes[ext] || 'application/octet-stream'
         const fileBuf = await fs.promises.readFile(decodedPath)
+        const totalSize = fileBuf.length
+
+        // Handle HTTP Range header for media scrubbing/seeking
+        const rangeHeader = request.headers.get('Range') || request.headers.get('range')
+        if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+          const parts = rangeHeader.replace('bytes=', '').split('-')
+          const start = parseInt(parts[0], 10) || 0
+          const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1
+          const chunk = fileBuf.subarray(start, Math.min(end + 1, totalSize))
+
+          return new Response(chunk, {
+            status: 206,
+            headers: {
+              'Content-Type': contentType,
+              'Content-Range': `bytes ${start}-${Math.min(end, totalSize - 1)}/${totalSize}`,
+              'Accept-Ranges': 'bytes',
+              'Content-Length': chunk.length.toString(),
+              'Access-Control-Allow-Origin': '*',
+            },
+          })
+        }
+
         return new Response(fileBuf, {
           headers: {
             'Content-Type': contentType,
             'Content-Length': fileBuf.length.toString(),
+            'Accept-Ranges': 'bytes',
             'Access-Control-Allow-Origin': '*',
           },
         })
