@@ -137,8 +137,8 @@ export interface ParallelDownloadOptions {
   partSizeKB?: number
   onProgress?: (percent: number, received: number, total: number) => void
   isCancelled?: () => boolean
+  abortSignal?: AbortSignal
 }
-
 
 export async function parallelDownloadDocument(
   client: TelegramClient,
@@ -150,8 +150,8 @@ export async function parallelDownloadDocument(
     options?.onProgress?.(percent, extra?.downloadedBytes ?? 0, extra?.fileSize ?? 0)
   })
   throttler.update(0, { downloadedBytes: 0, fileSize: Number(doc.size || 0) })
-
   const abortController = new AbortController()
+  if (options?.abortSignal) options.abortSignal.addEventListener('abort', () => abortController.abort())
   if (options?.isCancelled) {
     const checkInterval = setInterval(() => {
       if (options.isCancelled?.()) {
@@ -173,28 +173,25 @@ export async function parallelDownloadDocument(
   })
 }
 
+const JPEG_HEADER = Buffer.from(
+  'ffd8ffe000104a46494600010100000100010000ffdb004300281c1e231e19282321232d2b28303c64413c37373c7b585d4964918099968f808c8aa0b4e6c3a0aad8ad8a8cc8ffcbdaeef5ffffff9bc1fffffffafee6fdfff8ffdb0043012b2d2d3c353c76414176f8a58ca5f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8ffc00011080000000003012200021101031101ffc4001f0000010501010101010100000000000000000102030405060708090a0bffc400b5100002010303020403050504040000017d01020300041105122131410613516107227114328191a1082342b1c11552d1f02433627282090a161718191a25262728292a3435363738393a434445464748494a535455565758595a636465666768696a737475767778797a838485868788898a92939495969798999aa2a3a4a5a6a7a8a9aab2b3b4b5b6b7b8b9bac2c3c4c5c6c7c8c9cad2d3d4d5d6d7d8d9dae1e2e3e4e5e6e7e8e9eaf1f2f3f4f5f6f7f8f9faffc4001f0100030101010101010101010000000000000102030405060708090a0bffc400b51100020102040403040705040400010277000102031104052131061241510761711322328108144291a1b1c109233352f0156272d10a162434e125f11718191a262728292a35363738393a434445464748494a535455565758595a62636465666768696a72737475767778797a82838485868788898a92939495969798999aa2a3a4a5a6a7a8a9aab2b3b4b5b6b7b8b9bac2c3c4c5c6c7c8c9cad2d3d4d5d6d7d8d9dae2e3e4e5e6e7e8e9eaf2f3f4f5f6f7f8f9faffda000c03010002110311003f00',
+  'hex'
+)
+const JPEG_FOOTER = Buffer.from([0xff, 0xd9])
+
 export function strippedThumbToDataUrl(bytes: Uint8Array | Buffer): string | null {
   if (!bytes || bytes.length < 3) return null
   try {
     const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes)
     if (b[0] === 0x01) {
-      const header = Buffer.from([
-        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
-        0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x28, 0x1c, 0x1e, 0x23, 0x1e, 0x19, 0x28,
-        0x23, 0x21, 0x23, 0x2d, 0x2b, 0x28, 0x30, 0x3c, 0x64, 0x41, 0x3c, 0x37, 0x37, 0x3c, 0x7b, 0x58,
-        0x5d, 0x49, 0x64, 0x91, 0x80, 0x99, 0x96, 0x8f, 0x80, 0x8c, 0x8a, 0xa0, 0xb4, 0xe6, 0xc3, 0xa0,
-        0xaa, 0xda, 0xad, 0x8a, 0x8c, 0xc8, 0xff, 0xcb, 0xda, 0xee, 0xf5, 0xff, 0xff, 0xff, 0x9b, 0xc1,
-        0xff, 0xff, 0xf7, 0xfa, 0xff, 0xe6, 0xff, 0xff, 0xff, 0xff, 0xc0, 0x00, 0x0b, 0x08, b[1], b[2],
-        0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x1f, 0x00, 0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01,
-        0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
-        0x07, 0x08, 0x09, 0x0a, 0x0b, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
-      ])
-      const footer = Buffer.from([0xff, 0xd9])
-      const fullJpeg = Buffer.concat([header, b.subarray(3), footer])
-      return `data:image/jpeg;base64,${fullJpeg.toString('base64')}`
-    } else {
+      const header = Buffer.from(JPEG_HEADER)
+      header[164] = b[1]
+      header[166] = b[2]
+      return `data:image/jpeg;base64,${Buffer.concat([header, b.subarray(3), JPEG_FOOTER]).toString('base64')}`
+    } else if (b[0] === 0xff && b[1] === 0xd8) {
       return `data:image/jpeg;base64,${b.toString('base64')}`
     }
+    return null
   } catch (_) {
     return null
   }
@@ -202,22 +199,24 @@ export function strippedThumbToDataUrl(bytes: Uint8Array | Buffer): string | nul
 
 export function extractStrippedThumb(mediaObj: any): string | undefined {
   if (!mediaObj) return undefined
+  if (mediaObj.strippedThumb) return strippedThumbToDataUrl(mediaObj.strippedThumb) || undefined
+  if (mediaObj.stripped_thumb) return strippedThumbToDataUrl(mediaObj.stripped_thumb) || undefined
   if (Array.isArray(mediaObj.sizes)) {
     for (const s of mediaObj.sizes) {
-      if (s._ === 'photoStrippedSize' && s.bytes) {
-        const url = strippedThumbToDataUrl(s.bytes)
-        if (url) return url
-      }
+      if (s._ === 'photoStrippedSize' && s.bytes) return strippedThumbToDataUrl(s.bytes) || undefined
     }
   }
   if (Array.isArray(mediaObj.thumbs)) {
     for (const t of mediaObj.thumbs) {
-      if (t._ === 'photoStrippedSize' && t.bytes) {
-        const url = strippedThumbToDataUrl(t.bytes)
-        if (url) return url
-      }
+      if (t._ === 'photoStrippedSize' && t.bytes) return strippedThumbToDataUrl(t.bytes) || undefined
     }
   }
+  if (Array.isArray(mediaObj.videoThumbs)) {
+    for (const t of mediaObj.videoThumbs) {
+      if (t._ === 'photoStrippedSize' && t.bytes) return strippedThumbToDataUrl(t.bytes) || undefined
+    }
+  }
+  if (mediaObj._ === 'photoStrippedSize' && mediaObj.bytes) return strippedThumbToDataUrl(mediaObj.bytes) || undefined
   return undefined
 }
 
@@ -273,6 +272,7 @@ export class AccountManager {
   private customEmojiCache = new Map<string, string>()
   private botButtonCache = new Map<string, Buffer>()
   private peerPhotos = new Map<string, any>()
+  private peerAccessHashes = new Map<string, Long>()
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -332,6 +332,7 @@ export class AccountManager {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
+      connectionCount: (kind: any) => (kind === 'download' ? 8 : (kind === 'upload' ? 8 : 4)),
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
@@ -438,6 +439,7 @@ export class AccountManager {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
+      connectionCount: (kind: any) => (kind === 'download' ? 8 : (kind === 'upload' ? 8 : 4)),
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
@@ -551,6 +553,7 @@ export class AccountManager {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
+      connectionCount: (kind: any) => (kind === 'download' ? 8 : (kind === 'upload' ? 8 : 4)),
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
@@ -885,8 +888,22 @@ export class AccountManager {
       const users = new Map<number, any>()
       const chats = new Map<number, any>()
       const rawMsgMap = new Map<number, any>()
-      if (res.users) res.users.forEach((u: any) => users.set(u.id, u))
-      if (res.chats) res.chats.forEach((c: any) => chats.set(c.id, c))
+      if (res.users) {
+        res.users.forEach((u: any) => {
+          users.set(u.id, u)
+          if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+          const thumb = extractStrippedThumb(u.photo)
+          if (thumb) this.avatarCache.set(`${accountId}_${u.id}`, thumb)
+        })
+      }
+      if (res.chats) {
+        res.chats.forEach((c: any) => {
+          chats.set(c.id, c)
+          if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+          const thumb = extractStrippedThumb(c.photo)
+          if (thumb) this.avatarCache.set(`${accountId}_-${c.id}`, thumb)
+        })
+      }
       for (const m of rawMessages) {
         if (m.id) rawMsgMap.set(m.id, m)
       }
@@ -902,6 +919,7 @@ export class AccountManager {
         let senderId = ''
         let senderName = ''
         let senderUsername: string | undefined = undefined
+        let senderAvatarUrl: string | undefined = undefined
         if (m.fromId) {
           if (m.fromId._ === 'peerUser') {
             senderId = m.fromId.userId.toString()
@@ -909,6 +927,7 @@ export class AccountManager {
             if (u) {
               senderName = formatEntityName(u)
               senderUsername = u.username
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_${u.id}`) || extractStrippedThumb(u.photo)
             }
           } else if (m.fromId._ === 'peerChannel') {
             senderId = `-${m.fromId.channelId}`
@@ -916,11 +935,15 @@ export class AccountManager {
             if (c) {
               senderName = formatEntityName(c)
               senderUsername = c.username
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
             }
           } else if (m.fromId._ === 'peerChat') {
             senderId = `-${m.fromId.chatId}`
             const c = chats.get(m.fromId.chatId)
-            if (c) senderName = formatEntityName(c)
+            if (c) {
+              senderName = formatEntityName(c)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+            }
           }
         }
 
@@ -1079,6 +1102,7 @@ export class AccountManager {
           senderId,
           senderName,
           senderUsername,
+          senderAvatarUrl,
           text,
           date,
           isOutgoing,
@@ -1134,11 +1158,29 @@ export class AccountManager {
       if (photoLoc) {
         await holder.client.downloadToFile(avatarFile, photoLoc).catch(() => {})
       } else {
-        const inputPeer = toRawPeer(peerId)
+        let inputPeer: any
+        const numId = Number(peerId)
+        if (!isNaN(numId)) {
+          try {
+            inputPeer = await holder.client.resolvePeer(numId)
+          } catch (_) {}
+        }
+        if (!inputPeer) {
+          const cachedHash = this.peerAccessHashes.get(`${accountId}_${peerId}`)
+          if (cachedHash && !isNaN(numId)) {
+            inputPeer = peerId.startsWith('-')
+              ? { _: 'inputPeerChannel', channelId: Math.abs(numId), accessHash: cachedHash }
+              : { _: 'inputPeerUser', userId: numId, accessHash: cachedHash }
+          }
+        }
+        if (!inputPeer) {
+          inputPeer = toRawPeer(peerId)
+        }
+
         if (inputPeer._ === 'inputPeerUser') {
           const userPhotos: any = await holder.client.call({
             _: 'photos.getUserPhotos',
-            userId: { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash },
+            userId: { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash || Long.ZERO },
             offset: 0,
             maxId: Long.ZERO,
             limit: 1,
@@ -1150,7 +1192,7 @@ export class AccountManager {
         } else if (inputPeer._ === 'inputPeerChannel') {
           const res: any = await holder.client.call({
             _: 'channels.getFullChannel',
-            channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
+            channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash || Long.ZERO },
           }).catch(() => null)
           const photo = res?.fullChat?.chatPhoto
           if (photo && photo._ === 'photo') {
@@ -1201,7 +1243,7 @@ export class AccountManager {
         if (!msg || !msg.media) return null
 
         const ext = msg.media._ === 'messageMediaPhoto' ? '.jpg' : '.bin'
-        const cachedPath = path.join(this.mediaDir, `media_${accountId}_${chatId}_${messageId}${ext}`)
+        const cachedPath = path.join(this.mediaDir, `media_${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}${ext}`)
 
         if (!fs.existsSync(cachedPath)) {
           const location = msg.media.photo || msg.media.document
@@ -1213,20 +1255,47 @@ export class AccountManager {
             isCancelled: () => abortController.signal.aborted,
           })
 
-          await client.downloadToFile(cachedPath, location, {
-            abortSignal: abortController.signal,
-            progressCallback: (received, total) => {
-              const progress = total > 0 ? Math.min(100, Math.round((received / total) * 100)) : 0
-              this.onEventCallback?.('telegram:download-progress', {
-                accountId,
-                chatId,
-                messageId,
-                progress,
-                bytesReceived: received,
-                totalBytes: total,
-              })
-            },
-          })
+          const isDocOrVideo =
+            msg.media._ === 'messageMediaDocument' &&
+            Boolean(msg.media.document && (msg.media.document as any)._ === 'document')
+          const docObj = isDocOrVideo ? msg.media.document : null
+          const fileSize = docObj ? Number(docObj.size || 0) : 0
+          const isTurboParallel = !thumb && isDocOrVideo && fileSize > 10 * 1024 * 1024
+
+          if (isTurboParallel && docObj) {
+            await parallelDownloadDocument(client, docObj, cachedPath, {
+              partSizeKB: 512,
+              workers: 24,
+              abortSignal: abortController.signal,
+              isCancelled: () => abortController.signal.aborted,
+              onProgress: (progress, received, total) => {
+                this.onEventCallback?.('telegram:download-progress', {
+                  accountId,
+                  chatId,
+                  messageId,
+                  progress,
+                  bytesReceived: received,
+                  totalBytes: total,
+                })
+              },
+            })
+          } else {
+            await client.downloadToFile(cachedPath, location, {
+              partSize: 512,
+              abortSignal: abortController.signal,
+              progressCallback: (received, total) => {
+                const progress = total > 0 ? Math.min(100, Math.round((received / total) * 100)) : 0
+                this.onEventCallback?.('telegram:download-progress', {
+                  accountId,
+                  chatId,
+                  messageId,
+                  progress,
+                  bytesReceived: received,
+                  totalBytes: total,
+                })
+              },
+            })
+          }
           this.activeMediaDownloads.delete(cacheKey)
         }
 
@@ -1577,8 +1646,22 @@ export class AccountManager {
       const rawMessages = res.messages || []
       const users = new Map<number, any>()
       const chats = new Map<number, any>()
-      if (res.users) res.users.forEach((u: any) => users.set(u.id, u))
-      if (res.chats) res.chats.forEach((c: any) => chats.set(c.id, c))
+      if (res.users) {
+        res.users.forEach((u: any) => {
+          users.set(u.id, u)
+          if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+          const thumb = extractStrippedThumb(u.photo)
+          if (thumb) this.avatarCache.set(`${accountId}_${u.id}`, thumb)
+        })
+      }
+      if (res.chats) {
+        res.chats.forEach((c: any) => {
+          chats.set(c.id, c)
+          if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+          const thumb = extractStrippedThumb(c.photo)
+          if (thumb) this.avatarCache.set(`${accountId}_-${c.id}`, thumb)
+        })
+      }
 
       const items: MessageItem[] = []
       for (const m of rawMessages) {
@@ -1590,19 +1673,29 @@ export class AccountManager {
 
         let senderId = ''
         let senderName = ''
+        let senderAvatarUrl: string | undefined = undefined
         if (m.fromId) {
           if (m.fromId._ === 'peerUser') {
             senderId = m.fromId.userId.toString()
             const u = users.get(m.fromId.userId)
-            if (u) senderName = formatEntityName(u)
+            if (u) {
+              senderName = formatEntityName(u)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_${u.id}`) || extractStrippedThumb(u.photo)
+            }
           } else if (m.fromId._ === 'peerChannel') {
             senderId = `-${m.fromId.channelId}`
             const c = chats.get(m.fromId.channelId)
-            if (c) senderName = formatEntityName(c)
+            if (c) {
+              senderName = formatEntityName(c)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+            }
           } else if (m.fromId._ === 'peerChat') {
             senderId = `-${m.fromId.chatId}`
             const c = chats.get(m.fromId.chatId)
-            if (c) senderName = formatEntityName(c)
+            if (c) {
+              senderName = formatEntityName(c)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+            }
           }
         }
 
@@ -1661,6 +1754,7 @@ export class AccountManager {
           accountId,
           senderId,
           senderName,
+          senderAvatarUrl,
           text,
           date,
           isOutgoing,
@@ -2752,6 +2846,17 @@ export class AccountManager {
           }
         }
 
+        const senderIdStr = msg.sender?.id?.toString()
+        if (msg.sender?.photo && senderIdStr) {
+          const senderThumb = extractStrippedThumb(msg.sender.photo)
+          if (senderThumb) {
+            this.avatarCache.set(`${accountId}_${senderIdStr}`, senderThumb)
+          }
+        }
+        const senderAvatarUrl = senderIdStr
+          ? this.avatarCache.get(`${accountId}_${senderIdStr}`) || extractStrippedThumb(msg.sender?.photo)
+          : undefined
+
         const item: MessageItem = {
           id: msg.id,
           chatId,
@@ -2761,7 +2866,8 @@ export class AccountManager {
           isOutgoing: msg.isOutgoing,
           senderName: msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName || '',
           senderUsername: msg.sender?.username,
-          senderId: msg.sender?.id?.toString(),
+          senderId: senderIdStr,
+          senderAvatarUrl,
           mediaType,
           mediaFileName,
           mediaFileSize,
