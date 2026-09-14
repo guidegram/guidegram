@@ -1098,7 +1098,11 @@ export class AccountManager {
         })
       }
 
-      return items
+      for (const item of items) {
+        this.store.recordMessage(accountId, chatId, item)
+      }
+      const keepDeleted = this.store.getConfig().keepDeletedMessagesLocally !== false
+      return this.store.mergeAuditLogIntoMessages(accountId, chatId, items, keepDeleted)
     } catch (err: any) {
       Logger.error(`[AccountManager] getMessages error for :, err`)
       return []
@@ -2771,6 +2775,7 @@ export class AccountManager {
           replyMarkup,
           entities,
         }
+        this.store.recordMessage(accountId, chatId, item)
         this.onEventCallback?.('telegram:new-message', {
           accountId,
           chatId,
@@ -2795,14 +2800,29 @@ export class AccountManager {
     client.onEditMessage.add(async (msg: any) => {
       try {
         const chatId = msg.chat?.id?.toString() || ''
-        const item: MessageItem = {
+        const editDate = msg.editDate
+          ? Math.floor(msg.editDate.getTime() / 1000)
+          : Math.floor(Date.now() / 1000)
+        const entities = parseMtprotoEntities(msg.raw?.entities)
+
+        const updated = this.store.recordMessageEdit(
+          accountId,
+          chatId,
+          msg.id,
+          msg.text || '',
+          editDate,
+          entities
+        )
+
+        const item: MessageItem = updated || {
           id: msg.id,
           chatId,
           accountId,
           text: msg.text || '',
           date: msg.date ? Math.floor(msg.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
+          editDate,
           isOutgoing: msg.isOutgoing,
-          entities: parseMtprotoEntities(msg.raw?.entities),
+          entities,
         }
         this.onEventCallback?.('telegram:message-edited', { accountId, chatId, message: item })
       } catch (e) {
@@ -2812,9 +2832,31 @@ export class AccountManager {
 
     client.onDeleteMessage.add(async (update: any) => {
       try {
-        const chatId = update.chat?.id?.toString() || ''
-        const messageIds = update.messageIds || []
-        this.onEventCallback?.('telegram:message-deleted', { accountId, chatId, messageIds })
+        const messageIds: number[] = update.messageIds || []
+        if (messageIds.length === 0) return
+
+        let chatId = ''
+        if (update.channelId) {
+          const chStr = update.channelId.toString()
+          chatId = chStr.startsWith('-') ? chStr : `-100${chStr}`
+        } else {
+          chatId = this.store.findChatIdForMessageId(accountId, messageIds[0]) || ''
+        }
+
+        const keepDeleted = this.store.getConfig().keepDeletedMessagesLocally !== false
+        const now = Math.floor(Date.now() / 1000)
+
+        if (keepDeleted && chatId) {
+          this.store.recordMessageDelete(accountId, chatId, messageIds)
+        }
+
+        this.onEventCallback?.('telegram:message-deleted', {
+          accountId,
+          chatId,
+          messageIds,
+          isDeletedLocally: keepDeleted,
+          deletedAt: now,
+        })
       } catch (e) {
         Logger.warn('[AccountManager] Error processing delete message update:', e)
       }

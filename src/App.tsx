@@ -173,6 +173,8 @@ export const App: React.FC = () => {
     let unsubscribeAccountsLoaded: (() => void) | undefined
     let unsubscribeMute: (() => void) | undefined
     let unsubscribeReadHistory: (() => void) | undefined
+    let unsubscribeMsgDeleted: (() => void) | undefined
+    let unsubscribeMsgEdited: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -335,8 +337,109 @@ export const App: React.FC = () => {
         }
       )
 
+      // Real-time Anti-Delete Trapper
+      unsubscribeMsgDeleted = window.guidegram.on(
+        'telegram:message-deleted',
+        (payload: { accountId: string; chatId: string; messageIds: number[]; isDeletedLocally?: boolean; deletedAt?: number }) => {
+          const { chatId, messageIds, isDeletedLocally, deletedAt } = payload
+          if (!messageIds || messageIds.length === 0) return
+          const idSet = new Set<number>(messageIds)
+          const keepLocally = isDeletedLocally ?? (configRef.current?.keepDeletedMessagesLocally !== false)
+
+          setMessagesByChat((prev) => {
+            const targetChatIds = chatId && prev[chatId] ? [chatId] : Object.keys(prev)
+            let changed = false
+            const next = { ...prev }
+
+            for (const cId of targetChatIds) {
+              const list = prev[cId]
+              if (!list) continue
+              const hasMatch = list.some((m) => idSet.has(m.id))
+              if (!hasMatch) continue
+
+              changed = true
+              if (keepLocally) {
+                next[cId] = list.map((m) =>
+                  idSet.has(m.id)
+                    ? {
+                        ...m,
+                        isDeletedLocally: true,
+                        deletedAt: m.deletedAt || deletedAt || Math.floor(Date.now() / 1000),
+                      }
+                    : m
+                )
+              } else {
+                next[cId] = list.filter((m) => !idSet.has(m.id))
+              }
+            }
+
+            return changed ? next : prev
+          })
+        }
+      )
+
+      // Real-time Edit History Tracker
+      unsubscribeMsgEdited = window.guidegram.on(
+        'telegram:message-edited',
+        (payload: { accountId: string; chatId: string; message: MessageItem }) => {
+          const { chatId, message } = payload
+          if (!message?.id) return
+
+          setMessagesByChat((prev) => {
+            const targetChatIds = chatId && prev[chatId] ? [chatId] : Object.keys(prev)
+            let changed = false
+            const next = { ...prev }
+
+            for (const cId of targetChatIds) {
+              const list = prev[cId]
+              if (!list) continue
+              const idx = list.findIndex((m) => m.id === message.id)
+              if (idx === -1) continue
+
+              changed = true
+              const existing = list[idx]
+              const existingHistory = existing.editHistory || []
+              const historyToAdd =
+                existing.text &&
+                existing.text !== message.text &&
+                !existingHistory.some((h) => h.text === existing.text)
+                  ? [
+                      {
+                        text: existing.text,
+                        date: existing.editDate || existing.date,
+                        entities: existing.entities,
+                        mediaType: existing.mediaType,
+                        mediaThumbnailUrl: existing.mediaThumbnailUrl,
+                        strippedThumb: existing.strippedThumb,
+                      },
+                    ]
+                  : []
+              const mergedHistory =
+                message.editHistory && message.editHistory.length > 0
+                  ? message.editHistory
+                  : [...existingHistory, ...historyToAdd]
+
+              const updatedMsg: MessageItem = {
+                ...existing,
+                ...message,
+                editHistory: mergedHistory,
+                editDate: message.editDate || Math.floor(Date.now() / 1000),
+              }
+
+              const nextList = [...list]
+              nextList[idx] = updatedMsg
+              next[cId] = nextList
+            }
+
+            return changed ? next : prev
+          })
+        }
+      )
+
       return () => {
         unsubscribeMsg?.()
+        unsubscribeMsgDeleted?.()
+        unsubscribeMsgEdited?.()
         unsubscribeUpdate?.()
         unsubscribeAccountUpdated?.()
         unsubscribeAccountsLoaded?.()

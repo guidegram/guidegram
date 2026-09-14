@@ -45,6 +45,7 @@ import type {
   PrivacySecuritySettings,
   AutoHarvestStatus,
   WarpStatus,
+  MessageEditRevision,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -101,4 +102,5 @@ export type {
   PrivacySecuritySettings,
   AutoHarvestStatus,
   WarpStatus,
+  MessageEditRevision,
 }

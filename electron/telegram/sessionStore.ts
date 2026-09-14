@@ -1,25 +1,30 @@
 import fs from 'fs'
 import path from 'path'
-import { AppConfig, AccountInfo, ProxyConfig, CacheStats } from './types'
+import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision } from './types'
 
 export class SessionStore {
   private dataDir: string
   private sessionsDir: string
+  private auditLogsDir: string
   private configFilePath: string
   private config: AppConfig
   private safeBackupDir: string
   private backupConfigPath: string
   private backupSessionsDir: string
+  private backupAuditLogsDir: string
+  private auditCache: Map<string, Record<string, Record<number, MessageItem>>> = new Map()
 
   constructor(baseDataDir: string) {
     this.dataDir = baseDataDir
     this.sessionsDir = path.join(this.dataDir, 'sessions')
+    this.auditLogsDir = path.join(this.dataDir, 'audit_logs')
     this.configFilePath = path.join(this.dataDir, 'config.json')
 
     const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME || '', 'Library/Application Support') : path.join(process.env.HOME || '', '.config'))
     this.safeBackupDir = path.join(appData, 'Guidegram', 'safe_backup')
     this.backupConfigPath = path.join(this.safeBackupDir, 'config.json')
     this.backupSessionsDir = path.join(this.safeBackupDir, 'sessions')
+    this.backupAuditLogsDir = path.join(this.safeBackupDir, 'audit_logs')
 
     this.ensureDirectories()
     this.config = this.loadConfig()
@@ -32,12 +37,18 @@ export class SessionStore {
     if (!fs.existsSync(this.sessionsDir)) {
       fs.mkdirSync(this.sessionsDir, { recursive: true })
     }
+    if (!fs.existsSync(this.auditLogsDir)) {
+      fs.mkdirSync(this.auditLogsDir, { recursive: true })
+    }
     try {
       if (!fs.existsSync(this.safeBackupDir)) {
         fs.mkdirSync(this.safeBackupDir, { recursive: true })
       }
       if (!fs.existsSync(this.backupSessionsDir)) {
         fs.mkdirSync(this.backupSessionsDir, { recursive: true })
+      }
+      if (!fs.existsSync(this.backupAuditLogsDir)) {
+        fs.mkdirSync(this.backupAuditLogsDir, { recursive: true })
       }
     } catch {
       // Safe fallback if restricted
@@ -60,6 +71,7 @@ export class SessionStore {
       showSenderAvatar: true,
       quickForwardToSaved: true,
       alwaysDeleteBoth: true,
+      keepDeletedMessagesLocally: true,
       markAllReadEnabled: true,
       copyCallbackData: true,
       disableAnimations: false,
@@ -306,5 +318,276 @@ export class SessionStore {
     cleanDir(path.join(this.dataDir, 'temp'))
 
     return { clearedBytes, clearedFiles }
+  }
+
+  // ==========================================
+  // 64Gram Local Anti-Delete & Edit History Audit Log
+  // ==========================================
+
+  public getAuditFilePath(accountId: string): string {
+    return path.join(this.auditLogsDir, `audit_${accountId}.json`)
+  }
+
+  public getBackupAuditFilePath(accountId: string): string {
+    return path.join(this.backupAuditLogsDir, `audit_${accountId}.json`)
+  }
+
+  private loadAccountAudit(accountId: string): Record<string, Record<number, MessageItem>> {
+    if (this.auditCache.has(accountId)) {
+      return this.auditCache.get(accountId)!
+    }
+    const filePath = this.getAuditFilePath(accountId)
+    const backupFilePath = this.getBackupAuditFilePath(accountId)
+    let data: Record<string, Record<number, MessageItem>> = {}
+
+    if (fs.existsSync(filePath)) {
+      try {
+        const raw = fs.readFileSync(filePath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        data = parsed.chats || parsed || {}
+      } catch (err) {
+        console.error(`[SessionStore] Failed to parse audit log for account ${accountId}:`, err)
+      }
+    } else if (fs.existsSync(backupFilePath)) {
+      try {
+        const raw = fs.readFileSync(backupFilePath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        data = parsed.chats || parsed || {}
+        if (!fs.existsSync(this.auditLogsDir)) {
+          fs.mkdirSync(this.auditLogsDir, { recursive: true })
+        }
+        fs.writeFileSync(filePath, JSON.stringify({ chats: data }, null, 2), 'utf-8')
+      } catch (err) {
+        console.error(`[SessionStore] Failed to restore backup audit log for account ${accountId}:`, err)
+      }
+    }
+
+    this.auditCache.set(accountId, data)
+    return data
+  }
+
+  private saveAccountAudit(accountId: string, data: Record<string, Record<number, MessageItem>>): void {
+    this.auditCache.set(accountId, data)
+    const payload = JSON.stringify({ chats: data }, null, 2)
+    try {
+      if (!fs.existsSync(this.auditLogsDir)) {
+        fs.mkdirSync(this.auditLogsDir, { recursive: true })
+      }
+      fs.writeFileSync(this.getAuditFilePath(accountId), payload, 'utf-8')
+
+      // Dual-layer safe backup mirroring (Guidegram Data Shield)
+      try {
+        if (!fs.existsSync(this.backupAuditLogsDir)) {
+          fs.mkdirSync(this.backupAuditLogsDir, { recursive: true })
+        }
+        fs.writeFileSync(this.getBackupAuditFilePath(accountId), payload, 'utf-8')
+      } catch (backupErr) {
+        console.error(`[SessionStore] Failed to mirror audit log to safe backup:`, backupErr)
+      }
+    } catch (err) {
+      console.error(`[SessionStore] Failed to save audit log for account ${accountId}:`, err)
+    }
+  }
+
+  public recordMessage(accountId: string, chatId: string, msg: MessageItem): void {
+    if (!accountId || !chatId || !msg?.id) return
+    const audit = this.loadAccountAudit(accountId)
+    if (!audit[chatId]) {
+      audit[chatId] = {}
+    }
+
+    const existing = audit[chatId][msg.id]
+    if (existing) {
+      audit[chatId][msg.id] = {
+        ...existing,
+        ...msg,
+        isDeletedLocally: existing.isDeletedLocally || msg.isDeletedLocally,
+        deletedAt: existing.deletedAt || msg.deletedAt,
+        editDate: msg.editDate || existing.editDate,
+        editHistory:
+          existing.editHistory && existing.editHistory.length > 0
+            ? existing.editHistory
+            : msg.editHistory,
+      }
+    } else {
+      audit[chatId][msg.id] = { ...msg }
+    }
+
+    // Prune unedited/non-deleted messages when chat exceeds 500 records
+    const messageKeys = Object.keys(audit[chatId])
+    if (messageKeys.length > 500) {
+      const normalIds = messageKeys
+        .map(Number)
+        .filter((id) => {
+          const item = audit[chatId][id]
+          return !item.isDeletedLocally && (!item.editHistory || item.editHistory.length === 0)
+        })
+        .sort((a, b) => a - b)
+
+      const excessCount = messageKeys.length - 500
+      const toPrune = normalIds.slice(0, excessCount)
+      for (const pruneId of toPrune) {
+        delete audit[chatId][pruneId]
+      }
+    }
+
+    this.saveAccountAudit(accountId, audit)
+  }
+
+  public recordMessageEdit(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    newText: string,
+    editDate: number,
+    entities?: MessageEntityItem[]
+  ): MessageItem | null {
+    if (!accountId || !messageId) return null
+    const audit = this.loadAccountAudit(accountId)
+
+    let targetChatId = chatId
+    if (!targetChatId) {
+      targetChatId = this.findChatIdForMessageId(accountId, messageId) || ''
+    }
+    if (!targetChatId) return null
+
+    if (!audit[targetChatId]) {
+      audit[targetChatId] = {}
+    }
+
+    const existing = audit[targetChatId][messageId]
+    if (existing) {
+      const priorHistory = existing.editHistory ? [...existing.editHistory] : []
+      const priorText = existing.text
+      if (priorText && priorText !== newText && !priorHistory.some((h) => h.text === priorText)) {
+        priorHistory.push({
+          text: priorText,
+          date: existing.editDate || existing.date || Math.floor(Date.now() / 1000),
+          entities: existing.entities,
+          mediaType: existing.mediaType,
+          mediaThumbnailUrl: existing.mediaThumbnailUrl,
+          strippedThumb: existing.strippedThumb,
+        })
+      }
+
+      existing.text = newText
+      existing.editDate = editDate
+      if (entities) existing.entities = entities
+      existing.editHistory = priorHistory
+      this.saveAccountAudit(accountId, audit)
+      return existing
+    } else {
+      const item: MessageItem = {
+        id: messageId,
+        chatId: targetChatId,
+        accountId,
+        text: newText,
+        date: editDate,
+        editDate,
+        isOutgoing: false,
+        entities,
+        editHistory: [],
+      }
+      audit[targetChatId][messageId] = item
+      this.saveAccountAudit(accountId, audit)
+      return item
+    }
+  }
+
+  public recordMessageDelete(accountId: string, chatId: string, messageIds: number[]): MessageItem[] {
+    if (!accountId || !messageIds || messageIds.length === 0) return []
+    const audit = this.loadAccountAudit(accountId)
+    const deletedItems: MessageItem[] = []
+    const now = Math.floor(Date.now() / 1000)
+
+    for (const msgId of messageIds) {
+      let targetChatId = chatId
+      if (!targetChatId) {
+        targetChatId = this.findChatIdForMessageId(accountId, msgId) || ''
+      }
+      if (!targetChatId) continue
+
+      if (!audit[targetChatId]) {
+        audit[targetChatId] = {}
+      }
+
+      const existing = audit[targetChatId][msgId]
+      if (existing) {
+        existing.isDeletedLocally = true
+        existing.deletedAt = existing.deletedAt || now
+        deletedItems.push(existing)
+      } else {
+        const placeholder: MessageItem = {
+          id: msgId,
+          chatId: targetChatId,
+          accountId,
+          text: '[Message deleted]',
+          date: now,
+          isOutgoing: false,
+          isDeletedLocally: true,
+          deletedAt: now,
+        }
+        audit[targetChatId][msgId] = placeholder
+        deletedItems.push(placeholder)
+      }
+    }
+
+    this.saveAccountAudit(accountId, audit)
+    return deletedItems
+  }
+
+  public findChatIdForMessageId(accountId: string, messageId: number): string | null {
+    if (!accountId || !messageId) return null
+    const audit = this.loadAccountAudit(accountId)
+    for (const [cId, msgs] of Object.entries(audit)) {
+      if (msgs[messageId]) return cId
+    }
+    return null
+  }
+
+  public getAuditLog(accountId: string, chatId: string): MessageItem[] {
+    if (!accountId || !chatId) return []
+    const audit = this.loadAccountAudit(accountId)
+    const msgs = audit[chatId] || {}
+    return Object.values(msgs).sort((a, b) => a.date - b.date)
+  }
+
+  public mergeAuditLogIntoMessages(
+    accountId: string,
+    chatId: string,
+    liveMessages: MessageItem[],
+    keepDeleted = true
+  ): MessageItem[] {
+    if (!accountId || !chatId) return liveMessages
+    const audit = this.loadAccountAudit(accountId)
+    const auditMsgs = audit[chatId] || {}
+
+    const map = new Map<number, MessageItem>()
+    for (const live of liveMessages) {
+      map.set(live.id, { ...live })
+    }
+
+    for (const [idStr, auditMsg] of Object.entries(auditMsgs)) {
+      const id = Number(idStr)
+      const live = map.get(id)
+      if (live) {
+        if (auditMsg.editHistory && auditMsg.editHistory.length > 0) {
+          live.editHistory = auditMsg.editHistory
+        }
+        if (auditMsg.editDate) {
+          live.editDate = auditMsg.editDate
+        }
+        if (auditMsg.isDeletedLocally) {
+          live.isDeletedLocally = true
+          live.deletedAt = auditMsg.deletedAt
+        }
+      } else if (keepDeleted && auditMsg.isDeletedLocally) {
+        map.set(id, { ...auditMsg })
+      }
+    }
+
+    const result = Array.from(map.values())
+    result.sort((a, b) => a.date - b.date)
+    return result
   }
 }

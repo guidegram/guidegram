@@ -66,6 +66,7 @@ import {
   Phone,
   ChevronLeft,
   RefreshCw,
+  History,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -548,6 +549,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [hoveredMessage, setHoveredMessage] = useState<MessageItem | null>(null)
   const { t } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
+  const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
 
   // Media cache in component state (cacheKey -> dataUrl or guidegram-media url)
   const [downloadedMedia, setDownloadedMedia] = useState<Record<string, string>>({})
@@ -3621,7 +3623,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             msg.isOutgoing
                               ? 'bg-primary-600 text-white rounded-br-sm'
                               : 'bg-dark-800 text-gray-200 border border-white/5 rounded-bl-sm'
-                          }`
+                          } ${msg.isDeletedLocally ? 'ring-1 ring-rose-500/50 border-rose-500/30' : ''}`
                     } ${isSelected ? 'ring-2 ring-primary-400' : ''}`}
                       style={{
                         fontSize: msg.isSticker || msg.mediaType === 'sticker' ? undefined : `${chatFontSize}px`,
@@ -3883,6 +3885,39 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           <BellOff className="w-2.5 h-2.5" />
                         </span>
                       )}
+
+                      {/* 64Gram Local Anti-Delete Badge */}
+                      {msg.isDeletedLocally && (
+                        <span
+                          title={`This message was deleted on Telegram, but preserved locally (${
+                            msg.deletedAt ? formatMessageTime(msg.deletedAt) : 'deleted'
+                          })`}
+                          className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-300 bg-rose-500/25 border border-rose-500/40 px-1.5 py-0.2 rounded select-none animate-in fade-in"
+                        >
+                          <Trash2 className="w-2.5 h-2.5" />
+                          <span>[Deleted]</span>
+                        </span>
+                      )}
+
+                      {/* 64Gram Edit History Tracker Pill */}
+                      {msg.editHistory && msg.editHistory.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setViewingEditHistoryMsg(msg)
+                          }}
+                          title="Click to view previous versions"
+                          className="inline-flex items-center gap-0.5 text-[9px] font-bold text-accent-cyan bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/30 px-1.5 py-0.2 rounded select-none cursor-pointer transition-colors"
+                        >
+                          <History className="w-2.5 h-2.5" />
+                          <span>[Edited]</span>
+                        </button>
+                      ) : msg.editDate ? (
+                        <span className="text-[10px] opacity-75 select-none">
+                          edited
+                        </span>
+                      ) : null}
 
                       <span>{formatMessageTime(msg.date)}</span>
                       {msg.isOutgoing && <CheckCheck className="w-3 h-3 inline" />}
@@ -6330,6 +6365,124 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chatId={chat.id}
           onSelectSticker={handleSendSticker}
         />
+      )}
+
+      {/* 10. 64Gram Local Edit History Tracker Modal */}
+      {viewingEditHistoryMsg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={() => setViewingEditHistoryMsg(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-dark-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] text-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-dark-800/80">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-accent-cyan/15 border border-accent-cyan/30 text-accent-cyan">
+                  <History className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Message Edit History</span>
+                    <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-black/30 border border-white/10 text-accent-cyan">
+                      #{viewingEditHistoryMsg.id}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-gray-400">
+                    Chronological revision timeline ({(viewingEditHistoryMsg.editHistory?.length || 0) + 1} versions)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingEditHistoryMsg(null)}
+                className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Revision Timeline List */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {viewingEditHistoryMsg.editHistory &&
+                viewingEditHistoryMsg.editHistory.map((rev, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-xl bg-dark-800/60 border border-white/5 space-y-2 relative"
+                  >
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 border-b border-white/5 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-white/5 font-semibold text-gray-300">
+                          {idx === 0 ? 'Original Version' : `Revision #${idx + 1}`}
+                        </span>
+                        <span className="font-mono text-[10px] text-gray-400">
+                          {formatMessageTime(rev.date)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await copyTextToClipboard(rev.text)
+                          showToast('Copied revision text to clipboard')
+                        }}
+                        className="hover:text-accent-cyan transition-colors p-1"
+                        title="Copy this revision"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="whitespace-pre-wrap break-words text-gray-200 leading-relaxed font-sans select-text">
+                      {rev.text || <span className="italic opacity-50">[Empty text]</span>}
+                    </div>
+                  </div>
+                ))}
+
+              {/* Current Version Card */}
+              <div className="p-3.5 rounded-xl bg-accent-cyan/10 border border-accent-cyan/30 space-y-2 relative">
+                <div className="flex items-center justify-between text-[11px] text-accent-cyan border-b border-accent-cyan/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-accent-cyan/20 font-bold text-accent-cyan">
+                      Current Version
+                    </span>
+                    <span className="font-mono text-[10px] text-gray-300">
+                      {formatMessageTime(viewingEditHistoryMsg.editDate || viewingEditHistoryMsg.date)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await copyTextToClipboard(viewingEditHistoryMsg.text)
+                      showToast('Copied current text to clipboard')
+                    }}
+                    className="hover:text-accent-cyan transition-colors p-1"
+                    title="Copy current version"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="whitespace-pre-wrap break-words text-white leading-relaxed font-sans select-text font-medium">
+                  {viewingEditHistoryMsg.text || (
+                    <span className="italic opacity-50">[Empty text]</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 border-t border-white/10 bg-dark-800/80 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setViewingEditHistoryMsg(null)}
+                className="px-4 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

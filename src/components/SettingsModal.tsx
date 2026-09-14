@@ -149,6 +149,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showSenderAvatar, setShowSenderAvatar] = useState(true)
   const [quickForwardToSaved, setQuickForwardToSaved] = useState(true)
   const [alwaysDeleteBoth, setAlwaysDeleteBoth] = useState(true)
+  const [keepDeletedMessagesLocally, setKeepDeletedMessagesLocally] = useState(true)
   const [markAllReadEnabled, setMarkAllReadEnabled] = useState(true)
   const [copyCallbackData, setCopyCallbackData] = useState(true)
   const [disableAnimations, setDisableAnimations] = useState(false)
@@ -264,6 +265,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setShowSenderAvatar(cfg.showSenderAvatar ?? true)
         setQuickForwardToSaved(cfg.quickForwardToSaved ?? true)
         setAlwaysDeleteBoth(cfg.alwaysDeleteBoth ?? true)
+        setKeepDeletedMessagesLocally(cfg.keepDeletedMessagesLocally ?? true)
         setMarkAllReadEnabled(cfg.markAllReadEnabled ?? true)
         setCopyCallbackData(cfg.copyCallbackData ?? true)
         setDisableAnimations(cfg.disableAnimations ?? false)
@@ -418,6 +420,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       showSenderAvatar,
       quickForwardToSaved,
       alwaysDeleteBoth,
+      keepDeletedMessagesLocally,
       markAllReadEnabled,
       copyCallbackData,
       disableAnimations,
@@ -1229,6 +1232,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       icon={<ExternalLink className="w-3.5 h-3.5 text-accent-cyan" />}
                       checked={suppressLinkWarning}
                       onChange={setSuppressLinkWarning}
+                    />
+                    <ToggleItem
+                      title="Keep Deleted Messages Locally"
+                      desc="Preserve revoked and deleted messages with an unobtrusive red [Deleted] badge"
+                      icon={<Trash2 className="w-3.5 h-3.5 text-rose-400" />}
+                      checked={keepDeletedMessagesLocally}
+                      onChange={setKeepDeletedMessagesLocally}
                     />
                   </div>
 

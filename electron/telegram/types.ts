@@ -160,6 +160,15 @@ export interface MessageEntityItem {
   documentId?: string // for custom emoji
 }
 
+export interface MessageEditRevision {
+  text: string
+  date: number
+  entities?: MessageEntityItem[]
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage'
+  mediaThumbnailUrl?: string
+  strippedThumb?: string
+}
+
 export interface MessageItem {
   id: number
   chatId: string
@@ -203,6 +212,11 @@ export interface MessageItem {
   replyMarkup?: {
     rows: InlineButton[][]
   }
+  // Local Anti-Delete & Edit History (64Gram Parity)
+  isDeletedLocally?: boolean
+  deletedAt?: number
+  editDate?: number
+  editHistory?: MessageEditRevision[]
 }
 
 export interface ChatDetails {
@@ -336,6 +350,7 @@ export interface AppConfig {
   showSenderAvatar: boolean
   quickForwardToSaved: boolean
   alwaysDeleteBoth: boolean
+  keepDeletedMessagesLocally?: boolean
   markAllReadEnabled: boolean
   copyCallbackData: boolean
   disableAnimations?: boolean
