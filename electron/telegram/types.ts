@@ -58,6 +58,7 @@ export interface AccountInfo {
   proxyConfig?: ProxyConfig
   isPremium?: boolean
   isBot?: boolean
+  botToken?: string
   sessionString?: string
   deviceProfile?: {
     deviceModel: string

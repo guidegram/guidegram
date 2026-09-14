@@ -70,6 +70,16 @@ assert(dockCode.includes('acc.isBot') && dockCode.includes('🤖'), 'AccountDock
 const chatListCode = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatList.tsx'), 'utf8')
 assert(chatListCode.includes('account.isBot') && chatListCode.includes('BOT'), 'ChatList renders BOT label for active bot account')
 
+// 8. Bot Messages & Keyboards Parity Verification
+console.log('\n[SUITE 8] Bot Messages & Keyboards Parity')
+const viewportCode = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatViewport.tsx'), 'utf8')
+assert(accountManagerCode.includes('holder.info?.isBot'), 'accountManager.ts handles bot-specific message fetching')
+assert(accountManagerCode.includes("messages.getMessages"), 'accountManager.ts uses messages.getMessages for bots')
+assert(accountManagerCode.includes('recordDialogLastMessage'), 'accountManager.ts preserves dialog last message')
+assert(accountManagerCode.includes('replyKeyboardMarkup'), 'accountManager.ts parses replyKeyboardMarkup bot menus')
+assert(accountManagerCode.includes('botToken: cleanToken'), 'accountManager.ts persists botToken in startBotAuth')
+assert(viewportCode.includes('onSendMessage(btn.text)'), 'ChatViewport dispatches reply keyboard text buttons')
+
 console.log('\n====================================================')
 console.log(`Results: ${passed} passed, ${failed} failed`)
 console.log('====================================================')

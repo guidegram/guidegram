@@ -4681,6 +4681,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         } finally {
                                           setCallingBotBtnId(null)
                                         }
+                                        return
+                                      }
+                                      if (btn.text) {
+                                        onSendMessage(btn.text)
                                       }
                                     }}
                                     onContextMenu={async (e) => {

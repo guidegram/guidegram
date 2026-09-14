@@ -332,7 +332,7 @@ export class SessionStore {
     return path.join(this.backupAuditLogsDir, `audit_${accountId}.json`)
   }
 
-  private loadAccountAudit(accountId: string): Record<string, Record<number, MessageItem>> {
+  public loadAccountAudit(accountId: string): Record<string, Record<number, MessageItem>> {
     if (this.auditCache.has(accountId)) {
       return this.auditCache.get(accountId)!
     }

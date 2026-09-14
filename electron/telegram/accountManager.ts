@@ -372,6 +372,7 @@ export class AccountManager {
   private botButtonCache = new Map<string, Buffer>()
   private peerPhotos = new Map<string, any>()
   private peerAccessHashes = new Map<string, Long>()
+  private topMessageIds = new Map<string, number>()
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -469,6 +470,7 @@ export class AccountManager {
           proxyConfig: savedAcc.proxyConfig,
           isPremium: me.isPremium || false,
           isBot,
+          botToken: savedAcc.botToken,
           deviceProfile: profile,
         }
 
@@ -701,6 +703,7 @@ export class AccountManager {
         proxyConfig: proxy,
         isPremium: false,
         isBot: true,
+        botToken: cleanToken,
         deviceProfile: profile || DeviceProfileManager.getProfileForAccount(accountId, antiFingerprinting),
       }
 
@@ -972,6 +975,57 @@ export class AccountManager {
     return raw
   }
 
+  private recordDialogLastMessage(accountId: string, chatId: string, msg: any): void {
+    try {
+      if (!accountId || !chatId || !msg || !msg.id) return
+      const raw = msg.raw || msg
+      const text = msg.text || raw.message || ''
+      const date = msg.date ? Math.floor(msg.date.getTime() / 1000) : (raw.date || Math.floor(Date.now() / 1000))
+      const isOutgoing = Boolean(msg.isOutgoing || raw.out)
+
+      let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
+      const rawMarkup = raw.replyMarkup || raw.reply_markup
+      if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
+        const rows: InlineButton[][] = []
+        for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
+          const row = rawMarkup.rows[rIdx]
+          const btnRow: InlineButton[] = []
+          if (row?.buttons && Array.isArray(row.buttons)) {
+            for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
+              const b = row.buttons[cIdx]
+              if (b._ === 'keyboardButtonUrl') {
+                btnRow.push({ text: b.text, url: b.url })
+              } else if (b._ === 'keyboardButtonCallback') {
+                const b64 = Buffer.from(b.data).toString('base64')
+                this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
+                btnRow.push({ text: b.text, data: b64 })
+              } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
+                btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
+              } else if (b.text) {
+                btnRow.push({ text: b.text })
+              }
+            }
+          }
+          if (btnRow.length > 0) rows.push(btnRow)
+        }
+        if (rows.length > 0) replyMarkup = { rows }
+      }
+
+      const item: MessageItem = {
+        id: msg.id,
+        chatId,
+        accountId,
+        text,
+        date,
+        isOutgoing,
+        replyMarkup,
+      }
+      this.store.recordMessage(accountId, chatId, item)
+    } catch (e) {
+      Logger.warn('[AccountManager] recordDialogLastMessage warning:', e)
+    }
+  }
+
   public async getDialogs(
     accountId: string,
     limit = 350,
@@ -1058,6 +1112,10 @@ export class AccountManager {
         if (d.lastMessage) {
           lastMessageText = d.lastMessage.text || ''
           lastMessageDate = d.lastMessage.date ? d.lastMessage.date.getTime() : 0
+          if (d.lastMessage.id) {
+            this.topMessageIds.set(`${accountId}_${peerId}`, d.lastMessage.id)
+            this.recordDialogLastMessage(accountId, peerId, d.lastMessage)
+          }
         }
 
         const initials = title
@@ -1110,6 +1168,54 @@ export class AccountManager {
           draft,
         }
         dialogs.push(item)
+      }
+
+      // Ensure all chats present in local audit store are exposed as dialogs
+      try {
+        const audit = this.store.loadAccountAudit(accountId)
+        for (const [cId, msgs] of Object.entries(audit)) {
+          if (seenIds.has(cId)) continue
+          seenIds.add(cId)
+          const msgList = Object.values(msgs).sort((a, b) => b.date - a.date)
+          const topMsg = msgList[0]
+          if (!topMsg) continue
+
+          const isGroup = cId.startsWith('-') && !cId.startsWith('-100')
+          const isChannel = cId.startsWith('-100')
+          const isUser = !isGroup && !isChannel
+
+          const title = topMsg.senderName || (isUser ? `User ${cId}` : `Chat ${cId}`)
+          const initials = title
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+
+          dialogs.push({
+            id: cId,
+            accountId,
+            title,
+            unreadCount: 0,
+            readInboxMaxId: topMsg.id,
+            unreadMentionsCount: 0,
+            isMuted: false,
+            isUser,
+            isGroup,
+            isChannel,
+            isBroadcast: isChannel,
+            isBot: false,
+            isPinned: false,
+            isSavedMessages: false,
+            lastMessageText: topMsg.text || '',
+            lastMessageDate: topMsg.date ? topMsg.date * 1000 : 0,
+            avatarInitials: initials,
+            avatarUrl: topMsg.senderAvatarUrl,
+            username: topMsg.senderUsername,
+          })
+        }
+      } catch (auditDialogErr) {
+        Logger.warn('[AccountManager] Failed to merge audit dialogs:', auditDialogErr)
       }
 
       return dialogs
@@ -1173,23 +1279,68 @@ export class AccountManager {
     try {
       const inputPeer = await this.resolveInputPeer(accountId, chatId)
 
-      const res: any = await holder.client.call({
-        _: 'messages.getHistory',
-        peer: inputPeer,
-        offsetId: offsetId || 0,
-        offsetDate: 0,
-        addOffset: addOffset || 0,
-        limit,
-        maxId: 0,
-        minId: 0,
-        hash: Long.ZERO,
-      })
+      let res: any
+      if (holder.info?.isBot) {
+        // Telegram MTProto strictly prohibits bots from invoking messages.getHistory (RPC 400 BOT_METHOD_INVALID).
+        // Bots fetch history via messages.getMessages / channels.getMessages using known message IDs or audit store.
+        let topId = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
+        const auditMsgs = this.store.getAuditLog(accountId, chatId)
+        if (auditMsgs.length > 0) {
+          const maxAuditId = Math.max(...auditMsgs.map((m) => m.id))
+          if (maxAuditId > topId) topId = maxAuditId
+        }
 
-      const rawMessages = res.messages || []
+        let candidateIds: number[] = []
+        if (offsetId && offsetId > 0) {
+          const start = Math.max(1, offsetId - limit)
+          for (let i = start; i < offsetId; i++) candidateIds.push(i)
+        } else if (topId > 0) {
+          const start = Math.max(1, topId - limit + 1)
+          for (let i = start; i <= topId; i++) candidateIds.push(i)
+        } else {
+          for (let i = 1; i <= Math.min(50, limit); i++) candidateIds.push(i)
+        }
+
+        try {
+          if (inputPeer._ === 'inputPeerChannel') {
+            res = await holder.client.call({
+              _: 'channels.getMessages',
+              channel: {
+                _: 'inputChannel',
+                channelId: inputPeer.channelId,
+                accessHash: inputPeer.accessHash || Long.ZERO,
+              },
+              id: candidateIds.map((id) => ({ _: 'inputMessageID', id })),
+            })
+          } else {
+            res = await holder.client.call({
+              _: 'messages.getMessages',
+              id: candidateIds.map((id) => ({ _: 'inputMessageID', id })),
+            })
+          }
+        } catch (botFetchErr) {
+          Logger.warn(`[AccountManager] Bot messages fetch fallback warning for ${chatId}:`, botFetchErr)
+          res = { messages: [], users: [], chats: [] }
+        }
+      } else {
+        res = await holder.client.call({
+          _: 'messages.getHistory',
+          peer: inputPeer,
+          offsetId: offsetId || 0,
+          offsetDate: 0,
+          addOffset: addOffset || 0,
+          limit,
+          maxId: 0,
+          minId: 0,
+          hash: Long.ZERO,
+        })
+      }
+
+      const rawMessages = res?.messages || []
       const users = new Map<number, any>()
       const chats = new Map<number, any>()
       const rawMsgMap = new Map<number, any>()
-      if (res.users) {
+      if (res?.users) {
         res.users.forEach((u: any) => {
           users.set(u.id, u)
           if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
@@ -1197,7 +1348,7 @@ export class AccountManager {
           if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
         })
       }
-      if (res.chats) {
+      if (res?.chats) {
         res.chats.forEach((c: any) => {
           chats.set(c.id, c)
           const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
@@ -1217,7 +1368,11 @@ export class AccountManager {
         })
       }
       for (const m of rawMessages) {
-        if (m.id) rawMsgMap.set(m.id, m)
+        if (m.id) {
+          rawMsgMap.set(m.id, m)
+          const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
+          if (m.id > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, m.id)
+        }
       }
 
       // Pre-fetch any missing replied messages so snippets and sender names can be resolved accurately
@@ -1403,10 +1558,11 @@ export class AccountManager {
         }
 
         let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
-        if (m.replyMarkup?._ === 'replyInlineMarkup' && Array.isArray(m.replyMarkup.rows)) {
+        const rawMarkup = m.replyMarkup || (m as any).reply_markup
+        if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
           const rows: InlineButton[][] = []
-          for (let rIdx = 0; rIdx < m.replyMarkup.rows.length; rIdx++) {
-            const row = m.replyMarkup.rows[rIdx]
+          for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
+            const row = rawMarkup.rows[rIdx]
             const btnRow: InlineButton[] = []
             if (row?.buttons && Array.isArray(row.buttons)) {
               for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
@@ -1419,6 +1575,8 @@ export class AccountManager {
                   btnRow.push({ text: b.text, data: b64 })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
                   btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
+                } else if (b.text) {
+                  btnRow.push({ text: b.text })
                 }
               }
             }
@@ -1565,7 +1723,11 @@ export class AccountManager {
       const keepDeleted = this.store.getConfig().keepDeletedMessagesLocally !== false
       return this.store.mergeAuditLogIntoMessages(accountId, chatId, items, keepDeleted)
     } catch (err: any) {
-      Logger.error(`[AccountManager] getMessages error for :, err`)
+      Logger.error(`[AccountManager] getMessages error for ${chatId}:`, err)
+      const fallback = this.store.getAuditLog(accountId, chatId)
+      if (fallback && fallback.length > 0) {
+        return fallback
+      }
       return []
     }
   }
@@ -2897,7 +3059,7 @@ export class AccountManager {
     })
 
     const msgId = res.id || res.updates?.[0]?.id || Math.floor(Date.now() / 1000)
-    return {
+    const item: MessageItem = {
       id: msgId,
       chatId,
       accountId,
@@ -2905,6 +3067,10 @@ export class AccountManager {
       date: Math.floor(Date.now() / 1000),
       isOutgoing: true,
     }
+    const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
+    if (msgId > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msgId)
+    this.store.recordMessage(accountId, chatId, item)
+    return item
   }
 
   public async sendMedia(
@@ -4785,10 +4951,11 @@ export class AccountManager {
         const entities = parseMtprotoEntities(msg.raw?.entities)
 
         let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
-        if (msg.raw?.replyMarkup?._ === 'replyInlineMarkup' && Array.isArray(msg.raw.replyMarkup.rows)) {
+        const rawMarkup = msg.raw?.replyMarkup || msg.raw?.reply_markup
+        if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
           const rows: InlineButton[][] = []
-          for (let rIdx = 0; rIdx < msg.raw.replyMarkup.rows.length; rIdx++) {
-            const row = msg.raw.replyMarkup.rows[rIdx]
+          for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
+            const row = rawMarkup.rows[rIdx]
             const btnRow: InlineButton[] = []
             if (row?.buttons && Array.isArray(row.buttons)) {
               for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
@@ -4801,6 +4968,8 @@ export class AccountManager {
                   btnRow.push({ text: b.text, data: b64 })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
                   btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
+                } else if (b.text) {
+                  btnRow.push({ text: b.text })
                 }
               }
             }
@@ -4854,6 +5023,8 @@ export class AccountManager {
           replyMarkup,
           entities,
         }
+        const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
+        if (msg.id > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msg.id)
         this.store.recordMessage(accountId, chatId, item)
         this.onEventCallback?.('telegram:new-message', {
           accountId,
