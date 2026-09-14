@@ -46,6 +46,9 @@ import type {
   AutoHarvestStatus,
   WarpStatus,
   MessageEditRevision,
+  SharedMediaFilterType,
+  SharedMediaItem,
+  SharedMediaResponse,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -103,4 +106,7 @@ export type {
   AutoHarvestStatus,
   WarpStatus,
   MessageEditRevision,
+  SharedMediaFilterType,
+  SharedMediaItem,
+  SharedMediaResponse,
 }

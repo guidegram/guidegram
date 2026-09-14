@@ -67,6 +67,7 @@ import {
   ChevronLeft,
   RefreshCw,
   History,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -76,6 +77,7 @@ import { GroupStatsModal } from './GroupStatsModal'
 import { ForumTopicsBar } from './ForumTopicsBar'
 import { ScheduledMessagesModal } from './ScheduledMessagesModal'
 import { StickerPickerDrawer } from './StickerPickerDrawer'
+import { SharedMediaDrawer } from './SharedMediaDrawer'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -698,6 +700,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }, [chat?.accountId, chat?.id, chat?.isGroup, chat?.isForum])
 
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
+  const [isSharedMediaOpen, setIsSharedMediaOpen] = useState(false)
   const [isBotMenuOpen, setIsBotMenuOpen] = useState(false)
   const [callingBotBtnId, setCallingBotBtnId] = useState<string | null>(null)
   const [downloadProgress, setDownloadProgress] = useState<
@@ -3362,6 +3365,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <BarChart2 className="w-4 h-4 text-accent-cyan" />
             </button>
           )}
+
+          {/* Shared Media Gallery Button */}
+          <button
+            onClick={() => setIsSharedMediaOpen(true)}
+            title={t('shared_media.title')}
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-primary-400 border border-white/10 transition-colors cursor-pointer"
+          >
+            <ImageIcon className="w-4 h-4 text-primary-400" />
+          </button>
 
           {/* Chat Info Drawer Button */}
           <button
@@ -6587,6 +6599,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           accountId={chat.accountId}
           chatId={chat.id}
           chatTitle={chat.title}
+        />
+      )}
+
+      {/* Shared Media Gallery Drawer */}
+      {isSharedMediaOpen && chat && (
+        <SharedMediaDrawer
+          isOpen={isSharedMediaOpen}
+          onClose={() => setIsSharedMediaOpen(false)}
+          chat={chat}
         />
       )}
 

@@ -44,6 +44,9 @@ import {
   TwoFactorStatus,
   MyFullProfile,
   PrivacySecuritySettings,
+  SharedMediaFilterType,
+  SharedMediaItem,
+  SharedMediaResponse,
 } from './types'
 
 export interface ClientHolder {
@@ -1725,6 +1728,157 @@ export class AccountManager {
     } catch (err) {
       Logger.error('[AccountManager] searchGlobal error:', err)
       return []
+    }
+  }
+
+  public async getSharedMedia(
+    accountId: string,
+    chatId: string,
+    filterType: SharedMediaFilterType = 'media',
+    limit = 50,
+    offsetId = 0
+  ): Promise<SharedMediaResponse> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+
+      // Map filterType to MTProto messages filter
+      let filter: any = { _: 'inputMessagesFilterPhotoVideo' }
+      if (filterType === 'files') {
+        filter = { _: 'inputMessagesFilterDocument' }
+      } else if (filterType === 'links') {
+        filter = { _: 'inputMessagesFilterUrl' }
+      } else if (filterType === 'audio') {
+        filter = { _: 'inputMessagesFilterMusic' }
+      } else if (filterType === 'voice') {
+        filter = { _: 'inputMessagesFilterRoundVoice' }
+      }
+
+      const res: any = await holder.client.call({
+        _: 'messages.search',
+        peer: inputPeer,
+        q: '',
+        filter,
+        minDate: 0,
+        maxDate: 0,
+        offsetId: offsetId || 0,
+        addOffset: 0,
+        limit,
+        maxId: 0,
+        minId: 0,
+        hash: Long.ZERO,
+      })
+
+      const rawMessages = Array.isArray(res.messages) ? res.messages : []
+      const items: SharedMediaItem[] = []
+
+      for (const m of rawMessages) {
+        if (!m || m._ === 'messageEmpty') continue
+
+        let itemType: 'photo' | 'video' | 'file' | 'audio' | 'voice' | 'link' = 'file'
+        let thumbnailUrl: string | undefined = undefined
+        let fileName: string | undefined = undefined
+        let fileSize: number | undefined = undefined
+        let mimeType: string | undefined = undefined
+        let title: string | undefined = undefined
+        let description: string | undefined = undefined
+        let performer: string | undefined = undefined
+        let duration: number | undefined = undefined
+        let mediaUrl: string | undefined = undefined
+
+        const media = m.media
+
+        if (media?._ === 'messageMediaPhoto' && media.photo) {
+          itemType = 'photo'
+          thumbnailUrl = extractStrippedThumb(media.photo)
+        } else if (media?._ === 'messageMediaDocument' && media.document) {
+          const doc = media.document
+          fileSize = typeof doc.size === 'number' ? doc.size : Number(doc.size || 0)
+          mimeType = doc.mimeType || ''
+          thumbnailUrl = extractStrippedThumb(doc)
+
+          const attrs = Array.isArray(doc.attributes) ? doc.attributes : []
+          for (const a of attrs) {
+            if (a._ === 'documentAttributeFilename') {
+              fileName = a.fileName
+            } else if (a._ === 'documentAttributeVideo') {
+              itemType = 'video'
+              duration = a.duration
+            } else if (a._ === 'documentAttributeAudio') {
+              itemType = a.voice ? 'voice' : 'audio'
+              duration = a.duration
+              title = a.title
+              performer = a.performer
+            }
+          }
+
+          if (itemType === 'file' && !fileName) {
+            fileName = `document_${doc.id || m.id}`
+          }
+        } else if (media?._ === 'messageMediaWebPage' && media.webpage) {
+          itemType = 'link'
+          const wp = media.webpage
+          mediaUrl = wp.url
+          title = wp.title
+          description = wp.description
+          thumbnailUrl = extractStrippedThumb(wp.photo)
+        } else if (filterType === 'links') {
+          itemType = 'link'
+          if (Array.isArray(m.entities)) {
+            for (const ent of m.entities) {
+              if (ent._ === 'messageEntityTextUrl' && ent.url) {
+                mediaUrl = ent.url
+                break
+              } else if (ent._ === 'messageEntityUrl' && m.message) {
+                mediaUrl = m.message.slice(ent.offset, ent.offset + ent.length)
+                break
+              }
+            }
+          }
+        }
+
+        items.push({
+          id: m.id,
+          chatId,
+          accountId,
+          date: m.date || 0,
+          type: itemType,
+          caption: m.message || undefined,
+          text: m.message || undefined,
+          fileName,
+          fileSize,
+          mimeType,
+          thumbnailUrl,
+          url: mediaUrl,
+          title,
+          description,
+          performer,
+          duration,
+          mediaObj: media,
+        })
+      }
+
+      const totalCount = typeof res.count === 'number' ? res.count : items.length
+      const lastItem = items[items.length - 1]
+      const nextOffsetId = lastItem ? lastItem.id : 0
+      const hasMore = items.length >= limit
+
+      return {
+        items,
+        totalCount,
+        nextOffsetId,
+        hasMore,
+      }
+    } catch (err: any) {
+      Logger.error(`[AccountManager] getSharedMedia error for chat ${chatId}:`, err)
+      return {
+        items: [],
+        totalCount: 0,
+        nextOffsetId: 0,
+        hasMore: false,
+      }
     }
   }
 

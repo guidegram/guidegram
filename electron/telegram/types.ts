@@ -624,3 +624,32 @@ export interface PrivacySecuritySettings {
   savedMusicPrivacy: string
   invitesPrivacy: string
 }
+
+export type SharedMediaFilterType = 'media' | 'files' | 'links' | 'audio' | 'voice'
+
+export interface SharedMediaItem {
+  id: number
+  chatId: string
+  accountId: string
+  date: number
+  type: 'photo' | 'video' | 'file' | 'audio' | 'voice' | 'link'
+  caption?: string
+  text?: string
+  fileName?: string
+  fileSize?: number
+  mimeType?: string
+  thumbnailUrl?: string
+  url?: string
+  title?: string
+  description?: string
+  performer?: string
+  duration?: number
+  mediaObj?: any
+}
+
+export interface SharedMediaResponse {
+  items: SharedMediaItem[]
+  totalCount: number
+  nextOffsetId: number
+  hasMore: boolean
+}

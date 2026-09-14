@@ -35,6 +35,8 @@ import {
   PrivacySecuritySettings,
   AutoHarvestStatus,
   WarpStatus,
+  SharedMediaFilterType,
+  SharedMediaResponse,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -258,6 +260,14 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:create-group', { accountId, title, userIds }),
   createChannel: (accountId: string, title: string, about: string, isMegagroup?: boolean): Promise<DialogItem | null> =>
     ipcRenderer.invoke('telegram:create-channel', { accountId, title, about, isMegagroup }),
+  getSharedMedia: (
+    accountId: string,
+    chatId: string,
+    filterType?: SharedMediaFilterType,
+    limit?: number,
+    offsetId?: number
+  ): Promise<SharedMediaResponse> =>
+    ipcRenderer.invoke('telegram:get-shared-media', { accountId, chatId, filterType, limit, offsetId }),
 
   // Proxy & Settings
   testProxyPing: (proxy: ProxyConfig) =>

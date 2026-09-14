@@ -1462,6 +1462,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-shared-media', async (_event, { accountId, chatId, filterType, limit, offsetId }) => {
+    try {
+      return await accountManager.getSharedMedia(accountId, chatId, filterType, limit, offsetId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getSharedMedia error:`, err)
+      return { items: [], totalCount: 0, nextOffsetId: 0, hasMore: false }
+    }
+  })
+
   // Storage & Cache IPC
   ipcMain.handle('telegram:get-cache-stats', async () => {
     try {
