@@ -217,6 +217,12 @@ export interface MessageItem {
   isOutgoing: boolean
   isForwarded?: boolean
   forwardFromName?: string
+  forwardFromId?: string
+  forwardInfo?: {
+    fromId?: string
+    fromTitle?: string
+    date?: number
+  }
   replyToMsgId?: number
   replyTo?: ReplyInfo
   isSticker?: boolean
@@ -770,5 +776,24 @@ export interface StarsTransactionItem {
   isPending?: boolean
   isFailed?: boolean
 }
+
+export interface SavedDialogItem {
+  id: string
+  title: string
+  username?: string
+  avatarUrl?: string
+  topMessage?: string
+  date?: number
+  pinned?: boolean
+  unreadCount?: number
+  peerType: 'user' | 'chat' | 'channel'
+}
+
+export interface SavedReactionTagItem {
+  emoji: string
+  title?: string
+  count: number
+}
+
 
 

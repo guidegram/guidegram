@@ -60,6 +60,8 @@ import {
   BusinessIntro,
   StarsStatusPayload,
   StarsTransactionItem,
+  SavedDialogItem,
+  SavedReactionTagItem,
 } from './types'
 
 export interface ClientHolder {
@@ -1324,6 +1326,32 @@ export class AccountManager {
 
         const entities = parseMtprotoEntities(m.entities)
 
+        let isForwarded = Boolean((m as any).fwdFrom)
+        let forwardFromName = (m as any).fwdFrom?.fromName
+        let forwardFromId: string | undefined = undefined
+        const forwardDate = (m as any).fwdFrom?.date ? (m as any).fwdFrom.date * 1000 : undefined
+        if ((m as any).fwdFrom?.fromId) {
+          const fid = (m as any).fwdFrom.fromId
+          if (fid._ === 'peerUser') {
+            forwardFromId = fid.userId?.toString()
+            const u = users.get(fid.userId)
+            if (u && !forwardFromName) forwardFromName = formatEntityName(u)
+          } else if (fid._ === 'peerChannel') {
+            forwardFromId = `-${fid.channelId}`
+            const c = chats.get(fid.channelId)
+            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+          } else if (fid._ === 'peerChat') {
+            forwardFromId = `-${fid.chatId}`
+            const c = chats.get(fid.chatId)
+            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+          }
+        }
+        const forwardInfo = isForwarded ? {
+          fromId: forwardFromId,
+          fromTitle: forwardFromName,
+          date: forwardDate,
+        } : undefined
+
         items.push({
           id,
           chatId,
@@ -1338,6 +1366,10 @@ export class AccountManager {
           text,
           date,
           isOutgoing,
+          isForwarded,
+          forwardFromName,
+          forwardFromId,
+          forwardInfo,
           mediaType,
           mediaFileName,
           mediaFileSize,
@@ -2838,6 +2870,119 @@ export class AccountManager {
       }))
     } catch (err) {
       Logger.warn('[AccountManager] getStarsTransactions error:', err)
+      return []
+    }
+  }
+
+  public async getSavedDialogs(
+    accountId: string,
+    limit = 50
+  ): Promise<SavedDialogItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getSavedDialogs',
+        offsetDate: 0,
+        offsetId: 0,
+        offsetPeer: { _: 'inputPeerEmpty' },
+        limit: Math.min(100, Math.max(1, limit)),
+        hash: toLong(0),
+      })
+
+      if (!res || !Array.isArray(res.dialogs)) {
+        return []
+      }
+
+      const chatMap = new Map<string, any>()
+      const userMap = new Map<string, any>()
+      if (Array.isArray(res.chats)) {
+        for (const c of res.chats) chatMap.set(c.id?.toString(), c)
+      }
+      if (Array.isArray(res.users)) {
+        for (const u of res.users) userMap.set(u.id?.toString(), u)
+      }
+
+      const items: SavedDialogItem[] = []
+      for (const d of res.dialogs) {
+        let peerId = ''
+        let title = 'Saved Chat'
+        let username: string | undefined
+        let peerType: 'user' | 'chat' | 'channel' = 'user'
+
+        if (d.peer?._ === 'peerUser') {
+          peerId = d.peer.userId?.toString()
+          peerType = 'user'
+          const user = userMap.get(peerId)
+          if (user) {
+            title = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || 'User'
+            username = user.username
+          }
+        } else if (d.peer?._ === 'peerChannel') {
+          peerId = d.peer.channelId?.toString()
+          peerType = 'channel'
+          const channel = chatMap.get(peerId)
+          if (channel) {
+            title = channel.title || 'Channel'
+            username = channel.username
+          }
+        } else if (d.peer?._ === 'peerChat') {
+          peerId = d.peer.chatId?.toString()
+          peerType = 'chat'
+          const chat = chatMap.get(peerId)
+          if (chat) {
+            title = chat.title || 'Group'
+          }
+        }
+
+        items.push({
+          id: peerId,
+          title,
+          username,
+          pinned: Boolean(d.pinned),
+          unreadCount: d.unreadCount || 0,
+          topMessage: d.topMessage ? d.topMessage.toString() : undefined,
+          peerType,
+        })
+      }
+
+      return items
+    } catch (err) {
+      Logger.warn('[AccountManager] getSavedDialogs error:', err)
+      return []
+    }
+  }
+
+  public async getSavedReactionTags(
+    accountId: string
+  ): Promise<SavedReactionTagItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getSavedReactionTags',
+        hash: toLong(0),
+      })
+
+      if (!res || !Array.isArray(res.tags)) return []
+
+      return res.tags.map((t: any) => {
+        let emoji = '⭐️'
+        if (t.reaction?._ === 'reactionEmoji') {
+          emoji = t.reaction.emoticon
+        } else if (t.reaction?._ === 'reactionCustomEmoji') {
+          emoji = '🔖'
+        }
+        return {
+          emoji,
+          title: t.title,
+          count: t.count || 0,
+        }
+      })
+    } catch (err) {
+      Logger.warn('[AccountManager] getSavedReactionTags error:', err)
       return []
     }
   }

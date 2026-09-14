@@ -137,6 +137,8 @@ export type {
   BusinessProfile,
   StarsStatusPayload,
   StarsTransactionItem,
+  SavedDialogItem,
+  SavedReactionTagItem,
 }
 
 

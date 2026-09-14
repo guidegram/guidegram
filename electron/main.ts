@@ -1548,6 +1548,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-saved-dialogs', async (_event, { accountId, limit }) => {
+    try {
+      return await accountManager.getSavedDialogs(accountId, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSavedDialogs error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-saved-reaction-tags', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getSavedReactionTags(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSavedReactionTags error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

@@ -46,6 +46,8 @@ import {
   BusinessIntro,
   StarsStatusPayload,
   StarsTransactionItem,
+  SavedDialogItem,
+  SavedReactionTagItem,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -318,6 +320,15 @@ const guidegramAPI = {
     limit?: number
   ): Promise<StarsTransactionItem[]> =>
     ipcRenderer.invoke('telegram:get-stars-transactions', { accountId, offset, limit }),
+  getSavedDialogs: (
+    accountId: string,
+    limit?: number
+  ): Promise<SavedDialogItem[]> =>
+    ipcRenderer.invoke('telegram:get-saved-dialogs', { accountId, limit }),
+  getSavedReactionTags: (
+    accountId: string
+  ): Promise<SavedReactionTagItem[]> =>
+    ipcRenderer.invoke('telegram:get-saved-reaction-tags', { accountId }),
 
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>

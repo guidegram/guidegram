@@ -85,6 +85,7 @@ import { CreatePollModal } from './CreatePollModal'
 import { MiniAppModal } from './MiniAppModal'
 import { AdminLogModal } from './AdminLogModal'
 import { PaidReactionModal } from './PaidReactionModal'
+import { SavedMessagesBar } from './SavedMessagesBar'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -778,6 +779,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     isOpen: boolean
     messageId: number | null
   }>({ isOpen: false, messageId: null })
+  // Saved Messages 2.0 filter states
+  const [savedSourceFilter, setSavedSourceFilter] = useState<string | null>(null)
+  const [savedTagFilter, setSavedTagFilter] = useState<string | null>(null)
+  const [savedSearchQuery, setSavedSearchQuery] = useState('')
+  const [savedMediaFilter, setSavedMediaFilter] = useState<'all' | 'media' | 'files' | 'links' | 'voice'>('all')
   const [activeMiniApp, setActiveMiniApp] = useState<{
     url: string
     title: string
@@ -1357,6 +1363,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setReplyMessage(null)
     setStagedAttachments([])
     setIsAttachMenuOpen(false)
+    setSavedSourceFilter(null)
+    setSavedTagFilter(null)
+    setSavedSearchQuery('')
+    setSavedMediaFilter('all')
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause()
       audioPlayerRef.current = null
@@ -1439,8 +1449,50 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
+    // 4. Saved Messages 2.0 Filters (Source Chat, Reaction Tags, Search Query, Media Type)
+    if (chat?.isSavedMessages) {
+      if (savedSourceFilter) {
+        result = result.filter(
+          (m) => m.forwardInfo?.fromId === savedSourceFilter
+        )
+      }
+      if (savedTagFilter) {
+        result = result.filter(
+          (m) => m.reactions && m.reactions.some((r) => r.emoji === savedTagFilter)
+        )
+      }
+      if (savedSearchQuery.trim()) {
+        const sq = savedSearchQuery.toLowerCase()
+        result = result.filter(
+          (m) =>
+            (m.text && m.text.toLowerCase().includes(sq)) ||
+            (m.mediaFileName && m.mediaFileName.toLowerCase().includes(sq)) ||
+            (m.forwardInfo?.fromTitle && m.forwardInfo.fromTitle.toLowerCase().includes(sq))
+        )
+      }
+      if (savedMediaFilter !== 'all') {
+        result = result.filter((m) => {
+          if (savedMediaFilter === 'media') return m.mediaType === 'photo' || m.mediaType === 'video'
+          if (savedMediaFilter === 'files') return m.mediaType === 'document'
+          if (savedMediaFilter === 'links') return Boolean(m.webPage || m.text?.includes('http'))
+          if (savedMediaFilter === 'voice') return m.mediaType === 'voice' || Boolean(m.isVoice)
+          return true
+        })
+      }
+    }
+
     return result
-  }, [messages, searchQuery, searchSenderFilter, activeTopicId])
+  }, [
+    messages,
+    searchQuery,
+    searchSenderFilter,
+    activeTopicId,
+    chat?.isSavedMessages,
+    savedSourceFilter,
+    savedTagFilter,
+    savedSearchQuery,
+    savedMediaFilter,
+  ])
 
   useEffect(() => {
     setSearchMatchIndex(0)
@@ -3855,6 +3907,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           topics={forumTopics}
           activeTopicId={activeTopicId}
           onSelectTopic={(topicId) => setActiveTopicId(topicId)}
+        />
+      )}
+
+      {/* Saved Messages 2.0 Dual-Pane Filter & Tags Bar */}
+      {chat?.isSavedMessages && (
+        <SavedMessagesBar
+          accountId={chat.accountId}
+          messages={messages}
+          selectedSourceId={savedSourceFilter}
+          onSelectSource={setSavedSourceFilter}
+          selectedTag={savedTagFilter}
+          onSelectTag={setSavedTagFilter}
+          searchQuery={savedSearchQuery}
+          onSearchChange={setSavedSearchQuery}
+          mediaFilter={savedMediaFilter}
+          onMediaFilterChange={setSavedMediaFilter}
+          totalCount={messages.length}
+          filteredCount={filteredMessages.length}
         />
       )}
 
