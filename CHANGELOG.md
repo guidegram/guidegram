@@ -4,6 +4,21 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.11.0] — Telegram Bot Token Authentication & Interactive Settings Suite (2026-09-14)
+
+### 🌟 What's New & Enhancements
+- **🤖 Telegram Bot Token Authentication**: Added native support for logging in as a Telegram Bot via bot token (`botToken` input and `@BotFather` format validation), enabling direct client management for bots with automated session persistence.
+- **⚙️ Interactive Settings Submodals**: Expanded Settings with interactive dialogs and click handlers for Passcode Lock, Two-Step Verification (2FA), Active Sessions management, Auto-Download media controls, and Data/Storage clearing.
+- **🏷️ Bot Identification & Visual Badges**: Integrated distinct `BOT` badges in the multi-account dock (`AccountDock`) and chat list header for active bot accounts.
+
+### 🐛 Bug Fixes & Stability
+- **💬 Personal Chats Filter**: Automatically filtered bot accounts and broadcast channels out of the "Personal" chat list tab for a cleaner 1-on-1 direct messaging view.
+- **🔗 Private Channel Links & Peer Resolution**: Enhanced resolution for private channel join links and peer selection when interacting with channels or groups lacking public usernames.
+- **📥 Channel Media Downloads & HD Avatars**: Resolved channel media download dispatching, high-resolution avatar display, and standardized React hook call ordering across media viewers.
+- **✨ Premium Custom Emojis**: Improved fallback and vector rendering consistency for premium animated emojis across messages.
+
+---
+
 ## [v1.10.0] — Group Voice & Video Calls, Mini Apps Host, Saved Messages 2.0 & Telegram Business (2026-09-14)
 
 ### 🌟 What's New & Enhancements
