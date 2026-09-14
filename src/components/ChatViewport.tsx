@@ -78,6 +78,8 @@ import { ForumTopicsBar } from './ForumTopicsBar'
 import { ScheduledMessagesModal } from './ScheduledMessagesModal'
 import { StickerPickerDrawer } from './StickerPickerDrawer'
 import { SharedMediaDrawer } from './SharedMediaDrawer'
+import { PollWidget } from './PollWidget'
+import { CreatePollModal } from './CreatePollModal'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -733,6 +735,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Attachment popover menu & staging state
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
+  const [isCreatePollOpen, setIsCreatePollOpen] = useState(false)
   const [stagedAttachments, setStagedAttachments] = useState<StagedAttachment[]>([])
   const [uploadProgress, setUploadProgress] = useState<{
     isUploading: boolean
@@ -2809,6 +2812,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
+    // 2. Poll or Quiz Card
+    if (msg.mediaType === 'poll' || msg.poll) {
+      return (
+        <div className="my-1">
+          <PollWidget
+            message={msg}
+            accountId={chat?.accountId || msg.accountId}
+            chatId={chat?.id || msg.chatId}
+            onVoteSuccess={() => {
+              if (chat) {
+                window.guidegram?.getMessages(chat.accountId, chat.id, 20).then((msgs) => {
+                  if (msgs && onMergeHistoricalMessages) {
+                    onMergeHistoricalMessages(msgs)
+                  }
+                }).catch(() => {})
+              }
+            }}
+          />
+        </div>
+      )
+    }
+
     if (msg.mediaType === 'photo') {
       const isChannel = !!chat?.isChannel
       const isGroup = !!chat?.isGroup
@@ -4768,6 +4793,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <div className="flex flex-col">
                     <span className="font-semibold text-gray-100">Audio</span>
                     <span className="text-[10px] text-gray-400">MP3, M4A, FLAC, WAV</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAttachMenuOpen(false)
+                    setIsCreatePollOpen(true)
+                  }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:bg-amber-500/25 transition-colors">
+                    <BarChart2 className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-100">{t('poll.title') || 'Poll & Quiz'}</span>
+                    <span className="text-[10px] text-gray-400">Ask questions or run a quiz</span>
                   </div>
                 </button>
               </div>
@@ -6738,6 +6779,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 9. Create Poll & Quiz Modal */}
+      {isCreatePollOpen && chat && (
+        <CreatePollModal
+          isOpen={isCreatePollOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          onClose={() => setIsCreatePollOpen(false)}
+          onSuccess={() => {
+            setIsCreatePollOpen(false)
+            if (chat) {
+              window.guidegram?.getMessages(chat.accountId, chat.id, 30).then((msgs) => {
+                if (msgs && onMergeHistoricalMessages) {
+                  onMergeHistoricalMessages(msgs)
+                }
+              }).catch(() => {})
+            }
+          }}
+        />
       )}
     </div>
   )

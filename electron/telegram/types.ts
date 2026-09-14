@@ -169,9 +169,29 @@ export interface MessageEditRevision {
   text: string
   date: number
   entities?: MessageEntityItem[]
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll'
   mediaThumbnailUrl?: string
   strippedThumb?: string
+}
+
+export interface PollOptionItem {
+  text: string
+  option: string
+  voters?: number
+  chosen?: boolean
+  correct?: boolean
+}
+
+export interface PollItem {
+  id: string
+  question: string
+  answers: PollOptionItem[]
+  closed: boolean
+  publicVoters: boolean
+  multipleChoice: boolean
+  quiz: boolean
+  totalVoters?: number
+  solution?: string
 }
 
 export interface MessageItem {
@@ -194,7 +214,8 @@ export interface MessageItem {
   isRoundVideo?: boolean
   voiceWaveform?: number[]
   reactions?: MessageReactionItem[]
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll'
+  poll?: PollItem
   mediaUrl?: string
   mediaThumbnailUrl?: string
   strippedThumb?: string

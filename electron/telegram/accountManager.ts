@@ -47,6 +47,8 @@ import {
   SharedMediaFilterType,
   SharedMediaItem,
   SharedMediaResponse,
+  PollItem,
+  PollOptionItem,
 } from './types'
 
 export interface ClientHolder {
@@ -255,6 +257,57 @@ export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] |
     })
   }
   return result.length > 0 ? result : undefined
+}
+
+export function parsePollFromMedia(media: any, messageId: number): PollItem | undefined {
+  if (!media || media._ !== 'messageMediaPoll') return undefined
+  const rawPoll = media.poll
+  const rawResults = media.results
+  const answers: PollOptionItem[] = []
+
+  const resultsByOption = new Map<string, { voters: number; chosen?: boolean; correct?: boolean }>()
+  if (rawResults?.results && Array.isArray(rawResults.results)) {
+    for (const r of rawResults.results) {
+      const optKey = r.option ? Buffer.from(r.option).toString('hex') : ''
+      resultsByOption.set(optKey, {
+        voters: r.voters || 0,
+        chosen: Boolean(r.chosen),
+        correct: Boolean(r.correct),
+      })
+    }
+  }
+
+  if (rawPoll?.answers && Array.isArray(rawPoll.answers)) {
+    for (const a of rawPoll.answers) {
+      const optKey = a.option ? Buffer.from(a.option).toString('hex') : ''
+      const resInfo = resultsByOption.get(optKey)
+      const answerText = typeof a.text === 'string' ? a.text : a.text?.text || ''
+      answers.push({
+        text: answerText,
+        option: optKey,
+        voters: resInfo?.voters || 0,
+        chosen: resInfo?.chosen || false,
+        correct: resInfo?.correct || false,
+      })
+    }
+  }
+
+  const questionText =
+    typeof rawPoll?.question === 'string'
+      ? rawPoll.question
+      : rawPoll?.question?.text || ''
+
+  return {
+    id: rawPoll?.id?.toString() || messageId.toString(),
+    question: questionText,
+    answers,
+    closed: Boolean(rawPoll?.closed),
+    publicVoters: Boolean(rawPoll?.publicVoters),
+    multipleChoice: Boolean(rawPoll?.multipleChoice),
+    quiz: Boolean(rawPoll?.quiz),
+    totalVoters: rawResults?.totalVoters || 0,
+    solution: rawResults?.solution || undefined,
+  }
 }
 
 export class AccountManager {
@@ -1069,6 +1122,7 @@ export class AccountManager {
         let isVoice = false
         let isRoundVideo = false
         let isSticker = false
+        let poll: PollItem | undefined = undefined
 
         if (m.media) {
           if (m.media._ === 'messageMediaPhoto') {
@@ -1104,6 +1158,9 @@ export class AccountManager {
             }
           } else if (m.media._ === 'messageMediaWebPage') {
             mediaType = 'webpage'
+          } else if (m.media._ === 'messageMediaPoll') {
+            mediaType = 'poll'
+            poll = parsePollFromMedia(m.media, id)
           }
         }
 
@@ -1231,6 +1288,7 @@ export class AccountManager {
           isVoice,
           isRoundVideo,
           isSticker,
+          poll,
           reactions: reactions.length > 0 ? reactions : undefined,
           replyToMsgId: m.replyTo?.replyToMsgId,
           replyTo,
@@ -1976,6 +2034,7 @@ export class AccountManager {
         let isSticker = false
 
         let strippedThumb: string | undefined = undefined
+        let poll: PollItem | undefined = undefined
 
         if (m.media) {
           if (m.media._ === 'messageMediaPhoto') {
@@ -2011,6 +2070,9 @@ export class AccountManager {
             }
           } else if (m.media._ === 'messageMediaWebPage') {
             mediaType = 'webpage'
+          } else if (m.media._ === 'messageMediaPoll') {
+            mediaType = 'poll'
+            poll = parsePollFromMedia(m.media, id)
           }
         }
 
@@ -2034,6 +2096,7 @@ export class AccountManager {
           isVoice,
           isRoundVideo,
           isSticker,
+          poll,
           entities,
         })
       }
@@ -2620,6 +2683,108 @@ export class AccountManager {
       return true
     } catch (_) {
       return false
+    }
+  }
+
+  public async sendVote(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    options: string[]
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const optionsBuffers = options.map((opt) =>
+        /^[0-9a-fA-F]+$/.test(opt) && opt.length % 2 === 0
+          ? Buffer.from(opt, 'hex')
+          : Buffer.from(opt, 'utf-8')
+      )
+
+      await holder.client.call({
+        _: 'messages.sendVote',
+        peer: inputPeer,
+        msgId: messageId,
+        options: optionsBuffers,
+      })
+      return true
+    } catch (err: any) {
+      Logger.error(`[AccountManager] sendVote error:`, err)
+      return false
+    }
+  }
+
+  public async createPoll(
+    accountId: string,
+    chatId: string,
+    question: string,
+    answers: string[],
+    options?: {
+      multipleChoice?: boolean
+      quiz?: boolean
+      correctOptionIndex?: number
+      solution?: string
+      anonymous?: boolean
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const isQuiz = Boolean(options?.quiz)
+      const correctOptionIndex = options?.correctOptionIndex ?? (isQuiz ? 0 : undefined)
+
+      await holder.client.call({
+        _: 'messages.sendMedia',
+        peer: inputPeer,
+        media: {
+          _: 'inputMediaPoll',
+          poll: {
+            _: 'poll',
+            id: Long.ZERO,
+            closed: false,
+            publicVoters: !options?.anonymous,
+            multipleChoice: Boolean(options?.multipleChoice),
+            quiz: isQuiz,
+            question: {
+              _: 'textWithEntities',
+              text: question,
+              entities: [],
+            },
+            answers: answers.map((ans, idx) => ({
+              _: 'pollAnswer',
+              text: {
+                _: 'textWithEntities',
+                text: ans,
+                entities: [],
+              },
+              option: Buffer.from([idx]),
+            })),
+          },
+          correctAnswers:
+            correctOptionIndex !== undefined ? [Buffer.from([correctOptionIndex])] : undefined,
+          solution: options?.solution
+            ? {
+                _: 'textWithEntities',
+                text: options.solution,
+                entities: [],
+              }
+            : undefined,
+        } as any,
+        message: '',
+        randomId: Long.fromBits(
+          (Math.random() * 0xffffffff) | 0,
+          (Math.random() * 0xffffffff) | 0
+        ),
+      })
+
+      return true
+    } catch (err: any) {
+      Logger.error(`[AccountManager] createPoll error:`, err)
+      throw err
     }
   }
 

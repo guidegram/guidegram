@@ -1305,6 +1305,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:send-vote', async (_event, { accountId, chatId, messageId, options }) => {
+    try {
+      return await accountManager.sendVote(accountId, chatId, messageId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendVote error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:create-poll', async (_event, { accountId, chatId, question, answers, options }) => {
+    try {
+      return await accountManager.createPoll(accountId, chatId, question, answers, options)
+    } catch (err: any) {
+      Logger.error(`[IPC] createPoll error:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:get-star-gifts', async (_event, { accountId, userId }) => {
     try {
       return await accountManager.getSavedStarGifts(accountId, userId)

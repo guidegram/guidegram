@@ -49,6 +49,8 @@ import type {
   SharedMediaFilterType,
   SharedMediaItem,
   SharedMediaResponse,
+  PollOptionItem,
+  PollItem,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -109,4 +111,6 @@ export type {
   SharedMediaFilterType,
   SharedMediaItem,
   SharedMediaResponse,
+  PollOptionItem,
+  PollItem,
 }

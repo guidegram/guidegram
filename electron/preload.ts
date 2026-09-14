@@ -210,6 +210,22 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:delete-scheduled-messages', { accountId, chatId, messageIds }),
   sendReaction: (accountId: string, chatId: string, messageId: number, reactionEmoji: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:send-reaction', { accountId, chatId, messageId, reactionEmoji }),
+  sendVote: (accountId: string, chatId: string, messageId: number, options: string[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-vote', { accountId, chatId, messageId, options }),
+  createPoll: (
+    accountId: string,
+    chatId: string,
+    question: string,
+    answers: string[],
+    options?: {
+      multipleChoice?: boolean
+      quiz?: boolean
+      correctOptionIndex?: number
+      solution?: string
+      anonymous?: boolean
+    }
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:create-poll', { accountId, chatId, question, answers, options }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
 
