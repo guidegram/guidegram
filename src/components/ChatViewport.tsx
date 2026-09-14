@@ -81,6 +81,7 @@ import { SharedMediaDrawer } from './SharedMediaDrawer'
 import { PollWidget } from './PollWidget'
 import { CreatePollModal } from './CreatePollModal'
 import { MiniAppModal } from './MiniAppModal'
+import { AdminLogModal } from './AdminLogModal'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -769,6 +770,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   // Attachment popover menu & staging state
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false)
+  const [isAdminLogOpen, setIsAdminLogOpen] = useState(false)
   const [activeMiniApp, setActiveMiniApp] = useState<{
     url: string
     title: string
@@ -5968,6 +5970,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               )}
 
+              {/* Channel & Supergroup Admin Log / Recent Actions Card */}
+              {(chat.isGroup || chat.isChannel) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsInfoOpen(false)
+                    setIsAdminLogOpen(true)
+                  }}
+                  className="w-full p-3.5 rounded-2xl bg-accent-amber/15 hover:bg-accent-amber/25 border border-accent-amber/30 text-accent-amber font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-accent-amber/20 flex items-center justify-center">
+                      <ShieldCheck className="w-4 h-4 text-accent-amber" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="font-bold text-white">{t('admin_log.title')}</span>
+                      <span className="text-[10px] text-gray-400">{t('admin_log.subtitle')}</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-accent-amber" />
+                </button>
+              )}
+
               {/* 64Gram Power Feature: Chat Permissions Matrix */}
               {(chat.isGroup || chat.isChannel) && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
@@ -7058,6 +7083,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               setActiveMiniApp(null)
             }
           }}
+        />
+      )}
+
+      {/* 11. Admin Log / Recent Actions Modal */}
+      {isAdminLogOpen && chat && (
+        <AdminLogModal
+          isOpen={isAdminLogOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chat.title}
+          onClose={() => setIsAdminLogOpen(false)}
         />
       )}
     </div>

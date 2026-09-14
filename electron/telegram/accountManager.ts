@@ -50,6 +50,9 @@ import {
   PollItem,
   PollOptionItem,
   DraftItem,
+  AdminLogItem,
+  AdminLogResponse,
+  AdminLogActionType,
 } from './types'
 
 export interface ClientHolder {
@@ -2952,6 +2955,162 @@ export class AccountManager {
     } catch (err: any) {
       Logger.error(`[AccountManager] requestWebView error:`, err)
       throw err
+    }
+  }
+
+  public async getAdminLog(
+    accountId: string,
+    channelId: string,
+    q = '',
+    limit = 50,
+    maxId?: string
+  ): Promise<AdminLogResponse> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { events: [], hasMore: false }
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, channelId)
+      if (inputPeer._ !== 'inputPeerChannel') {
+        return { events: [], hasMore: false }
+      }
+
+      const inputChannel: tl.TypeInputChannel = {
+        _: 'inputChannel',
+        channelId: inputPeer.channelId,
+        accessHash: inputPeer.accessHash,
+      }
+
+      const res: any = await holder.client.call({
+        _: 'channels.getAdminLog',
+        channel: inputChannel,
+        q: q || '',
+        maxId: toLong(maxId),
+        minId: Long.ZERO,
+        limit: Math.min(100, Math.max(1, limit)),
+        eventsFilter: undefined,
+        admins: undefined,
+      })
+
+      if (!res || !Array.isArray(res.events)) {
+        return { events: [], hasMore: false }
+      }
+
+      const usersMap = new Map<string, any>()
+      if (Array.isArray(res.users)) {
+        for (const u of res.users) {
+          if (u?.id) usersMap.set(u.id.toString(), u)
+        }
+      }
+
+      const events: AdminLogItem[] = []
+      for (const ev of res.events) {
+        if (!ev) continue
+        const id = ev.id?.toString() || ''
+        const date = Number(ev.date || 0)
+        const userId = ev.userId?.toString() || ''
+        const u = usersMap.get(userId)
+        const userName = u ? formatEntityName(u) : `User #${userId}`
+        const userAvatarUrl = u?.photo ? extractStrippedThumb(u.photo) : undefined
+
+        let actionType: AdminLogActionType = 'other'
+        let actionTitle = 'Admin action'
+        let actionDescription: string | undefined = undefined
+        let prevValue: string | undefined = undefined
+        let newValue: string | undefined = undefined
+
+        const act = ev.action
+        if (act) {
+          const actType = act._ || ''
+          if (actType === 'channelAdminLogEventActionDeleteMessage') {
+            actionType = 'delete_message'
+            actionTitle = 'Deleted message'
+            actionDescription = act.message?.message ? `"${act.message.message}"` : `Message #${act.message?.id || ''}`
+          } else if (actType === 'channelAdminLogEventActionEditMessage') {
+            actionType = 'edit_message'
+            actionTitle = 'Edited message'
+            prevValue = act.prevMessage?.message
+            newValue = act.newMessage?.message
+            actionDescription = `From: "${prevValue || ''}" To: "${newValue || ''}"`
+          } else if (actType === 'channelAdminLogEventActionParticipantJoin') {
+            actionType = 'join'
+            actionTitle = 'Joined via invite link'
+          } else if (actType === 'channelAdminLogEventActionParticipantLeave') {
+            actionType = 'leave'
+            actionTitle = 'Left group/channel'
+          } else if (actType === 'channelAdminLogEventActionParticipantInvite') {
+            actionType = 'invite'
+            actionTitle = 'Invited member'
+            const invitedUser = usersMap.get(act.participant?.userId?.toString())
+            if (invitedUser) {
+              actionDescription = `Invited ${formatEntityName(invitedUser)}`
+            }
+          } else if (actType === 'channelAdminLogEventActionParticipantToggleBan') {
+            const isBanned = act.newParticipant?._ === 'channelParticipantBanned'
+            actionType = isBanned ? 'ban' : 'unban'
+            actionTitle = isBanned ? 'Banned / Restricted member' : 'Unbanned member'
+            const targetUser = usersMap.get(
+              act.prevParticipant?.peer?.userId?.toString() || act.newParticipant?.peer?.userId?.toString()
+            )
+            if (targetUser) {
+              actionDescription = `Target: ${formatEntityName(targetUser)}`
+            }
+          } else if (actType === 'channelAdminLogEventActionParticipantToggleAdmin') {
+            actionType = 'admin_change'
+            actionTitle = 'Admin permissions changed'
+            const targetUser = usersMap.get(
+              act.prevParticipant?.userId?.toString() || act.newParticipant?.userId?.toString()
+            )
+            if (targetUser) {
+              actionDescription = `Admin: ${formatEntityName(targetUser)}`
+            }
+          } else if (actType === 'channelAdminLogEventActionUpdatePinned') {
+            actionType = 'pin_message'
+            actionTitle = act.message ? 'Pinned message' : 'Unpinned message'
+            if (act.message?.message) actionDescription = `"${act.message.message}"`
+          } else if (actType === 'channelAdminLogEventActionChangeTitle') {
+            actionType = 'change_info'
+            actionTitle = 'Changed title'
+            prevValue = act.prevValue
+            newValue = act.newValue
+            actionDescription = `From "${prevValue}" to "${newValue}"`
+          } else if (actType === 'channelAdminLogEventActionChangeAbout') {
+            actionType = 'change_info'
+            actionTitle = 'Changed description'
+            prevValue = act.prevValue
+            newValue = act.newValue
+          } else if (actType === 'channelAdminLogEventActionChangePhoto') {
+            actionType = 'change_info'
+            actionTitle = 'Changed group/channel photo'
+          } else if (actType === 'channelAdminLogEventActionDefaultBannedRights') {
+            actionType = 'admin_change'
+            actionTitle = 'Changed default member permissions'
+          } else {
+            actionType = 'other'
+            actionTitle = actType.replace(/^channelAdminLogEventAction/, '')
+          }
+        }
+
+        events.push({
+          id,
+          date,
+          userId,
+          userName,
+          userAvatarUrl,
+          actionType,
+          actionTitle,
+          actionDescription,
+          prevValue,
+          newValue,
+        })
+      }
+
+      return {
+        events,
+        hasMore: events.length >= limit,
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getAdminLog error for ${channelId}:`, err)
+      return { events: [], hasMore: false }
     }
   }
 

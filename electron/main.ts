@@ -1449,6 +1449,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-admin-log', async (_event, { accountId, channelId, q, limit, maxId }) => {
+    try {
+      return await accountManager.getAdminLog(accountId, channelId, q, limit, maxId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAdminLog error:`, err)
+      return { events: [], hasMore: false }
+    }
+  })
+
   ipcMain.handle('telegram:get-star-gifts', async (_event, { accountId, userId }) => {
     try {
       return await accountManager.getSavedStarGifts(accountId, userId)

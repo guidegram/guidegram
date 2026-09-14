@@ -38,6 +38,7 @@ import {
   SharedMediaFilterType,
   SharedMediaResponse,
   DraftItem,
+  AdminLogResponse,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -254,6 +255,20 @@ const guidegramAPI = {
     }),
   openMiniApp: (url: string, title?: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:open-mini-app', { url, title }),
+  getAdminLog: (
+    accountId: string,
+    channelId: string,
+    q?: string,
+    limit?: number,
+    maxId?: string
+  ): Promise<AdminLogResponse> =>
+    ipcRenderer.invoke('telegram:get-admin-log', {
+      accountId,
+      channelId,
+      q,
+      limit,
+      maxId,
+    }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
 

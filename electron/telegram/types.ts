@@ -683,3 +683,34 @@ export interface SharedMediaResponse {
   nextOffsetId: number
   hasMore: boolean
 }
+
+export type AdminLogActionType =
+  | 'edit_message'
+  | 'delete_message'
+  | 'join'
+  | 'leave'
+  | 'invite'
+  | 'ban'
+  | 'unban'
+  | 'admin_change'
+  | 'pin_message'
+  | 'change_info'
+  | 'other'
+
+export interface AdminLogItem {
+  id: string
+  date: number
+  userId: string
+  userName: string
+  userAvatarUrl?: string
+  actionType: AdminLogActionType
+  actionTitle: string
+  actionDescription?: string
+  prevValue?: string
+  newValue?: string
+}
+
+export interface AdminLogResponse {
+  events: AdminLogItem[]
+  hasMore: boolean
+}

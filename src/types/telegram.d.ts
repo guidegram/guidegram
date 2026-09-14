@@ -52,6 +52,9 @@ import type {
   PollOptionItem,
   PollItem,
   DraftItem,
+  AdminLogActionType,
+  AdminLogItem,
+  AdminLogResponse,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -115,4 +118,7 @@ export type {
   PollOptionItem,
   PollItem,
   DraftItem,
+  AdminLogActionType,
+  AdminLogItem,
+  AdminLogResponse,
 }
