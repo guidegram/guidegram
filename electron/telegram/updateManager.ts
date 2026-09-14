@@ -158,14 +158,14 @@ export class UpdateManager {
               try {
                 const parsed = JSON.parse(body)
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                  // Filter non-draft/non-prerelease and sort descending by semver
-                  const stable = parsed.filter((r: any) => !r.draft && !r.prerelease)
-                  stable.sort((a: any, b: any) => {
+                  // Filter non-draft releases and sort descending by semver
+                  const nonDraft = parsed.filter((r: any) => !r.draft)
+                  nonDraft.sort((a: any, b: any) => {
                     const verA = (a.tag_name || '').replace(/^v/, '').trim()
                     const verB = (b.tag_name || '').replace(/^v/, '').trim()
                     return this.compareSemver(verB, verA)
                   })
-                  resolve(stable[0] || parsed[0])
+                  resolve(nonDraft[0] || parsed[0])
                   return
                 } else if (parsed && typeof parsed === 'object') {
                   resolve(parsed)

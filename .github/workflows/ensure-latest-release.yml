@@ -17,13 +17,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Update v1.8.0 Release Body & Promote As Latest
+      - name: Promote Latest Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.0
-          name: Guidegram v1.8.0
+          tag_name: v1.9.0
+          name: Guidegram v1.9.0
           body_path: RELEASE_NOTES.md
-          prerelease: true
-          make_latest: false
+          prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
