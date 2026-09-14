@@ -322,6 +322,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     'miniapp.open_window': 'Open in Standalone Window',
     'miniapp.copy_link': 'Copy App Link',
     'miniapp.close': 'Close',
+    'voice.voice_message': 'Voice Message',
+    'voice.seek': 'Click to seek',
+    'voice.speed': 'Playback speed',
     'common.cancel': 'Cancel',
   },
   fa: {
@@ -641,6 +644,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     'miniapp.open_window': 'باز کردن در پنجره مستقل',
     'miniapp.copy_link': 'کپی لینک مینی‌اپ',
     'miniapp.close': 'بستن',
+    'voice.voice_message': 'پیام صوتی',
+    'voice.seek': 'پرش به زمان دلخواه',
+    'voice.speed': 'سرعت پخش',
     'common.cancel': 'انصراف',
   },
 }

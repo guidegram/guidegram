@@ -226,6 +226,30 @@ export function extractStrippedThumb(mediaObj: any): string | undefined {
   return undefined
 }
 
+export function decodeMtprotoWaveform(waveformBuffer?: any): number[] | undefined {
+  if (!waveformBuffer || waveformBuffer.length === 0) return undefined
+  try {
+    const buf = Buffer.isBuffer(waveformBuffer) ? waveformBuffer : Buffer.from(waveformBuffer)
+    const bitsCount = buf.length * 8
+    const samplesCount = Math.floor(bitsCount / 5)
+    if (samplesCount <= 0) return undefined
+    const result: number[] = []
+    for (let i = 0; i < samplesCount; i++) {
+      const bitOffset = i * 5
+      const byteOffset = Math.floor(bitOffset / 8)
+      const bitShift = bitOffset % 8
+      let value = buf[byteOffset] >> bitShift
+      if (bitShift > 3 && byteOffset + 1 < buf.length) {
+        value |= buf[byteOffset + 1] << (8 - bitShift)
+      }
+      result.push(value & 0x1f)
+    }
+    return result
+  } catch {
+    return undefined
+  }
+}
+
 export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] | undefined {
   if (!rawEntities || !Array.isArray(rawEntities) || rawEntities.length === 0) return undefined
   const result: MessageEntityItem[] = []
@@ -1134,6 +1158,7 @@ export class AccountManager {
         let isVoice = false
         let isRoundVideo = false
         let isSticker = false
+        let voiceWaveform: number[] | undefined = undefined
         let poll: PollItem | undefined = undefined
 
         if (m.media) {
@@ -1151,6 +1176,9 @@ export class AccountManager {
                   if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
                   if (attr._ === 'documentAttributeAudio') {
                     mediaDuration = attr.duration
+                    if (attr.waveform) {
+                      voiceWaveform = decodeMtprotoWaveform(attr.waveform)
+                    }
                     if (attr.voice) {
                       isVoice = true
                       mediaType = 'voice'
@@ -1298,6 +1326,7 @@ export class AccountManager {
           mediaDuration,
           strippedThumb,
           isVoice,
+          voiceWaveform,
           isRoundVideo,
           isSticker,
           poll,
@@ -2044,6 +2073,7 @@ export class AccountManager {
         let isVoice = false
         let isRoundVideo = false
         let isSticker = false
+        let voiceWaveform: number[] | undefined = undefined
 
         let strippedThumb: string | undefined = undefined
         let poll: PollItem | undefined = undefined
@@ -2063,6 +2093,9 @@ export class AccountManager {
                   if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
                   if (attr._ === 'documentAttributeAudio') {
                     mediaDuration = attr.duration
+                    if (attr.waveform) {
+                      voiceWaveform = decodeMtprotoWaveform(attr.waveform)
+                    }
                     if (attr.voice) {
                       isVoice = true
                       mediaType = 'voice'
@@ -2106,6 +2139,7 @@ export class AccountManager {
           mediaDuration,
           strippedThumb,
           isVoice,
+          voiceWaveform,
           isRoundVideo,
           isSticker,
           poll,
@@ -3448,6 +3482,7 @@ export class AccountManager {
         let isVoice = false
         let isRoundVideo = false
         let isSticker = false
+        let voiceWaveform: number[] | undefined = undefined
 
         if (msg.raw?.media) {
           const rawM = msg.raw.media
@@ -3465,6 +3500,9 @@ export class AccountManager {
                   if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
                   if (attr._ === 'documentAttributeAudio') {
                     mediaDuration = attr.duration
+                    if (attr.waveform) {
+                      voiceWaveform = decodeMtprotoWaveform(attr.waveform)
+                    }
                     if (attr.voice) {
                       isVoice = true
                       mediaType = 'voice'
@@ -3503,7 +3541,7 @@ export class AccountManager {
                   this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
                   btnRow.push({ text: b.text, data: b64 })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                  btnRow.push({ text: b.text, url: b.url })
+                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
                 }
               }
             }
@@ -3549,6 +3587,7 @@ export class AccountManager {
           mediaDuration,
           strippedThumb,
           isVoice,
+          voiceWaveform,
           isRoundVideo,
           isSticker,
           replyToMsgId: msg.raw?.replyTo?.replyToMsgId,

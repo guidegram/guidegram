@@ -732,6 +732,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Voice playback state
   const [playingVoiceId, setPlayingVoiceId] = useState<number | null>(null)
+  const [playingVoiceMsg, setPlayingVoiceMsg] = useState<MessageItem | null>(null)
   const [voicePlaybackSpeed, setVoicePlaybackSpeed] = useState<number>(1)
   const [voiceCurrentTime, setVoiceCurrentTime] = useState<number>(0)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
@@ -1653,7 +1654,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     // If clicking on already playing voice, toggle pause/play
     if (playingVoiceId === msg.id && audioPlayerRef.current) {
       if (audioPlayerRef.current.paused) {
-        audioPlayerRef.current.play()
+        audioPlayerRef.current.play().catch(() => {})
       } else {
         audioPlayerRef.current.pause()
         setPlayingVoiceId(null)
@@ -1699,19 +1700,40 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
     audio.onended = () => {
       setPlayingVoiceId(null)
+      setPlayingVoiceMsg(null)
       setVoiceCurrentTime(0)
     }
     audio.onerror = () => {
       setPlayingVoiceId(null)
+      setPlayingVoiceMsg(null)
       showToast('Error playing audio format')
     }
 
     audioPlayerRef.current = audio
     setPlayingVoiceId(msg.id)
+    setPlayingVoiceMsg(msg)
     setVoiceCurrentTime(0)
     audio.play().catch(() => {
       setPlayingVoiceId(null)
+      setPlayingVoiceMsg(null)
     })
+  }
+
+  const handleStopVoice = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause()
+      audioPlayerRef.current = null
+    }
+    setPlayingVoiceId(null)
+    setPlayingVoiceMsg(null)
+    setVoiceCurrentTime(0)
+  }
+
+  const handleSeekVoice = (seekSeconds: number) => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.currentTime = seekSeconds
+      setVoiceCurrentTime(seekSeconds)
+    }
   }
 
   const handleToggleVoiceSpeed = (e: React.MouseEvent) => {
@@ -3235,17 +3257,40 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
             {/* Waveform and scrubber */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-0.5 h-6 cursor-pointer">
+              {/* Interactive waveform with seeking */}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
+                  const seekRatio = rect.width > 0 ? clickX / rect.width : 0
+                  const newTime = seekRatio * duration
+                  if (isPlaying && audioPlayerRef.current) {
+                    audioPlayerRef.current.currentTime = newTime
+                    setVoiceCurrentTime(newTime)
+                  } else {
+                    handlePlayVoice(msg).then(() => {
+                      if (audioPlayerRef.current) {
+                        audioPlayerRef.current.currentTime = newTime
+                        setVoiceCurrentTime(newTime)
+                      }
+                    })
+                  }
+                }}
+                title={t('voice.seek') || 'Click to seek'}
+                className="flex items-center gap-0.5 h-6 cursor-pointer py-1 group/waveform"
+              >
                 {bars.map((val, i) => {
                   const barProgress = i / bars.length
                   const isPassed = barProgress <= progressRatio
-                  const heightPercent = Math.max(15, Math.min(100, Math.round((val / 255) * 100) || val))
+                  const maxVal = Math.max(...bars, 31)
+                  const heightPercent = Math.max(18, Math.min(100, Math.round((val / maxVal) * 100)))
                   return (
                     <div
                       key={i}
                       style={{ height: `${heightPercent}%` }}
-                      className={`w-1 rounded-full transition-colors ${
-                        isPassed ? 'bg-accent-emerald' : 'bg-white/20'
+                      className={`w-1 rounded-full transition-all group-hover/waveform:scale-y-105 ${
+                        isPassed ? 'bg-accent-emerald' : 'bg-white/20 hover:bg-white/40'
                       }`}
                     />
                   )
@@ -3589,6 +3634,100 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Telegram Floating Voice & Audio Player Banner */}
+      {playingVoiceId !== null && playingVoiceMsg && (
+        <div className="shrink-0 px-4 py-2.5 bg-dark-850/98 backdrop-blur-xl border-b border-white/10 flex items-center justify-between gap-3 z-20 select-none shadow-md animate-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Play/Pause Button */}
+            <button
+              type="button"
+              onClick={() => handlePlayVoice(playingVoiceMsg)}
+              className="w-8 h-8 rounded-full bg-accent-emerald text-white flex items-center justify-center shrink-0 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              title={audioPlayerRef.current && !audioPlayerRef.current.paused ? 'Pause' : 'Play'}
+            >
+              {audioPlayerRef.current && !audioPlayerRef.current.paused ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+              )}
+            </button>
+
+            {/* Info & Scrubber */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <div className="flex items-center gap-1.5 truncate">
+                  <Mic className="w-3 h-3 text-accent-emerald shrink-0" />
+                  <span className="font-semibold text-white truncate">
+                    {playingVoiceMsg.senderName || t('voice.voice_message') || 'Voice Message'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono shrink-0 ml-2">
+                  <span>{formatDuration(Math.round(voiceCurrentTime))}</span>
+                  <span className="mx-1">/</span>
+                  <span>{formatDuration(playingVoiceMsg.mediaDuration || 0)}</span>
+                </div>
+              </div>
+
+              {/* Mini Scrubber Bar */}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
+                  const ratio = rect.width > 0 ? clickX / rect.width : 0
+                  const newTime = ratio * (playingVoiceMsg.mediaDuration || 0)
+                  handleSeekVoice(newTime)
+                }}
+                className="relative w-full h-1.5 bg-white/10 hover:h-2 rounded-full cursor-pointer overflow-hidden transition-all group/bar"
+              >
+                <div
+                  style={{
+                    width: `${
+                      playingVoiceMsg.mediaDuration && playingVoiceMsg.mediaDuration > 0
+                        ? Math.min(100, (voiceCurrentTime / playingVoiceMsg.mediaDuration) * 100)
+                        : 0
+                    }%`,
+                  }}
+                  className="h-full bg-accent-emerald rounded-full transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Playback speed toggle */}
+            <button
+              type="button"
+              onClick={handleToggleVoiceSpeed}
+              title={t('voice.speed') || 'Playback speed'}
+              className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white font-mono text-[10px] font-bold transition-colors cursor-pointer"
+            >
+              {voicePlaybackSpeed}x
+            </button>
+
+            {/* Jump to Message */}
+            <button
+              type="button"
+              onClick={() => handleScrollToReply(playingVoiceMsg.id)}
+              title="Jump to message"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <CornerUpLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Stop & Close */}
+            <button
+              type="button"
+              onClick={handleStopVoice}
+              title="Stop playback"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
