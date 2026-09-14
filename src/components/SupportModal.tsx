@@ -10,8 +10,11 @@ import {
   QrCode,
   Zap,
 } from 'lucide-react'
+import QRCode from 'qrcode'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
+import gramQrImg from '../assets/donate/gram.png'
+import tronQrImg from '../assets/donate/tron.png'
 
 interface SupportModalProps {
   isOpen: boolean
@@ -24,6 +27,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
   const { t, isRTL } = useI18n()
   const [selectedNetwork, setSelectedNetwork] = useState<CryptoNetwork>('ton')
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
+  const [fallbackQr, setFallbackQr] = useState<string | null>(null)
 
   const DONATION_DATA = {
     ton: {
@@ -32,7 +36,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
       networkName: 'TON Blockchain',
       networkShort: 'TON Network',
       address: 'UQBvB6Vjd-IGZz7a6xc6gdOlDyEJGIfCtLxcYl4nAGboDJBN',
-      image: '/images/donate/gram.png',
+      image: gramQrImg,
       deepLink: 'ton://transfer/UQBvB6Vjd-IGZz7a6xc6gdOlDyEJGIfCtLxcYl4nAGboDJBN',
       colorClass: 'from-blue-500/20 via-sky-500/10 to-transparent',
       borderClass: 'border-blue-500/40',
@@ -46,7 +50,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
       networkName: 'TRC-20 Network',
       networkShort: 'Tron Network',
       address: 'TFH25GHwwdd87vmi3xMmr6KXYsnV8wVMSH',
-      image: '/images/donate/tron.png',
+      image: tronQrImg,
       deepLink: null,
       colorClass: 'from-red-500/20 via-rose-500/10 to-transparent',
       borderClass: 'border-red-500/40',
@@ -77,6 +81,24 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
         setCopiedAddress((prev) => (prev === addr ? null : prev))
       }, 2500)
     }
+  }
+
+  // Reset fallback QR when network changes
+  useEffect(() => {
+    setFallbackQr(null)
+  }, [selectedNetwork])
+
+  const handleImageError = () => {
+    QRCode.toDataURL(activeItem.address, {
+      width: 256,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    })
+      .then((dataUrl) => setFallbackQr(dataUrl))
+      .catch((err) => console.error('[SupportModal] Failed to generate fallback QR code:', err))
   }
 
   const activeItem = DONATION_DATA[selectedNetwork]
@@ -171,8 +193,9 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
               <div className="relative group shrink-0">
                 <div className="w-44 h-44 sm:w-48 sm:h-48 rounded-2xl bg-white p-2.5 shadow-2xl flex items-center justify-center border border-gray-100 overflow-hidden">
                   <img
-                    src={activeItem.image}
+                    src={fallbackQr || activeItem.image}
                     alt={activeItem.name}
+                    onError={handleImageError}
                     className="w-full h-full object-contain rounded-xl transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
