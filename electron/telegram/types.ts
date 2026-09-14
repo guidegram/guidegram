@@ -287,6 +287,9 @@ export interface ChatDetails {
   canSendMessages?: boolean
   canDeleteMessages?: boolean
   isCreator?: boolean
+  isAdmin?: boolean
+  canManageCalls?: boolean
+  canViewAdminLog?: boolean
   permissionsMatrix?: {
     sendMessages: boolean
     sendMedia: boolean

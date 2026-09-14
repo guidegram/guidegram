@@ -3605,7 +3605,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           )}
 
           {/* Voice Chat / Live Stream Trigger */}
-          {(chat.isGroup || chat.isChannel) && (
+          {(chat.isGroup || chat.isChannel) &&
+            (chatDetails?.hasGroupCall ||
+              isCallJoined ||
+              chatDetails?.canManageCalls ||
+              chatDetails?.isCreator ||
+              chatDetails?.isAdmin) && (
             <button
               type="button"
               onClick={() => setIsGroupCallModalOpen(true)}
@@ -3645,7 +3650,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           )}
 
           {/* Group Statistics Modal Trigger */}
-          {chat.isGroup && (
+          {chat.isGroup && (chatDetails?.isCreator || chatDetails?.isAdmin) && (
             <button
               onClick={() => setIsStatsModalOpen(true)}
               title={t('chat.group_stats')}
@@ -6151,7 +6156,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               )}
 
               {/* Channel & Supergroup Admin Log / Recent Actions Card */}
-              {(chat.isGroup || chat.isChannel) && (
+              {(chat.isGroup || chat.isChannel) &&
+                (chatDetails?.canViewAdminLog || chatDetails?.isCreator || chatDetails?.isAdmin) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -6173,8 +6179,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               )}
 
-              {/* 64Gram Power Feature: Chat Permissions Matrix */}
-              {(chat.isGroup || chat.isChannel) && (
+              {/* 64Gram Power Feature: Chat Permissions Matrix (Groups only) */}
+              {chat.isGroup && !chat.isChannel && !chatDetails?.isBroadcast && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
                     <span>Chat Permissions</span>

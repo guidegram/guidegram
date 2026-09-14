@@ -30,22 +30,40 @@ export const Avatar: React.FC<AvatarProps> = ({
   const [currentUrl, setCurrentUrl] = useState<string | null>(avatarUrl || cachedUrl || null)
   const [hasError, setHasError] = useState(false)
 
-  useEffect(() => {
-    setHasError(false)
-  }, [avatarUrl, currentUrl])
+  const isValidUrl =
+    Boolean(currentUrl) &&
+    typeof currentUrl === 'string' &&
+    currentUrl.trim().length > 30 &&
+    !currentUrl.endsWith('base64,')
 
   useEffect(() => {
-    if (avatarUrl) {
+    // 1. If we already have the full avatar in memory cache, use it immediately
+    if (cacheKey && avatarMemoryCache.has(cacheKey)) {
+      const cached = avatarMemoryCache.get(cacheKey)!
+      if (cached !== currentUrl && cached.length > 30 && !cached.endsWith('base64,')) {
+        setCurrentUrl(cached)
+        setHasError(false)
+        return
+      }
+    }
+
+    // 2. If avatarUrl prop is provided, set as initial view if valid
+    const isPropValid =
+      avatarUrl &&
+      typeof avatarUrl === 'string' &&
+      avatarUrl.length > 30 &&
+      !avatarUrl.endsWith('base64,')
+
+    if (isPropValid && !currentUrl) {
       setCurrentUrl(avatarUrl)
-      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
-      return
+      // If it's a full dataUrl or media URL (not a stripped thumb < 2KB), cache it
+      if (!avatarUrl.startsWith('data:image/jpeg;base64,') || avatarUrl.length > 2000) {
+        if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
+        return
+      }
     }
 
-    if (cachedUrl) {
-      setCurrentUrl(cachedUrl)
-      return
-    }
-
+    // 3. Always attempt to fetch the high-resolution profile photo if accountId and peerId are provided
     if (!accountId || !peerId || !window.guidegram?.getProfilePhoto) {
       return
     }
@@ -55,9 +73,15 @@ export const Avatar: React.FC<AvatarProps> = ({
       .getProfilePhoto(accountId, peerId)
       .then((photoDataUrl) => {
         if (!isMounted) return
-        if (photoDataUrl) {
+        if (
+          photoDataUrl &&
+          typeof photoDataUrl === 'string' &&
+          photoDataUrl.length > 50 &&
+          !photoDataUrl.endsWith('base64,')
+        ) {
           if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)
           setCurrentUrl(photoDataUrl)
+          setHasError(false)
         }
       })
       .catch(() => {
@@ -67,7 +91,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     return () => {
       isMounted = false
     }
-  }, [accountId, peerId, avatarUrl, cacheKey, cachedUrl])
+  }, [accountId, peerId, avatarUrl, cacheKey])
 
   const safeInitials =
     initials ||
@@ -83,11 +107,11 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const cursorClass = onClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
 
-  if (currentUrl && !hasError) {
+  if (isValidUrl && !hasError) {
     return (
       <img
-        src={currentUrl}
-        alt={title}
+        src={currentUrl!}
+        alt=""
         onClick={onClick}
         onError={() => setHasError(true)}
         className={`${sizeClasses} object-cover shrink-0 select-none border border-white/10 ${cursorClass} ${className}`}

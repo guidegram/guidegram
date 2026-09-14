@@ -29,13 +29,13 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
   onVoteSuccess,
 }) => {
   const { t } = useI18n()
-  const poll = message.poll
-  if (!poll) return null
-
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSolution, setShowSolution] = useState(false)
   const [localVoted, setLocalVoted] = useState(false)
+
+  const poll = message.poll
+  if (!poll) return null
 
   // Has user already voted on server or locally?
   const hasUserVoted = localVoted || poll.answers.some((a) => a.chosen)

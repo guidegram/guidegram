@@ -146,6 +146,9 @@ export function toRawPeer(peerId: string | number): tl.TypeInputPeer {
     return { _: 'inputPeerChannel', channelId, accessHash: Long.ZERO }
   } else if (s.startsWith('-')) {
     const chatId = Math.abs(num)
+    if (chatId > 2000000000) {
+      return { _: 'inputPeerChannel', channelId: chatId, accessHash: Long.ZERO }
+    }
     return { _: 'inputPeerChat', chatId }
   } else {
     return { _: 'inputPeerUser', userId: num, accessHash: Long.ZERO }
@@ -361,6 +364,7 @@ export class AccountManager {
   private avatarsDir: string
   private mediaDir: string
   private avatarCache = new Map<string, string>()
+  private thumbCache = new Map<string, string>()
   private mediaCache = new Map<string, string>()
   private inFlightDownloads = new Map<string, Promise<string | null>>()
   private activeMediaDownloads = new Map<string, { abort: () => void; isCancelled: () => boolean }>()
@@ -913,32 +917,59 @@ export class AccountManager {
     const s = String(peerId).trim()
     if (s === 'self' || s === 'me') return { _: 'inputPeerSelf' }
 
+    let normalized = s
+    if (s.startsWith('-') && !s.startsWith('-100')) {
+      const val = Math.abs(Number(s))
+      if (val > 2000000000) {
+        normalized = `-100${val}`
+      }
+    } else if (!s.startsWith('-') && !isNaN(Number(s)) && Number(s) > 2000000000) {
+      normalized = `-100${s}`
+    }
+
     if (holder?.client) {
       try {
-        const num = Number(s)
-        const target = !isNaN(num) ? num : s
+        const num = Number(normalized)
+        const target = !isNaN(num) ? num : normalized
         const resolved: any = await holder.client.resolvePeer(target)
         if (resolved) {
           if (resolved.accessHash) {
             this.peerAccessHashes.set(`${accountId}_${s}`, resolved.accessHash)
+            this.peerAccessHashes.set(`${accountId}_${normalized}`, resolved.accessHash)
           }
           return resolved
         }
       } catch (_) {}
     }
 
-    const cachedHash = this.peerAccessHashes.get(`${accountId}_${s}`)
+    const bareId = normalized.replace(/^-100/, '').replace(/^-/, '')
+    const cachedHash =
+      this.peerAccessHashes.get(`${accountId}_${normalized}`) ||
+      this.peerAccessHashes.get(`${accountId}_${s}`) ||
+      this.peerAccessHashes.get(`${accountId}_-${bareId}`) ||
+      this.peerAccessHashes.get(`${accountId}_${bareId}`)
+
     if (cachedHash) {
-      if (s.startsWith('-100')) {
-        const channelId = parseInt(s.slice(4), 10)
+      if (normalized.startsWith('-100')) {
+        const channelId = parseInt(normalized.slice(4), 10)
         return { _: 'inputPeerChannel', channelId, accessHash: cachedHash }
-      } else if (!s.startsWith('-')) {
-        const userId = parseInt(s, 10)
+      } else if (normalized.startsWith('-')) {
+        const chatId = Math.abs(Number(normalized))
+        if (chatId > 2000000000) {
+          return { _: 'inputPeerChannel', channelId: chatId, accessHash: cachedHash }
+        }
+        return { _: 'inputPeerChat', chatId }
+      } else {
+        const userId = parseInt(normalized, 10)
         return { _: 'inputPeerUser', userId, accessHash: cachedHash }
       }
     }
 
-    return toRawPeer(s)
+    const raw = toRawPeer(normalized)
+    if (raw._ === 'inputPeerChannel' && cachedHash) {
+      raw.accessHash = cachedHash
+    }
+    return raw
   }
 
   public async getDialogs(
@@ -1096,16 +1127,7 @@ export class AccountManager {
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      let inputPeer: any
-      const numChatId = Number(chatId)
-      if (!isNaN(numChatId)) {
-        try {
-          inputPeer = await holder.client.resolvePeer(numChatId)
-        } catch (_) {}
-      }
-      if (!inputPeer) {
-        inputPeer = toRawPeer(chatId)
-      }
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
 
       const res: any = await holder.client.call({
         _: 'messages.getHistory',
@@ -1128,15 +1150,26 @@ export class AccountManager {
           users.set(u.id, u)
           if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
-          if (thumb) this.avatarCache.set(`${accountId}_${u.id}`, thumb)
+          if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
         })
       }
       if (res.chats) {
         res.chats.forEach((c: any) => {
           chats.set(c.id, c)
-          if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+          const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
+          const peerId = isChan ? `-100${c.id}` : `-${c.id}`
+          if (c.accessHash) {
+            this.peerAccessHashes.set(`${accountId}_${peerId}`, c.accessHash)
+            this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+            this.peerAccessHashes.set(`${accountId}_-100${c.id}`, c.accessHash)
+            this.peerAccessHashes.set(`${accountId}_${c.id}`, c.accessHash)
+          }
           const thumb = extractStrippedThumb(c.photo)
-          if (thumb) this.avatarCache.set(`${accountId}_-${c.id}`, thumb)
+          if (thumb) {
+            this.thumbCache.set(`${accountId}_${peerId}`, thumb)
+            this.thumbCache.set(`${accountId}_-${c.id}`, thumb)
+            this.thumbCache.set(`${accountId}_-100${c.id}`, thumb)
+          }
         })
       }
       for (const m of rawMessages) {
@@ -1177,7 +1210,7 @@ export class AccountManager {
               users.set(u.id, u)
               if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
               const thumb = extractStrippedThumb(u.photo)
-              if (thumb) this.avatarCache.set(`${accountId}_${u.id}`, thumb)
+              if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
             })
           }
           if (extraRes?.chats) {
@@ -1185,7 +1218,7 @@ export class AccountManager {
               chats.set(c.id, c)
               if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
               const thumb = extractStrippedThumb(c.photo)
-              if (thumb) this.avatarCache.set(`${accountId}_-${c.id}`, thumb)
+              if (thumb) this.thumbCache.set(`${accountId}_-${c.id}`, thumb)
             })
           }
           if (extraRes?.messages) {
@@ -1223,7 +1256,7 @@ export class AccountManager {
             if (senderUser) {
               senderName = formatEntityName(senderUser)
               senderUsername = senderUser.username
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_${senderUser.id}`) || extractStrippedThumb(senderUser.photo)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_${senderUser.id}`) || this.thumbCache.get(`${accountId}_${senderUser.id}`) || extractStrippedThumb(senderUser.photo)
               if (senderUser.emojiStatus?.documentId) {
                 senderEmojiStatusId = senderUser.emojiStatus.documentId.toString()
               }
@@ -1239,7 +1272,7 @@ export class AccountManager {
             if (c) {
               senderName = formatEntityName(c)
               senderUsername = c.username
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || this.thumbCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
               if (c.color?.color !== undefined) {
                 senderColor = c.color.color
               }
@@ -1249,7 +1282,7 @@ export class AccountManager {
             const c = chats.get(m.fromId.chatId)
             if (c) {
               senderName = formatEntityName(c)
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || this.thumbCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
             }
           }
         }
@@ -1500,23 +1533,58 @@ export class AccountManager {
 
     const cacheKey = `${accountId}_${peerId}${isBig ? '_big' : ''}`
     if (this.avatarCache.has(cacheKey)) {
-      return this.avatarCache.get(cacheKey)!
+      const cached = this.avatarCache.get(cacheKey)!
+      if (cached && cached !== 'data:image/jpeg;base64,' && cached.length > 30) {
+        return cached
+      }
     }
 
     try {
-      const avatarFile = path.join(this.avatarsDir, `avatar_${accountId}_${peerId}${isBig ? '_big' : ''}.jpg`)
-      if (fs.existsSync(avatarFile)) {
-        const data = await fs.promises.readFile(avatarFile)
-        const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
-        this.avatarCache.set(cacheKey, dataUrl)
-        return dataUrl
+      const isSelf = peerId === accountId || peerId === 'self' || peerId === 'me'
+      const baseName = `${accountId}_${peerId}${isBig ? '_big' : ''}.jpg`
+      const candidateFiles = [
+        path.join(this.avatarsDir, `avatar_${baseName}`),
+        path.join(this.avatarsDir, baseName),
+      ]
+
+      for (const p of candidateFiles) {
+        if (fs.existsSync(p)) {
+          try {
+            const stat = fs.statSync(p)
+            if (stat.size === 0) {
+              fs.unlinkSync(p)
+            } else {
+              const data = await fs.promises.readFile(p)
+              if (data.length > 0) {
+                const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+                this.avatarCache.set(cacheKey, dataUrl)
+                return dataUrl
+              }
+            }
+          } catch {}
+        }
       }
 
-      // Check if we have peer photo location cached from iterDialogs
-      let photoLoc = isBig ? undefined : this.peerPhotos.get(`${accountId}_${peerId}`)
+      const avatarFile = candidateFiles[0]
+
+      // Check if we have peer photo location cached from iterDialogs (only for other peers, not self)
+      let photoLoc = (isBig || isSelf) ? undefined : this.peerPhotos.get(`${accountId}_${peerId}`)
 
       if (photoLoc) {
         await holder.client.downloadToFile(avatarFile, photoLoc).catch(() => {})
+      } else if (isSelf) {
+        // Fetch current user's profile photo via inputUserSelf
+        const userPhotos: any = await holder.client.call({
+          _: 'photos.getUserPhotos',
+          userId: { _: 'inputUserSelf' },
+          offset: 0,
+          maxId: Long.ZERO,
+          limit: 1,
+        }).catch(() => null)
+        const firstPhoto = userPhotos?.photos?.[0]
+        if (firstPhoto && firstPhoto._ === 'photo') {
+          await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+        }
       } else {
         let inputPeer: any
         const numId = Number(peerId)
@@ -1550,9 +1618,14 @@ export class AccountManager {
             await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
           }
         } else if (inputPeer._ === 'inputPeerChannel') {
+          let accessHash = inputPeer.accessHash || Long.ZERO
+          if (accessHash.isZero()) {
+            const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.channelId}`)
+            if (cachedHash) accessHash = cachedHash
+          }
           const res: any = await holder.client.call({
             _: 'channels.getFullChannel',
-            channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash || Long.ZERO },
+            channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash },
           }).catch(() => null)
           const photo = res?.fullChat?.chatPhoto
           if (photo && photo._ === 'photo') {
@@ -1562,10 +1635,17 @@ export class AccountManager {
       }
 
       if (fs.existsSync(avatarFile)) {
+        const stat = fs.statSync(avatarFile)
+        if (stat.size === 0) {
+          try { fs.unlinkSync(avatarFile) } catch {}
+          return null
+        }
         const data = await fs.promises.readFile(avatarFile)
-        const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
-        this.avatarCache.set(cacheKey, dataUrl)
-        return dataUrl
+        if (data.length > 0) {
+          const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+          this.avatarCache.set(cacheKey, dataUrl)
+          return dataUrl
+        }
       }
     } catch (err: any) {
       Logger.warn(`[AccountManager] getProfilePhoto error for ${peerId}:`, err?.message || err)
@@ -1593,19 +1673,85 @@ export class AccountManager {
 
     const downloadPromise = (async () => {
       try {
+        const candidatePrefixes = [
+          `media_${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}`,
+          `${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}`,
+        ]
+        try {
+          const files = fs.readdirSync(this.mediaDir)
+          for (const prefix of candidatePrefixes) {
+            const found = files.find((f) => f.startsWith(prefix))
+            if (found) {
+              const fullPath = path.join(this.mediaDir, found)
+              if (fs.existsSync(fullPath) && fs.statSync(fullPath).size > 0) {
+                const dataUrl = `guidegram-media://${fullPath.replace(/\\/g, '/')}`
+                this.mediaCache.set(cacheKey, dataUrl)
+                return dataUrl
+              }
+            }
+          }
+        } catch {}
+
         const inputPeer = toRawPeer(chatId)
-        const res: any = await client.call({
-          _: 'messages.getMessages',
-          id: [{ _: 'inputMessageID', id: messageId }],
-        })
+        let res: any
+        if (inputPeer._ === 'inputPeerChannel') {
+          let accessHash = (inputPeer as any).accessHash || Long.ZERO
+          if (accessHash.isZero()) {
+            const cachedHash =
+              this.peerAccessHashes.get(`${accountId}_${inputPeer.channelId}`) ||
+              this.peerAccessHashes.get(`${accountId}_${chatId}`) ||
+              this.peerAccessHashes.get(`${accountId}_${chatId.replace(/^-100/, '')}`)
+            if (cachedHash) accessHash = cachedHash
+          }
+          res = await client.call({
+            _: 'channels.getMessages',
+            channel: {
+              _: 'inputChannel',
+              channelId: inputPeer.channelId,
+              accessHash,
+            },
+            id: [{ _: 'inputMessageID', id: messageId }],
+          })
+        } else {
+          res = await client.call({
+            _: 'messages.getMessages',
+            id: [{ _: 'inputMessageID', id: messageId }],
+          })
+        }
 
         const msg = res?.messages?.[0]
         if (!msg || !msg.media) return null
 
-        const ext = msg.media._ === 'messageMediaPhoto' ? '.jpg' : '.bin'
+        let ext = '.bin'
+        if (msg.media._ === 'messageMediaPhoto') {
+          ext = '.jpg'
+        } else if (msg.media._ === 'messageMediaDocument') {
+          const doc = msg.media.document
+          const mime = doc?.mimeType || ''
+          if (mime.includes('video/mp4') || mime.includes('mp4')) ext = '.mp4'
+          else if (mime.includes('webm')) ext = '.webm'
+          else if (mime.includes('webp')) ext = '.webp'
+          else if (mime.includes('audio/ogg') || mime.includes('ogg')) ext = '.ogg'
+          else if (mime.includes('audio/mpeg') || mime.includes('mp3')) ext = '.mp3'
+          else if (mime.includes('image/jpeg')) ext = '.jpg'
+          else if (mime.includes('image/png')) ext = '.png'
+          else if (mime.includes('pdf')) ext = '.pdf'
+          else {
+            const fnAttr = doc?.attributes?.find((a: any) => a._ === 'documentAttributeFilename')
+            if (fnAttr?.fileName) {
+              const parsedExt = path.extname(fnAttr.fileName)
+              if (parsedExt) ext = parsedExt
+            }
+          }
+        }
+
         const cachedPath = path.join(this.mediaDir, `media_${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}${ext}`)
 
-        if (!fs.existsSync(cachedPath)) {
+        if (!fs.existsSync(cachedPath) || fs.statSync(cachedPath).size === 0) {
+          try {
+            if (fs.existsSync(cachedPath)) fs.unlinkSync(cachedPath)
+          } catch {}
+
           const location = msg.media.photo || msg.media.document
           if (!location) return null
 
@@ -1659,9 +1805,16 @@ export class AccountManager {
           this.activeMediaDownloads.delete(cacheKey)
         }
 
-        const dataUrl = `guidegram-media://${cachedPath.replace(/\\/g, '/')}`
-        this.mediaCache.set(cacheKey, dataUrl)
-        return dataUrl
+        if (fs.existsSync(cachedPath)) {
+          if (fs.statSync(cachedPath).size === 0) {
+            try { fs.unlinkSync(cachedPath) } catch {}
+            return null
+          }
+          const dataUrl = `guidegram-media://${cachedPath.replace(/\\/g, '/')}`
+          this.mediaCache.set(cacheKey, dataUrl)
+          return dataUrl
+        }
+        return null
       } catch (err) {
         this.activeMediaDownloads.delete(cacheKey)
         Logger.error('[AccountManager] downloadMedia error:', err)
@@ -1708,10 +1861,22 @@ export class AccountManager {
       let sourcePath = ''
       const exts = ['.mp4', '.jpg', '.png', '.webp', '.ogg', '.pdf', '.bin', '']
       for (const ext of exts) {
-        const p = path.join(this.mediaDir, `media_${cacheKey}${ext}`)
-        if (fs.existsSync(p)) {
-          sourcePath = p
+        const p1 = path.join(this.mediaDir, `media_${cacheKey}${ext}`)
+        const p2 = path.join(this.mediaDir, `${cacheKey}${ext}`)
+        if (fs.existsSync(p1) && fs.statSync(p1).size > 0) {
+          sourcePath = p1
           break
+        }
+        if (fs.existsSync(p2) && fs.statSync(p2).size > 0) {
+          sourcePath = p2
+          break
+        }
+      }
+
+      if (!sourcePath && mediaUrl.startsWith('guidegram-media://')) {
+        const candidate = mediaUrl.replace(/^guidegram-media:\/\//, '')
+        if (fs.existsSync(candidate) && fs.statSync(candidate).size > 0) {
+          sourcePath = candidate
         }
       }
 
@@ -1838,26 +2003,95 @@ export class AccountManager {
 
   public async resolvePeer(accountId: string, target: string): Promise<DialogItem> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     const clean = target.replace(/^@/, '').trim()
+    const isNumeric = /^-?\d+$/.test(clean)
+
+    if (isNumeric) {
+      const inputPeer = await this.resolveInputPeer(accountId, clean)
+      if (inputPeer._ === 'inputPeerChannel') {
+        const res: any = await holder.client.call({
+          _: 'channels.getChannels',
+          id: [{ _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash || Long.ZERO }],
+        }).catch(() => null)
+        const c = res?.chats?.[0]
+        if (c) {
+          const peerId = `-100${c.id}`
+          if (c.accessHash) {
+            this.peerAccessHashes.set(`${accountId}_${peerId}`, c.accessHash)
+            this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+            this.peerAccessHashes.set(`${accountId}_${c.id}`, c.accessHash)
+            this.peerAccessHashes.set(`${accountId}_-100${c.id}`, c.accessHash)
+          }
+          return {
+            id: peerId,
+            accountId,
+            title: c.title || 'Channel',
+            unreadCount: 0,
+            isUser: false,
+            isGroup: !c.broadcast,
+            isChannel: !!c.broadcast,
+            isBot: false,
+            isPinned: false,
+            username: c.username,
+          }
+        }
+      } else if (inputPeer._ === 'inputPeerUser') {
+        const res: any = await holder.client.call({
+          _: 'users.getUsers',
+          id: [{ _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash || Long.ZERO }],
+        }).catch(() => null)
+        const u = res?.[0] || res?.users?.[0]
+        if (u) {
+          const peerId = u.id.toString()
+          if (u.accessHash) {
+            this.peerAccessHashes.set(`${accountId}_${peerId}`, u.accessHash)
+          }
+          return {
+            id: peerId,
+            accountId,
+            title: formatEntityName(u),
+            unreadCount: 0,
+            isUser: true,
+            isGroup: false,
+            isChannel: false,
+            isBot: !!u.bot,
+            isPinned: false,
+            username: u.username,
+          }
+        }
+      }
+    }
+
     const res: any = await holder.client.call({
       _: 'contacts.resolveUsername',
       username: clean,
     })
 
     const peer = res.peer
+    const isChan = peer._ === 'peerChannel'
     const peerId =
       peer._ === 'peerUser'
         ? peer.userId.toString()
-        : peer._ === 'peerChannel'
-        ? `-${peer.channelId}`
+        : isChan
+        ? `-100${peer.channelId}`
         : `-${peer.chatId}`
 
     const user = res.users?.[0]
     const chat = res.chats?.[0]
     const entity = user || chat
     const title = formatEntityName(entity, clean)
+
+    if (chat?.accessHash) {
+      this.peerAccessHashes.set(`${accountId}_${peerId}`, chat.accessHash)
+      this.peerAccessHashes.set(`${accountId}_-${chat.id}`, chat.accessHash)
+      this.peerAccessHashes.set(`${accountId}_-100${chat.id}`, chat.accessHash)
+      this.peerAccessHashes.set(`${accountId}_${chat.id}`, chat.accessHash)
+    }
+    if (user?.accessHash) {
+      this.peerAccessHashes.set(`${accountId}_${user.id}`, user.accessHash)
+    }
 
     return {
       id: peerId,
@@ -1874,7 +2108,7 @@ export class AccountManager {
 
   public async searchPublicPeers(accountId: string, query: string): Promise<DialogItem[]> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
       const res: any = await holder.client.call({
@@ -1888,8 +2122,17 @@ export class AccountManager {
       const users = res.users || []
 
       for (const c of chats) {
+        const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
+        const peerId = isChan ? `-100${c.id}` : `-${c.id}`
+        if (c.accessHash) {
+          this.peerAccessHashes.set(`${accountId}_${peerId}`, c.accessHash)
+          this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+          this.peerAccessHashes.set(`${accountId}_-100${c.id}`, c.accessHash)
+          this.peerAccessHashes.set(`${accountId}_${c.id}`, c.accessHash)
+        }
+
         items.push({
-          id: `-${c.id}`,
+          id: peerId,
           accountId,
           title: c.title || 'Channel',
           unreadCount: 0,
@@ -1903,6 +2146,9 @@ export class AccountManager {
       }
 
       for (const u of users) {
+        if (u.accessHash) {
+          this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+        }
         items.push({
           id: u.id.toString(),
           accountId,
@@ -1949,11 +2195,12 @@ export class AccountManager {
       const items: MessageItem[] = []
       for (const m of res.messages || []) {
         if (m._ === 'messageEmpty') continue
+        const isChan = m.peerId?._ === 'peerChannel'
         const peerId =
           m.peerId?._ === 'peerUser'
             ? m.peerId.userId.toString()
-            : m.peerId?._ === 'peerChannel'
-            ? `-${m.peerId.channelId}`
+            : isChan
+            ? `-100${m.peerId.channelId}`
             : m.peerId?._ === 'peerChat'
             ? `-${m.peerId.chatId}`
             : ''
@@ -2162,7 +2409,7 @@ export class AccountManager {
           users.set(u.id, u)
           if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
-          if (thumb) this.avatarCache.set(`${accountId}_${u.id}`, thumb)
+          if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
         })
       }
       if (res.chats) {
@@ -2170,7 +2417,7 @@ export class AccountManager {
           chats.set(c.id, c)
           if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
           const thumb = extractStrippedThumb(c.photo)
-          if (thumb) this.avatarCache.set(`${accountId}_-${c.id}`, thumb)
+          if (thumb) this.thumbCache.set(`${accountId}_-${c.id}`, thumb)
         })
       }
 
@@ -2191,21 +2438,21 @@ export class AccountManager {
             const u = users.get(m.fromId.userId)
             if (u) {
               senderName = formatEntityName(u)
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_${u.id}`) || extractStrippedThumb(u.photo)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_${u.id}`) || this.thumbCache.get(`${accountId}_${u.id}`) || extractStrippedThumb(u.photo)
             }
           } else if (m.fromId._ === 'peerChannel') {
             senderId = `-${m.fromId.channelId}`
             const c = chats.get(m.fromId.channelId)
             if (c) {
               senderName = formatEntityName(c)
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || this.thumbCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
             }
           } else if (m.fromId._ === 'peerChat') {
             senderId = `-${m.fromId.chatId}`
             const c = chats.get(m.fromId.chatId)
             if (c) {
               senderName = formatEntityName(c)
-              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
+              senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || this.thumbCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
             }
           }
         }
@@ -2311,16 +2558,7 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
-    let inputPeer: any
-    const numChatId = Number(chatId)
-    if (!isNaN(numChatId)) {
-      try {
-        inputPeer = await holder.client.resolvePeer(numChatId)
-      } catch (_) {}
-    }
-    if (!inputPeer) {
-      inputPeer = toRawPeer(chatId)
-    }
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
 
     let details: ChatDetails = {
       id: chatId,
@@ -2371,9 +2609,9 @@ export class AccountManager {
             birthday = b.year ? `${b.day}/${b.month}/${b.year}` : `${b.day}/${b.month}`
           }
           if (fu.personalChannelId) {
-            personalChannelId = fu.personalChannelId.toString()
+            personalChannelId = `-100${fu.personalChannelId}`
             if (res.chats && Array.isArray(res.chats)) {
-              const ch = res.chats.find((c: any) => c.id?.toString() === personalChannelId)
+              const ch = res.chats.find((c: any) => c.id?.toString() === fu.personalChannelId?.toString())
               if (ch) personalChannelTitle = ch.title
             }
           }
@@ -2443,6 +2681,15 @@ export class AccountManager {
         const groupCallAccessHash = hasGroupCall ? rawCall.accessHash?.toString() : undefined
         const groupCallParticipantsCount = hasGroupCall ? Number(rawCall.participantsCount || 0) : undefined
 
+        const isCreator = Boolean(c?.creator)
+        const adminRights = c?.adminRights
+        const isAdmin = isCreator || Boolean(adminRights)
+        const canManageCalls = isCreator || Boolean(adminRights?.manageCall)
+        const canViewAdminLog = isCreator || Boolean(res.fullChat?.canViewAdminLog || adminRights)
+        const canPostMessages = c?.broadcast
+          ? (isCreator || Boolean(adminRights?.postMessages))
+          : !c?.defaultBannedRights?.sendMessages
+
         details = {
           id: chatId,
           title: c?.title || 'Channel',
@@ -2462,6 +2709,21 @@ export class AccountManager {
           groupCallId,
           groupCallAccessHash,
           groupCallParticipantsCount,
+          isCreator,
+          isAdmin,
+          canManageCalls,
+          canViewAdminLog,
+          canSendMessages: canPostMessages,
+          permissionsMatrix: {
+            sendMessages: canPostMessages,
+            sendMedia: !c?.defaultBannedRights?.sendMedia,
+            sendStickers: !c?.defaultBannedRights?.sendStickers,
+            sendPolls: !c?.defaultBannedRights?.sendPolls,
+            embedLinks: !c?.defaultBannedRights?.embedLinks,
+            inviteUsers: isCreator || Boolean(adminRights?.inviteUsers) || !c?.defaultBannedRights?.inviteUsers,
+            pinMessages: isCreator || Boolean(adminRights?.pinMessages) || !c?.defaultBannedRights?.pinMessages,
+            changeInfo: isCreator || Boolean(adminRights?.changeInfo) || !c?.defaultBannedRights?.changeInfo,
+          },
         }
       } else if (inputPeer._ === 'inputPeerChat') {
         const res: any = await holder.client.call({
@@ -2507,6 +2769,12 @@ export class AccountManager {
         const groupCallAccessHash = hasGroupCall ? rawGroupCall.accessHash?.toString() : undefined
         const groupCallParticipantsCount = hasGroupCall ? Number(rawGroupCall.participantsCount || 0) : undefined
 
+        const isCreator = Boolean(c?.creator)
+        const adminRights = c?.adminRights
+        const isAdmin = isCreator || Boolean(adminRights)
+        const canManageCalls = isCreator || Boolean(adminRights?.manageCall)
+        const canViewAdminLog = isCreator || Boolean(adminRights)
+
         details = {
           id: chatId,
           title: c?.title || 'Group',
@@ -2522,6 +2790,10 @@ export class AccountManager {
           groupCallId,
           groupCallAccessHash,
           groupCallParticipantsCount,
+          isCreator,
+          isAdmin,
+          canManageCalls,
+          canViewAdminLog,
         }
       }
     } catch (err: any) {
@@ -2537,10 +2809,10 @@ export class AccountManager {
     mute: boolean
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       await holder.client.call({
         _: 'account.updateNotifySettings',
         peer: { _: 'inputNotifyPeer', peer: inputPeer },
@@ -2566,7 +2838,7 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
-    const inputPeer = toRawPeer(chatId)
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
     const randomId = toLong(Math.floor(Math.random() * 10000000000))
     const actualReplyTo = options?.replyToMsgId ?? replyToMsgId
 
@@ -2602,6 +2874,8 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
+    const targetPeer = await this.resolveInputPeer(accountId, chatId)
+
     let uploaded: any
     if (options?.isVoice) {
       // Ensure voice notes are cached in mediaDir before temporary file cleanup
@@ -2614,7 +2888,7 @@ export class AccountManager {
       }
 
       // Handled with DocumentAttributeAudio voice parameters and 4 upload workers
-      uploaded = await holder.client.sendMedia(chatId, filePath, {
+      uploaded = await holder.client.sendMedia(targetPeer as any, filePath, {
         caption: options?.caption,
         replyTo: options?.replyToMsgId,
         silent: options?.silent,
@@ -2622,7 +2896,7 @@ export class AccountManager {
         workers: 4,
       } as any)
     } else {
-      uploaded = await holder.client.sendMedia(chatId, filePath, {
+      uploaded = await holder.client.sendMedia(targetPeer as any, filePath, {
         caption: options?.caption,
         replyTo: options?.replyToMsgId,
         silent: options?.silent,
@@ -2655,7 +2929,7 @@ export class AccountManager {
     const targets = Array.isArray(toChatId) ? toChatId : [toChatId]
     if (targets.length === 0) return true
 
-    const fromPeer = toRawPeer(fromChatId)
+    const fromPeer = await this.resolveInputPeer(accountId, fromChatId)
     const customCaption = options?.newCaption ?? options?.caption
 
     let firstError: any = null
@@ -2664,7 +2938,7 @@ export class AccountManager {
     for (let i = 0; i < targets.length; i++) {
       const targetId = targets[i]
       try {
-        const toPeer = toRawPeer(targetId)
+        const toPeer = await this.resolveInputPeer(accountId, targetId)
         const randomIds = messageIds.map(() => toLong(Math.floor(Math.random() * 10000000000)))
 
         await holder.client.call({
@@ -2718,9 +2992,9 @@ export class AccountManager {
     revoke = true
   ): Promise<void> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
-    const inputPeer = toRawPeer(chatId)
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
     if (inputPeer._ === 'inputPeerChannel') {
       await holder.client.call({
         _: 'channels.deleteMessages',
@@ -2817,10 +3091,10 @@ export class AccountManager {
     chatId: string
   ): Promise<ScheduledMessageItem[]> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       const res: any = await holder.client.call({
         _: 'messages.getScheduledHistory',
         peer: inputPeer,
@@ -2845,10 +3119,10 @@ export class AccountManager {
     messageId: number
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       await holder.client.call({
         _: 'messages.sendScheduledMessages',
         peer: inputPeer,
@@ -2866,10 +3140,10 @@ export class AccountManager {
     messageIds: number[]
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       await holder.client.call({
         _: 'messages.deleteScheduledMessages',
         peer: inputPeer,
@@ -2888,10 +3162,10 @@ export class AccountManager {
     reactionEmoji: string
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       await holder.client.call({
         _: 'messages.sendReaction',
         peer: inputPeer,
@@ -4506,11 +4780,11 @@ export class AccountManager {
         if (msg.sender?.photo && senderIdStr) {
           const senderThumb = extractStrippedThumb(msg.sender.photo)
           if (senderThumb) {
-            this.avatarCache.set(`${accountId}_${senderIdStr}`, senderThumb)
+            this.thumbCache.set(`${accountId}_${senderIdStr}`, senderThumb)
           }
         }
         const senderAvatarUrl = senderIdStr
-          ? this.avatarCache.get(`${accountId}_${senderIdStr}`) || extractStrippedThumb(msg.sender?.photo)
+          ? this.avatarCache.get(`${accountId}_${senderIdStr}`) || this.thumbCache.get(`${accountId}_${senderIdStr}`) || extractStrippedThumb(msg.sender?.photo)
           : undefined
 
         const item: MessageItem = {

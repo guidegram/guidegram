@@ -71,6 +71,11 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
+  // Reset fallback QR when network changes
+  useEffect(() => {
+    setFallbackQr(null)
+  }, [selectedNetwork])
+
   if (!isOpen) return null
 
   const handleCopy = async (addr: string) => {
@@ -82,11 +87,6 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
       }, 2500)
     }
   }
-
-  // Reset fallback QR when network changes
-  useEffect(() => {
-    setFallbackQr(null)
-  }, [selectedNetwork])
 
   const handleImageError = () => {
     QRCode.toDataURL(activeItem.address, {

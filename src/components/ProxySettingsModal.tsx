@@ -52,6 +52,9 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [secret, setSecret] = useState('')
+  const [isDistributing, setIsDistributing] = useState(false)
+  const [distributionSuccess, setDistributionSuccess] = useState<string | null>(null)
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || '')
 
   // Load initial status on mount
   useEffect(() => {
@@ -117,10 +120,6 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
       setIsTogglingWarp(false)
     }
   }
-
-  const [isDistributing, setIsDistributing] = useState(false)
-  const [distributionSuccess, setDistributionSuccess] = useState<string | null>(null)
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || '')
 
   const handleDistributeToAccounts = async () => {
     if (accounts.length === 0) return
