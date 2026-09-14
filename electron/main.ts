@@ -354,6 +354,95 @@ function createWindow() {
   })
 }
 
+const activeMiniApps = new Set<BrowserWindow>()
+
+function openMiniAppWindow(url: string, title = 'Telegram Mini App') {
+  const win = new BrowserWindow({
+    width: 480,
+    height: 760,
+    minWidth: 360,
+    minHeight: 520,
+    title,
+    backgroundColor: '#0F1117',
+    icon: getAppIcon(),
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  activeMiniApps.add(win)
+  win.setMenu(null)
+
+  win.webContents.on('dom-ready', () => {
+    win.webContents.executeJavaScript(`
+      if (!window.Telegram) window.Telegram = {};
+      if (!window.Telegram.WebApp) {
+        window.Telegram.WebApp = {
+          initData: "",
+          initDataUnsafe: {},
+          version: "8.0",
+          platform: "tdesktop",
+          colorScheme: "dark",
+          themeParams: {
+            bg_color: "#0F1117",
+            text_color: "#FFFFFF",
+            hint_color: "#7E8597",
+            link_color: "#6366F1",
+            button_color: "#6366F1",
+            button_text_color: "#FFFFFF",
+            secondary_bg_color: "#181B26"
+          },
+          isExpanded: true,
+          viewportHeight: window.innerHeight,
+          viewportStableHeight: window.innerHeight,
+          headerColor: "#0F1117",
+          backgroundColor: "#0F1117",
+          BackButton: {
+            isVisible: false,
+            show: function() { this.isVisible = true; },
+            hide: function() { this.isVisible = false; },
+            onClick: function(cb) { window.addEventListener('popstate', cb); }
+          },
+          MainButton: {
+            text: "CONTINUE",
+            color: "#6366F1",
+            textColor: "#FFFFFF",
+            isVisible: false,
+            isActive: true,
+            isProgressVisible: false,
+            setText: function(t) { this.text = t; },
+            onClick: function(cb) {},
+            show: function() { this.isVisible = true; },
+            hide: function() { this.isVisible = false; },
+            enable: function() { this.isActive = true; },
+            disable: function() { this.isActive = false; }
+          },
+          HapticFeedback: {
+            impactOccurred: function() {},
+            notificationOccurred: function() {},
+            selectionChanged: function() {}
+          },
+          ready: function() {},
+          expand: function() {},
+          close: function() { window.close(); },
+          openLink: function(url) { window.open(url, '_blank'); },
+          openTelegramLink: function(url) { window.open(url, '_blank'); },
+          sendData: function(data) {}
+        };
+      }
+    `).catch(() => {})
+  })
+
+  win.on('closed', () => {
+    activeMiniApps.delete(win)
+  })
+
+  win.loadURL(url)
+  return win
+}
+
 app.whenReady().then(async () => {
   Logger.info('[App] Electron app is ready. Initializing SessionStore & AccountManager...')
 
@@ -1338,6 +1427,25 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.error(`[IPC] getAllDrafts error:`, err)
       return {}
+    }
+  })
+
+  ipcMain.handle('telegram:request-web-view', async (_event, { accountId, peerId, botId, url, startParam, fromBotMenu }) => {
+    try {
+      return await accountManager.requestWebView(accountId, peerId, botId, url, startParam, fromBotMenu)
+    } catch (err: any) {
+      Logger.error(`[IPC] requestWebView error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:open-mini-app', async (_event, { url, title }) => {
+    try {
+      openMiniAppWindow(url, title)
+      return true
+    } catch (err: any) {
+      Logger.error(`[IPC] openMiniApp error:`, err)
+      return false
     }
   })
 

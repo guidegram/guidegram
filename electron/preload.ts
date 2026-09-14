@@ -236,6 +236,24 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:save-draft', { accountId, chatId, message, replyToMsgId }),
   getAllDrafts: (accountId: string): Promise<Record<string, DraftItem>> =>
     ipcRenderer.invoke('telegram:get-all-drafts', { accountId }),
+  requestWebView: (
+    accountId: string,
+    peerId: string,
+    botId: string,
+    url?: string,
+    startParam?: string,
+    fromBotMenu?: boolean
+  ): Promise<{ url: string; queryId?: string }> =>
+    ipcRenderer.invoke('telegram:request-web-view', {
+      accountId,
+      peerId,
+      botId,
+      url,
+      startParam,
+      fromBotMenu,
+    }),
+  openMiniApp: (url: string, title?: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:open-mini-app', { url, title }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
 

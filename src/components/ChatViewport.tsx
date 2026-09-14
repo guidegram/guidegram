@@ -80,6 +80,7 @@ import { StickerPickerDrawer } from './StickerPickerDrawer'
 import { SharedMediaDrawer } from './SharedMediaDrawer'
 import { PollWidget } from './PollWidget'
 import { CreatePollModal } from './CreatePollModal'
+import { MiniAppModal } from './MiniAppModal'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -767,6 +768,54 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   // Attachment popover menu & staging state
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false)
+  const [activeMiniApp, setActiveMiniApp] = useState<{
+    url: string
+    title: string
+    botName?: string
+    botUsername?: string
+  } | null>(null)
+  const [isLaunchingMiniApp, setIsLaunchingMiniApp] = useState(false)
+
+  const handleLaunchMiniApp = async (appUrl?: string, appTitle?: string) => {
+    if (!chat) return
+    setIsLaunchingMiniApp(true)
+    try {
+      if (window.guidegram?.requestWebView) {
+        const res = await window.guidegram.requestWebView(
+          chat.accountId,
+          chat.id,
+          chat.id,
+          appUrl,
+          undefined,
+          !appUrl
+        )
+        if (res && res.url) {
+          setActiveMiniApp({
+            url: res.url,
+            title: appTitle || chat.title || 'Telegram Mini App',
+            botName: chat.title,
+            botUsername: chat.username,
+          })
+          return
+        }
+      }
+      if (appUrl) {
+        setActiveMiniApp({
+          url: appUrl,
+          title: appTitle || chat.title || 'Telegram Mini App',
+          botName: chat.title,
+          botUsername: chat.username,
+        })
+      } else {
+        showToast(t('miniapp.loading') || 'Could not launch Mini App')
+      }
+    } catch (err: any) {
+      console.warn('[MiniApp] Launch failed:', err)
+      showToast(err?.message || 'Failed to launch Mini App')
+    } finally {
+      setIsLaunchingMiniApp(false)
+    }
+  }
   const [stagedAttachments, setStagedAttachments] = useState<StagedAttachment[]>([])
   const [uploadProgress, setUploadProgress] = useState<{
     isUploading: boolean
@@ -3393,6 +3442,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <span className="hidden sm:inline">Ghost: {ghostMode ? 'ON' : 'OFF'}</span>
           </button>
 
+          {/* Bot Mini App Trigger */}
+          {chat.isBot && (
+            <button
+              onClick={() => handleLaunchMiniApp()}
+              disabled={isLaunchingMiniApp}
+              title={t('miniapp.launch')}
+              className="px-2.5 py-1.5 rounded-xl bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 border border-primary-500/30 transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow-xs active:scale-95"
+            >
+              <Bot className={`w-4 h-4 text-primary-400 ${isLaunchingMiniApp ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{t('miniapp.launch')}</span>
+            </button>
+          )}
+
           {/* In-Chat Search Toggle (Ctrl+F) */}
           <button
             onClick={() => setIsSearchOpen((prev) => !prev)}
@@ -4245,6 +4307,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                     onClick={async (e) => {
                                       e.stopPropagation()
                                       if (btn.url) {
+                                        if (btn.webAppUrl || (btn as any).isMiniApp || btn.url.includes('#tgWebAppData') || btn.url.includes('tgWebApp')) {
+                                          handleLaunchMiniApp(btn.webAppUrl || btn.url, btn.text)
+                                          return
+                                        }
                                         handleSafeOpenUrl(btn.url)
                                         return
                                       }
@@ -6833,6 +6899,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   onMergeHistoricalMessages(msgs)
                 }
               }).catch(() => {})
+            }
+          }}
+        />
+      )}
+
+      {/* 10. Telegram Mini App (TWA) Modal */}
+      {activeMiniApp && (
+        <MiniAppModal
+          isOpen={!!activeMiniApp}
+          url={activeMiniApp.url}
+          title={activeMiniApp.title}
+          botName={activeMiniApp.botName}
+          botUsername={activeMiniApp.botUsername}
+          onClose={() => setActiveMiniApp(null)}
+          onOpenInNewWindow={() => {
+            if (window.guidegram?.openMiniApp) {
+              window.guidegram.openMiniApp(activeMiniApp.url, activeMiniApp.title)
+              setActiveMiniApp(null)
             }
           }}
         />

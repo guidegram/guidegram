@@ -1201,7 +1201,7 @@ export class AccountManager {
                   this.botButtonCache.set(`${chatId}_${id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
                   btnRow.push({ text: b.text, data: b64 })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                  btnRow.push({ text: b.text, url: b.url })
+                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
                 }
               }
             }
@@ -2865,6 +2865,59 @@ export class AccountManager {
     } catch (err: any) {
       Logger.error(`[AccountManager] getAllDrafts error:`, err)
       return {}
+    }
+  }
+
+  public async requestWebView(
+    accountId: string,
+    peerId: string,
+    botId: string,
+    url?: string,
+    startParam?: string,
+    fromBotMenu?: boolean
+  ): Promise<{ url: string; queryId?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const inputBot = await this.resolveInputPeer(accountId, botId)
+      const inputBotUser: tl.TypeInputUser =
+        inputBot._ === 'inputPeerUser'
+          ? { _: 'inputUser', userId: inputBot.userId, accessHash: inputBot.accessHash }
+          : { _: 'inputUserSelf' }
+
+      const themeParams = {
+        _: 'dataJSON' as const,
+        data: JSON.stringify({
+          bg_color: '#0F1117',
+          text_color: '#FFFFFF',
+          hint_color: '#7E8597',
+          link_color: '#6366F1',
+          button_color: '#6366F1',
+          button_text_color: '#FFFFFF',
+          secondary_bg_color: '#181B26',
+        }),
+      }
+
+      const res: any = await holder.client.call({
+        _: 'messages.requestWebView',
+        peer: inputPeer,
+        bot: inputBotUser,
+        url: url || undefined,
+        startParam: startParam || undefined,
+        fromBotMenu: Boolean(fromBotMenu),
+        platform: 'tdesktop',
+        themeParams,
+      })
+
+      return {
+        url: res.url,
+        queryId: res.queryId ? res.queryId.toString() : undefined,
+      }
+    } catch (err: any) {
+      Logger.error(`[AccountManager] requestWebView error:`, err)
+      throw err
     }
   }
 

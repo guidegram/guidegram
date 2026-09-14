@@ -130,6 +130,8 @@ export interface InlineButton {
   text: string
   url?: string
   data?: string // callback_data
+  webAppUrl?: string
+  isMiniApp?: boolean
 }
 
 export interface WebPagePreview {
