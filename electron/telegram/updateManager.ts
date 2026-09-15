@@ -26,9 +26,9 @@ export class UpdateManager {
 
       const tagName: string = releaseData.tag_name || ''
       const latestVer = tagName.replace(/^v/, '').trim()
-      const hasUpdate = this.compareSemver(latestVer, this.currentVersion) > 0
+      const isNewer = this.compareSemver(latestVer, this.currentVersion) > 0
 
-      // Find Windows zip asset
+      // Find Windows zip asset (required for seamless background portable update)
       let downloadUrl: string | undefined
       if (Array.isArray(releaseData.assets)) {
         const zipAsset = releaseData.assets.find((a: any) =>
@@ -38,6 +38,10 @@ export class UpdateManager {
           downloadUrl = zipAsset.browser_download_url
         }
       }
+
+      // An update is only actionable if a valid binary package is available for download.
+      // If a release on GitHub is still compiling or has no binary assets, do not trigger false update banners.
+      const hasUpdate = isNewer && !!downloadUrl
 
       // Security and Minor/Major version classification
       const notesLower = (releaseData.body || '').toLowerCase()
