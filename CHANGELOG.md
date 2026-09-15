@@ -4,6 +4,15 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.11.1] — Bot Message History & Reply Keyboard Rendering (2026-09-15)
+
+### 🌟 What's New & Enhancements
+- **🤖 Bot Message History Synchronization**: Resolved MTProto message retrieval for bot accounts. Implemented direct `messages.getMessages` retrieval fallback alongside update tracking to bypass standard bot history restrictions, ensuring bot conversations reliably populate message history.
+- **⌨️ Bot Reply Keyboards & Custom Menus**: Restored interactive rendering for `replyKeyboardMarkup` persistent menus in the chat viewport, enabling one-click response dispatch for bot keyboards.
+- **🛡️ Bot Token Session Hardening**: Preserved active bot tokens and dialog state across reconnections, ensuring smooth session restoration for automated accounts.
+
+---
+
 ## [v1.11.0] — Telegram Bot Token Authentication & Interactive Settings Suite (2026-09-14)
 
 ### 🌟 What's New & Enhancements
