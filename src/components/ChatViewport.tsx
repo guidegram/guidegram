@@ -1268,6 +1268,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         }
 
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+        if (!ghostMode && chat && window.guidegram?.markAsRead && messages.length > 0) {
+          const lastMsg = messages[messages.length - 1]
+          if (lastMsg && lastMsg.id > lastMarkedReadIdRef.current) {
+            lastMarkedReadIdRef.current = lastMsg.id
+            window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
+            onUpdateUnreadCount?.(chat.id, 0)
+          }
+        }
       }, 60)
       return
     }

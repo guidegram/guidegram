@@ -3318,6 +3318,24 @@ export class AccountManager {
           maxId: targetMaxId,
         })
       }
+
+      // Immediately update local dialogs cache so that next launch/render has zero unread
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        if (cached && cached.length > 0) {
+          let changed = false
+          const next = cached.map((d) => {
+            if (d.id === chatId && (d.unreadCount || 0) > 0) {
+              changed = true
+              return { ...d, unreadCount: 0, readInboxMaxId: targetMaxId }
+            }
+            return d
+          })
+          if (changed) {
+            this.store.saveDialogsCache(accountId, next)
+          }
+        }
+      } catch (_) {}
     } catch (err: any) {
       Logger.warn(`[AccountManager] markAsRead warning for ${chatId}:`, err?.message || err)
     }
@@ -5184,14 +5202,65 @@ export class AccountManager {
 
     client.onRawUpdate.add((update: any) => {
       try {
-        if (update._ === 'updateReadHistoryInbox' || update._ === 'updateReadChannelInbox') {
-          const peerId = update.peer?.userId?.toString() || update.peer?.chatId?.toString() || (update.channelId ? `-${update.channelId}` : '')
-          this.onEventCallback?.('telegram:read-history', {
-            accountId,
-            chatId: peerId,
-            maxId: update.maxId,
-            stillUnreadCount: update.stillUnreadCount,
-          })
+        if (
+          update._ === 'updateReadHistoryInbox' ||
+          update._ === 'updateReadChannelInbox' ||
+          update._ === 'updateDialogUnreadMark'
+        ) {
+          let peerId = ''
+          const peer = update.peer?.peer || update.peer
+          if (peer) {
+            if (peer.userId) {
+              peerId = peer.userId.toString()
+            } else if (peer.chatId) {
+              peerId = `-${peer.chatId}`
+            } else if (peer.channelId) {
+              const chStr = peer.channelId.toString()
+              peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+            }
+          } else if (update.channelId) {
+            const chStr = update.channelId.toString()
+            peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+          }
+
+          if (peerId) {
+            const stillUnreadCount =
+              update._ === 'updateDialogUnreadMark'
+                ? (update.unread ? 1 : 0)
+                : update.stillUnreadCount
+
+            this.onEventCallback?.('telegram:read-history', {
+              accountId,
+              chatId: peerId,
+              maxId: update.maxId,
+              stillUnreadCount,
+            })
+
+            // Immediately synchronize local dialogs cache so that next launch/render has correct count
+            try {
+              const cached = this.store.loadDialogsCache(accountId)
+              if (cached && cached.length > 0) {
+                let changed = false
+                const next = cached.map((d) => {
+                  if (d.id === peerId) {
+                    const nextCount = typeof stillUnreadCount === 'number' ? stillUnreadCount : 0
+                    if (d.unreadCount !== nextCount) {
+                      changed = true
+                      return {
+                        ...d,
+                        unreadCount: nextCount,
+                        readInboxMaxId: update.maxId ? Math.max(d.readInboxMaxId || 0, update.maxId) : d.readInboxMaxId,
+                      }
+                    }
+                  }
+                  return d
+                })
+                if (changed) {
+                  this.store.saveDialogsCache(accountId, next)
+                }
+              }
+            } catch (_) {}
+          }
         }
       } catch (_) {}
     })

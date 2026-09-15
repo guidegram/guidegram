@@ -226,7 +226,7 @@ export const App: React.FC = () => {
               id: chatId,
               accountId,
               title: chatInfo?.title || message?.senderName || 'Chat',
-              unreadCount: chatId !== activeChatId ? 1 : 0,
+              unreadCount: chatId !== activeChatId && !message?.isOutgoing ? 1 : 0,
               unreadMentionsCount: 0,
               isMuted: isChatMuted,
               isUser: chatInfo?.isUser ?? true,
@@ -242,11 +242,14 @@ export const App: React.FC = () => {
             }
             updatedList = [newDialog, ...list]
           } else {
+            const shouldIncrement = chatId !== activeChatId && !message?.isOutgoing
             updatedList = list.map((d) =>
               d.id === chatId
                 ? {
                     ...d,
-                    unreadCount: chatId !== activeChatId ? d.unreadCount + 1 : d.unreadCount,
+                    unreadCount: shouldIncrement
+                      ? d.unreadCount + 1
+                      : (chatId === activeChatId ? 0 : d.unreadCount),
                     lastMessageText: msgText || d.lastMessageText,
                     lastMessageDate: msgDate,
                   }
