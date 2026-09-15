@@ -609,6 +609,8 @@ export const App: React.FC = () => {
     if (!activeAccountId) return
     setDialogsByAccount((prev) => {
       const list = prev[activeAccountId] || []
+      const current = list.find((d) => d.id === chatId)
+      if (!current || current.unreadCount === unreadCount) return prev
       return {
         ...prev,
         [activeAccountId]: list.map((d) => (d.id === chatId ? { ...d, unreadCount } : d)),

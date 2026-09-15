@@ -1035,6 +1035,33 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
+    if (holder.info?.isBot) {
+      // Telegram MTProto strictly forbids bots from calling messages.getDialogs (RPC 400 BOT_METHOD_INVALID).
+      // Synthesize dialog list for bots from known local audit records & conversation store.
+      const audit = this.store.loadAccountAudit(accountId)
+      const dialogs: DialogItem[] = []
+      const chatIds = Object.keys(audit || {})
+      for (const chatId of chatIds) {
+        const chatMsgs = audit[chatId] || {}
+        const msgIds = Object.keys(chatMsgs).map(Number).sort((a, b) => b - a)
+        const lastMsg = msgIds.length > 0 ? chatMsgs[msgIds[0]] : undefined
+        dialogs.push({
+          id: chatId,
+          accountId,
+          title: lastMsg?.senderName || `Chat ${chatId}`,
+          unreadCount: 0,
+          lastMessageText: lastMsg?.text || (lastMsg?.mediaType ? `[${lastMsg.mediaType}]` : ''),
+          lastMessageDate: lastMsg?.date || 0,
+          isUser: !chatId.startsWith('-'),
+          isGroup: chatId.startsWith('-') && !chatId.startsWith('-100'),
+          isChannel: chatId.startsWith('-100'),
+          isBot: false,
+          isPinned: false,
+        })
+      }
+      return dialogs.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+    }
+
     try {
       const dialogs: DialogItem[] = []
       const seenIds = new Set<string>()
@@ -1717,8 +1744,8 @@ export class AccountManager {
         })
       }
 
-      for (const item of items) {
-        this.store.recordMessage(accountId, chatId, item)
+      if (items.length > 0) {
+        this.store.recordMessages(accountId, chatId, items)
       }
       const keepDeleted = this.store.getConfig().keepDeletedMessagesLocally !== false
       return this.store.mergeAuditLogIntoMessages(accountId, chatId, items, keepDeleted)
@@ -3916,7 +3943,17 @@ export class AccountManager {
       await holder.client.call(callParams)
       return true
     } catch (err: any) {
-      Logger.error(`[AccountManager] saveDraft error:`, err)
+      const msg = String(err?.message || '')
+      if (
+        msg.includes('CHAT_ADMIN_REQUIRED') ||
+        msg.includes('CHANNEL_INVALID') ||
+        msg.includes('CHANNEL_PRIVATE') ||
+        msg.includes('USER_BANNED_IN_CHANNEL')
+      ) {
+        Logger.debug(`[AccountManager] saveDraft skipped for read-only peer ${chatId}: ${msg}`)
+      } else {
+        Logger.warn(`[AccountManager] saveDraft warning:`, err)
+      }
       return false
     }
   }

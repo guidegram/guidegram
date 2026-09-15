@@ -13,6 +13,9 @@ export class SessionStore {
   private backupSessionsDir: string
   private backupAuditLogsDir: string
   private auditCache: Map<string, Record<string, Record<number, MessageItem>>> = new Map()
+  private saveAuditTimers: Map<string, NodeJS.Timeout> = new Map()
+  private isSavingAudit: Map<string, boolean> = new Map()
+  private pendingSaveAudit: Map<string, boolean> = new Map()
 
   constructor(baseDataDir: string) {
     this.dataDir = baseDataDir
@@ -366,27 +369,155 @@ export class SessionStore {
     return data
   }
 
-  private saveAccountAudit(accountId: string, data: Record<string, Record<number, MessageItem>>): void {
+  private saveAccountAudit(accountId: string, data: Record<string, Record<number, MessageItem>>, immediate: boolean = false): void {
     this.auditCache.set(accountId, data)
-    const payload = JSON.stringify({ chats: data }, null, 2)
+    if (immediate) {
+      this.flushSaveAccountAuditSync(accountId)
+    } else {
+      this.scheduleSaveAccountAudit(accountId)
+    }
+  }
+
+  public scheduleSaveAccountAudit(accountId: string, delayMs: number = 800): void {
+    const existing = this.saveAuditTimers.get(accountId)
+    if (existing) clearTimeout(existing)
+
+    const timer = setTimeout(() => {
+      this.saveAuditTimers.delete(accountId)
+      this.flushSaveAccountAudit(accountId).catch((err) => {
+        console.error(`[SessionStore] Async save audit log error for account ${accountId}:`, err)
+      })
+    }, delayMs)
+    this.saveAuditTimers.set(accountId, timer)
+  }
+
+  public async flushSaveAccountAudit(accountId: string): Promise<void> {
+    const data = this.auditCache.get(accountId)
+    if (!data) return
+
+    if (this.isSavingAudit.get(accountId)) {
+      this.pendingSaveAudit.set(accountId, true)
+      return
+    }
+
+    this.isSavingAudit.set(accountId, true)
     try {
+      // Use compact JSON to avoid 80% CPU serialization overhead on large audit logs
+      const payload = JSON.stringify({ chats: data })
+      const filePath = this.getAuditFilePath(accountId)
+      const backupFilePath = this.getBackupAuditFilePath(accountId)
+
       if (!fs.existsSync(this.auditLogsDir)) {
-        fs.mkdirSync(this.auditLogsDir, { recursive: true })
+        await fs.promises.mkdir(this.auditLogsDir, { recursive: true })
       }
-      fs.writeFileSync(this.getAuditFilePath(accountId), payload, 'utf-8')
+      await fs.promises.writeFile(filePath, payload, 'utf-8')
 
       // Dual-layer safe backup mirroring (Guidegram Data Shield)
       try {
         if (!fs.existsSync(this.backupAuditLogsDir)) {
-          fs.mkdirSync(this.backupAuditLogsDir, { recursive: true })
+          await fs.promises.mkdir(this.backupAuditLogsDir, { recursive: true })
         }
-        fs.writeFileSync(this.getBackupAuditFilePath(accountId), payload, 'utf-8')
+        await fs.promises.writeFile(backupFilePath, payload, 'utf-8')
       } catch (backupErr) {
         console.error(`[SessionStore] Failed to mirror audit log to safe backup:`, backupErr)
       }
     } catch (err) {
       console.error(`[SessionStore] Failed to save audit log for account ${accountId}:`, err)
+    } finally {
+      this.isSavingAudit.set(accountId, false)
+      if (this.pendingSaveAudit.get(accountId)) {
+        this.pendingSaveAudit.delete(accountId)
+        this.flushSaveAccountAudit(accountId).catch(() => {})
+      }
     }
+  }
+
+  public flushSaveAccountAuditSync(accountId: string): void {
+    const timer = this.saveAuditTimers.get(accountId)
+    if (timer) {
+      clearTimeout(timer)
+      this.saveAuditTimers.delete(accountId)
+    }
+    const data = this.auditCache.get(accountId)
+    if (!data) return
+
+    try {
+      const payload = JSON.stringify({ chats: data })
+      const filePath = this.getAuditFilePath(accountId)
+      const backupFilePath = this.getBackupAuditFilePath(accountId)
+
+      if (!fs.existsSync(this.auditLogsDir)) {
+        fs.mkdirSync(this.auditLogsDir, { recursive: true })
+      }
+      fs.writeFileSync(filePath, payload, 'utf-8')
+
+      try {
+        if (!fs.existsSync(this.backupAuditLogsDir)) {
+          fs.mkdirSync(this.backupAuditLogsDir, { recursive: true })
+        }
+        fs.writeFileSync(backupFilePath, payload, 'utf-8')
+      } catch (backupErr) {
+        console.error(`[SessionStore] Failed to mirror audit log to safe backup:`, backupErr)
+      }
+    } catch (err) {
+      console.error(`[SessionStore] Failed to sync save audit log for account ${accountId}:`, err)
+    }
+  }
+
+  public flushAllAuditsSync(): void {
+    for (const [accountId, timer] of this.saveAuditTimers.entries()) {
+      clearTimeout(timer)
+      this.flushSaveAccountAuditSync(accountId)
+    }
+    this.saveAuditTimers.clear()
+  }
+
+  public recordMessages(accountId: string, chatId: string, msgs: MessageItem[]): void {
+    if (!accountId || !chatId || !Array.isArray(msgs) || msgs.length === 0) return
+    const audit = this.loadAccountAudit(accountId)
+    if (!audit[chatId]) {
+      audit[chatId] = {}
+    }
+
+    for (const msg of msgs) {
+      if (!msg?.id) continue
+      const existing = audit[chatId][msg.id]
+      if (existing) {
+        audit[chatId][msg.id] = {
+          ...existing,
+          ...msg,
+          isDeletedLocally: existing.isDeletedLocally || msg.isDeletedLocally,
+          deletedAt: existing.deletedAt || msg.deletedAt,
+          editDate: msg.editDate || existing.editDate,
+          editHistory:
+            existing.editHistory && existing.editHistory.length > 0
+              ? existing.editHistory
+              : msg.editHistory,
+        }
+      } else {
+        audit[chatId][msg.id] = { ...msg }
+      }
+    }
+
+    // Prune unedited/non-deleted messages when chat exceeds 500 records
+    const messageKeys = Object.keys(audit[chatId])
+    if (messageKeys.length > 500) {
+      const normalIds = messageKeys
+        .map(Number)
+        .filter((id) => {
+          const item = audit[chatId][id]
+          return !item.isDeletedLocally && (!item.editHistory || item.editHistory.length === 0)
+        })
+        .sort((a, b) => a - b)
+
+      const excessCount = messageKeys.length - 500
+      const toPrune = normalIds.slice(0, excessCount)
+      for (const pruneId of toPrune) {
+        delete audit[chatId][pruneId]
+      }
+    }
+
+    this.saveAccountAudit(accountId, audit)
   }
 
   public recordMessage(accountId: string, chatId: string, msg: MessageItem): void {

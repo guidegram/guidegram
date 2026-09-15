@@ -607,6 +607,11 @@ app.on('window-all-closed', () => {
   }
 })
 
+app.on('before-quit', () => {
+  Logger.info('[App] Application quitting. Flushing pending audit logs...')
+  sessionStore?.flushAllAuditsSync()
+})
+
 // =========================================================================
 // Feature 22: Rich Web Link Preview Engine (Zero Extra Dependencies)
 // =========================================================================

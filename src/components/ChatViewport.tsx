@@ -756,6 +756,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const draftDebounceRef = useRef<NodeJS.Timeout | null>(null)
   useEffect(() => {
     if (!chat) return
+    // Skip saving cloud drafts in broadcast channels or read-only chats where posting is forbidden
+    if (chat.isChannel && chatDetails?.canSendMessages === false) return
     if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
 
     draftDebounceRef.current = setTimeout(() => {
@@ -767,12 +769,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           replyMessage?.id
         ).catch(() => {})
       }
-    }, 800)
+    }, 1000)
 
     return () => {
       if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
     }
-  }, [inputText, chat?.id, chat?.accountId, replyMessage?.id])
+  }, [inputText, chat?.id, chat?.accountId, chat?.isChannel, chatDetails?.canSendMessages, replyMessage?.id])
 
   // Attachment popover menu & staging state
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
@@ -1123,33 +1125,53 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           setUnreadScrollCount(0)
         }
 
-        // Dynamic Read Tracking: As user scrolls, detect the highest visible message and mark read progressively
-        const containerBottom = el.scrollTop + el.clientHeight
-        const msgNodes = el.querySelectorAll('[id^="msg-"]')
-        let maxVisibleId = 0
-        msgNodes.forEach((node) => {
-          const htmlEl = node as HTMLElement
-          if (htmlEl.offsetTop + htmlEl.offsetHeight <= containerBottom + 60) {
-            const rawId = parseInt(htmlEl.id.replace('msg-', ''), 10)
-            if (!isNaN(rawId) && rawId > maxVisibleId) {
-              maxVisibleId = rawId
+        // Lightweight & Non-blocking Read Tracking: avoid querying full DOM on every scroll tick
+        if (distanceFromBottom <= 50 && messages.length > 0) {
+          const lastMsg = messages[messages.length - 1]
+          if (lastMsg && lastMsg.id > lastMarkedReadIdRef.current) {
+            lastMarkedReadIdRef.current = lastMsg.id
+            if (!ghostMode && chat && window.guidegram?.markAsRead) {
+              if (markAsReadTimerRef.current) clearTimeout(markAsReadTimerRef.current)
+              markAsReadTimerRef.current = setTimeout(() => {
+                window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
+                onUpdateUnreadCount?.(chat.id, 0)
+              }, 350)
             }
           }
-        })
+        } else if (unreadScrollCount > 0 || (chat?.unreadCount && chat.unreadCount > 0)) {
+          // Debounced check for visible messages while scrolled up without DOM layout thrashing
+          if (markAsReadTimerRef.current) clearTimeout(markAsReadTimerRef.current)
+          markAsReadTimerRef.current = setTimeout(() => {
+            if (!messagesContainerRef.current) return
+            const container = messagesContainerRef.current
+            const containerBottom = container.scrollTop + container.clientHeight
+            // Check elements from bottom upwards to find max visible message without iterating all nodes
+            const children = container.children
+            let maxVisibleId = 0
+            for (let i = children.length - 1; i >= 0; i--) {
+              const child = children[i] as HTMLElement
+              if (child.id && child.id.startsWith('msg-')) {
+                if (child.offsetTop <= containerBottom + 40) {
+                  const rawId = parseInt(child.id.replace('msg-', ''), 10)
+                  if (!isNaN(rawId)) {
+                    maxVisibleId = rawId
+                    break // Found the bottom-most visible message!
+                  }
+                }
+              }
+            }
 
-        if (maxVisibleId > lastMarkedReadIdRef.current) {
-          lastMarkedReadIdRef.current = maxVisibleId
-          if (!ghostMode && chat && window.guidegram?.markAsRead) {
-            if (markAsReadTimerRef.current) clearTimeout(markAsReadTimerRef.current)
-            markAsReadTimerRef.current = setTimeout(() => {
-              window.guidegram.markAsRead(chat.accountId, chat.id, maxVisibleId)
-            }, 300)
-          }
-
-          const remainingUnread = messages.filter((m) => !m.isOutgoing && m.id > maxVisibleId).length
-          if (chat && onUpdateUnreadCount) {
-            onUpdateUnreadCount(chat.id, remainingUnread)
-          }
+            if (maxVisibleId > lastMarkedReadIdRef.current) {
+              lastMarkedReadIdRef.current = maxVisibleId
+              if (!ghostMode && chat && window.guidegram?.markAsRead) {
+                window.guidegram.markAsRead(chat.accountId, chat.id, maxVisibleId)
+              }
+              const remainingUnread = messages.filter((m) => !m.isOutgoing && m.id > maxVisibleId).length
+              if (chat && onUpdateUnreadCount) {
+                onUpdateUnreadCount(chat.id, remainingUnread)
+              }
+            }
+          }, 350)
         }
 
         // Infinite Scroll: Fetch older messages when near top (< 120px)
@@ -1198,7 +1220,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       }
       isScrollingRef.current = false
     })
-  }, [messages, chat, onMergeHistoricalMessages, ghostMode, onUpdateUnreadCount])
+  }, [messages, chat, onMergeHistoricalMessages, ghostMode, onUpdateUnreadCount, unreadScrollCount])
 
   const handleScrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
