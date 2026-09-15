@@ -27,6 +27,10 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 import { I18nProvider } from './i18n'
+import { initFontManager } from './utils/fontManager'
+
+// Initialize offline/cached font manager
+initFontManager().catch((err) => console.warn('[FontManager] init failed:', err))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
