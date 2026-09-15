@@ -1,4 +1,4 @@
-# 🚀 Guidegram v1.11.1 — Bot Message History & Reply Keyboard Rendering
+# 🚀 Guidegram v1.11.2 — Instant Startup Caching, High-Res Avatars & Typography Polish
 
 > **Next-Generation Portable Desktop Telegram Client** with Unlimited Multi-Account, Dedicated Proxies, Advanced Group Analytics, and Multi-Chain Community Support.
 
@@ -6,42 +6,41 @@
 
 <div align="center">
   <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
-  <h3>Guidegram v1.11.1</h3>
-  <p><strong>Bot Message History Parity • Reply Keyboards Rendering • Session Hardening</strong></p>
+  <h3>Guidegram v1.11.2</h3>
+  <p><strong>Instant Disk Caching • Crisp High-Res Avatars • Local Typography Assets</strong></p>
 </div>
 
 ---
 
 ## 🌟 Release Highlights
 
-Guidegram v1.11.1 is a targeted stability and feature release optimizing **Telegram Bot Account integration**. This release resolves message history synchronization when operating bot accounts under MTProto restrictions and restores interactive rendering for bot **Reply Keyboards (`replyKeyboardMarkup`)** directly in the chat viewport.
+Guidegram v1.11.2 introduces high-performance **instant startup caching** for all dialog lists, eliminates low-resolution profile photo blur with an automated **HD avatar downloader**, bundles **local Persian font assets** with resilient fallback, and optimizes **message list scroll performance**.
 
 ---
 
 ## 📦 What's New & Enhancements
 
-### 1. 🤖 Bot Message History Synchronization
-- **MTProto Bot History Fallback**: Bypasses Telegram MTProto limitations on `messages.getHistory` for bot accounts by employing direct `messages.getMessages` retrieval coupled with live update tracking.
-- **Continuous Message Flow**: Ensures past messages and incoming dialogues load reliably when managing or conversing as a bot account.
+### 1. ⚡ Instant Disk Dialog Caching
+- **Sub-10ms App Startup**: Cached dialog items are read directly from persistent disk storage (`data/cache/dialogs_${accountId}.json`) during initial launch, displaying conversations immediately without waiting for MTProto network round-trips.
+- **Background Synchronization**: Live messages, drafts, and incoming updates sync seamlessly in the background without freezing or blocking the user interface.
 
-### 2. ⌨️ Interactive Bot Reply Keyboards (`replyKeyboardMarkup`)
-- **Native Custom Keyboard Layouts**: Restored full UI rendering for custom persistent reply menus sent by bots.
-- **One-Click Dispatch**: Clicking reply keyboard options immediately transmits the response to the bot without requiring manual text entry.
+### 2. 🖼️ Crisp High-Resolution Profile Photos
+- **Cache Poisoning Resolution**: Fixed an issue where tiny 20x20 blurred preview thumbnails (`strippedThumb`) were treated as cached avatars, preventing full image retrieval.
+- **HD Avatar Downloader**: Downloads crisp 160x160 profile photos (`peer.photo.small`) directly via Telegram MTProto and caches them to disk (`data/avatars/`).
+- **Smooth Progressive Transition**: Displays lightweight blurred previews momentarily as placeholders while smoothly swapping in crystal-clear photos once retrieved.
 
-### 3. 🛡️ Session Hardening & Account Stability
-- **Bot Token Persistence**: Maintained bot token integrity and connection states across restarts.
-- **Dialog Cache Reliability**: Preserved dialog list references and last message previews for active bot sessions.
+### 3. 🔤 Local Persian Typography & BiDi Fallback
+- **Bundled Vazirmatn Fonts**: Integrated local Vazirmatn font assets with automatic CDN caching fallback.
+- **Bilingual Typographic Harmony**: Preserves accurate LTR numbers and English segments within Persian conversations.
 
----
-
-## 🐛 Bug Fixes & Stability Improvements
-- **Message List Hydration**: Fixed missing dialog message bubbles when logging in via Bot Token.
-- **Chat Viewport**: Enhanced keyboard event dispatching and visual state coordination.
+### 4. 🚀 Scroll & Layout Performance
+- **Zero Layout Thrashing**: Streamlined virtualized message viewport measurements for buttery 60fps scrolling.
+- **Debounced Audit Persistence**: Minimized disk I/O during heavy message streams.
 
 ---
 
 ## 📝 Full Changelog
-https://github.com/guidegram/guidegram/compare/v1.11.0...v1.11.1
+https://github.com/guidegram/guidegram/compare/v1.11.1...v1.11.2
 
 ---
 

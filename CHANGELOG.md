@@ -4,6 +4,16 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.11.2] — Instant Startup Caching, High-Res Avatars & Typography Polish (2026-09-15)
+
+### 🌟 What's New & Enhancements
+- **⚡ Instant Disk Dialog Caching**: Enabled persistent local disk caching for all dialog lists, achieving sub-10ms initial startup rendering before performing non-blocking background network synchronization.
+- **🖼️ Crisp High-Resolution Profile Photos**: Fixed avatar cache poisoning caused by 20x20 preview thumbnails. Implemented automated MTProto HD avatar downloader for users, channels, and supergroups with progressive visual loading.
+- **🔤 Local Persian Font Bundling**: Packaged local Vazirmatn fonts with automatic CDN fallback and directional bidirectional balancing.
+- **🚀 Scroll & Viewport Optimization**: Eliminated layout thrashing and debounced audit persistence for smooth 60fps message scrolling.
+
+---
+
 ## [v1.11.1] — Bot Message History & Reply Keyboard Rendering (2026-09-15)
 
 ### 🌟 What's New & Enhancements
