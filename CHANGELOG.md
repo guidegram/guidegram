@@ -4,6 +4,17 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.11.3] — Unread Count Parity & Read History Synchronization (2026-09-15)
+
+### 🌟 What's New & Enhancements
+- **📬 Outgoing Message Filtering in Real-Time Feed**: Guaranteed that outgoing messages sent from other Telegram clients do not increment unread counters for active or background chats in Guidegram.
+- **🔄 MTProto Read History & Channel Normalization**: Corrected channel identifier formatting (`-100` prefix) in raw `updateReadChannelInbox` handlers, ensuring multi-client read actions sync flawlessly.
+- **🏷️ Dialog Unread Mark Support**: Added full support for MTProto `updateDialogUnreadMark` events, mirroring manual mark-as-read/unread operations across devices.
+- **💾 Disk Cache Synchronization on Read**: Local dialog caches are immediately updated upon reading messages or receiving read-history updates, eliminating stale unread badges across app restarts.
+- **⚡ Responsive Initial Chat View Read Sync**: Immediately syncs read status when opening a chat at bottom without requiring manual scroll gestures.
+
+---
+
 ## [v1.11.2] — Instant Startup Caching, High-Res Avatars & Typography Polish (2026-09-15)
 
 ### 🌟 What's New & Enhancements
