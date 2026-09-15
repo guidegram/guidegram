@@ -1016,6 +1016,15 @@ function setupIpcHandlers() {
     return accountManager.logoutAccount(accountId)
   })
 
+  ipcMain.handle('telegram:get-cached-dialogs', async (_event, { accountId }) => {
+    try {
+      return accountManager.getCachedDialogs(accountId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getCachedDialogs failed for ${accountId}:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle(
     'telegram:get-dialogs',
     async (_event, { accountId, limit, offsetDate, offsetId }) => {

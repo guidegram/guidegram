@@ -547,6 +547,23 @@ export const App: React.FC = () => {
     try {
       hasMoreDialogsRef.current = true
       loadCloudFoldersForAccount(accountId)
+
+      // Instant cache load (<10ms) from local disk
+      if (window.guidegram.getCachedDialogs) {
+        try {
+          const cached = await window.guidegram.getCachedDialogs(accountId)
+          if (cached && cached.length > 0) {
+            setDialogsByAccount((prev) => ({ ...prev, [accountId]: cached }))
+            if (!activeChatId) {
+              setActiveChatId(cached[0].id)
+              loadMessages(accountId, cached[0].id)
+            }
+          }
+        } catch (cacheErr) {
+          console.warn('Failed to read cached dialogs:', cacheErr)
+        }
+      }
+
       const dialogs = await window.guidegram.getDialogs(accountId, 350)
       const uniqueMap = new Map<string, DialogItem>()
       for (const d of dialogs) {

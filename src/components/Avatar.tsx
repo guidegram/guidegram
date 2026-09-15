@@ -40,7 +40,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     // 1. If we already have the full avatar in memory cache, use it immediately
     if (cacheKey && avatarMemoryCache.has(cacheKey)) {
       const cached = avatarMemoryCache.get(cacheKey)!
-      if (cached !== currentUrl && cached.length > 30 && !cached.endsWith('base64,')) {
+      if (cached !== currentUrl && cached.length > 2000 && !cached.endsWith('base64,')) {
         setCurrentUrl(cached)
         setHasError(false)
         return
@@ -76,7 +76,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         if (
           photoDataUrl &&
           typeof photoDataUrl === 'string' &&
-          photoDataUrl.length > 50 &&
+          photoDataUrl.length > 2000 &&
           !photoDataUrl.endsWith('base64,')
         ) {
           if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)

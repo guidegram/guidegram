@@ -1088,19 +1088,19 @@ export class AccountManager {
 
         let avatarUrl: string | undefined = undefined
         const avatarCacheKey = `${accountId}_${peerId}`
+        // Prioritize full high-res avatar from cache if already downloaded
         if (this.avatarCache.has(avatarCacheKey)) {
           avatarUrl = this.avatarCache.get(avatarCacheKey)
         } else if (peer.photo?.thumb) {
           try {
-            const dataUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
-            avatarUrl = dataUrl
-            this.avatarCache.set(avatarCacheKey, dataUrl)
+            avatarUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
+            // Note: DO NOT set into this.avatarCache so getProfilePhoto can fetch the crystal-clear 160x160 photo
           } catch (_) {}
         } else if (peer.photo?.raw?.strippedThumb) {
           const thumb = strippedThumbToDataUrl(peer.photo.raw.strippedThumb)
           if (thumb) {
             avatarUrl = thumb
-            this.avatarCache.set(avatarCacheKey, thumb)
+            // Note: DO NOT set into this.avatarCache so getProfilePhoto can fetch the crystal-clear 160x160 photo
           }
         }
 
@@ -1245,11 +1245,42 @@ export class AccountManager {
         Logger.warn('[AccountManager] Failed to merge audit dialogs:', auditDialogErr)
       }
 
+      // Persist dialogs to disk cache for instant zero-latency startup on next app launch!
+      if (!offsetDate || offsetDate === 0) {
+        this.store.saveDialogsCache(accountId, dialogs)
+        // Background prefetch crystal-clear high-res avatars for top visible dialogs
+        this.prefetchAvatars(accountId, dialogs.slice(0, 40))
+      }
+
       return dialogs
     } catch (err: any) {
       Logger.error(`[AccountManager] getDialogs error for ${accountId}:`, err)
       return []
     }
+  }
+
+  /**
+   * Get cached dialogs from disk (< 10ms read)
+   */
+  public getCachedDialogs(accountId: string): DialogItem[] {
+    return this.store.loadDialogsCache(accountId)
+  }
+
+  /**
+   * Background prefetch high-resolution avatars for visible chats so they are crystal clear
+   */
+  private prefetchAvatars(accountId: string, dialogs: DialogItem[]): void {
+    setTimeout(async () => {
+      for (const d of dialogs) {
+        try {
+          const baseName = `${accountId}_${d.id}.jpg`
+          const avatarFile = path.join(this.avatarsDir, `avatar_${baseName}`)
+          if (!fs.existsSync(avatarFile)) {
+            await this.getProfilePhoto(accountId, d.id, false).catch(() => {})
+          }
+        } catch (_) {}
+      }
+    }, 150)
   }
 
   public async getContacts(accountId: string): Promise<ContactItem[]> {
@@ -1767,7 +1798,9 @@ export class AccountManager {
     const cacheKey = `${accountId}_${peerId}${isBig ? '_big' : ''}`
     if (this.avatarCache.has(cacheKey)) {
       const cached = this.avatarCache.get(cacheKey)!
-      if (cached && cached !== 'data:image/jpeg;base64,' && cached.length > 30) {
+      // Real downloaded profile photos are full JPEGs (length > 2000 chars base64)
+      // Stripped thumbnails are tiny (< 1500 chars). NEVER treat a low-res thumbnail as a finished profile photo!
+      if (cached && (!cached.startsWith('data:image/jpeg;base64,') || cached.length > 2000)) {
         return cached
       }
     }

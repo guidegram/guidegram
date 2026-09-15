@@ -1,11 +1,12 @@
 import fs from 'fs'
 import path from 'path'
-import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision } from './types'
+import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision, DialogItem } from './types'
 
 export class SessionStore {
   private dataDir: string
   private sessionsDir: string
   private auditLogsDir: string
+  private cacheDir: string
   private configFilePath: string
   private config: AppConfig
   private safeBackupDir: string
@@ -21,6 +22,7 @@ export class SessionStore {
     this.dataDir = baseDataDir
     this.sessionsDir = path.join(this.dataDir, 'sessions')
     this.auditLogsDir = path.join(this.dataDir, 'audit_logs')
+    this.cacheDir = path.join(this.dataDir, 'cache')
     this.configFilePath = path.join(this.dataDir, 'config.json')
 
     const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME || '', 'Library/Application Support') : path.join(process.env.HOME || '', '.config'))
@@ -42,6 +44,9 @@ export class SessionStore {
     }
     if (!fs.existsSync(this.auditLogsDir)) {
       fs.mkdirSync(this.auditLogsDir, { recursive: true })
+    }
+    if (!fs.existsSync(this.cacheDir)) {
+      fs.mkdirSync(this.cacheDir, { recursive: true })
     }
     try {
       if (!fs.existsSync(this.safeBackupDir)) {
@@ -720,5 +725,43 @@ export class SessionStore {
     const result = Array.from(map.values())
     result.sort((a, b) => a.date - b.date)
     return result
+  }
+
+  /**
+   * Save dialog list cache to disk for instant zero-latency startup (< 10ms read)
+   */
+  public saveDialogsCache(accountId: string, dialogs: DialogItem[]): void {
+    if (!accountId || !Array.isArray(dialogs) || dialogs.length === 0) return
+    try {
+      if (!fs.existsSync(this.cacheDir)) {
+        fs.mkdirSync(this.cacheDir, { recursive: true })
+      }
+      const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
+      // Save up to 350 most recent dialogs
+      const dataToSave = dialogs.slice(0, 350)
+      fs.writeFileSync(filePath, JSON.stringify(dataToSave), 'utf-8')
+    } catch (err) {
+      console.error(`[SessionStore] Failed to save dialogs cache for ${accountId}:`, err)
+    }
+  }
+
+  /**
+   * Load cached dialogs from disk for instant UI display
+   */
+  public loadDialogsCache(accountId: string): DialogItem[] {
+    if (!accountId) return []
+    try {
+      const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          return parsed
+        }
+      }
+    } catch (err) {
+      console.error(`[SessionStore] Failed to load dialogs cache for ${accountId}:`, err)
+    }
+    return []
   }
 }

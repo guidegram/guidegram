@@ -83,6 +83,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:reconnect-account', { accountId }),
 
   // Dialogs & Messages
+  getCachedDialogs: (accountId: string): Promise<DialogItem[]> =>
+    ipcRenderer.invoke('telegram:get-cached-dialogs', { accountId }),
   getDialogs: (
     accountId: string,
     limit?: number,
