@@ -4,6 +4,21 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.11.5] — Instant Window Restore, Portable Singleton Stabilization & Startup Parity (2026-09-16)
+
+### 🌟 What's New & Enhancements
+- **🪟 Instant Window Foreground Elevation**: Engineered high-priority foreground restoration on second-instance launch (`setAlwaysOnTop` toggle), ensuring that clicking the desktop icon or shortcut immediately surfaces the application window above all active windows on Windows.
+- **📌 Taskbar Minimization Parity**: Adjusted the custom titlebar minimize button (`_`) to preserve the application icon on the Windows Taskbar for one-click access, reserving system tray hiding strictly for close operations.
+- **🖱️ Tray Click & Double-Click Support**: Added dual single-click and double-click handling for the system tray notification icon, reliably focusing and restoring the main window under all desktop states.
+
+### 🐛 Bug Fixes & Stability
+- **🔒 Chromium Portable Singleton Lock Collision**: Configured `userData` path strictly before requesting the Chromium single-instance application lock, eliminating Windows sharing violation `ERROR_SHARING_VIOLATION (error 32)` across portable sessions.
+- **⚡ IPC Channel Registration Collision**: Resolved duplicate `'telegram:send-bot-callback'` handler registration in the Electron main process, eliminating unhandled startup rejections and headless process stalls.
+- **🛡️ Defensive IPC & Window Startup Guard**: Wrapped IPC handler initialization in defensive error boundaries, guaranteeing that window and system tray creation complete reliably regardless of individual handler initialization state.
+- **🧪 IPC Uniqueness Automated Test**: Integrated continuous verification suite (`tests/ipc_handlers_verification.mjs`) to audit all IPC channels and prevent duplicate channel regressions.
+
+---
+
 ## [v1.11.4] — Mobile 2FA Resilience, Smart System Tray & Dynamic What's New (2026-09-16)
 
 ### 🌟 What's New & Enhancements

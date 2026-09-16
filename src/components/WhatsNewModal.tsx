@@ -22,8 +22,32 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
-    // v1.11.4+: Mobile 2FA resilience, smart tray close intercept & unread sync
-    if (cleanVer.startsWith('1.11.4') || cleanVer >= '1.11.4') {
+    // v1.11.5+: Instant Window Restore, Taskbar Parity & Singleton Lock Stabilization
+    if (cleanVer.startsWith('1.11.5') || cleanVer >= '1.11.5') {
+      return [
+        {
+          icon: Minimize2,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: t('whatsnew.feat_window_restore_title'),
+          desc: t('whatsnew.feat_window_restore_desc'),
+        },
+        {
+          icon: Shield,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: t('whatsnew.feat_singleton_ipc_title'),
+          desc: t('whatsnew.feat_singleton_ipc_desc'),
+        },
+        {
+          icon: Smartphone,
+          bgColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+          title: t('whatsnew.feat_phone_2fa_title'),
+          desc: t('whatsnew.feat_phone_2fa_desc'),
+        },
+      ]
+    }
+
+    // v1.11.4: Mobile 2FA resilience, smart tray close intercept & unread sync
+    if (cleanVer.startsWith('1.11.4')) {
       return [
         {
           icon: Smartphone,
