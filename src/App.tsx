@@ -45,6 +45,7 @@ export const App: React.FC = () => {
     dialogsByAccountRef.current = dialogsByAccount
   }, [dialogsByAccount])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const [initialScrollMsgId, setInitialScrollMsgId] = useState<number | null>(null)
   const [messagesByChat, setMessagesByChat] = useState<Record<string, MessageItem[]>>({})
 
   const [activeTab, setActiveTab] = useState<TabCategory>('all')
@@ -718,8 +719,9 @@ export const App: React.FC = () => {
     loadDialogsForAccount(accountId)
   }
 
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = (chatId: string, targetMsgId?: number) => {
     setActiveChatId(chatId)
+    setInitialScrollMsgId(targetMsgId ?? null)
     if (activeAccountId) {
       loadMessages(activeAccountId, chatId)
     }
@@ -968,7 +970,7 @@ export const App: React.FC = () => {
     }
   }
 
-  const handleSelectUserOrChat = async (target: string) => {
+  const handleSelectUserOrChat = async (target: string, targetMsgId?: number) => {
     if (!activeAccountId) return
     const dialogs = dialogsByAccount[activeAccountId] || []
     const cleanTarget = target.replace(/^@/, '').trim()
@@ -978,12 +980,13 @@ export const App: React.FC = () => {
       (d) =>
         d.id === cleanTarget ||
         d.id === target ||
+        (d.username && d.username.toLowerCase() === cleanTarget.toLowerCase()) ||
         (isTargetNumeric && d.id.replace(/^-100/, '').replace(/^-/, '') === targetDigits) ||
         d.title.toLowerCase() === cleanTarget.toLowerCase() ||
         d.title.toLowerCase() === target.toLowerCase()
     )
     if (found) {
-      handleSelectChat(found.id)
+      handleSelectChat(found.id, targetMsgId)
       return
     }
 
@@ -997,7 +1000,7 @@ export const App: React.FC = () => {
             const exists = list.some((d) => d.id === resolved.id)
             return exists ? prev : { ...prev, [activeAccountId]: [resolved, ...list] }
           })
-          handleSelectChat(resolved.id)
+          handleSelectChat(resolved.id, targetMsgId)
           return
         }
       } catch (err) {
@@ -1366,6 +1369,8 @@ export const App: React.FC = () => {
             onDeleteMessage={handleDeleteMessage}
             onToggleGhostMode={handleToggleGhostMode}
             onSelectUserOrChat={handleSelectUserOrChat}
+            initialScrollMsgId={initialScrollMsgId}
+            onClearInitialScroll={() => setInitialScrollMsgId(null)}
             onMergeHistoricalMessages={handleMergeHistoricalMessages}
             onUpdateUnreadCount={handleUpdateUnreadCount}
           />

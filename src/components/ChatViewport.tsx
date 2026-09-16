@@ -95,6 +95,7 @@ import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeybo
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
+import { parseTelegramUrl } from '../utils/telegramLink'
 
 interface ChatViewportProps {
   chat: DialogItem | null
@@ -134,7 +135,9 @@ interface ChatViewportProps {
   onQuickForwardToSaved?: (message: MessageItem) => Promise<boolean> | void
   onDeleteMessage?: (message: MessageItem) => Promise<boolean> | void
   onToggleGhostMode: () => void
-  onSelectUserOrChat?: (target: string) => void
+  onSelectUserOrChat?: (target: string, targetMsgId?: number) => void
+  initialScrollMsgId?: number | null
+  onClearInitialScroll?: () => void
   onMergeHistoricalMessages?: (newMessages: MessageItem[]) => void
   onUpdateUnreadCount?: (chatId: string, unreadCount: number) => void
 }
@@ -236,6 +239,7 @@ const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview,
 
   return (
     <div
+      data-url={preview.url || url}
       onClick={(e) => {
         e.stopPropagation()
         onSafeOpen(preview.url || url)
@@ -599,6 +603,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onDeleteMessage,
   onToggleGhostMode,
   onSelectUserOrChat,
+  initialScrollMsgId,
+  onClearInitialScroll,
   onMergeHistoricalMessages,
   onUpdateUnreadCount,
 }) => {
@@ -1374,6 +1380,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     y: number
     message: MessageItem
     selectedText?: string
+    linkUrl?: string
   } | null>(null)
 
   // Close context menu & send menu on global click or Escape
@@ -1655,21 +1662,94 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     return p?.role
   }
 
-  // Safe external link opener respecting suppressLinkWarning (64Gram)
-  const handleSafeOpenUrl = (url: string) => {
-    if (suppressLinkWarning || url.startsWith('tg://') || url.includes('t.me/')) {
-      window.guidegram?.openExternal?.(url)
-    } else {
-      setPendingExternalUrl(url)
-    }
-  }
-
   const showToast = (msg: string) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
     setToast(msg)
     toastTimeoutRef.current = setTimeout(() => {
       setToast(null)
     }, 2200)
+  }
+
+  // Scroll to replied message and highlight it, fetching historical context if not loaded
+  const handleScrollToReply = async (replyId: number) => {
+    const el = document.getElementById(`msg-${replyId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('reply-highlight')
+      setTimeout(() => el.classList.remove('reply-highlight'), 1800)
+      return
+    }
+
+    if (chat && window.guidegram?.getMessages) {
+      showToast(`Loading original message #${replyId}...`)
+      try {
+        const chunk = await window.guidegram.getMessages(chat.accountId, chat.id, 50, replyId, -25)
+        if (chunk && chunk.length > 0) {
+          if (onMergeHistoricalMessages) {
+            onMergeHistoricalMessages(chunk)
+          }
+          setTimeout(() => {
+            const targetEl = document.getElementById(`msg-${replyId}`)
+            if (targetEl) {
+              targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              targetEl.classList.add('reply-highlight')
+              setTimeout(() => targetEl.classList.remove('reply-highlight'), 1800)
+            } else {
+              showToast(`Original message #${replyId} not in loaded history`)
+            }
+          }, 250)
+          return
+        }
+      } catch (err) {
+        console.warn('Failed to load message context:', err)
+      }
+    }
+
+    showToast(`Original message #${replyId} not in loaded history`)
+  }
+
+  // Auto-scroll to targeted message if requested via external link or selection
+  useEffect(() => {
+    if (initialScrollMsgId && messages.length > 0) {
+      const timer = setTimeout(() => {
+        handleScrollToReply(initialScrollMsgId)
+        onClearInitialScroll?.()
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [initialScrollMsgId, messages.length])
+
+  // Safe link opener respecting internal Telegram routing & suppressLinkWarning (64Gram)
+  const handleSafeOpenUrl = (url: string) => {
+    if (!url) return
+    const parsed = parseTelegramUrl(url)
+    if (parsed.isTelegram && (parsed.type === 'peer' || parsed.type === 'private_channel') && parsed.target) {
+      const isCurrentChat =
+        Boolean(chat) &&
+        (chat?.id === parsed.target ||
+         chat?.id.replace(/^-100/, '') === parsed.target.replace(/^-100/, '') ||
+         (chat?.username && chat.username.toLowerCase() === parsed.target.toLowerCase()))
+
+      if (isCurrentChat) {
+        if (parsed.messageId) {
+          handleScrollToReply(parsed.messageId)
+        } else {
+          showToast(`Already viewing ${chat?.username ? `@${chat.username}` : chat?.title || parsed.target}`)
+        }
+        return
+      }
+
+      if (onSelectUserOrChat) {
+        onSelectUserOrChat(parsed.target, parsed.messageId)
+        return
+      }
+    }
+
+    if (suppressLinkWarning || url.startsWith('tg://') || url.includes('t.me/')) {
+      window.guidegram?.openExternal?.(url)
+    } else {
+      setPendingExternalUrl(url)
+    }
   }
 
   // Load chat details when drawer opens
@@ -2498,44 +2578,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     })
   }
 
-  // Scroll to replied message and highlight it, fetching historical context if not loaded
-  const handleScrollToReply = async (replyId: number) => {
-    const el = document.getElementById(`msg-${replyId}`)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      el.classList.add('reply-highlight')
-      setTimeout(() => el.classList.remove('reply-highlight'), 1800)
-      return
-    }
-
-    if (chat && window.guidegram?.getMessages) {
-      showToast(`Loading original message #${replyId}...`)
-      try {
-        const chunk = await window.guidegram.getMessages(chat.accountId, chat.id, 50, replyId, -25)
-        if (chunk && chunk.length > 0) {
-          if (onMergeHistoricalMessages) {
-            onMergeHistoricalMessages(chunk)
-          }
-          setTimeout(() => {
-            const targetEl = document.getElementById(`msg-${replyId}`)
-            if (targetEl) {
-              targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              targetEl.classList.add('reply-highlight')
-              setTimeout(() => targetEl.classList.remove('reply-highlight'), 1800)
-            } else {
-              showToast(`Original message #${replyId} not in loaded history`)
-            }
-          }, 250)
-          return
-        }
-      } catch (err) {
-        console.warn('Failed to load message context:', err)
-      }
-    }
-
-    showToast(`Original message #${replyId} not in loaded history`)
-  }
-
   /**
    * Rich text renderer supporting:
    * 1. Telegram DC Entities (bold, italic, code, pre, text_url, etc.)
@@ -2652,6 +2694,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 <a
                   key={key}
                   href={url}
+                  data-url={url}
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -2679,14 +2722,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               )
             } else if (ent.type === 'mention') {
               const username = subText.replace(/^@/, '')
+              const tMeUrl = `https://t.me/${username}`
               node = (
                 <button
                   key={key}
                   type="button"
+                  data-url={tMeUrl}
                   onClick={(e) => {
                     e.stopPropagation()
                     if (onSelectUserOrChat) onSelectUserOrChat(username)
-                    else window.guidegram?.openExternal?.(`https://t.me/${username}`)
+                    else handleSafeOpenUrl(tMeUrl)
                   }}
                   className="text-accent-cyan font-semibold hover:underline inline cursor-pointer"
                   title={`Open @${username}`}
@@ -2871,6 +2916,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <a
               key={partKey}
               href={url}
+              data-url={url}
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
@@ -2919,9 +2965,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <React.Fragment key={partKey}>
               <button
                 type="button"
+                data-url={cleanPart}
                 onClick={(e) => {
                   e.stopPropagation()
-                  window.guidegram?.openExternal?.(cleanPart)
+                  handleSafeOpenUrl(cleanPart)
                 }}
                 className="text-primary-300 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer bg-white/5 px-1 rounded"
                 title={`Telegram Deep Link: ${cleanPart}`}
@@ -2938,18 +2985,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         if (tMePrivateMatch) {
           const channelBareId = tMePrivateMatch[1]
           const targetMsgId = tMePrivateMatch[2]
-          const channelPeerId = `-100${channelBareId}`
+          const targetUrl = cleanPart.startsWith('http') ? cleanPart : `https://${cleanPart}`
           return (
             <React.Fragment key={partKey}>
               <button
                 type="button"
+                data-url={targetUrl}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (onSelectUserOrChat) {
-                    onSelectUserOrChat(channelPeerId)
-                  } else {
-                    window.guidegram?.openExternal?.(cleanPart.startsWith('http') ? cleanPart : `https://${cleanPart}`)
-                  }
+                  handleSafeOpenUrl(targetUrl)
                 }}
                 className="text-accent-cyan underline hover:text-cyan-300 transition-colors font-medium inline cursor-pointer"
                 title={`Open Channel ${channelBareId}${targetMsgId ? ` message #${targetMsgId}` : ''}`}
@@ -2965,17 +3009,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         if (tMeMatch) {
           const username = tMeMatch[1]
           const targetMsgId = tMeMatch[2]
+          const targetUrl = cleanPart.startsWith('http') ? cleanPart : `https://${cleanPart}`
           return (
             <React.Fragment key={partKey}>
               <button
                 type="button"
+                data-url={targetUrl}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (onSelectUserOrChat) {
-                    onSelectUserOrChat(username)
-                  } else {
-                    window.guidegram?.openExternal?.(cleanPart.startsWith('http') ? cleanPart : `https://${cleanPart}`)
-                  }
+                  handleSafeOpenUrl(targetUrl)
                 }}
                 className="text-accent-cyan underline hover:text-cyan-300 transition-colors font-medium inline cursor-pointer"
                 title={`Open @${username}${targetMsgId ? ` message #${targetMsgId}` : ''}`}
@@ -2992,6 +3034,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <React.Fragment key={partKey}>
               <a
                 href={cleanPart}
+                data-url={cleanPart}
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -3009,16 +3052,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
         if (cleanPart.startsWith('@')) {
           const username = cleanPart.slice(1)
+          const targetUrl = `https://t.me/${username}`
           return (
             <button
               key={partKey}
               type="button"
+              data-url={targetUrl}
               onClick={(e) => {
                 e.stopPropagation()
                 if (onSelectUserOrChat) {
                   onSelectUserOrChat(username)
                 } else {
-                  window.guidegram?.openExternal?.(`https://t.me/${username}`)
+                  handleSafeOpenUrl(targetUrl)
                 }
               }}
               className="text-accent-cyan font-semibold hover:underline inline cursor-pointer"
@@ -4177,11 +4222,30 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   e.preventDefault()
                   e.stopPropagation()
                   const selection = window.getSelection()?.toString()
+
+                  // Detect clicked link
+                  const targetEl = e.target as HTMLElement | null
+                  const anchor = targetEl?.closest('a')
+                  let clickedLinkUrl: string | undefined =
+                    anchor?.getAttribute('href') || (anchor as any)?.dataset?.url
+
+                  if (!clickedLinkUrl) {
+                    const elWithUrl = targetEl?.closest('[data-url]') as HTMLElement | null
+                    if (elWithUrl?.dataset?.url) {
+                      clickedLinkUrl = elWithUrl.dataset.url
+                    }
+                  }
+
+                  if (!clickedLinkUrl && selection && (selection.trim().startsWith('http://') || selection.trim().startsWith('https://') || selection.trim().startsWith('t.me/'))) {
+                    clickedLinkUrl = selection.trim().startsWith('t.me/') ? `https://${selection.trim()}` : selection.trim()
+                  }
+
                   setContextMenu({
                     x: e.clientX,
                     y: e.clientY,
                     message: msg,
                     selectedText: selection && selection.trim() ? selection.trim() : undefined,
+                    linkUrl: clickedLinkUrl,
                   })
                 }}
                 onClick={async (e) => {
@@ -6846,12 +6910,51 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       {contextMenu && (
         <div
           style={{
-            top: Math.min(contextMenu.y, window.innerHeight - 340),
-            left: Math.min(contextMenu.x, window.innerWidth - 220),
+            top: Math.min(contextMenu.y, window.innerHeight - (contextMenu.linkUrl ? 420 : 340)),
+            left: Math.min(contextMenu.x, window.innerWidth - 240),
           }}
           onClick={(e) => e.stopPropagation()}
-          className="fixed z-50 w-52 bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
+          className="fixed z-50 min-w-[210px] max-w-[280px] bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
         >
+          {/* Specific Link Actions (when right-clicking directly on a link) */}
+          {contextMenu.linkUrl && (
+            <>
+              {/* Open Link */}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = contextMenu.linkUrl!
+                  setContextMenu(null)
+                  handleSafeOpenUrl(url)
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-accent-cyan hover:text-white hover:bg-accent-cyan/20 transition-colors text-left cursor-pointer font-medium"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                <span className="truncate">
+                  {contextMenu.linkUrl.startsWith('https://t.me/') || contextMenu.linkUrl.startsWith('tg://')
+                    ? (t('chat.open_telegram_link') || 'Open in Telegram')
+                    : (t('chat.open_link') || 'Open Link')}
+                </span>
+              </button>
+
+              {/* Copy Link (Copies the URL of this specific link) */}
+              <button
+                type="button"
+                onClick={async () => {
+                  await copyTextToClipboard(contextMenu.linkUrl!)
+                  setContextMenu(null)
+                  showToast(t('chat.link_copied') || 'Link copied to clipboard')
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+              >
+                <Copy className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                <span>{t('chat.copy_link') || 'Copy Link'}</span>
+              </button>
+
+              <div className="h-px bg-white/10 my-1 -mx-1" />
+            </>
+          )}
+
           {/* Reply to message */}
           <button
             type="button"
@@ -6863,7 +6966,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-primary-300 hover:text-white hover:bg-primary-600/30 transition-colors text-left cursor-pointer"
           >
             <Reply className="w-3.5 h-3.5 shrink-0 text-primary-400" />
-            <span>Reply</span>
+            <span>{t('app.reply') || 'Reply'}</span>
           </button>
 
           {/* Quote Selection into Input (if text selected) */}
@@ -6911,7 +7014,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
             >
               <Copy className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-              <span>Copy Message Text</span>
+              <span>{t('chat.copy_message_text') || 'Copy Message Text'}</span>
             </button>
           )}
 
@@ -6924,12 +7027,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 : `https://t.me/c/${chat.id.replace(/^-100/, '')}/${contextMenu.message.id}`
               await copyTextToClipboard(link)
               setContextMenu(null)
-              showToast('Copied link to message')
+              showToast(t('chat.message_link_copied') || 'Copied link to message')
             }}
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
           >
             <ExternalLink className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-            <span>Copy Message Link</span>
+            <span>{t('chat.copy_message_link') || 'Copy Message Link'}</span>
           </button>
 
           {/* 64Gram Copy Message ID */}

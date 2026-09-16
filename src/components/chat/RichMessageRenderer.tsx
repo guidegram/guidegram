@@ -514,6 +514,7 @@ export const FormattedTextRenderer: React.FC<FormattedTextProps> = ({
               <a
                 key={wrapKey}
                 href={url}
+                data-url={url}
                 onClick={(e) => handleOpenUrl(url, e)}
                 className="text-accent-cyan underline hover:text-cyan-300 font-medium cursor-pointer inline-flex items-center gap-0.5"
                 title={`Open ${url}`}
@@ -541,15 +542,18 @@ export const FormattedTextRenderer: React.FC<FormattedTextProps> = ({
             break
           case 'mention': {
             const username = seg.text.replace(/^@/, '')
+            const tMeUrl = `https://t.me/${username}`
             node = (
               <button
                 key={wrapKey}
                 type="button"
+                data-url={tMeUrl}
                 onClick={(e) => {
                   e.stopPropagation()
                   if (onSelectUserOrChat) onSelectUserOrChat(username)
+                  else if (onSafeOpenUrl) onSafeOpenUrl(tMeUrl)
                   else if (window.guidegram?.openExternal) {
-                    window.guidegram.openExternal(`https://t.me/${username}`)
+                    window.guidegram.openExternal(tMeUrl)
                   }
                 }}
                 className="text-accent-cyan font-semibold hover:underline inline cursor-pointer text-left"

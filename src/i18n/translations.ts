@@ -39,6 +39,17 @@ export const translations: Record<Language, TranslationDictionary> = {
     'app.unmute': 'Unmute',
     'app.muted': 'Muted',
 
+    // Chat Context Menu & Links
+    'chat.open_link': 'Open Link',
+    'chat.open_telegram_link': 'Open in Telegram',
+    'chat.copy_link': 'Copy Link',
+    'chat.copy_message_link': 'Copy Message Link',
+    'chat.copy_message_text': 'Copy Message Text',
+    'chat.copy_message_id': 'Copy Message ID',
+    'chat.copy_user_id': 'Copy User ID',
+    'chat.link_copied': 'Link copied to clipboard',
+    'chat.message_link_copied': 'Message link copied to clipboard',
+
     // Tabs
     'tab.all': 'All',
     'tab.users': 'Direct',
@@ -483,6 +494,17 @@ export const translations: Record<Language, TranslationDictionary> = {
     'app.mute': 'بی‌صدا کردن',
     'app.unmute': 'با صدا کردن',
     'app.muted': 'بی‌صدا',
+
+    // Chat Context Menu & Links
+    'chat.open_link': 'باز کردن لینک',
+    'chat.open_telegram_link': 'باز کردن در تلگرام',
+    'chat.copy_link': 'کپی لینک',
+    'chat.copy_message_link': 'کپی لینک پیام',
+    'chat.copy_message_text': 'کپی متن پیام',
+    'chat.copy_message_id': 'کپی شناسه پیام',
+    'chat.copy_user_id': 'کپی شناسه کاربر',
+    'chat.link_copied': 'لینک در کلیپ‌بورد کپی شد',
+    'chat.message_link_copied': 'لینک پیام در کلیپ‌بورد کپی شد',
 
     // Tabs
     'tab.all': 'همه',
