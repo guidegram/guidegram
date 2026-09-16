@@ -63,6 +63,15 @@ import type {
   BusinessProfile,
   StarsStatusPayload,
   StarsTransactionItem,
+  ServiceActionType,
+  ServiceActionData,
+  RichMessagePayload,
+  RichBlock,
+  RichTableBlock,
+  RichTableCell,
+  RichTableRow,
+  RichDetailsBlock,
+  PhoneAuthResult,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -73,6 +82,7 @@ declare global {
 
 export type {
   AccountInfo,
+  PhoneAuthResult,
   DialogItem,
   MessageItem,
   ProxyConfig,
@@ -141,6 +151,14 @@ export type {
   SavedReactionTagItem,
   GroupCallInfo,
   GroupCallParticipantItem,
+  ServiceActionType,
+  ServiceActionData,
+  RichMessagePayload,
+  RichBlock,
+  RichTableBlock,
+  RichTableCell,
+  RichTableRow,
+  RichDetailsBlock,
 }
 
 

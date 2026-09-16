@@ -1,6 +1,6 @@
 {
   "name": "guidegram",
-  "version": "1.11.3",
+  "version": "1.11.4",
   "description": "Guidegram",
   "author": "DoctorGuidance",
   "main": "dist-electron/main.js",

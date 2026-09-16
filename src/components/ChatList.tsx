@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck } from 'lucide-react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
 import { Avatar } from './Avatar'
 import { isRTL } from '../utils/textUtils'
 import { CustomEmojiView } from './ChatViewport'
-import { StoryViewerModal } from './StoryViewerModal'
 import { useI18n } from '../i18n'
+
+const StoryViewerModal = React.lazy(() => import('./StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })))
 
 interface ChatListProps {
   account: AccountInfo | null
@@ -67,6 +68,14 @@ export const ChatList: React.FC<ChatListProps> = ({
       localStorage.setItem('guidegram_recent_searches', JSON.stringify(updated))
     } catch (_) {}
   }
+
+  const handleSelectDialog = useCallback(
+    (dialogId: string) => {
+      if (searchQuery.trim()) saveRecentSearch(searchQuery.trim())
+      onSelectChat(dialogId)
+    },
+    [searchQuery, onSelectChat, recentSearches]
+  )
 
   const clearRecentSearches = () => {
     setRecentSearches([])
@@ -400,7 +409,18 @@ export const ChatList: React.FC<ChatListProps> = ({
                 <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   {t('search.all_chats')}
                 </div>
-                {filteredDialogs.map((dialog) => renderDialogItem(dialog))}
+                {filteredDialogs.map((dialog) => (
+                  <DialogListItem
+                    key={dialog.id}
+                    dialog={dialog}
+                    isSelected={activeChatId === dialog.id}
+                    showChatId={showChatId}
+                    formatTime={formatTime}
+                    formatNumber={formatNumber}
+                    t={t}
+                    onSelect={handleSelectDialog}
+                  />
+                ))}
               </div>
             )}
 
@@ -497,7 +517,18 @@ export const ChatList: React.FC<ChatListProps> = ({
         ) : filteredDialogs.length === 0 ? (
           <div className="p-8 text-center text-xs text-gray-400">{t('app.no_chats')}</div>
         ) : (
-          filteredDialogs.map((dialog) => renderDialogItem(dialog))
+          filteredDialogs.map((dialog) => (
+            <DialogListItem
+              key={dialog.id}
+              dialog={dialog}
+              isSelected={activeChatId === dialog.id}
+              showChatId={showChatId}
+              formatTime={formatTime}
+              formatNumber={formatNumber}
+              t={t}
+              onSelect={handleSelectDialog}
+            />
+          ))
         )}
 
         {isLoadingMoreDialogs && (
@@ -509,28 +540,36 @@ export const ChatList: React.FC<ChatListProps> = ({
       </div>
 
       {viewingStoryPeer && account && (
-        <StoryViewerModal
-          isOpen={!!viewingStoryPeer}
-          onClose={() => setViewingStoryPeer(null)}
-          accountId={account.id}
-          peerId={viewingStoryPeer.id}
-          peerTitle={viewingStoryPeer.title}
-          ghostMode={ghostMode}
-        />
+        <React.Suspense fallback={null}>
+          <StoryViewerModal
+            isOpen={!!viewingStoryPeer}
+            onClose={() => setViewingStoryPeer(null)}
+            accountId={account.id}
+            peerId={viewingStoryPeer.id}
+            peerTitle={viewingStoryPeer.title}
+            ghostMode={ghostMode}
+          />
+        </React.Suspense>
       )}
     </div>
   )
+}
 
-  function renderDialogItem(dialog: DialogItem) {
-    const isSelected = activeChatId === dialog.id
+interface DialogListItemProps {
+  dialog: DialogItem
+  isSelected: boolean
+  showChatId: boolean
+  formatTime: (timestamp?: number) => string
+  formatNumber: (n: number) => string
+  t: (key: string, params?: any) => string
+  onSelect: (id: string) => void
+}
 
+export const DialogListItem = React.memo<DialogListItemProps>(
+  ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect }) => {
     return (
       <div
-        key={dialog.id}
-        onClick={() => {
-          if (searchQuery.trim()) saveRecentSearch(searchQuery.trim())
-          onSelectChat(dialog.id)
-        }}
+        onClick={() => onSelect(dialog.id)}
         className={`px-3 py-2.5 transition-colors cursor-pointer border-b border-white/5 relative group ${
           isSelected ? 'bg-primary-600/20' : 'hover:bg-dark-800/60'
         }`}
@@ -571,14 +610,36 @@ export const ChatList: React.FC<ChatListProps> = ({
             </div>
 
             <div className="flex items-center justify-between gap-1">
-              <div className="text-[11px] text-gray-400 truncate flex-1 leading-snug">
+              <div className="text-[11px] text-gray-400 truncate flex-1 leading-snug flex items-center gap-1.5 min-w-0">
                 {dialog.draft?.text ? (
                   <>
-                    <span className="text-red-400 font-semibold mr-1">{t('chat.draft') || 'Draft:'}</span>
-                    <span className="text-gray-300">{dialog.draft.text}</span>
+                    <span className="text-red-400 font-semibold mr-1 shrink-0">{t('chat.draft') || 'Draft:'}</span>
+                    <span className="text-gray-300 truncate">{dialog.draft.text}</span>
                   </>
                 ) : (
-                  dialog.lastMessageText || '...'
+                  <>
+                    {dialog.lastMessageIsOutgoing && (
+                      <span className="inline-flex items-center shrink-0">
+                        {dialog.lastMessageRead ? (
+                          <span title="Read"><CheckCheck className="w-3.5 h-3.5 text-accent-cyan" /></span>
+                        ) : (
+                          <span title="Sent"><Check className="w-3.5 h-3.5 text-gray-400" /></span>
+                        )}
+                      </span>
+                    )}
+
+                    {dialog.lastMessageThumb && (
+                      <img
+                        src={dialog.lastMessageThumb}
+                        alt=""
+                        className="w-4 h-4 rounded object-cover shrink-0 border border-white/10"
+                      />
+                    )}
+
+                    <span className="truncate">
+                      {dialog.lastMessageText || '...'}
+                    </span>
+                  </>
                 )}
               </div>
 
@@ -599,7 +660,7 @@ export const ChatList: React.FC<ChatListProps> = ({
                     @{dialog.unreadMentionsCount > 1 ? formatNumber(dialog.unreadMentionsCount) : ''}
                   </span>
                 ) : null}
-                {dialog.unreadCount > 0 && (
+                {dialog.unreadCount > 0 && !dialog.lastMessageIsOutgoing && (
                   <span
                     title={
                       dialog.isMuted
@@ -627,5 +688,25 @@ export const ChatList: React.FC<ChatListProps> = ({
         </div>
       </div>
     )
+  },
+  (prev, next) => {
+    return (
+      prev.isSelected === next.isSelected &&
+      prev.showChatId === next.showChatId &&
+      prev.dialog.id === next.dialog.id &&
+      prev.dialog.unreadCount === next.dialog.unreadCount &&
+      prev.dialog.unreadMentionsCount === next.dialog.unreadMentionsCount &&
+      prev.dialog.lastMessageDate === next.dialog.lastMessageDate &&
+      prev.dialog.lastMessageText === next.dialog.lastMessageText &&
+      prev.dialog.lastMessageRead === next.dialog.lastMessageRead &&
+      prev.dialog.lastMessageIsOutgoing === next.dialog.lastMessageIsOutgoing &&
+      prev.dialog.draft?.text === next.dialog.draft?.text &&
+      prev.dialog.avatarUrl === next.dialog.avatarUrl &&
+      prev.dialog.title === next.dialog.title &&
+      prev.dialog.isPinned === next.dialog.isPinned &&
+      prev.dialog.isMuted === next.dialog.isMuted &&
+      prev.dialog.customEmojiStatusId === next.dialog.customEmojiStatusId &&
+      prev.dialog.isPremium === next.dialog.isPremium
+    )
   }
-}
+)

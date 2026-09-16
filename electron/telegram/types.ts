@@ -69,6 +69,9 @@ export interface AccountInfo {
   }
 }
 
+export type PhoneAuthResult = AccountInfo | { need2fa: true; hint?: string }
+
+
 export interface MessageReactionItem {
   emoji: string
   count: number
@@ -97,6 +100,7 @@ export interface DialogItem {
   title: string
   unreadCount: number
   readInboxMaxId?: number
+  readOutboxMaxId?: number
   unreadMentionsCount?: number
   unreadSendersCount?: number
   isMuted?: boolean
@@ -111,6 +115,11 @@ export interface DialogItem {
   canSendMessages?: boolean
   lastMessageText?: string
   lastMessageDate?: number
+  lastMessageId?: number
+  lastMessageIsOutgoing?: boolean
+  lastMessageRead?: boolean
+  lastMessageMediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'round_video'
+  lastMessageThumb?: string
   avatarInitials?: string
   avatarUrl?: string
   username?: string
@@ -120,6 +129,7 @@ export interface DialogItem {
   isForum?: boolean
   isSponsored?: boolean
   isSponsorChannel?: boolean
+  accessHash?: string
   draft?: DraftItem
 }
 
@@ -135,6 +145,80 @@ export interface InlineButton {
   data?: string // callback_data
   webAppUrl?: string
   isMiniApp?: boolean
+  style?: 'primary' | 'danger' | 'success' | string
+  iconCustomEmojiId?: string
+  type?: 'default' | 'request_phone' | 'request_location' | 'request_poll' | 'web_app' | string
+  _?: string
+}
+
+export interface RichTableCell {
+  text: string
+  isHeader?: boolean
+  align?: 'left' | 'center' | 'right'
+  valign?: 'top' | 'middle' | 'bottom'
+  colspan?: number
+  rowspan?: number
+}
+
+export interface RichTableRow {
+  cells: RichTableCell[]
+}
+
+export interface RichTableBlock {
+  type: 'table'
+  title?: string
+  rows: RichTableRow[]
+  bordered?: boolean
+  striped?: boolean
+  compact?: boolean
+}
+
+export interface RichDetailsBlock {
+  type: 'details'
+  title: string
+  open?: boolean
+  blocks: RichBlock[]
+}
+
+export interface RichHeaderBlock {
+  type: 'header' | 'subheader'
+  text: string
+}
+
+export interface RichParagraphBlock {
+  type: 'paragraph'
+  text: string
+}
+
+export interface RichListBlock {
+  type: 'list'
+  ordered?: boolean
+  items: string[]
+}
+
+export interface RichDividerBlock {
+  type: 'divider'
+}
+
+export interface RichBlockquoteBlock {
+  type: 'blockquote'
+  text: string
+  caption?: string
+  collapsed?: boolean
+}
+
+export type RichBlock =
+  | RichTableBlock
+  | RichDetailsBlock
+  | RichHeaderBlock
+  | RichParagraphBlock
+  | RichListBlock
+  | RichDividerBlock
+  | RichBlockquoteBlock
+
+export interface RichMessagePayload {
+  rtl?: boolean
+  blocks: RichBlock[]
 }
 
 export interface WebPagePreview {
@@ -257,12 +341,59 @@ export interface MessageItem {
   senderIsPremium?: boolean
   replyMarkup?: {
     rows: InlineButton[][]
+    _?: string
+    resize?: boolean
+    singleUse?: boolean
+    selective?: boolean
+    persistent?: boolean
+    placeholder?: string
   }
+  richMessage?: RichMessagePayload
   // Local Anti-Delete & Edit History (64Gram Parity)
   isDeletedLocally?: boolean
   deletedAt?: number
   editDate?: number
   editHistory?: MessageEditRevision[]
+  // Telegram Service Messages & Chat Actions
+  isService?: boolean
+  actionType?: ServiceActionType
+  actionData?: ServiceActionData
+}
+
+export type ServiceActionType =
+  | 'user_left'
+  | 'user_removed'
+  | 'user_joined'
+  | 'user_joined_link'
+  | 'user_joined_request'
+  | 'users_added'
+  | 'chat_created'
+  | 'channel_created'
+  | 'title_changed'
+  | 'photo_changed'
+  | 'photo_deleted'
+  | 'message_pinned'
+  | 'history_cleared'
+  | 'contact_joined'
+  | 'ttl_changed'
+  | 'group_call_started'
+  | 'group_call_ended'
+  | 'group_call_scheduled'
+  | 'topic_created'
+  | 'topic_edited'
+  | 'score_changed'
+  | 'payment_sent'
+  | 'custom'
+  | 'unknown'
+
+export interface ServiceActionData {
+  actorName?: string
+  actorId?: string
+  targetName?: string
+  targetId?: string
+  title?: string
+  period?: number
+  duration?: number
 }
 
 export interface ChatDetails {

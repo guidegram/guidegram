@@ -5,19 +5,22 @@ import { AccountDock } from './components/AccountDock'
 import { ChatTabs, TabCategory } from './components/ChatTabs'
 import { ChatList } from './components/ChatList'
 import { ChatViewport } from './components/ChatViewport'
-import { DirectForwardModal, DirectForwardPayload } from './components/DirectForwardModal'
-import { AddAccountModal } from './components/AddAccountModal'
-import { ProxySettingsModal } from './components/ProxySettingsModal'
-import { SettingsModal } from './components/SettingsModal'
-import { UnifiedInbox } from './components/UnifiedInbox'
-import { MainMenuDrawer } from './components/MainMenuDrawer'
-import { MyProfileDrawer } from './components/MyProfileDrawer'
-import { ContactsModal } from './components/ContactsModal'
-import { CreateChatModal } from './components/CreateChatModal'
-import { CloseConfirmModal } from './components/CloseConfirmModal'
+import type { DirectForwardPayload } from './components/DirectForwardModal'
 import { UpdateBanner } from './components/UpdateBanner'
-import { WhatsNewModal } from './components/WhatsNewModal'
-import { SupportModal } from './components/SupportModal'
+
+// Performance: Code-split heavy modals with React.lazy to reduce initial bundle and startup V8 parse time
+const DirectForwardModal = React.lazy(() => import('./components/DirectForwardModal').then((m) => ({ default: m.DirectForwardModal })))
+const AddAccountModal = React.lazy(() => import('./components/AddAccountModal').then((m) => ({ default: m.AddAccountModal })))
+const ProxySettingsModal = React.lazy(() => import('./components/ProxySettingsModal').then((m) => ({ default: m.ProxySettingsModal })))
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal })))
+const UnifiedInbox = React.lazy(() => import('./components/UnifiedInbox').then((m) => ({ default: m.UnifiedInbox })))
+const MainMenuDrawer = React.lazy(() => import('./components/MainMenuDrawer').then((m) => ({ default: m.MainMenuDrawer })))
+const MyProfileDrawer = React.lazy(() => import('./components/MyProfileDrawer').then((m) => ({ default: m.MyProfileDrawer })))
+const ContactsModal = React.lazy(() => import('./components/ContactsModal').then((m) => ({ default: m.ContactsModal })))
+const CreateChatModal = React.lazy(() => import('./components/CreateChatModal').then((m) => ({ default: m.CreateChatModal })))
+const CloseConfirmModal = React.lazy(() => import('./components/CloseConfirmModal').then((m) => ({ default: m.CloseConfirmModal })))
+const WhatsNewModal = React.lazy(() => import('./components/WhatsNewModal').then((m) => ({ default: m.WhatsNewModal })))
+const SupportModal = React.lazy(() => import('./components/SupportModal').then((m) => ({ default: m.SupportModal })))
 import {
   AccountInfo,
   DialogItem,
@@ -200,6 +203,7 @@ export const App: React.FC = () => {
     let unsubscribeReadHistory: (() => void) | undefined
     let unsubscribeMsgDeleted: (() => void) | undefined
     let unsubscribeMsgEdited: (() => void) | undefined
+    let unsubscribeReadOutbox: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -217,6 +221,7 @@ export const App: React.FC = () => {
           const list = prev[accountId] || []
           const msgDate = message?.date ? (message.date < 1e11 ? message.date * 1000 : message.date) : Date.now()
           const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
+          const isOutgoing = Boolean(message?.isOutgoing)
           const exists = list.some((d) => d.id === chatId)
 
           let updatedList: DialogItem[]
@@ -238,6 +243,11 @@ export const App: React.FC = () => {
               isSavedMessages: chatId === accountId,
               lastMessageText: msgText,
               lastMessageDate: msgDate,
+              lastMessageId: message?.id,
+              lastMessageIsOutgoing: isOutgoing,
+              lastMessageRead: isOutgoing ? false : true,
+              lastMessageMediaType: message?.mediaType,
+              lastMessageThumb: message?.strippedThumb,
               avatarInitials: (chatInfo?.title || message?.senderName || 'C').slice(0, 2).toUpperCase(),
             }
             updatedList = [newDialog, ...list]
@@ -249,9 +259,14 @@ export const App: React.FC = () => {
                     ...d,
                     unreadCount: shouldIncrement
                       ? d.unreadCount + 1
-                      : (chatId === activeChatId ? 0 : d.unreadCount),
+                      : (isOutgoing || chatId === activeChatId ? 0 : d.unreadCount),
                     lastMessageText: msgText || d.lastMessageText,
                     lastMessageDate: msgDate,
+                    lastMessageId: message?.id ?? d.lastMessageId,
+                    lastMessageIsOutgoing: isOutgoing,
+                    lastMessageRead: isOutgoing ? false : true,
+                    lastMessageMediaType: message?.mediaType ?? d.lastMessageMediaType,
+                    lastMessageThumb: message?.strippedThumb ?? d.lastMessageThumb,
                   }
                 : d
             )
@@ -358,6 +373,29 @@ export const App: React.FC = () => {
               [accountId]: list.map((d) =>
                 d.id === chatId
                   ? { ...d, unreadCount: typeof stillUnreadCount === 'number' ? stillUnreadCount : 0 }
+                  : d
+              ),
+            }
+          })
+        }
+      )
+
+      // Real-time read-outbox sync (ticks turn to double-check in real-time when peer reads)
+      unsubscribeReadOutbox = window.guidegram.on(
+        'telegram:read-outbox',
+        (payload: { accountId: string; chatId: string; maxId: number }) => {
+          const { accountId, chatId, maxId } = payload
+          setDialogsByAccount((prev) => {
+            const list = prev[accountId] || []
+            return {
+              ...prev,
+              [accountId]: list.map((d) =>
+                d.id === chatId
+                  ? {
+                      ...d,
+                      readOutboxMaxId: Math.max(d.readOutboxMaxId || 0, maxId),
+                      lastMessageRead: d.lastMessageId ? d.lastMessageId <= maxId : true,
+                    }
                   : d
               ),
             }
@@ -474,6 +512,7 @@ export const App: React.FC = () => {
         unsubscribeMute?.()
         unsubscribeUpdateInstalled?.()
         unsubscribeReadHistory?.()
+        unsubscribeReadOutbox?.()
       }
     }
   }, [])
@@ -722,6 +761,26 @@ export const App: React.FC = () => {
         ...prev,
         [activeChatId]: [...(prev[activeChatId] || []), enrichedSent],
       }))
+
+      setDialogsByAccount((prev) => {
+        const list = prev[activeAccountId] || []
+        return {
+          ...prev,
+          [activeAccountId]: list.map((d) =>
+            d.id === activeChatId
+              ? {
+                  ...d,
+                  lastMessageText: text,
+                  lastMessageDate: Date.now(),
+                  lastMessageId: sent.id,
+                  lastMessageIsOutgoing: true,
+                  lastMessageRead: false,
+                  unreadCount: 0,
+                }
+              : d
+          ),
+        }
+      })
     } catch (err) {
       console.error('Failed to send message:', err)
       throw err
@@ -756,6 +815,28 @@ export const App: React.FC = () => {
         ...prev,
         [activeChatId]: [...(prev[activeChatId] || []), enrichedSent],
       }))
+
+      const mediaLabel = options?.caption || (options?.isVoice ? '[Voice message]' : '[Photo]')
+      setDialogsByAccount((prev) => {
+        const list = prev[activeAccountId] || []
+        return {
+          ...prev,
+          [activeAccountId]: list.map((d) =>
+            d.id === activeChatId
+              ? {
+                  ...d,
+                  lastMessageText: mediaLabel,
+                  lastMessageDate: Date.now(),
+                  lastMessageId: sent.id,
+                  lastMessageIsOutgoing: true,
+                  lastMessageRead: false,
+                  lastMessageMediaType: options?.isVoice ? 'voice' : 'photo',
+                  unreadCount: 0,
+                }
+              : d
+          ),
+        }
+      })
     } catch (err) {
       console.error('Failed to send media:', err)
       throw err
@@ -1120,6 +1201,16 @@ export const App: React.FC = () => {
     activeChatId,
   ])
 
+  // Listen for close-confirm request triggered by main process (e.g. Alt+F4 / native close)
+  useEffect(() => {
+    const unsub = window.guidegram?.on?.('app:request-close-confirm', () => {
+      setIsCloseConfirmOpen(true)
+    })
+    return () => {
+      unsub?.()
+    }
+  }, [])
+
   // Smooth Loading Splash
   if (!isLoaded) {
     return (
@@ -1183,16 +1274,18 @@ export const App: React.FC = () => {
             onOpenProxyModal={() => setIsProxyModalOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
-          <UnifiedInbox
-            accounts={accounts}
-            allDialogs={dialogsByAccount}
-            onSelectAccountAndChat={(accId, chatId) => {
-              setActiveAccountId(accId)
-              setIsUnifiedInboxOpen(false)
-              setActiveChatId(chatId)
-              loadMessages(accId, chatId)
-            }}
-          />
+          <React.Suspense fallback={<div className="flex-1 flex items-center justify-center bg-dark-900 text-gray-400 text-sm">Loading Unified Inbox...</div>}>
+            <UnifiedInbox
+              accounts={accounts}
+              allDialogs={dialogsByAccount}
+              onSelectAccountAndChat={(accId, chatId) => {
+                setActiveAccountId(accId)
+                setIsUnifiedInboxOpen(false)
+                setActiveChatId(chatId)
+                loadMessages(accId, chatId)
+              }}
+            />
+          </React.Suspense>
         </div>
       ) : (
         <div className={`flex flex-1 min-h-0 overflow-hidden ${isResizingSidebar ? 'select-none' : ''}`}>
@@ -1279,144 +1372,167 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Main Telegram Desktop Drawer */}
-      <MainMenuDrawer
-        isOpen={isMainMenuOpen}
-        onClose={() => setIsMainMenuOpen(false)}
-        accounts={accounts}
-        activeAccount={currentAccount}
-        onSelectAccount={handleSelectAccount}
-        onOpenAddAccount={() => {
-          setIsMainMenuOpen(false)
-          setIsAddAccountOpen(true)
-        }}
-        onOpenSettings={() => {
-          setIsMainMenuOpen(false)
-          setIsSettingsOpen(true)
-        }}
-        onOpenProxyModal={() => {
-          setIsMainMenuOpen(false)
-          setIsProxyModalOpen(true)
-        }}
-        onOpenSavedMessages={() => {
-          setIsMainMenuOpen(false)
-          handleOpenSavedMessages()
-        }}
-        ghostMode={ghostMode}
-        onToggleGhostMode={handleToggleGhostMode}
-        onOpenProfile={() => {
-          setIsMainMenuOpen(false)
-          setIsMyProfileOpen(true)
-        }}
-        onOpenNewGroup={() => {
-          setIsMainMenuOpen(false)
-          setCreateChatState({ isOpen: true, mode: 'group' })
-        }}
-        onOpenNewChannel={() => {
-          setIsMainMenuOpen(false)
-          setCreateChatState({ isOpen: true, mode: 'channel' })
-        }}
-        onOpenContacts={() => {
-          setIsMainMenuOpen(false)
-          setIsContactsOpen(true)
-        }}
-        onOpenCalls={() => {
-          setIsMainMenuOpen(false)
-          setIsContactsOpen(true)
-        }}
-        onOpenArchivedChats={() => {
-          setIsMainMenuOpen(false)
-          setActiveTab('archived' as any)
-        }}
-        onOpenSupport={() => {
-          setIsMainMenuOpen(false)
-          setIsSupportModalOpen(true)
-        }}
-        archivedUnreadCount={archivedUnreadCount}
-        unreadCountsByAccount={unreadCountsByAccount}
-        isNightMode={config?.theme !== 'light'}
-        onToggleNightMode={handleToggleNightMode}
-      />
+      {/* Main Telegram Desktop Drawer & Modals (Code-Split via Suspense) */}
+      <React.Suspense fallback={null}>
+        {isMainMenuOpen && (
+          <MainMenuDrawer
+            isOpen={isMainMenuOpen}
+            onClose={() => setIsMainMenuOpen(false)}
+            accounts={accounts}
+            activeAccount={currentAccount}
+            onSelectAccount={handleSelectAccount}
+            onOpenAddAccount={() => {
+              setIsMainMenuOpen(false)
+              setIsAddAccountOpen(true)
+            }}
+            onOpenSettings={() => {
+              setIsMainMenuOpen(false)
+              setIsSettingsOpen(true)
+            }}
+            onOpenProxyModal={() => {
+              setIsMainMenuOpen(false)
+              setIsProxyModalOpen(true)
+            }}
+            onOpenSavedMessages={() => {
+              setIsMainMenuOpen(false)
+              handleOpenSavedMessages()
+            }}
+            ghostMode={ghostMode}
+            onToggleGhostMode={handleToggleGhostMode}
+            onOpenProfile={() => {
+              setIsMainMenuOpen(false)
+              setIsMyProfileOpen(true)
+            }}
+            onOpenNewGroup={() => {
+              setIsMainMenuOpen(false)
+              setCreateChatState({ isOpen: true, mode: 'group' })
+            }}
+            onOpenNewChannel={() => {
+              setIsMainMenuOpen(false)
+              setCreateChatState({ isOpen: true, mode: 'channel' })
+            }}
+            onOpenContacts={() => {
+              setIsMainMenuOpen(false)
+              setIsContactsOpen(true)
+            }}
+            onOpenCalls={() => {
+              setIsMainMenuOpen(false)
+              setIsContactsOpen(true)
+            }}
+            onOpenArchivedChats={() => {
+              setIsMainMenuOpen(false)
+              setActiveTab('archived' as any)
+            }}
+            onOpenSupport={() => {
+              setIsMainMenuOpen(false)
+              setIsSupportModalOpen(true)
+            }}
+            archivedUnreadCount={archivedUnreadCount}
+            unreadCountsByAccount={unreadCountsByAccount}
+            isNightMode={config?.theme !== 'light'}
+            onToggleNightMode={handleToggleNightMode}
+          />
+        )}
 
-      {/* Modals & Slide-over Drawers */}
-      <MyProfileDrawer
-        isOpen={isMyProfileOpen}
-        onClose={() => setIsMyProfileOpen(false)}
-        account={currentAccount}
-      />
+        {isMyProfileOpen && (
+          <MyProfileDrawer
+            isOpen={isMyProfileOpen}
+            onClose={() => setIsMyProfileOpen(false)}
+            account={currentAccount}
+          />
+        )}
 
-      <ContactsModal
-        isOpen={isContactsOpen}
-        accountId={currentAccount?.id}
-        onClose={() => setIsContactsOpen(false)}
-        onSelectContact={(contactId) => {
-          setIsContactsOpen(false)
-          handleSelectUserOrChat(contactId)
-        }}
-      />
+        {isContactsOpen && (
+          <ContactsModal
+            isOpen={isContactsOpen}
+            accountId={currentAccount?.id}
+            onClose={() => setIsContactsOpen(false)}
+            onSelectContact={(contactId) => {
+              setIsContactsOpen(false)
+              handleSelectUserOrChat(contactId)
+            }}
+          />
+        )}
 
-      <CreateChatModal
-        isOpen={createChatState.isOpen}
-        mode={createChatState.mode}
-        accountId={currentAccount?.id}
-        onClose={() => setCreateChatState((prev) => ({ ...prev, isOpen: false }))}
-        onChatCreated={(chat) => {
-          if (currentAccount) {
-            loadDialogsForAccount(currentAccount.id)
-          }
-          if (chat?.id) {
-            handleSelectChat(chat.id)
-          }
-        }}
-      />
+        {createChatState.isOpen && (
+          <CreateChatModal
+            isOpen={createChatState.isOpen}
+            mode={createChatState.mode}
+            accountId={currentAccount?.id}
+            onClose={() => setCreateChatState((prev) => ({ ...prev, isOpen: false }))}
+            onChatCreated={(chat) => {
+              if (currentAccount) {
+                loadDialogsForAccount(currentAccount.id)
+              }
+              if (chat?.id) {
+                handleSelectChat(chat.id)
+              }
+            }}
+          />
+        )}
 
-      <AddAccountModal
-        isOpen={isAddAccountOpen}
-        onClose={() => setIsAddAccountOpen(false)}
-        onAccountAdded={handleAccountAdded}
-      />
+        {isAddAccountOpen && (
+          <AddAccountModal
+            isOpen={isAddAccountOpen}
+            onClose={() => setIsAddAccountOpen(false)}
+            onAccountAdded={handleAccountAdded}
+          />
+        )}
 
-      <DirectForwardModal
-        isOpen={!!forwardMessage}
-        message={forwardMessage}
-        dialogs={currentDialogs}
-        onClose={() => setForwardMessage(null)}
-        onForward={handleDirectForward}
-      />
+        {Boolean(forwardMessage) && (
+          <DirectForwardModal
+            isOpen={!!forwardMessage}
+            message={forwardMessage}
+            dialogs={currentDialogs}
+            onClose={() => setForwardMessage(null)}
+            onForward={handleDirectForward}
+          />
+        )}
 
-      <ProxySettingsModal
-        isOpen={isProxyModalOpen}
-        accounts={accounts}
-        onClose={() => setIsProxyModalOpen(false)}
-        onUpdateAccountProxy={handleUpdateAccountProxy}
-      />
+        {isProxyModalOpen && (
+          <ProxySettingsModal
+            isOpen={isProxyModalOpen}
+            accounts={accounts}
+            onClose={() => setIsProxyModalOpen(false)}
+            onUpdateAccountProxy={handleUpdateAccountProxy}
+          />
+        )}
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        accounts={accounts}
-        onClose={() => setIsSettingsOpen(false)}
-        onLogoutAccount={handleLogoutAccount}
-        onConfigUpdated={(newCfg) => setConfig(newCfg)}
-        onUpdateFound={(info) => setUpdateInfo(info)}
-        onOpenSupport={() => setIsSupportModalOpen(true)}
-      />
+        {isSettingsOpen && (
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            accounts={accounts}
+            onClose={() => setIsSettingsOpen(false)}
+            onLogoutAccount={handleLogoutAccount}
+            onConfigUpdated={(newCfg) => setConfig(newCfg)}
+            onUpdateFound={(info) => setUpdateInfo(info)}
+            onOpenSupport={() => setIsSupportModalOpen(true)}
+          />
+        )}
 
-      <SupportModal
-        isOpen={isSupportModalOpen}
-        onClose={() => setIsSupportModalOpen(false)}
-      />
+        {isSupportModalOpen && (
+          <SupportModal
+            isOpen={isSupportModalOpen}
+            onClose={() => setIsSupportModalOpen(false)}
+          />
+        )}
 
-      <CloseConfirmModal
-        isOpen={isCloseConfirmOpen}
-        onClose={() => setIsCloseConfirmOpen(false)}
-        onConfirm={handleConfirmClose}
-      />
+        {isCloseConfirmOpen && (
+          <CloseConfirmModal
+            isOpen={isCloseConfirmOpen}
+            onClose={() => setIsCloseConfirmOpen(false)}
+            onConfirm={handleConfirmClose}
+          />
+        )}
 
-      <WhatsNewModal
-        isOpen={!!whatsNewVersion}
-        version={whatsNewVersion || '1.8.0'}
-        onClose={() => setWhatsNewVersion(null)}
-      />
+        {Boolean(whatsNewVersion) && (
+          <WhatsNewModal
+            isOpen={!!whatsNewVersion}
+            version={whatsNewVersion || '1.8.0'}
+            onClose={() => setWhatsNewVersion(null)}
+          />
+        )}
+      </React.Suspense>
 
       {updateInfo && updateInfo.hasUpdate && (
         <UpdateBanner

@@ -76,7 +76,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         if (
           photoDataUrl &&
           typeof photoDataUrl === 'string' &&
-          photoDataUrl.length > 2000 &&
+          photoDataUrl.length > 50 &&
           !photoDataUrl.endsWith('base64,')
         ) {
           if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)

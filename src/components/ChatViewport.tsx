@@ -89,6 +89,9 @@ import { PaidReactionModal } from './PaidReactionModal'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
 import { GroupCallModal } from './GroupCallModal'
+import { BotIntroCard } from './chat/BotIntroCard'
+import { BotMenuDrawer, BotMenuButtonType } from './chat/BotMenuDrawer'
+import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeyboardPanel'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
@@ -625,6 +628,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [userProfilePeerId, setUserProfilePeerId] = useState<string | null>(null)
   const [userProfileDetails, setUserProfileDetails] = useState<ChatDetails | null>(null)
   const [isLoadingUserProfile, setIsLoadingUserProfile] = useState(false)
+
+  // Bot Subsystem State (MTProto Layer 180+)
+  const [isReplyKeyboardOpen, setIsReplyKeyboardOpen] = useState(true)
+  const [isBotStarting, setIsBotStarting] = useState(false)
+  const [botInfoState, setBotInfoState] = useState<any>(null)
+  const [botMenuButtonState, setBotMenuButtonState] = useState<BotMenuButtonType | null>(null)
 
   // Sync isMuted state whenever selected chat changes or updates
   useEffect(() => {
@@ -1415,7 +1424,75 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         if (details) setChatDetails(details)
       }).catch(() => {})
     }
+
+    if (chat && (chat.isBot || chatDetails?.isBot)) {
+      if (window.guidegram?.getBotInfo) {
+        window.guidegram.getBotInfo(chat.accountId, chat.id).then((info) => {
+          if (info) setBotInfoState(info)
+        }).catch(() => {})
+      }
+      if (window.guidegram?.getBotMenuButton) {
+        window.guidegram.getBotMenuButton(chat.accountId, chat.id).then((btn) => {
+          if (btn) setBotMenuButtonState(btn)
+        }).catch(() => {})
+      }
+    } else {
+      setBotInfoState(null)
+      setBotMenuButtonState(null)
+    }
   }, [chat?.id])
+
+  // Active persistent ReplyKeyboardMarkup from bot messages (Layer 180+)
+  const activeReplyMarkup = useMemo(() => {
+    if (!chat?.isBot && !chatDetails?.isBot) return null
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i]
+      if (m.replyMarkup?._ === 'replyKeyboardHide') {
+        return null
+      }
+      if (
+        !m.isOutgoing &&
+        m.replyMarkup &&
+        (m.replyMarkup._ === 'replyKeyboardMarkup' || (!m.replyMarkup._ && m.replyMarkup.rows.length > 0)) &&
+        Array.isArray(m.replyMarkup.rows) &&
+        m.replyMarkup.rows.length > 0
+      ) {
+        return {
+          rows: m.replyMarkup.rows,
+          resize: m.replyMarkup.resize ?? true,
+          resize_keyboard: m.replyMarkup.resize ?? true,
+          single_use: m.replyMarkup.singleUse,
+          one_time_keyboard: m.replyMarkup.singleUse,
+          selective: m.replyMarkup.selective,
+          persistent: m.replyMarkup.persistent,
+          placeholder: m.replyMarkup.placeholder,
+        }
+      }
+    }
+    return null
+  }, [messages, chat?.isBot, chatDetails?.isBot])
+
+  // Dedicated Start Bot Action Handler (messages.startBot)
+  const handleStartBot = useCallback(async (startParam?: string) => {
+    if (!chat) return
+    setIsBotStarting(true)
+    try {
+      if (window.guidegram?.startBot) {
+        const res = await window.guidegram.startBot(chat.accountId, chat.id, startParam)
+        if (!res.success && res.error) {
+          showToast(res.error)
+        } else {
+          showToast('Bot started!')
+        }
+      } else {
+        onSendMessage(startParam ? `/start ${startParam}` : '/start')
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to start bot')
+    } finally {
+      setIsBotStarting(false)
+    }
+  }, [chat, onSendMessage])
 
   // Ctrl+F hotkey listener for in-chat search
   useEffect(() => {
@@ -4061,23 +4138,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         {filteredMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-xs text-gray-400 gap-3">
             {(chat.isBot || chatDetails?.isBot) && !searchQuery ? (
-              <div className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-dark-850/80 border border-white/10 shadow-xl max-w-sm text-center animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 rounded-2xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 shadow-glow">
-                  <Bot className="w-8 h-8" />
-                </div>
-                <div className="font-bold text-base text-gray-100">{chat.title}</div>
-                <div className="text-xs text-gray-400 leading-relaxed">
-                  {chatDetails?.about || t('app.bot_welcome')}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onSendMessage('/start')}
-                  className="mt-2 px-6 py-2.5 rounded-2xl bg-primary-600 hover:bg-primary-500 active:scale-95 text-white font-bold text-xs transition-all shadow-glow flex items-center gap-2 cursor-pointer"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>{t('app.start_bot')}</span>
-                </button>
-              </div>
+              <BotIntroCard
+                chat={chat}
+                chatDetails={chatDetails}
+                botInfo={chatDetails?.botInfo || botInfoState}
+                hasMessages={filteredMessages.length > 0}
+                isLoading={isBotStarting}
+                onStartBot={handleStartBot}
+                onSelectCommand={(cmd: string) => onSendMessage(cmd)}
+                onOpenUrl={handleSafeOpenUrl}
+              />
             ) : (
               <div>
                 {searchQuery ? `No messages found matching "${searchQuery}"` : 'No messages in this chat yet.'}
@@ -5359,71 +5429,25 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               </div>
             ) : (
               <form onSubmit={handleSend} className="flex items-end gap-2">
-                {/* Bot Menu & Command Switcher */}
-                {(chat.isBot || chatDetails?.isBot) &&
-                  Boolean(
-                    (chatDetails?.botInfo?.commands && chatDetails.botInfo.commands.length > 0) ||
-                    chatDetails?.botInfo?.menuButton
-                  ) && (
-                    <div className="relative shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (chatDetails?.botInfo?.menuButton?.url) {
-                            handleSafeOpenUrl(chatDetails.botInfo.menuButton.url)
-                          } else {
-                            setIsBotMenuOpen((prev) => !prev)
-                          }
-                        }}
-                        className={`p-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isBotMenuOpen
-                            ? 'bg-primary-500/25 text-primary-300 border border-primary-500/40 shadow-glow'
-                            : 'bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5'
-                        }`}
-                        title={chatDetails?.botInfo?.menuButton?.text || t('chat.bot_commands')}
-                      >
-                        <Bot className="w-4 h-4 text-primary-400" />
-                        <span className="font-bold text-xs">
-                          {chatDetails?.botInfo?.menuButton?.text || t('chat.bot_menu')}
-                        </span>
-                      </button>
-
-                      {isBotMenuOpen &&
-                        chatDetails?.botInfo?.commands &&
-                        chatDetails.botInfo.commands.length > 0 && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute bottom-full left-0 mb-2 w-64 max-h-72 overflow-y-auto bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs select-none"
-                          >
-                            <div className="px-2.5 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 flex items-center justify-between">
-                              <span>{t('chat.bot_commands')}</span>
-                              {chatDetails?.username && (
-                                <span className="text-primary-400 font-mono">@{chatDetails.username}</span>
-                              )}
-                            </div>
-                            {chatDetails.botInfo.commands
-                              .map((c) => ({
-                                cmd: c.command.startsWith('/') ? c.command : `/${c.command}`,
-                                label: c.description,
-                              }))
-                              .map((item) => (
-                                <button
-                                  key={item.cmd}
-                                  type="button"
-                                  onClick={() => {
-                                    setIsBotMenuOpen(false)
-                                    onSendMessage(item.cmd)
-                                  }}
-                                  className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-white/10 text-gray-200 hover:text-white transition-colors cursor-pointer text-left"
-                                >
-                                  <span className="font-mono font-bold text-primary-400 shrink-0">{item.cmd}</span>
-                                  <span className="text-[10px] text-gray-400 truncate text-right">{item.label}</span>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                    </div>
-                  )}
+                {/* Bot Menu & Command Drawer (Telegram MTProto Layer 180+) */}
+                {(chat.isBot || chatDetails?.isBot) && (
+                  <BotMenuDrawer
+                    chat={chat}
+                    chatDetails={chatDetails}
+                    menuButton={botMenuButtonState || (chatDetails?.botInfo?.menuButton as any)}
+                    commands={chatDetails?.botInfo?.commands}
+                    inputText={inputText}
+                    cursorPosition={textareaRef.current?.selectionEnd ?? undefined}
+                    onSendCommand={(cmd: string) => onSendMessage(cmd)}
+                    onInsertCommand={(cmd: string) => {
+                      setInputText(cmd + ' ')
+                      setTimeout(() => textareaRef.current?.focus(), 50)
+                    }}
+                    onLaunchMiniApp={(url: string, _title?: string) => {
+                      handleSafeOpenUrl(url)
+                    }}
+                  />
+                )}
 
                 {/* Paperclip Button with Attachment Popover Toggle */}
                 <button
@@ -5694,6 +5718,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     }}
                     className="w-full bg-transparent text-xs text-gray-100 placeholder-gray-500 resize-none focus:outline-none leading-relaxed"
                   />
+
+                  {/* Official Telegram 4-Dots Reply Keyboard Toggle Button */}
+                  {Boolean(activeReplyMarkup) && (
+                    <ReplyKeyboardToggleButton
+                      hasKeyboard={Boolean(activeReplyMarkup)}
+                      isOpen={isReplyKeyboardOpen}
+                      onToggle={() => setIsReplyKeyboardOpen((prev: boolean) => !prev)}
+                      className="shrink-0 ml-1.5 self-end mb-0.5"
+                    />
+                  )}
                 </div>
 
                 {/* Send or Voice Record Trigger */}
@@ -5793,6 +5827,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   </button>
                 )}
               </form>
+            )}
+
+            {/* Telegram Persistent Custom Reply Keyboard Panel (Layer 180+) */}
+            {activeReplyMarkup && (
+              <ReplyKeyboardPanel
+                replyMarkup={activeReplyMarkup as any}
+                isOpen={isReplyKeyboardOpen}
+                botName={chatDetails?.title || chat.title}
+                botUsername={chatDetails?.username}
+                onToggleOpen={(open: boolean) => setIsReplyKeyboardOpen(open)}
+                onSendMessage={(text: string) => onSendMessage(text)}
+                onSendContact={async (phone?: string, _firstName?: string) => {
+                  onSendMessage(phone ? `Phone: ${phone}` : 'Shared Contact')
+                }}
+                onSendLocation={async (coords: { latitude: number; longitude: number }) => {
+                  onSendMessage(`Location: ${coords.latitude}, ${coords.longitude}`)
+                }}
+                onLaunchMiniApp={(url: string, _title?: string) => {
+                  handleSafeOpenUrl(url)
+                }}
+              />
             )}
           </div>
         )}

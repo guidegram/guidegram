@@ -5,6 +5,7 @@ import {
   AppConfig,
   QrTokenPayload,
   AccountInfo,
+  PhoneAuthResult,
   UpdateInfo,
   ChatDetails,
   MessageItem,
@@ -67,7 +68,7 @@ const guidegramAPI = {
   getAccounts: (): Promise<AccountInfo[]> => ipcRenderer.invoke('telegram:get-accounts'),
   startPhoneAuth: (phone: string, proxy?: ProxyConfig) =>
     ipcRenderer.invoke('telegram:start-phone-auth', { phone, proxy }),
-  completePhoneAuth: (phone: string, code: string, password?: string) =>
+  completePhoneAuth: (phone: string, code: string, password?: string): Promise<PhoneAuthResult> =>
     ipcRenderer.invoke('telegram:complete-phone-auth', { phone, code, password }),
   loginBot: (token: string, proxy?: ProxyConfig): Promise<AccountInfo> =>
     ipcRenderer.invoke('telegram:login-bot', { token, proxy }),
@@ -270,6 +271,16 @@ const guidegramAPI = {
     }),
   openMiniApp: (url: string, title?: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:open-mini-app', { url, title }),
+  startBot: (
+    accountId: string,
+    botPeerId: string,
+    startParam?: string
+  ): Promise<{ success: boolean; messageId?: number; error?: string }> =>
+    ipcRenderer.invoke('telegram:start-bot', { accountId, botPeerId, startParam }),
+  getBotInfo: (accountId: string, botPeerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-bot-info', { accountId, botPeerId }),
+  getBotMenuButton: (accountId: string, botPeerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-bot-menu-button', { accountId, botPeerId }),
   getAdminLog: (
     accountId: string,
     channelId: string,

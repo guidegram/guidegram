@@ -1331,7 +1331,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="grid grid-cols-3 gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => setCloseAction('ask')}
+                      onClick={() => {
+                        setCloseAction('ask')
+                        window.guidegram?.updateConfig?.({ closeAction: 'ask', rememberCloseAction: true })
+                      }}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         closeAction === 'ask'
                           ? 'bg-primary-600/20 text-primary-300 border-primary-500/50 shadow-glow'
@@ -1344,7 +1347,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => setCloseAction('minimize')}
+                      onClick={() => {
+                        setCloseAction('minimize')
+                        window.guidegram?.updateConfig?.({ closeAction: 'minimize', rememberCloseAction: true })
+                      }}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         closeAction === 'minimize'
                           ? 'bg-primary-600/20 text-primary-300 border-primary-500/50 shadow-glow'
@@ -1357,7 +1363,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => setCloseAction('quit')}
+                      onClick={() => {
+                        setCloseAction('quit')
+                        window.guidegram?.updateConfig?.({ closeAction: 'quit', rememberCloseAction: true })
+                      }}
                       className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         closeAction === 'quit'
                           ? 'bg-accent-rose/20 text-accent-rose border-accent-rose/50 shadow-glow'

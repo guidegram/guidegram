@@ -27,6 +27,12 @@ app.name = 'Guidegram'
 app.setName('Guidegram')
 app.setAppUserModelId('com.guidegram.desktop')
 
+// Hardware & GPU Acceleration optimization switches
+app.commandLine.appendSwitch('enable-gpu-rasterization')
+app.commandLine.appendSwitch('enable-zero-copy')
+app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization')
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+
 // Enforce Single Instance Application Lock: prevent duplicate instances/windows
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
 if (!hasSingleInstanceLock) {
@@ -119,6 +125,7 @@ let tray: Tray | null = null
 let sessionStore: SessionStore
 let accountManager: AccountManager
 let updateManager: UpdateManager
+let isQuitting = false
 
 // Focus primary window when user clicks pinned taskbar icon or second instance launches
 app.on('second-instance', () => {
@@ -240,6 +247,7 @@ function createTray() {
     {
       label: 'Quit Guidegram',
       click: () => {
+        isQuitting = true
         if (tray) {
           tray.destroy()
           tray = null
@@ -347,6 +355,31 @@ function createWindow() {
     Logger.info(`[Window] Loading production bundle: ${htmlPath}`)
     mainWindow.loadFile(htmlPath)
   }
+
+  mainWindow.on('close', (event) => {
+    if (isQuitting) return
+
+    const cfg = sessionStore ? sessionStore.getConfig() : null
+    const action = cfg?.closeAction || 'ask'
+
+    if (action === 'minimize') {
+      event.preventDefault()
+      mainWindow?.hide()
+      Logger.info('[Window] Close event intercepted: window hidden to tray.')
+      return
+    }
+
+    if (action === 'ask') {
+      event.preventDefault()
+      mainWindow?.show()
+      mainWindow?.focus()
+      mainWindow?.webContents.send('app:request-close-confirm')
+      Logger.info('[Window] Close event intercepted: prompting user for confirmation.')
+      return
+    }
+
+    Logger.info('[Window] Close event proceeding: action is quit.')
+  })
 
   mainWindow.on('closed', () => {
     Logger.info('[Window] Main window closed.')
@@ -608,6 +641,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  isQuitting = true
   Logger.info('[App] Application quitting. Flushing pending audit logs...')
   sessionStore?.flushAllAuditsSync()
 })
@@ -884,6 +918,7 @@ function setupIpcHandlers() {
       mainWindow?.hide()
       return { action: 'minimize' }
     } else if (cfg.closeAction === 'quit') {
+      isQuitting = true
       mainWindow?.close()
       return { action: 'quit' }
     }
@@ -902,12 +937,21 @@ function setupIpcHandlers() {
     if (action === 'minimize') {
       mainWindow?.hide()
     } else {
+      isQuitting = true
       mainWindow?.close()
     }
   })
 
   ipcMain.handle('window:close', () => {
-    mainWindow?.close()
+    const cfg = sessionStore.getConfig()
+    if (cfg.closeAction === 'minimize') {
+      mainWindow?.hide()
+    } else if (cfg.closeAction === 'quit') {
+      isQuitting = true
+      mainWindow?.close()
+    } else {
+      mainWindow?.webContents.send('app:request-close-confirm')
+    }
   })
 
   ipcMain.handle('window:is-maximized', () => {
@@ -1470,6 +1514,42 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.error(`[IPC] openMiniApp error:`, err)
       return false
+    }
+  })
+
+  ipcMain.handle('telegram:start-bot', async (_event, { accountId, botPeerId, startParam }) => {
+    try {
+      return await accountManager.startBot(accountId, botPeerId, startParam)
+    } catch (err: any) {
+      Logger.error(`[IPC] startBot error:`, err)
+      return { success: false, error: err?.message || 'Failed to start bot' }
+    }
+  })
+
+  ipcMain.handle('telegram:get-bot-info', async (_event, { accountId, botPeerId }) => {
+    try {
+      return await accountManager.getBotInfo(accountId, botPeerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getBotInfo error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-bot-menu-button', async (_event, { accountId, botPeerId }) => {
+    try {
+      return await accountManager.getBotMenuButton(accountId, botPeerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getBotMenuButton error:`, err)
+      return { type: 'default' }
+    }
+  })
+
+  ipcMain.handle('telegram:send-bot-callback', async (_event, { accountId, chatId, messageId, data, row, col }) => {
+    try {
+      return await accountManager.sendBotCallbackQuery(accountId, chatId, messageId, data, row, col)
+    } catch (err: any) {
+      Logger.error(`[IPC] sendBotCallbackQuery error:`, err)
+      throw err
     }
   })
 

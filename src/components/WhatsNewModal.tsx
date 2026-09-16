@@ -1,5 +1,5 @@
 import React from 'react'
-import { Sparkles, ShieldCheck, Zap, Shield, Smartphone, ArrowRight, ArrowLeft, X } from 'lucide-react'
+import { Sparkles, ShieldCheck, Zap, Shield, Smartphone, ArrowRight, ArrowLeft, X, Minimize2, ExternalLink } from 'lucide-react'
 import { useI18n } from '../i18n'
 
 interface WhatsNewModalProps {
@@ -17,29 +17,83 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
 
   if (!isOpen) return null
 
-  const features = [
-    {
-      icon: Zap,
-      color: 'from-amber-500 to-orange-500',
-      bgColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      title: t('whatsnew.feat_updater_title'),
-      desc: t('whatsnew.feat_updater_desc'),
-    },
-    {
-      icon: Shield,
-      color: 'from-emerald-500 to-teal-500',
-      bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      title: t('whatsnew.feat_isolation_title'),
-      desc: t('whatsnew.feat_isolation_desc'),
-    },
-    {
-      icon: Smartphone,
-      color: 'from-cyan-500 to-blue-500',
-      bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-      title: t('whatsnew.feat_login_title'),
-      desc: t('whatsnew.feat_login_desc'),
-    },
-  ]
+  // Version-aware feature resolution:
+  // Dynamically showcase the actual highlights of the updated version instead of static fallback items.
+  const getVersionFeatures = (ver: string) => {
+    const cleanVer = ver.replace(/^v/, '').trim()
+
+    // v1.11.4+: Mobile 2FA resilience, smart tray close intercept & unread sync
+    if (cleanVer.startsWith('1.11.4') || cleanVer >= '1.11.4') {
+      return [
+        {
+          icon: Smartphone,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: t('whatsnew.feat_phone_2fa_title'),
+          desc: t('whatsnew.feat_phone_2fa_desc'),
+        },
+        {
+          icon: Minimize2,
+          bgColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+          title: t('whatsnew.feat_tray_close_title'),
+          desc: t('whatsnew.feat_tray_close_desc'),
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+          title: t('whatsnew.feat_unread_sync_title'),
+          desc: t('whatsnew.feat_unread_sync_desc'),
+        },
+      ]
+    }
+
+    // v1.11.3: Unread counter parity & MTProto read sync
+    if (cleanVer.startsWith('1.11.3')) {
+      return [
+        {
+          icon: Zap,
+          bgColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+          title: t('whatsnew.feat_unread_sync_title'),
+          desc: t('whatsnew.feat_unread_sync_desc'),
+        },
+        {
+          icon: Shield,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: t('whatsnew.feat_isolation_title'),
+          desc: t('whatsnew.feat_isolation_desc'),
+        },
+        {
+          icon: Smartphone,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: t('whatsnew.feat_login_title'),
+          desc: t('whatsnew.feat_login_desc'),
+        },
+      ]
+    }
+
+    // General fallback
+    return [
+      {
+        icon: Smartphone,
+        bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+        title: t('whatsnew.feat_phone_2fa_title'),
+        desc: t('whatsnew.feat_phone_2fa_desc'),
+      },
+      {
+        icon: Minimize2,
+        bgColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+        title: t('whatsnew.feat_tray_close_title'),
+        desc: t('whatsnew.feat_tray_close_desc'),
+      },
+      {
+        icon: Zap,
+        bgColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+        title: t('whatsnew.feat_unread_sync_title'),
+        desc: t('whatsnew.feat_unread_sync_desc'),
+      },
+    ]
+  }
+
+  const features = getVersionFeatures(version)
 
   return (
     <div
@@ -129,19 +183,31 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
           })}
         </div>
 
-        {/* Action Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-primary-600 via-primary-500 to-accent-cyan hover:from-primary-500 hover:to-accent-cyan text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(59,130,246,0.35)] hover:shadow-[0_0_35px_rgba(14,165,233,0.5)] transition-all cursor-pointer group"
-        >
-          <span>{t('whatsnew.action_button')}</span>
-          {isRTL ? (
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          ) : (
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          )}
-        </button>
+        {/* Action Button & Release Notes Link */}
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-primary-600 via-primary-500 to-accent-cyan hover:from-primary-500 hover:to-accent-cyan text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(59,130,246,0.35)] hover:shadow-[0_0_35px_rgba(14,165,233,0.5)] transition-all cursor-pointer group"
+          >
+            <span>{t('whatsnew.action_button')}</span>
+            {isRTL ? (
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            ) : (
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            )}
+          </button>
+
+          <a
+            href={`https://github.com/guidegram/guidegram/releases`}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full flex items-center justify-center gap-1.5 text-[11px] text-gray-400 hover:text-primary-400 transition-colors py-1 cursor-pointer"
+          >
+            <span>{t('whatsnew.view_release_notes')}</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
       </div>
     </div>
   )

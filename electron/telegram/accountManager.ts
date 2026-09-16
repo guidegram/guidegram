@@ -64,6 +64,14 @@ import {
   SavedReactionTagItem,
   GroupCallInfo,
   GroupCallParticipantItem,
+  ServiceActionType,
+  ServiceActionData,
+  RichMessagePayload,
+  RichBlock,
+  RichTableBlock,
+  RichTableCell,
+  RichTableRow,
+  RichDetailsBlock,
 } from './types'
 
 export interface ClientHolder {
@@ -352,12 +360,440 @@ export function parsePollFromMedia(media: any, messageId: number): PollItem | un
   }
 }
 
+export function extractRichText(rt: any): string {
+  if (!rt) return ''
+  if (typeof rt === 'string') return rt
+  if (Array.isArray(rt)) return rt.map(extractRichText).join('')
+  if (rt._ === 'textPlain' || rt.type === 'textPlain') return rt.text || ''
+  if (rt._ === 'textBold' || rt.type === 'textBold') return extractRichText(rt.text)
+  if (rt._ === 'textItalic' || rt.type === 'textItalic') return extractRichText(rt.text)
+  if (rt._ === 'textUnderline' || rt.type === 'textUnderline') return extractRichText(rt.text)
+  if (rt._ === 'textStrike' || rt.type === 'textStrike') return extractRichText(rt.text)
+  if (rt._ === 'textFixed' || rt.type === 'textFixed') return extractRichText(rt.text)
+  if (rt._ === 'textUrl' || rt.type === 'textUrl') return extractRichText(rt.text)
+  if (rt._ === 'textConcat' || rt.type === 'textConcat') {
+    return Array.isArray(rt.texts) ? rt.texts.map(extractRichText).join('') : ''
+  }
+  if (rt.text) return extractRichText(rt.text)
+  return ''
+}
+
+export function parsePageBlock(b: any): RichBlock | null {
+  if (!b) return null
+  const type = b._ || b.type
+  if (type === 'pageBlockTable') {
+    const title = extractRichText(b.title)
+    const rows: RichTableRow[] = []
+    if (Array.isArray(b.rows)) {
+      for (const r of b.rows) {
+        const cells: RichTableCell[] = []
+        if (Array.isArray(r.cells)) {
+          for (const c of r.cells) {
+            cells.push({
+              text: extractRichText(c.text),
+              isHeader: Boolean(c.header),
+              align: c.align_center || c.alignCenter ? 'center' : (c.align_right || c.alignRight ? 'right' : 'left'),
+              valign: c.val_top || c.valTop ? 'top' : (c.val_middle || c.valMiddle ? 'middle' : 'bottom'),
+              colspan: c.colspan || 1,
+              rowspan: c.rowspan || 1,
+            })
+          }
+        }
+        rows.push({ cells })
+      }
+    }
+    return {
+      type: 'table',
+      title: title || undefined,
+      rows,
+      bordered: Boolean(b.bordered),
+      striped: Boolean(b.striped),
+    }
+  }
+  if (type === 'pageBlockDetails') {
+    const title = extractRichText(b.title)
+    const subBlocks: RichBlock[] = []
+    if (Array.isArray(b.blocks)) {
+      for (const sb of b.blocks) {
+        const parsed = parsePageBlock(sb)
+        if (parsed) subBlocks.push(parsed)
+      }
+    }
+    return {
+      type: 'details',
+      title: title || 'Details',
+      open: Boolean(b.open),
+      blocks: subBlocks,
+    }
+  }
+  if (type === 'pageBlockHeader') {
+    return { type: 'header', text: extractRichText(b.text) }
+  }
+  if (type === 'pageBlockSubheader') {
+    return { type: 'subheader', text: extractRichText(b.text) }
+  }
+  if (type === 'pageBlockParagraph') {
+    return { type: 'paragraph', text: extractRichText(b.text) }
+  }
+  if (type === 'pageBlockDivider') {
+    return { type: 'divider' }
+  }
+  if (type === 'pageBlockBlockquote' || type === 'pageBlockPullquote') {
+    return {
+      type: 'blockquote',
+      text: extractRichText(b.text),
+      caption: extractRichText(b.caption) || undefined,
+    }
+  }
+  if (type === 'pageBlockList') {
+    const items: string[] = []
+    if (Array.isArray(b.items)) {
+      for (const item of b.items) {
+        items.push(extractRichText(item.text || item))
+      }
+    }
+    return {
+      type: 'list',
+      ordered: Boolean(b.ordered),
+      items,
+    }
+  }
+  return null
+}
+
+export function extractRichMessagePayload(m: any): RichMessagePayload | undefined {
+  if (!m) return undefined
+  const rawBlocks =
+    m.richMessage?.blocks ||
+    m.rich_message?.blocks ||
+    m.media?.webpage?.cachedPage?.blocks ||
+    m.media?.webpage?.cached_page?.blocks ||
+    m.media?.webPage?.cachedPage?.blocks ||
+    (m as any).cachedPage?.blocks
+
+  if (Array.isArray(rawBlocks) && rawBlocks.length > 0) {
+    const blocks: RichBlock[] = []
+    for (const rb of rawBlocks) {
+      const parsed = parsePageBlock(rb)
+      if (parsed) blocks.push(parsed)
+    }
+    if (blocks.length > 0) {
+      return { blocks, rtl: true }
+    }
+  }
+  return undefined
+}
+
+export function parseMarkdownTable(text: string): RichTableBlock | null {
+  if (!text || !text.includes('|')) return null
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  const tableLines = lines.filter((l) => l.startsWith('|') && l.endsWith('|'))
+  if (tableLines.length < 2) return null
+
+  const rows: RichTableRow[] = []
+  let hasSeparator = false
+
+  for (let i = 0; i < tableLines.length; i++) {
+    const line = tableLines[i]
+    if (/^\|(\s*:?-+:?\s*\|)+$/.test(line)) {
+      hasSeparator = true
+      continue
+    }
+
+    const rawCells = line.slice(1, -1).split('|')
+    const isFirstRow = rows.length === 0
+    const cells: RichTableCell[] = rawCells.map((c) => ({
+      text: c.trim(),
+      isHeader: isFirstRow && hasSeparator,
+      align: 'center',
+    }))
+    rows.push({ cells })
+  }
+
+  if (hasSeparator && rows.length > 0) {
+    rows[0].cells.forEach((c) => (c.isHeader = true))
+  }
+
+  if (rows.length >= 2) {
+    return {
+      type: 'table',
+      rows,
+      bordered: true,
+      striped: true,
+    }
+  }
+  return null
+}
+
+export function parseMessageAction(
+  rawAction: any,
+  fromId: any,
+  usersMap?: Map<number, any>,
+  chatsMap?: Map<number, any>,
+  fallbackActorName?: string
+): { text: string; actionType: ServiceActionType; actionData: ServiceActionData } {
+  if (!rawAction) {
+    return { text: '', actionType: 'unknown', actionData: {} }
+  }
+
+  const actType = rawAction._ || rawAction.type || ''
+  const resolveUserName = (userId: any): string => {
+    if (!userId) return 'User'
+    const numId = typeof userId === 'number' ? userId : parseInt(String(userId), 10)
+    if (usersMap && !isNaN(numId) && usersMap.has(numId)) {
+      return formatEntityName(usersMap.get(numId))
+    }
+    return 'User'
+  }
+
+  const fromUserId =
+    fromId?._ === 'peerUser'
+      ? fromId.userId
+      : fromId?.userId
+      ? fromId.userId
+      : typeof fromId === 'number'
+      ? fromId
+      : undefined
+  const actorIdStr = fromUserId !== undefined ? String(fromUserId) : undefined
+  const actorName = fallbackActorName || (fromUserId ? resolveUserName(fromUserId) : 'User')
+
+  // 1. User left / removed
+  if (
+    actType === 'messageActionChatDeleteUser' ||
+    actType === 'user_left' ||
+    actType === 'user_removed'
+  ) {
+    const rawTargetId = rawAction.userId ?? rawAction.user_id ?? rawAction.user
+    const targetIdStr = rawTargetId !== undefined ? String(rawTargetId) : undefined
+    const isSelfLeft =
+      actType === 'user_left' ||
+      !targetIdStr ||
+      !actorIdStr ||
+      targetIdStr === actorIdStr
+
+    if (isSelfLeft) {
+      const name = fallbackActorName || (targetIdStr ? resolveUserName(targetIdStr) : actorName)
+      return {
+        text: `${name} left the group`,
+        actionType: 'user_left',
+        actionData: {
+          actorName: name,
+          actorId: targetIdStr || actorIdStr,
+          targetName: name,
+          targetId: targetIdStr || actorIdStr,
+        },
+      }
+    } else {
+      const targetName = resolveUserName(rawTargetId)
+      return {
+        text: `${actorName} removed ${targetName}`,
+        actionType: 'user_removed',
+        actionData: {
+          actorName,
+          actorId: actorIdStr,
+          targetName,
+          targetId: targetIdStr,
+        },
+      }
+    }
+  }
+
+  // 2. User added / joined
+  if (
+    actType === 'messageActionChatAddUser' ||
+    actType === 'users_added' ||
+    actType === 'user_joined'
+  ) {
+    const rawUsers: any[] = Array.isArray(rawAction.users)
+      ? rawAction.users
+      : rawAction.user
+      ? [rawAction.user]
+      : []
+    const userNames = rawUsers
+      .map((u) => resolveUserName(u))
+      .filter((n) => n && n !== 'User')
+    const targetNames =
+      userNames.length > 0 ? userNames.join(', ') : 'member'
+
+    if (rawUsers.length === 1 && String(rawUsers[0]) === actorIdStr) {
+      return {
+        text: `${actorName} joined the group`,
+        actionType: 'user_joined',
+        actionData: { actorName, targetName: actorName, targetId: actorIdStr },
+      }
+    }
+    return {
+      text: `${actorName} added ${targetNames}`,
+      actionType: 'users_added',
+      actionData: { actorName, actorId: actorIdStr, targetName: targetNames },
+    }
+  }
+
+  // 3. Joined via link
+  if (actType === 'messageActionChatJoinedByLink' || actType === 'user_joined_link') {
+    return {
+      text: `${actorName} joined the group via invite link`,
+      actionType: 'user_joined_link',
+      actionData: { actorName, actorId: actorIdStr },
+    }
+  }
+
+  // 4. Joined via request
+  if (
+    actType === 'messageActionChatJoinedByRequest' ||
+    actType === 'user_joined_approved' ||
+    actType === 'user_joined_request'
+  ) {
+    return {
+      text: `${actorName} joined the group via request`,
+      actionType: 'user_joined_request',
+      actionData: { actorName, actorId: actorIdStr },
+    }
+  }
+
+  // 5. Chat / Channel created
+  if (actType === 'messageActionChatCreate' || actType === 'chat_created') {
+    const title = rawAction.title || 'Group'
+    return {
+      text: `${actorName} created the group "${title}"`,
+      actionType: 'chat_created',
+      actionData: { actorName, actorId: actorIdStr, title },
+    }
+  }
+  if (actType === 'messageActionChannelCreate' || actType === 'channel_created') {
+    const title = rawAction.title || 'Channel'
+    return {
+      text: `${actorName} created the channel "${title}"`,
+      actionType: 'channel_created',
+      actionData: { actorName, actorId: actorIdStr, title },
+    }
+  }
+
+  // 6. Title changed
+  if (actType === 'messageActionChatEditTitle' || actType === 'title_changed') {
+    const title = rawAction.title || ''
+    return {
+      text: `${actorName} changed group name to "${title}"`,
+      actionType: 'title_changed',
+      actionData: { actorName, actorId: actorIdStr, title },
+    }
+  }
+
+  // 7. Photo changed
+  if (actType === 'messageActionChatEditPhoto' || actType === 'photo_changed') {
+    return {
+      text: `${actorName} updated group photo`,
+      actionType: 'photo_changed',
+      actionData: { actorName, actorId: actorIdStr },
+    }
+  }
+
+  // 8. Photo deleted
+  if (actType === 'messageActionChatDeletePhoto' || actType === 'photo_deleted') {
+    return {
+      text: `${actorName} removed group photo`,
+      actionType: 'photo_deleted',
+      actionData: { actorName, actorId: actorIdStr },
+    }
+  }
+
+  // 9. Message pinned
+  if (actType === 'messageActionPinMessage' || actType === 'message_pinned') {
+    return {
+      text: `${actorName} pinned a message`,
+      actionType: 'message_pinned',
+      actionData: { actorName, actorId: actorIdStr },
+    }
+  }
+
+  // 10. History cleared
+  if (actType === 'messageActionHistoryClear' || actType === 'history_cleared') {
+    return {
+      text: 'Chat history was cleared',
+      actionType: 'history_cleared',
+      actionData: {},
+    }
+  }
+
+  // 11. Contact joined Telegram
+  if (actType === 'messageActionContactSignUp' || actType === 'contact_joined') {
+    return {
+      text: `${actorName} joined Telegram!`,
+      actionType: 'contact_joined',
+      actionData: { actorName, actorId: actorIdStr },
+    }
+  }
+
+  // 12. TTL changed
+  if (actType === 'messageActionSetMessagesTTL' || actType === 'ttl_changed') {
+    const period = Number(rawAction.period || 0)
+    return {
+      text: `${actorName} set auto-delete timer`,
+      actionType: 'ttl_changed',
+      actionData: { actorName, actorId: actorIdStr, period },
+    }
+  }
+
+  // 13. Group call
+  if (
+    actType === 'messageActionGroupCall' ||
+    actType === 'group_call_started' ||
+    actType === 'group_call_ended'
+  ) {
+    const duration = rawAction.duration ? Number(rawAction.duration) : undefined
+    const isEnded = Boolean(duration) || actType === 'group_call_ended'
+    return {
+      text: isEnded
+        ? duration
+          ? `Voice chat ended (${duration}s)`
+          : 'Voice chat ended'
+        : `${actorName} started a voice chat`,
+      actionType: isEnded ? 'group_call_ended' : 'group_call_started',
+      actionData: { actorName, actorId: actorIdStr, duration },
+    }
+  }
+
+  // 14. Forum topic created / edited
+  if (actType === 'messageActionTopicCreate' || actType === 'topic_created') {
+    const title = rawAction.title || ''
+    return {
+      text: `${actorName} created topic "${title}"`,
+      actionType: 'topic_created',
+      actionData: { actorName, actorId: actorIdStr, title },
+    }
+  }
+  if (actType === 'messageActionTopicEdit' || actType === 'topic_edited') {
+    const title = rawAction.title || ''
+    return {
+      text: `${actorName} edited topic "${title}"`,
+      actionType: 'topic_edited',
+      actionData: { actorName, actorId: actorIdStr, title },
+    }
+  }
+
+  // 15. Custom or other action
+  if (actType === 'messageActionCustomAction' || actType === 'custom') {
+    const msgText = rawAction.message || rawAction.action || 'Action'
+    return {
+      text: msgText,
+      actionType: 'custom',
+      actionData: { actorName, title: msgText },
+    }
+  }
+
+  return {
+    text: `${actorName} performed an action`,
+    actionType: 'unknown',
+    actionData: { actorName, actorId: actorIdStr },
+  }
+}
+
 export class AccountManager {
   private store: SessionStore
   private clients = new Map<string, ClientHolder>()
   private pendingAuthClients = new Map<
     string,
-    { client: TelegramClient; phoneCodeHash: string; proxy?: ProxyConfig; profile?: any }
+    { client: TelegramClient; phoneCodeHash: string; proxy?: ProxyConfig; profile?: any; is2faNeeded?: boolean }
   >()
   private pendingQrAuth?: PendingQrAuth
   private onEventCallback?: (event: string, payload: any) => void
@@ -371,6 +807,7 @@ export class AccountManager {
   private customEmojiCache = new Map<string, CustomEmojiPayload>()
   private botButtonCache = new Map<string, Buffer>()
   private peerPhotos = new Map<string, any>()
+  private peerBigPhotos = new Map<string, any>()
   private peerAccessHashes = new Map<string, Long>()
   private topMessageIds = new Map<string, number>()
 
@@ -457,8 +894,23 @@ export class AccountManager {
       const me: any = await client.getMe().catch(() => null)
       if (me && me.id) {
         const isBot = Boolean(me.isBot || (me as any).bot || savedAcc.isBot)
+        const accountId = me.id.toString()
+        let avatarUrl = savedAcc.avatarUrl
+
+        if (me.photo) {
+          if (me.photo.small) this.peerPhotos.set(`${accountId}_${accountId}`, me.photo.small)
+          if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, me.photo.big)
+          if (!avatarUrl) {
+            if (me.photo.thumb) {
+              avatarUrl = `data:image/jpeg;base64,${Buffer.from(me.photo.thumb).toString('base64')}`
+            } else if ((me.raw?.photo as any)?.strippedThumb) {
+              avatarUrl = strippedThumbToDataUrl((me.raw.photo as any).strippedThumb) || undefined
+            }
+          }
+        }
+
         const updatedInfo: AccountInfo = {
-          id: me.id.toString(),
+          id: accountId,
           phone: me.phoneNumber
             ? (me.phoneNumber.startsWith('+') ? me.phoneNumber : '+' + me.phoneNumber)
             : (savedAcc.phone || (me.username ? `@${me.username}` : `Bot ${me.id}`)),
@@ -471,6 +923,7 @@ export class AccountManager {
           isPremium: me.isPremium || false,
           isBot,
           botToken: savedAcc.botToken,
+          avatarUrl,
           deviceProfile: profile,
         }
 
@@ -484,6 +937,18 @@ export class AccountManager {
 
         const currentAccounts = this.store.getConfig().accounts.map((a) => (a.id === updatedInfo.id ? updatedInfo : a))
         this.store.updateConfig({ accounts: currentAccounts })
+
+        // Proactively ensure profile photo is downloaded to disk in background
+        if (me.photo || isBot) {
+          this.getProfilePhoto(accountId, accountId).then((fullPhoto) => {
+            if (fullPhoto && fullPhoto !== updatedInfo.avatarUrl) {
+              updatedInfo.avatarUrl = fullPhoto
+              const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto } : a))
+              this.store.updateConfig({ accounts: accs })
+              this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
+            }
+          }).catch(() => {})
+        }
 
         Logger.info(`[AccountManager] Account ${updatedInfo.id} connected successfully!`)
         this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
@@ -534,7 +999,17 @@ export class AccountManager {
 
 
   public async startPhoneAuth(phone: string, proxy?: ProxyConfig): Promise<{ phoneCodeHash: string }> {
-    Logger.info(`[AccountManager] Starting phone auth for , proxy=`)
+    Logger.info(`[AccountManager] Starting phone auth for ${phone}, proxy=${proxy?.type || 'none'}`)
+    
+    // Clean up any existing pending auth for this phone
+    const existing = this.pendingAuthClients.get(phone)
+    if (existing) {
+      try {
+        await existing.client.disconnect()
+      } catch (_) {}
+      this.pendingAuthClients.delete(phone)
+    }
+
     const config = this.store.getConfig()
     const transport = ProxyManager.toMtcuteTransport(proxy)
     const antiFingerprinting = config.antiFingerprinting !== false
@@ -565,7 +1040,7 @@ export class AccountManager {
       const sentCode: any = await client.sendCode({ phone })
       const phoneCodeHash = sentCode.phoneCodeHash || ''
       Logger.info(`[AccountManager] Code sent to ${phone}, phoneCodeHash: ${phoneCodeHash}`)
-      this.pendingAuthClients.set(phone, { client, phoneCodeHash, proxy, profile })
+      this.pendingAuthClients.set(phone, { client, phoneCodeHash, proxy, profile, is2faNeeded: false })
       return { phoneCodeHash }
     } catch (err: any) {
       Logger.error(`[AccountManager] startPhoneAuth failed for ${phone}:`, err)
@@ -580,7 +1055,7 @@ export class AccountManager {
     phone: string,
     code: string,
     password?: string
-  ): Promise<AccountInfo> {
+  ): Promise<AccountInfo | { need2fa: true; hint?: string }> {
     const pending = this.pendingAuthClients.get(phone)
     if (!pending) {
       throw new Error('No pending authentication found for this phone number.')
@@ -590,11 +1065,23 @@ export class AccountManager {
     const config = this.store.getConfig()
 
     try {
-      await client.signIn({
-        phone,
-        phoneCodeHash,
-        phoneCode: code,
-      })
+      if (pending.is2faNeeded) {
+        if (!password) {
+          let hint = ''
+          try {
+            const pwd = await client.call({ _: 'account.getPassword' })
+            hint = pwd.hint || ''
+          } catch (_) {}
+          return { need2fa: true, hint }
+        }
+        await client.checkPassword(password)
+      } else {
+        await client.signIn({
+          phone,
+          phoneCodeHash,
+          phoneCode: code,
+        })
+      }
     } catch (err: any) {
       const msg = err?.message || ''
       if (
@@ -602,8 +1089,14 @@ export class AccountManager {
         err.text === 'SESSION_PASSWORD_NEEDED' ||
         err?.code === 401
       ) {
+        pending.is2faNeeded = true
         if (!password) {
-          throw new Error('2FA_REQUIRED')
+          let hint = ''
+          try {
+            const pwd = await client.call({ _: 'account.getPassword' })
+            hint = pwd.hint || ''
+          } catch (_) {}
+          return { need2fa: true, hint }
         }
         await client.checkPassword(password)
       } else {
@@ -615,6 +1108,17 @@ export class AccountManager {
     const sessionString = await client.exportSession()
     const accountId = me.id.toString()
 
+    let avatarUrl: string | undefined = undefined
+    if (me.photo) {
+      if (me.photo.small) this.peerPhotos.set(`${accountId}_${accountId}`, me.photo.small)
+      if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, me.photo.big)
+      if (me.photo.thumb) {
+        avatarUrl = `data:image/jpeg;base64,${Buffer.from(me.photo.thumb).toString('base64')}`
+      } else if ((me.raw?.photo as any)?.strippedThumb) {
+        avatarUrl = strippedThumbToDataUrl((me.raw.photo as any).strippedThumb) || undefined
+      }
+    }
+
     const info: AccountInfo = {
       id: accountId,
       phone: me.phoneNumber ? (me.phoneNumber.startsWith('+') ? me.phoneNumber : '+' + me.phoneNumber) : phone,
@@ -625,6 +1129,7 @@ export class AccountManager {
       unreadTotal: 0,
       proxyConfig: proxy,
       isPremium: me.isPremium || false,
+      avatarUrl,
       deviceProfile: profile || DeviceProfileManager.getProfileForAccount(accountId, config.antiFingerprinting !== false),
     }
 
@@ -640,6 +1145,17 @@ export class AccountManager {
     try {
       client.startUpdatesLoop()
     } catch (_) {}
+
+    if (me.photo) {
+      this.getProfilePhoto(accountId, accountId).then((fullPhoto) => {
+        if (fullPhoto && fullPhoto !== info.avatarUrl) {
+          info.avatarUrl = fullPhoto
+          const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto } : a))
+          this.store.updateConfig({ accounts: accs })
+          this.onEventCallback?.('telegram:account-updated', { account: info })
+        }
+      }).catch(() => {})
+    }
 
     return info
   }
@@ -692,6 +1208,17 @@ export class AccountManager {
       const accountId = me.id.toString()
       const botPhone = me.username ? `@${me.username}` : `Bot ${me.id}`
 
+      let avatarUrl: string | undefined = undefined
+      if (me.photo) {
+        if (me.photo.small) this.peerPhotos.set(`${accountId}_${accountId}`, me.photo.small)
+        if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, me.photo.big)
+        if (me.photo.thumb) {
+          avatarUrl = `data:image/jpeg;base64,${Buffer.from(me.photo.thumb).toString('base64')}`
+        } else if ((me.raw?.photo as any)?.strippedThumb) {
+          avatarUrl = strippedThumbToDataUrl((me.raw.photo as any).strippedThumb) || undefined
+        }
+      }
+
       const info: AccountInfo = {
         id: accountId,
         phone: botPhone,
@@ -704,6 +1231,7 @@ export class AccountManager {
         isPremium: false,
         isBot: true,
         botToken: cleanToken,
+        avatarUrl,
         deviceProfile: profile || DeviceProfileManager.getProfileForAccount(accountId, antiFingerprinting),
       }
 
@@ -718,6 +1246,16 @@ export class AccountManager {
       try {
         client.startUpdatesLoop()
       } catch (_) {}
+
+      // Proactively fetch and cache bot profile photo in background
+      this.getProfilePhoto(accountId, accountId).then((fullPhoto) => {
+        if (fullPhoto && fullPhoto !== info.avatarUrl) {
+          info.avatarUrl = fullPhoto
+          const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto } : a))
+          this.store.updateConfig({ accounts: accs })
+          this.onEventCallback?.('telegram:account-updated', { account: info })
+        }
+      }).catch(() => {})
 
       Logger.info(`[AccountManager] Bot account ${accountId} (${botPhone}) registered successfully!`)
       this.onEventCallback?.('telegram:account-updated', { account: info })
@@ -869,6 +1407,17 @@ export class AccountManager {
 
     const qrProfile = this.pendingQrAuth?.profile || DeviceProfileManager.getProfileForAccount(accountId, config.antiFingerprinting !== false)
 
+    let avatarUrl: string | undefined = undefined
+    if (me.photo) {
+      if (me.photo.small) this.peerPhotos.set(`${accountId}_${accountId}`, me.photo.small)
+      if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, me.photo.big)
+      if (me.photo.thumb) {
+        avatarUrl = `data:image/jpeg;base64,${Buffer.from(me.photo.thumb).toString('base64')}`
+      } else if ((me.raw?.photo as any)?.strippedThumb) {
+        avatarUrl = strippedThumbToDataUrl((me.raw.photo as any).strippedThumb) || undefined
+      }
+    }
+
     const info: AccountInfo = {
       id: accountId,
       phone: phoneStr,
@@ -879,6 +1428,7 @@ export class AccountManager {
       unreadTotal: 0,
       proxyConfig: proxy,
       isPremium: me.isPremium || false,
+      avatarUrl,
       deviceProfile: qrProfile,
     }
 
@@ -894,6 +1444,17 @@ export class AccountManager {
     try {
       client.startUpdatesLoop()
     } catch (_) {}
+
+    if (me.photo) {
+      this.getProfilePhoto(accountId, accountId).then((fullPhoto) => {
+        if (fullPhoto && fullPhoto !== info.avatarUrl) {
+          info.avatarUrl = fullPhoto
+          const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto } : a))
+          this.store.updateConfig({ accounts: accs })
+          this.onEventCallback?.('telegram:account-updated', { account: info })
+        }
+      }).catch(() => {})
+    }
     Logger.info(`[AccountManager] finalizeQrLogin completed successfully for account ${accountId}`)
     this.onEventCallback?.('telegram:qr-success', { account: info })
 
@@ -918,7 +1479,7 @@ export class AccountManager {
   public async resolveInputPeer(accountId: string, peerId: string | number): Promise<tl.TypeInputPeer> {
     const holder = this.clients.get(accountId)
     const s = String(peerId).trim()
-    if (s === 'self' || s === 'me') return { _: 'inputPeerSelf' }
+    if (s === 'self' || s === 'me' || (holder?.info && s === holder.info.id)) return { _: 'inputPeerSelf' }
 
     let normalized = s
     if (s.startsWith('-') && !s.startsWith('-100')) {
@@ -926,8 +1487,6 @@ export class AccountManager {
       if (val > 2000000000) {
         normalized = `-100${val}`
       }
-    } else if (!s.startsWith('-') && !isNaN(Number(s)) && Number(s) > 2000000000) {
-      normalized = `-100${s}`
     }
 
     if (holder?.client) {
@@ -946,11 +1505,31 @@ export class AccountManager {
     }
 
     const bareId = normalized.replace(/^-100/, '').replace(/^-/, '')
-    const cachedHash =
+    let cachedHash =
       this.peerAccessHashes.get(`${accountId}_${normalized}`) ||
       this.peerAccessHashes.get(`${accountId}_${s}`) ||
       this.peerAccessHashes.get(`${accountId}_-${bareId}`) ||
       this.peerAccessHashes.get(`${accountId}_${bareId}`)
+
+    if (!cachedHash) {
+      const cachedDialogs = this.store.loadDialogsCache(accountId)
+      const found = cachedDialogs.find((d) => d.id === s || d.id === normalized || d.id.endsWith(bareId))
+      if (found && found.accessHash) {
+        try {
+          cachedHash = Long.fromString(found.accessHash)
+          this.peerAccessHashes.set(`${accountId}_${normalized}`, cachedHash)
+          this.peerAccessHashes.set(`${accountId}_${s}`, cachedHash)
+        } catch (_) {}
+      }
+    }
+
+    // Basic group chat (inputPeerChat) does not require any accessHash
+    if (normalized.startsWith('-') && !normalized.startsWith('-100')) {
+      const chatId = Math.abs(Number(normalized))
+      if (chatId <= 2000000000) {
+        return { _: 'inputPeerChat', chatId }
+      }
+    }
 
     if (cachedHash) {
       if (normalized.startsWith('-100')) {
@@ -958,20 +1537,51 @@ export class AccountManager {
         return { _: 'inputPeerChannel', channelId, accessHash: cachedHash }
       } else if (normalized.startsWith('-')) {
         const chatId = Math.abs(Number(normalized))
-        if (chatId > 2000000000) {
-          return { _: 'inputPeerChannel', channelId: chatId, accessHash: cachedHash }
-        }
-        return { _: 'inputPeerChat', chatId }
+        return { _: 'inputPeerChannel', channelId: chatId, accessHash: cachedHash }
       } else {
         const userId = parseInt(normalized, 10)
         return { _: 'inputPeerUser', userId, accessHash: cachedHash }
       }
     }
 
-    const raw = toRawPeer(normalized)
-    if (raw._ === 'inputPeerChannel' && cachedHash) {
-      raw.accessHash = cachedHash
+    // If still missing accessHash for channel or user, attempt fetching entity info from MTProto
+    if (holder?.client) {
+      if (normalized.startsWith('-100') || (normalized.startsWith('-') && Math.abs(Number(normalized)) > 2000000000)) {
+        const channelId = normalized.startsWith('-100')
+          ? parseInt(normalized.slice(4), 10)
+          : Math.abs(Number(normalized))
+        try {
+          const res: any = await holder.client.call({
+            _: 'channels.getChannels',
+            id: [{ _: 'inputChannel', channelId, accessHash: Long.ZERO }],
+          }).catch(() => null)
+          const ch = res?.chats?.[0]
+          if (ch?.accessHash) {
+            this.peerAccessHashes.set(`${accountId}_${normalized}`, ch.accessHash)
+            this.peerAccessHashes.set(`${accountId}_${s}`, ch.accessHash)
+            return { _: 'inputPeerChannel', channelId, accessHash: ch.accessHash }
+          }
+        } catch (_) {}
+      } else if (!normalized.startsWith('-')) {
+        const userId = parseInt(normalized, 10)
+        if (!isNaN(userId) && userId > 0) {
+          try {
+            const res: any = await holder.client.call({
+              _: 'users.getUsers',
+              id: [{ _: 'inputUser', userId, accessHash: Long.ZERO }],
+            }).catch(() => null)
+            const u = res?.[0]
+            if (u?.accessHash) {
+              this.peerAccessHashes.set(`${accountId}_${normalized}`, u.accessHash)
+              this.peerAccessHashes.set(`${accountId}_${s}`, u.accessHash)
+              return { _: 'inputPeerUser', userId, accessHash: u.accessHash }
+            }
+          } catch (_) {}
+        }
+      }
     }
+
+    const raw = toRawPeer(normalized)
     return raw
   }
 
@@ -979,13 +1589,35 @@ export class AccountManager {
     try {
       if (!accountId || !chatId || !msg || !msg.id) return
       const raw = msg.raw || msg
-      const text = msg.text || raw.message || ''
+      let text = msg.text || raw.message || ''
       const date = msg.date ? Math.floor(msg.date.getTime() / 1000) : (raw.date || Math.floor(Date.now() / 1000))
       const isOutgoing = Boolean(msg.isOutgoing || raw.out)
 
-      let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
+      const isService = raw._ === 'messageService' || Boolean(msg.action)
+      let actionType: ServiceActionType | undefined = undefined
+      let actionData: ServiceActionData | undefined = undefined
+
+      if (isService) {
+        const actionObj = raw.action || msg.action
+        if (actionObj) {
+          const parsed = parseMessageAction(
+            actionObj,
+            raw.fromId,
+            undefined,
+            undefined,
+            msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName
+          )
+          text = parsed.text
+          actionType = parsed.actionType
+          actionData = parsed.actionData
+        }
+      }
+
+      let replyMarkup: MessageItem['replyMarkup'] = undefined
       const rawMarkup = raw.replyMarkup || raw.reply_markup
-      if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
+      if (rawMarkup?._ === 'replyKeyboardHide') {
+        replyMarkup = { rows: [], _: 'replyKeyboardHide' }
+      } else if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
         const rows: InlineButton[][] = []
         for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
           const row = rawMarkup.rows[rIdx]
@@ -993,22 +1625,50 @@ export class AccountManager {
           if (row?.buttons && Array.isArray(row.buttons)) {
             for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
               const b = row.buttons[cIdx]
-              if (b._ === 'keyboardButtonUrl') {
-                btnRow.push({ text: b.text, url: b.url })
+              let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
+              const rawStyle = b.style || (b as any).theme || (b as any).color
+              if (rawStyle) {
+                const sName = typeof rawStyle === 'string' ? rawStyle : (rawStyle._ || rawStyle.type || '')
+                if (/success|green/i.test(sName)) btnStyle = 'success'
+                else if (/danger|red/i.test(sName)) btnStyle = 'danger'
+                else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
+              }
+              const iconCustomEmojiId = b.iconCustomEmojiId
+                ? String(b.iconCustomEmojiId)
+                : ((b as any).icon_custom_emoji_id ? String((b as any).icon_custom_emoji_id) : undefined)
+
+              if (b._ === 'keyboardButtonRequestPhone') {
+                btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
+              } else if (b._ === 'keyboardButtonRequestGeoLocation') {
+                btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
+              } else if (b._ === 'keyboardButtonRequestPoll') {
+                btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
+              } else if (b._ === 'keyboardButtonUrl') {
+                btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
               } else if (b._ === 'keyboardButtonCallback') {
                 const b64 = Buffer.from(b.data).toString('base64')
                 this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
-                btnRow.push({ text: b.text, data: b64 })
+                btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
               } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
+                btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
               } else if (b.text) {
-                btnRow.push({ text: b.text })
+                btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
               }
             }
           }
           if (btnRow.length > 0) rows.push(btnRow)
         }
-        if (rows.length > 0) replyMarkup = { rows }
+        if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
+          replyMarkup = {
+            rows,
+            _: rawMarkup._,
+            resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
+            singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
+            selective: Boolean(rawMarkup.selective),
+            persistent: Boolean(rawMarkup.persistent),
+            placeholder: rawMarkup.placeholder,
+          }
+        }
       }
 
       const item: MessageItem = {
@@ -1019,6 +1679,9 @@ export class AccountManager {
         date,
         isOutgoing,
         replyMarkup,
+        isService,
+        actionType,
+        actionData,
       }
       this.store.recordMessage(accountId, chatId, item)
     } catch (e) {
@@ -1079,11 +1742,18 @@ export class AccountManager {
 
         if (peer.accessHash) {
           this.peerAccessHashes.set(`${accountId}_${peerId}`, peer.accessHash)
+          const bareId = peerId.replace(/^-100/, '').replace(/^-/, '')
+          this.peerAccessHashes.set(`${accountId}_${bareId}`, peer.accessHash)
+          this.peerAccessHashes.set(`${accountId}_-${bareId}`, peer.accessHash)
+          this.peerAccessHashes.set(`${accountId}_-100${bareId}`, peer.accessHash)
         }
 
-        // Cache small photo location for instant avatar download
+        // Cache small and big photo locations for instant avatar download
         if (peer.photo?.small) {
           this.peerPhotos.set(`${accountId}_${peerId}`, peer.photo.small)
+        }
+        if (peer.photo?.big) {
+          this.peerBigPhotos.set(`${accountId}_${peerId}`, peer.photo.big)
         }
 
         let avatarUrl: string | undefined = undefined
@@ -1111,8 +1781,8 @@ export class AccountManager {
         const isBroadcast = isChannel && !isGroup
 
         const title = formatEntityName(peer, 'Unknown Chat')
-        const unreadCount = d.unreadCount || 0
         const readInboxMaxId = (d.raw as any)?.readInboxMaxId || 0
+        const readOutboxMaxId = (d.raw as any)?.readOutboxMaxId || 0
         const unreadMentionsCount = d.unreadMentionsCount || 0
         const isPinned = Boolean(d.isPinned)
 
@@ -1136,14 +1806,84 @@ export class AccountManager {
 
         let lastMessageText = ''
         let lastMessageDate = 0
+        let lastMessageId: number | undefined = undefined
+        let lastMessageIsOutgoing = false
+        let lastMessageRead = false
+        let lastMessageMediaType: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'round_video' | undefined = undefined
+        let lastMessageThumb: string | undefined = undefined
+
         if (d.lastMessage) {
-          lastMessageText = d.lastMessage.text || ''
+          lastMessageId = d.lastMessage.id
           lastMessageDate = d.lastMessage.date ? d.lastMessage.date.getTime() : 0
+          lastMessageIsOutgoing = Boolean(d.lastMessage.isOutgoing || (d.lastMessage.raw as any)?.out)
+          lastMessageRead = lastMessageIsOutgoing ? (d.lastMessage.id <= readOutboxMaxId) : true
+
+          const rawMedia = (d.lastMessage.raw as any)?.media
+          if (rawMedia) {
+            if (rawMedia._ === 'messageMediaPhoto') {
+              lastMessageMediaType = 'photo'
+              lastMessageThumb = extractStrippedThumb(rawMedia.photo || rawMedia)
+            } else if (rawMedia._ === 'messageMediaDocument') {
+              const doc = rawMedia.document
+              if (doc && doc._ === 'document') {
+                lastMessageThumb = extractStrippedThumb(doc)
+                if (doc.attributes) {
+                  for (const attr of doc.attributes) {
+                    if (attr._ === 'documentAttributeSticker') {
+                      lastMessageMediaType = 'sticker'
+                      if (attr.alt) {
+                        lastMessageText = attr.alt
+                      }
+                    } else if (attr._ === 'documentAttributeVideo') {
+                      lastMessageMediaType = attr.roundMessage ? 'round_video' : 'video'
+                    } else if (attr._ === 'documentAttributeAudio') {
+                      lastMessageMediaType = attr.voice ? 'voice' : 'document'
+                    }
+                  }
+                }
+                if (!lastMessageMediaType) lastMessageMediaType = 'document'
+              }
+            }
+          }
+
+          if (d.lastMessage.text) {
+            lastMessageText = d.lastMessage.text
+          } else if (!lastMessageText && lastMessageMediaType) {
+            if (lastMessageMediaType === 'photo') lastMessageText = '[Photo]'
+            else if (lastMessageMediaType === 'sticker') lastMessageText = '[Sticker]'
+            else if (lastMessageMediaType === 'video') lastMessageText = '[Video]'
+            else if (lastMessageMediaType === 'voice') lastMessageText = '[Voice message]'
+            else if (lastMessageMediaType === 'round_video') lastMessageText = '[Video message]'
+            else if (lastMessageMediaType === 'document') lastMessageText = '[File]'
+          } else if (!lastMessageText) {
+            const rawLast = (d.lastMessage as any).raw || d.lastMessage
+            const act = (rawLast as any).action || (d.lastMessage as any).action
+            if (act) {
+              const parsed = parseMessageAction(
+                act,
+                (rawLast as any).fromId,
+                undefined,
+                undefined,
+                (d.lastMessage as any).sender?.displayName ||
+                  (d.lastMessage as any).sender?.title ||
+                  (d.lastMessage as any).sender?.firstName
+              )
+              lastMessageText = parsed.text
+            }
+          }
+
           if (d.lastMessage.id) {
             this.topMessageIds.set(`${accountId}_${peerId}`, d.lastMessage.id)
             this.recordDialogLastMessage(accountId, peerId, d.lastMessage)
           }
         }
+
+        // In Telegram, unread badge is strictly for incoming messages the current user hasn't read.
+        // If the last message was sent by the current user, any server unread_count is peer's unread or desync.
+        const isManuallyUnread = Boolean((d.raw as any)?.unreadMark)
+        const unreadCount = isManuallyUnread
+          ? Math.max(1, d.unreadCount || 1)
+          : (lastMessageIsOutgoing ? 0 : (d.unreadCount || 0))
 
         const initials = title
           .split(' ')
@@ -1168,6 +1908,7 @@ export class AccountManager {
           title,
           unreadCount,
           readInboxMaxId,
+          readOutboxMaxId,
           unreadMentionsCount,
           isMuted,
           isUser,
@@ -1179,6 +1920,11 @@ export class AccountManager {
           isSavedMessages: isUser && peerId === accountId,
           lastMessageText,
           lastMessageDate,
+          lastMessageId,
+          lastMessageIsOutgoing,
+          lastMessageRead,
+          lastMessageMediaType,
+          lastMessageThumb,
           avatarInitials: initials,
           avatarUrl,
           username: (peer as any).username,
@@ -1192,6 +1938,7 @@ export class AccountManager {
           isForum: (peer as any).isForum,
           isSponsored: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
           isSponsorChannel: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
+          accessHash: peer.accessHash ? peer.accessHash.toString() : undefined,
           draft,
         }
         dialogs.push(item)
@@ -1263,7 +2010,20 @@ export class AccountManager {
    * Get cached dialogs from disk (< 10ms read)
    */
   public getCachedDialogs(accountId: string): DialogItem[] {
-    return this.store.loadDialogsCache(accountId)
+    const cached = this.store.loadDialogsCache(accountId)
+    for (const d of cached) {
+      if (d.accessHash) {
+        try {
+          const hash = Long.fromString(d.accessHash)
+          this.peerAccessHashes.set(`${accountId}_${d.id}`, hash)
+          const bareId = d.id.replace(/^-100/, '').replace(/^-/, '')
+          this.peerAccessHashes.set(`${accountId}_${bareId}`, hash)
+          this.peerAccessHashes.set(`${accountId}_-${bareId}`, hash)
+          this.peerAccessHashes.set(`${accountId}_-100${bareId}`, hash)
+        } catch (_) {}
+      }
+    }
+    return cached
   }
 
   /**
@@ -1404,6 +2164,16 @@ export class AccountManager {
           if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
           if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
+          if (u.photo?._ === 'userProfilePhoto' && u.photo.photoId) {
+            const accessHash = u.accessHash || this.peerAccessHashes.get(`${accountId}_${u.id}`) || Long.ZERO
+            const loc = {
+              _: 'inputPeerPhotoFileLocation',
+              peer: { _: 'inputPeerUser', userId: u.id, accessHash },
+              photoId: u.photo.photoId,
+              big: false,
+            }
+            this.peerPhotos.set(`${accountId}_${u.id}`, loc)
+          }
         })
       }
       if (res?.chats) {
@@ -1468,6 +2238,16 @@ export class AccountManager {
               if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
               const thumb = extractStrippedThumb(u.photo)
               if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
+              if (u.photo?._ === 'userProfilePhoto' && u.photo.photoId) {
+                const accessHash = u.accessHash || this.peerAccessHashes.get(`${accountId}_${u.id}`) || Long.ZERO
+                const loc = {
+                  _: 'inputPeerPhotoFileLocation',
+                  peer: { _: 'inputPeerUser', userId: u.id, accessHash },
+                  photoId: u.photo.photoId,
+                  big: false,
+                }
+                this.peerPhotos.set(`${accountId}_${u.id}`, loc)
+              }
             })
           }
           if (extraRes?.chats) {
@@ -1496,7 +2276,7 @@ export class AccountManager {
         const id = m.id
         const date = m.date || 0
         const isOutgoing = m.out || false
-        const text = m.message || ''
+        let text = m.message || ''
 
         let senderId = ''
         let senderName = ''
@@ -1542,6 +2322,16 @@ export class AccountManager {
               senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || this.thumbCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
             }
           }
+        }
+        const isService = m._ === 'messageService'
+        let actionType: ServiceActionType | undefined = undefined
+        let actionData: ServiceActionData | undefined = undefined
+
+        if (isService && m.action) {
+          const parsed = parseMessageAction(m.action, m.fromId, users, chats, senderName)
+          text = parsed.text
+          actionType = parsed.actionType
+          actionData = parsed.actionData
         }
 
         let mediaType: any = undefined
@@ -1615,9 +2405,11 @@ export class AccountManager {
           }
         }
 
-        let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
+        let replyMarkup: MessageItem['replyMarkup'] = undefined
         const rawMarkup = m.replyMarkup || (m as any).reply_markup
-        if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
+        if (rawMarkup?._ === 'replyKeyboardHide') {
+          replyMarkup = { rows: [], _: 'replyKeyboardHide' }
+        } else if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
           const rows: InlineButton[][] = []
           for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
             const row = rawMarkup.rows[rIdx]
@@ -1625,23 +2417,49 @@ export class AccountManager {
             if (row?.buttons && Array.isArray(row.buttons)) {
               for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
                 const b = row.buttons[cIdx]
-                if (b._ === 'keyboardButtonUrl') {
-                  btnRow.push({ text: b.text, url: b.url })
+                let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
+                const rawStyle = b.style || (b as any).theme || (b as any).color
+                if (rawStyle) {
+                  const sName = typeof rawStyle === 'string' ? rawStyle : (rawStyle._ || rawStyle.type || '')
+                  if (/success|green/i.test(sName)) btnStyle = 'success'
+                  else if (/danger|red/i.test(sName)) btnStyle = 'danger'
+                  else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
+                }
+                const iconCustomEmojiId = b.iconCustomEmojiId
+                  ? String(b.iconCustomEmojiId)
+                  : ((b as any).icon_custom_emoji_id ? String((b as any).icon_custom_emoji_id) : undefined)
+
+                if (b._ === 'keyboardButtonRequestPhone') {
+                  btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonRequestGeoLocation') {
+                  btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonRequestPoll') {
+                  btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonUrl') {
+                  btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
                 } else if (b._ === 'keyboardButtonCallback') {
                   const b64 = Buffer.from(b.data).toString('base64')
                   this.botButtonCache.set(`${chatId}_${id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
-                  btnRow.push({ text: b.text, data: b64 })
+                  btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
+                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
                 } else if (b.text) {
-                  btnRow.push({ text: b.text })
+                  btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
                 }
               }
             }
             if (btnRow.length > 0) rows.push(btnRow)
           }
-          if (rows.length > 0) {
-            replyMarkup = { rows }
+          if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
+            replyMarkup = {
+              rows,
+              _: rawMarkup._,
+              resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
+              singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
+              selective: Boolean(rawMarkup.selective),
+              persistent: Boolean(rawMarkup.persistent),
+              placeholder: rawMarkup.placeholder,
+            }
           }
         }
 
@@ -1737,6 +2555,15 @@ export class AccountManager {
           date: forwardDate,
         } : undefined
 
+        const richMsgPayload = extractRichMessagePayload(m)
+        let richMessage = richMsgPayload
+        if (!richMessage && text) {
+          const parsedTable = parseMarkdownTable(text)
+          if (parsedTable) {
+            richMessage = { blocks: [parsedTable], rtl: true }
+          }
+        }
+
         items.push({
           id,
           chatId,
@@ -1771,7 +2598,11 @@ export class AccountManager {
           replyToMsgId: m.replyTo?.replyToMsgId,
           replyTo,
           replyMarkup,
+          richMessage,
           entities,
+          isService,
+          actionType,
+          actionData,
         })
       }
 
@@ -1833,25 +2664,54 @@ export class AccountManager {
 
       const avatarFile = candidateFiles[0]
 
-      // Check if we have peer photo location cached from iterDialogs (only for other peers, not self)
-      let photoLoc = (isBig || isSelf) ? undefined : this.peerPhotos.get(`${accountId}_${peerId}`)
+      // Check if we have photo location cached
+      let photoLoc = isBig
+        ? this.peerBigPhotos.get(`${accountId}_${peerId}`) || this.peerPhotos.get(`${accountId}_${peerId}`)
+        : this.peerPhotos.get(`${accountId}_${peerId}`)
 
       if (photoLoc) {
         await holder.client.downloadToFile(avatarFile, photoLoc).catch(() => {})
-      } else if (isSelf) {
-        // Fetch current user's profile photo via inputUserSelf
-        const userPhotos: any = await holder.client.call({
-          _: 'photos.getUserPhotos',
-          userId: { _: 'inputUserSelf' },
-          offset: 0,
-          maxId: Long.ZERO,
-          limit: 1,
-        }).catch(() => null)
-        const firstPhoto = userPhotos?.photos?.[0]
-        if (firstPhoto && firstPhoto._ === 'photo') {
-          await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+      }
+
+      if (!fs.existsSync(avatarFile) && isSelf) {
+        // 1. Check getMe() for self user/bot photo
+        const me: any = await holder.client.getMe().catch(() => null)
+        if (me?.photo) {
+          if (me.photo.small) this.peerPhotos.set(`${accountId}_${peerId}`, me.photo.small)
+          if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${peerId}`, me.photo.big)
+          const targetLoc = isBig ? (me.photo.big || me.photo.small) : (me.photo.small || me.photo.big)
+          if (targetLoc) {
+            await holder.client.downloadToFile(avatarFile, targetLoc).catch(() => {})
+          }
         }
-      } else {
+
+        // 2. If not downloaded and NOT a bot, try photos.getUserPhotos (bots will error with BOT_METHOD_INVALID)
+        if (!fs.existsSync(avatarFile) && !holder.info.isBot) {
+          const userPhotos: any = await holder.client.call({
+            _: 'photos.getUserPhotos',
+            userId: { _: 'inputUserSelf' },
+            offset: 0,
+            maxId: Long.ZERO,
+            limit: 1,
+          }).catch(() => null)
+          const firstPhoto = userPhotos?.photos?.[0]
+          if (firstPhoto && firstPhoto._ === 'photo') {
+            await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+          }
+        }
+
+        // 3. If still not downloaded (works for bots and users), fetch full user profile photo
+        if (!fs.existsSync(avatarFile)) {
+          const fullRes: any = await holder.client.call({
+            _: 'users.getFullUser',
+            id: { _: 'inputUserSelf' },
+          }).catch(() => null)
+          const photo = fullRes?.fullUser?.profilePhoto || fullRes?.fullUser?.profile_photo || fullRes?.fullUser?.fallbackPhoto
+          if (photo && (photo._ === 'photo' || (photo as any).sizes)) {
+            await holder.client.downloadToFile(avatarFile, photo).catch(() => {})
+          }
+        }
+      } else if (!fs.existsSync(avatarFile) && !isSelf) {
         const inputPeer = await this.resolveInputPeer(accountId, peerId)
         if (inputPeer._ === 'inputPeerUser') {
           let accessHash = inputPeer.accessHash || Long.ZERO
@@ -1869,6 +2729,16 @@ export class AccountManager {
           const firstPhoto = userPhotos?.photos?.[0]
           if (firstPhoto && firstPhoto._ === 'photo') {
             await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+          }
+          if (!fs.existsSync(avatarFile)) {
+            const fullRes: any = await holder.client.call({
+              _: 'users.getFullUser',
+              id: { _: 'inputUser', userId: inputPeer.userId, accessHash },
+            }).catch(() => null)
+            const photo = fullRes?.fullUser?.profilePhoto || fullRes?.fullUser?.profile_photo || fullRes?.fullUser?.fallbackPhoto
+            if (photo && (photo._ === 'photo' || (photo as any).sizes)) {
+              await holder.client.downloadToFile(avatarFile, photo).catch(() => {})
+            }
           }
         } else if (inputPeer._ === 'inputPeerChannel') {
           let accessHash = inputPeer.accessHash || Long.ZERO
@@ -1899,6 +2769,12 @@ export class AccountManager {
           this.avatarCache.set(cacheKey, dataUrl)
           return dataUrl
         }
+      }
+
+      // Fast fallback to cached thumbnail if full photo is unavailable
+      const thumb = this.thumbCache.get(`${accountId}_${peerId}`)
+      if (thumb) {
+        return thumb
       }
     } catch (err: any) {
       Logger.warn(`[AccountManager] getProfilePhoto error for ${peerId}:`, err?.message || err)
@@ -2200,6 +3076,120 @@ export class AccountManager {
     } catch (err: any) {
       Logger.error('[AccountManager] sendBotCallbackQuery error:', err)
       throw err
+    }
+  }
+
+  public async startBot(
+    accountId: string,
+    botPeerId: string,
+    startParam?: string
+  ): Promise<{ success: boolean; messageId?: number; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, botPeerId)
+      let inputUser: any
+      if (inputPeer._ === 'inputPeerUser') {
+        inputUser = { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash || Long.ZERO }
+      } else {
+        const cleanId = botPeerId.replace(/^-/, '')
+        const cachedHash = this.peerAccessHashes.get(`${accountId}_${cleanId}`) || Long.ZERO
+        inputUser = { _: 'inputUser', userId: toLong(cleanId), accessHash: cachedHash }
+      }
+
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const res: any = await holder.client.call({
+        _: 'messages.startBot',
+        bot: inputUser,
+        peer: inputPeer,
+        randomId,
+        startParam: (startParam || '').trim(),
+      })
+
+      let msgId: number | undefined = undefined
+      if (res && Array.isArray(res.updates)) {
+        for (const u of res.updates) {
+          if (u?.message?.id) {
+            msgId = u.message.id
+            break
+          } else if (u?.id && typeof u.id === 'number') {
+            msgId = u.id
+          }
+        }
+      }
+
+      return { success: true, messageId: msgId }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] messages.startBot failed for ${botPeerId}, trying fallback:`, err?.message || err)
+      try {
+        const fallbackText = startParam ? `/start ${startParam}` : '/start'
+        const sent = await this.sendMessage(accountId, botPeerId, fallbackText)
+        return { success: true, messageId: sent.id }
+      } catch (fallbackErr: any) {
+        return { success: false, error: err?.message || fallbackErr?.message || 'Failed to start bot' }
+      }
+    }
+  }
+
+  public async getBotInfo(accountId: string, botPeerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, botPeerId)
+      let inputUser: any
+      if (inputPeer._ === 'inputPeerUser') {
+        inputUser = { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash || Long.ZERO }
+      } else {
+        const cleanId = botPeerId.replace(/^-/, '')
+        const cachedHash = this.peerAccessHashes.get(`${accountId}_${cleanId}`) || Long.ZERO
+        inputUser = { _: 'inputUser', userId: toLong(cleanId), accessHash: cachedHash }
+      }
+
+      const res: any = await holder.client.call({
+        _: 'bots.getBotInfo',
+        bot: inputUser,
+        langCode: '',
+      })
+
+      return res
+    } catch (err) {
+      Logger.warn(`[AccountManager] getBotInfo failed for ${botPeerId}:`, err)
+      return null
+    }
+  }
+
+  public async getBotMenuButton(accountId: string, botPeerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { type: 'default' }
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, botPeerId)
+      let inputUser: any
+      if (inputPeer._ === 'inputPeerUser') {
+        inputUser = { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash || Long.ZERO }
+      } else {
+        const cleanId = botPeerId.replace(/^-/, '')
+        const cachedHash = this.peerAccessHashes.get(`${accountId}_${cleanId}`) || Long.ZERO
+        inputUser = { _: 'inputUser', userId: toLong(cleanId), accessHash: cachedHash }
+      }
+
+      const res: any = await holder.client.call({
+        _: 'bots.getBotMenuButton',
+        userId: inputUser,
+      })
+
+      if (res?._ === 'botMenuButtonCommands') {
+        return { type: 'commands', text: 'Commands' }
+      } else if (res?._ === 'botMenuButton' && res.text) {
+        return { type: 'web_app', text: res.text, url: res.url }
+      } else {
+        return { type: 'default' }
+      }
+    } catch (err) {
+      Logger.warn(`[AccountManager] getBotMenuButton failed for ${botPeerId}:`, err)
+      return { type: 'default' }
     }
   }
 
@@ -2690,7 +3680,7 @@ export class AccountManager {
         const id = m.id
         const date = m.date ? (m.date < 1e11 ? m.date * 1000 : m.date) : Date.now()
         const isOutgoing = m.out || false
-        const text = m.message || ''
+        let text = m.message || ''
 
         let senderId = ''
         let senderName = ''
@@ -2718,6 +3708,17 @@ export class AccountManager {
               senderAvatarUrl = this.avatarCache.get(`${accountId}_-${c.id}`) || this.thumbCache.get(`${accountId}_-${c.id}`) || extractStrippedThumb(c.photo)
             }
           }
+        }
+
+        const isService = m._ === 'messageService'
+        let actionType: ServiceActionType | undefined = undefined
+        let actionData: ServiceActionData | undefined = undefined
+
+        if (isService && m.action) {
+          const parsed = parseMessageAction(m.action, m.fromId, users, chats, senderName)
+          text = parsed.text
+          actionType = parsed.actionType
+          actionData = parsed.actionData
         }
 
         let mediaType: any = undefined
@@ -2806,6 +3807,9 @@ export class AccountManager {
           paidMediaStars,
           paidMediaCount,
           entities,
+          isService,
+          actionType,
+          actionData,
         })
       }
 
@@ -2840,20 +3844,42 @@ export class AccountManager {
         })
         const u = res.users?.[0]
         let botInfo: any = undefined
-        if (res.fullUser?.botInfo) {
-          const bi = res.fullUser.botInfo
+        if (res.fullUser?.botInfo || u?.bot) {
+          const bi = res.fullUser?.botInfo || {}
           let menuBtn: any = undefined
-          if (res.fullUser.botMenuButton) {
-            const bmb = res.fullUser.botMenuButton
-            if (bmb._ === 'botMenuButton' && bmb.text) {
-              menuBtn = { text: bmb.text, url: bmb.url }
-            } else if (bmb._ === 'botMenuButtonCommands') {
-              menuBtn = { text: 'Commands' }
+          const rawMb = bi.menuButton || bi.menu_button || res.fullUser?.botMenuButton
+          if (rawMb) {
+            if (rawMb._ === 'botMenuButton' && rawMb.text) {
+              menuBtn = { type: 'web_app', text: rawMb.text, url: rawMb.url }
+            } else if (rawMb._ === 'botMenuButtonCommands') {
+              menuBtn = { type: 'commands', text: 'Commands' }
+            } else {
+              menuBtn = { type: 'default' }
             }
+          } else if (u?.bot) {
+            menuBtn = await this.getBotMenuButton(accountId, chatId).catch(() => ({ type: 'default' }))
           }
+
+          let descPhotoUrl: string | undefined = undefined
+          const rawPhoto = bi.descriptionPhoto || bi.description_photo
+          if (rawPhoto) {
+            const thumb = extractStrippedThumb(rawPhoto)
+            if (thumb) descPhotoUrl = thumb
+          }
+
+          let descDocUrl: string | undefined = undefined
+          const rawDoc = bi.descriptionDocument || bi.description_document
+          if (rawDoc) {
+            const thumb = extractStrippedThumb(rawDoc)
+            if (thumb) descDocUrl = thumb
+          }
+
           botInfo = {
-            description: bi.description,
-            commands: bi.commands?.map((cmd: any) => ({ command: cmd.command, description: cmd.description })),
+            userId: chatId,
+            description: bi.description || res.fullUser?.about,
+            descriptionPhoto: descPhotoUrl ? { url: descPhotoUrl } : undefined,
+            descriptionDocument: descDocUrl ? { url: descDocUrl } : undefined,
+            commands: bi.commands?.map((cmd: any) => ({ command: cmd.command, description: cmd.description })) || [],
             menuButton: menuBtn,
           }
         }
@@ -3103,29 +4129,57 @@ export class AccountManager {
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     const inputPeer = await this.resolveInputPeer(accountId, chatId)
-    const randomId = toLong(Math.floor(Math.random() * 10000000000))
     const actualReplyTo = options?.replyToMsgId ?? replyToMsgId
 
-    const res: any = await holder.client.call({
-      _: 'messages.sendMessage',
-      peer: inputPeer,
-      message: text,
-      randomId,
-      replyTo: actualReplyTo
-        ? { _: 'inputReplyToMessage', replyToMsgId: actualReplyTo }
-        : undefined,
-      silent: options?.silent,
-      scheduleDate: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
-    })
+    let msgId: number = Math.floor(Date.now() / 1000)
+    let itemDate = Math.floor(Date.now() / 1000)
 
-    const msgId = res.id || res.updates?.[0]?.id || Math.floor(Date.now() / 1000)
+    try {
+      // First attempt using mtcute's high-level sendText (automatically handles entities, drafts, schedule)
+      const sentMsg: any = await holder.client.sendText(inputPeer as any, text, {
+        replyTo: actualReplyTo,
+        silent: options?.silent,
+        schedule: options?.scheduleDate ? new Date(options.scheduleDate) : undefined,
+      })
+      if (sentMsg?.id) {
+        msgId = sentMsg.id
+        if (sentMsg.date) itemDate = Math.floor(sentMsg.date.getTime() / 1000)
+      }
+    } catch (sendErr: any) {
+      Logger.warn(`[AccountManager] client.sendText fallback to messages.sendMessage for ${chatId}:`, sendErr?.message || sendErr)
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const res: any = await holder.client.call({
+        _: 'messages.sendMessage',
+        peer: inputPeer,
+        message: text,
+        randomId,
+        replyTo: actualReplyTo
+          ? { _: 'inputReplyToMessage', replyToMsgId: actualReplyTo }
+          : undefined,
+        silent: options?.silent,
+        scheduleDate: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
+      })
+
+      if (res) {
+        if (typeof res.id === 'number') {
+          msgId = res.id
+        } else if (Array.isArray(res.updates)) {
+          const updMsg = res.updates.find((u: any) => u?.message?.id || u?.id)
+          if (updMsg) {
+            msgId = updMsg.message?.id || updMsg.id
+          }
+        }
+      }
+    }
+
     const item: MessageItem = {
       id: msgId,
       chatId,
       accountId,
       text,
-      date: Math.floor(Date.now() / 1000),
+      date: itemDate,
       isOutgoing: true,
+      replyToMsgId: actualReplyTo,
     }
     const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
     if (msgId > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msgId)
@@ -4680,7 +5734,7 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
-    const inputPeer = toRawPeer(chatId)
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
     const randomId = toLong(Math.floor(Math.random() * 10000000000))
 
     const res: any = await holder.client.call({
@@ -4986,6 +6040,9 @@ export class AccountManager {
         if (chat?.photo?.small) {
           this.peerPhotos.set(`${accountId}_${chatId}`, chat.photo.small)
         }
+        if (chat?.photo?.big) {
+          this.peerBigPhotos.set(`${accountId}_${chatId}`, chat.photo.big)
+        }
 
         let mediaType: any = undefined
         let mediaFileName: string | undefined = undefined
@@ -5038,9 +6095,11 @@ export class AccountManager {
 
         const entities = parseMtprotoEntities(msg.raw?.entities)
 
-        let replyMarkup: { rows: InlineButton[][] } | undefined = undefined
+        let replyMarkup: MessageItem['replyMarkup'] = undefined
         const rawMarkup = msg.raw?.replyMarkup || msg.raw?.reply_markup
-        if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
+        if (rawMarkup?._ === 'replyKeyboardHide') {
+          replyMarkup = { rows: [], _: 'replyKeyboardHide' }
+        } else if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
           const rows: InlineButton[][] = []
           for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
             const row = rawMarkup.rows[rIdx]
@@ -5048,22 +6107,50 @@ export class AccountManager {
             if (row?.buttons && Array.isArray(row.buttons)) {
               for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
                 const b = row.buttons[cIdx]
-                if (b._ === 'keyboardButtonUrl') {
-                  btnRow.push({ text: b.text, url: b.url })
+                let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
+                const rawStyle = b.style || (b as any).theme || (b as any).color
+                if (rawStyle) {
+                  const sName = typeof rawStyle === 'string' ? rawStyle : (rawStyle._ || rawStyle.type || '')
+                  if (/success|green/i.test(sName)) btnStyle = 'success'
+                  else if (/danger|red/i.test(sName)) btnStyle = 'danger'
+                  else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
+                }
+                const iconCustomEmojiId = b.iconCustomEmojiId
+                  ? String(b.iconCustomEmojiId)
+                  : ((b as any).icon_custom_emoji_id ? String((b as any).icon_custom_emoji_id) : undefined)
+
+                if (b._ === 'keyboardButtonRequestPhone') {
+                  btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonRequestGeoLocation') {
+                  btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonRequestPoll') {
+                  btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonUrl') {
+                  btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
                 } else if (b._ === 'keyboardButtonCallback') {
                   const b64 = Buffer.from(b.data).toString('base64')
                   this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
-                  btnRow.push({ text: b.text, data: b64 })
+                  btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true })
+                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
                 } else if (b.text) {
-                  btnRow.push({ text: b.text })
+                  btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
                 }
               }
             }
             if (btnRow.length > 0) rows.push(btnRow)
           }
-          if (rows.length > 0) replyMarkup = { rows }
+          if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
+            replyMarkup = {
+              rows,
+              _: rawMarkup._,
+              resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
+              singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
+              selective: Boolean(rawMarkup.selective),
+              persistent: Boolean(rawMarkup.persistent),
+              placeholder: rawMarkup.placeholder,
+            }
+          }
         }
 
         let replyTo: ReplyInfo | undefined = undefined
@@ -5081,19 +6168,55 @@ export class AccountManager {
           if (senderThumb) {
             this.thumbCache.set(`${accountId}_${senderIdStr}`, senderThumb)
           }
+          if (msg.sender.photo.small) {
+            this.peerPhotos.set(`${accountId}_${senderIdStr}`, msg.sender.photo.small)
+          } else if (msg.sender.photo._ === 'userProfilePhoto' && msg.sender.photo.photoId) {
+            const accessHash = msg.sender.accessHash || this.peerAccessHashes.get(`${accountId}_${senderIdStr}`) || Long.ZERO
+            this.peerPhotos.set(`${accountId}_${senderIdStr}`, {
+              _: 'inputPeerPhotoFileLocation',
+              peer: { _: 'inputPeerUser', userId: msg.sender.id, accessHash },
+              photoId: msg.sender.photo.photoId,
+              big: false,
+            })
+          }
         }
         const senderAvatarUrl = senderIdStr
           ? this.avatarCache.get(`${accountId}_${senderIdStr}`) || this.thumbCache.get(`${accountId}_${senderIdStr}`) || extractStrippedThumb(msg.sender?.photo)
           : undefined
+        const senderName = msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName || ''
+
+        const isService = msg.raw?._ === 'messageService' || Boolean(msg.action)
+        let text = msg.text || ''
+        let actionType: ServiceActionType | undefined = undefined
+        let actionData: ServiceActionData | undefined = undefined
+
+        if (isService) {
+          const rawAction = msg.raw?.action || msg.action
+          if (rawAction) {
+            const parsed = parseMessageAction(rawAction, msg.raw?.fromId, undefined, undefined, senderName)
+            text = parsed.text
+            actionType = parsed.actionType
+            actionData = parsed.actionData
+          }
+        }
+
+        const richMsgPayload = extractRichMessagePayload(msg.raw || msg)
+        let richMessage = richMsgPayload
+        if (!richMessage && text) {
+          const parsedTable = parseMarkdownTable(text)
+          if (parsedTable) {
+            richMessage = { blocks: [parsedTable], rtl: true }
+          }
+        }
 
         const item: MessageItem = {
           id: msg.id,
           chatId,
           accountId,
-          text: msg.text || '',
+          text,
           date: msg.date ? Math.floor(msg.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
           isOutgoing: msg.isOutgoing,
-          senderName: msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName || '',
+          senderName,
           senderUsername: msg.sender?.username,
           senderId: senderIdStr,
           senderAvatarUrl,
@@ -5109,7 +6232,11 @@ export class AccountManager {
           replyToMsgId: msg.raw?.replyTo?.replyToMsgId,
           replyTo,
           replyMarkup,
+          richMessage,
           entities,
+          isService,
+          actionType,
+          actionData,
         }
         const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
         if (msg.id > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msg.id)
@@ -5251,6 +6378,54 @@ export class AccountManager {
                         unreadCount: nextCount,
                         readInboxMaxId: update.maxId ? Math.max(d.readInboxMaxId || 0, update.maxId) : d.readInboxMaxId,
                       }
+                    }
+                  }
+                  return d
+                })
+                if (changed) {
+                  this.store.saveDialogsCache(accountId, next)
+                }
+              }
+            } catch (_) {}
+          }
+        } else if (
+          update._ === 'updateReadHistoryOutbox' ||
+          update._ === 'updateReadChannelOutbox'
+        ) {
+          let peerId = ''
+          const peer = update.peer?.peer || update.peer
+          if (peer) {
+            if (peer.userId) {
+              peerId = peer.userId.toString()
+            } else if (peer.chatId) {
+              peerId = `-${peer.chatId}`
+            } else if (peer.channelId) {
+              const chStr = peer.channelId.toString()
+              peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+            }
+          } else if (update.channelId) {
+            const chStr = update.channelId.toString()
+            peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+          }
+
+          if (peerId) {
+            this.onEventCallback?.('telegram:read-outbox', {
+              accountId,
+              chatId: peerId,
+              maxId: update.maxId,
+            })
+
+            try {
+              const cached = this.store.loadDialogsCache(accountId)
+              if (cached && cached.length > 0) {
+                let changed = false
+                const next = cached.map((d) => {
+                  if (d.id === peerId) {
+                    changed = true
+                    return {
+                      ...d,
+                      readOutboxMaxId: Math.max(d.readOutboxMaxId || 0, update.maxId || 0),
+                      lastMessageRead: d.lastMessageId ? d.lastMessageId <= (update.maxId || 0) : true,
                     }
                   }
                   return d

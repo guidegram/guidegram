@@ -23,6 +23,14 @@ interface AddAccountModalProps {
   onAccountAdded: (account: AccountInfo) => void
 }
 
+function cleanErrorMessage(raw?: string | null): string {
+  if (!raw) return ''
+  return raw
+    .replace(/^Error invoking remote method '[^']+':\s*(Error:\s*)?/i, '')
+    .replace(/^Error:\s*/i, '')
+    .trim()
+}
+
 export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   isOpen,
   onClose,
@@ -57,6 +65,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [phonePassword, setPhonePassword] = useState('')
+  const [phone2FaHint, setPhone2FaHint] = useState('')
   const [phoneLoading, setPhoneLoading] = useState(false)
 
   // Common error state
@@ -140,6 +149,10 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
       setBotToken('')
       setBotLoading(false)
       setBotSuccess(false)
+      setStep('phone')
+      setCode('')
+      setPhonePassword('')
+      setPhone2FaHint('')
       return
     }
 
@@ -280,7 +293,16 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
       await window.guidegram.startPhoneAuth(phone.trim(), proxy)
       setStep('code')
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to send code. Check phone or proxy settings.')
+      const msg = err?.message || ''
+      if (msg.includes('PHONE_NUMBER_INVALID')) {
+        setErrorMessage('Invalid phone number format. Please include country code (e.g. +98...).')
+      } else if (msg.includes('PHONE_NUMBER_BANNED')) {
+        setErrorMessage('This phone number has been banned by Telegram.')
+      } else if (msg.includes('FLOOD_WAIT')) {
+        setErrorMessage('Too many requests. Please wait a while before requesting another code.')
+      } else {
+        setErrorMessage(cleanErrorMessage(msg) || 'Failed to send code. Check phone or proxy settings.')
+      }
     } finally {
       setPhoneLoading(false)
     }
@@ -289,27 +311,45 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   // Phone Flow: Step 2 & 3 Submit Code or Password
   const handleSubmitCode = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!code.trim()) return
+    if (step === 'code' && !code.trim()) return
+    if (step === '2fa' && !phonePassword.trim()) return
 
     setPhoneLoading(true)
     setErrorMessage(null)
 
     try {
-      const account = await window.guidegram.completePhoneAuth(
+      const res = await window.guidegram.completePhoneAuth(
         phone.trim(),
         code.trim(),
         phonePassword.trim() || undefined
       )
+      if ('need2fa' in res && res.need2fa) {
+        setPhone2FaHint(res.hint || '')
+        setStep('2fa')
+        setErrorMessage(null)
+        return
+      }
       setStep('success')
       setTimeout(() => {
-        onAccountAdded(account)
+        onAccountAdded(res as AccountInfo)
         onClose()
       }, 1200)
     } catch (err: any) {
-      if (err.message === '2FA_REQUIRED') {
+      const msg = err?.message || ''
+      if (
+        msg.includes('2FA_REQUIRED') ||
+        msg.includes('SESSION_PASSWORD_NEEDED')
+      ) {
         setStep('2fa')
+        setErrorMessage(null)
+      } else if (msg.includes('PASSWORD_HASH_INVALID')) {
+        setErrorMessage('Incorrect 2FA password. Please try again.')
+      } else if (msg.includes('PHONE_CODE_INVALID')) {
+        setErrorMessage('Invalid verification code. Please check and try again.')
+      } else if (msg.includes('PHONE_CODE_EXPIRED')) {
+        setErrorMessage('The verification code has expired. Please request a new code.')
       } else {
-        setErrorMessage(err.message || 'Invalid code or verification error.')
+        setErrorMessage(cleanErrorMessage(msg) || 'Invalid code or verification error.')
       }
     } finally {
       setPhoneLoading(false)
@@ -388,7 +428,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
         <div className="p-6">
           {errorMessage && (
             <div className="mb-4 p-3 rounded-xl bg-accent-rose/10 border border-accent-rose/20 text-accent-rose text-xs leading-relaxed">
-              {errorMessage}
+              {cleanErrorMessage(errorMessage)}
             </div>
           )}
 
@@ -796,23 +836,60 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         required
+                        autoFocus
                         className="w-full bg-dark-800 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-100 text-center tracking-widest font-mono text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
                       />
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={phoneLoading || !code.trim()}
-                    className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-glow transition-all"
-                  >
-                    {phoneLoading ? 'Verifying...' : 'Sign In'}
-                  </button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('phone')
+                        setCode('')
+                        setErrorMessage(null)
+                      }}
+                      className="px-3.5 py-2.5 bg-dark-800 hover:bg-dark-700 text-gray-300 hover:text-white rounded-xl text-xs font-medium border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={phoneLoading || !code.trim()}
+                      className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-glow transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {phoneLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        <span>Sign In</span>
+                      )}
+                    </button>
+                  </div>
                 </form>
               )}
 
               {step === '2fa' && (
                 <form onSubmit={handleSubmitCode} className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-dark-850 border border-white/5 space-y-2">
+                    <div className="flex items-center gap-2 text-primary-400">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-xs font-semibold">Two-Step Verification (2FA)</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                      This Telegram account is protected by an additional cloud password.
+                    </p>
+                    {phone2FaHint && (
+                      <div className="text-[11px] text-accent-cyan bg-accent-cyan/10 px-2.5 py-1 rounded-lg border border-accent-cyan/20">
+                        Hint: {phone2FaHint}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">
                       Two-Step Verification Password (2FA)
@@ -825,18 +902,40 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
                         value={phonePassword}
                         onChange={(e) => setPhonePassword(e.target.value)}
                         required
+                        autoFocus
                         className="w-full bg-dark-800 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
                       />
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={phoneLoading || !phonePassword.trim()}
-                    className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-glow transition-all"
-                  >
-                    {phoneLoading ? 'Verifying 2FA...' : 'Complete Login'}
-                  </button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('code')
+                        setPhonePassword('')
+                        setErrorMessage(null)
+                      }}
+                      className="px-3.5 py-2.5 bg-dark-800 hover:bg-dark-700 text-gray-300 hover:text-white rounded-xl text-xs font-medium border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={phoneLoading || !phonePassword.trim()}
+                      className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-semibold shadow-glow transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {phoneLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Verifying 2FA...</span>
+                        </>
+                      ) : (
+                        <span>Complete Login</span>
+                      )}
+                    </button>
+                  </div>
                 </form>
               )}
 

@@ -4,6 +4,15 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v1.11.4] — Mobile 2FA Resilience, Smart System Tray & Dynamic What's New (2026-09-16)
+
+### 🌟 What's New & Enhancements
+- **📱 Resilient Phone Authentication & Cloud 2FA**: Resolved authentication stall upon verification code entry for 2FA-enabled accounts. Introduced typed `{ need2fa: true, hint }` IPC payload, cloud password hint rendering, bidirectional step navigation with "Back" buttons, and human-friendly error formatting.
+- **🪟 Smart System Tray & Close-to-Tray Intercept**: Intercepted window close signals (`X` button & `Alt+F4`), preventing abrupt application destruction and safely hiding the window to the system tray. Added instant auto-saving for close action settings.
+- **✨ Dynamic, Version-Aware What's New Modal**: Overhauled the post-update modal to dynamically evaluate the installed version and highlight actual version features instead of static legacy cards, integrated with direct GitHub release links.
+
+---
+
 ## [v1.11.3] — Unread Count Parity & Read History Synchronization (2026-09-15)
 
 ### 🌟 What's New & Enhancements
