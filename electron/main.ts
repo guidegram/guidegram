@@ -33,23 +33,24 @@ app.commandLine.appendSwitch('enable-zero-copy')
 app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization')
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
 
-// Enforce Single Instance Application Lock: prevent duplicate instances/windows
-const hasSingleInstanceLock = app.requestSingleInstanceLock()
-if (!hasSingleInstanceLock) {
-  app.quit()
-  process.exit(0)
-}
-
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Configure 100% Portable User Data Directory
+// Configure 100% Portable User Data Directory BEFORE requesting single instance lock
+// (Chromium requires userData path to be set first so singleton pipe & lock use the same path)
 const isDev = !app.isPackaged
 const portableDataDir = isDev
   ? path.resolve(__dirname, '../data')
   : path.join(path.dirname(app.getPath('exe')), 'data')
 
 app.setPath('userData', portableDataDir)
+
+// Enforce Single Instance Application Lock: prevent duplicate instances/windows
+const hasSingleInstanceLock = app.requestSingleInstanceLock()
+if (!hasSingleInstanceLock) {
+  app.quit()
+  process.exit(0)
+}
 
 // System-wide Portable Locator path: %APPDATA%\Guidegram\portable_locator.json
 const systemAppDataDir = app.getPath('appData')
@@ -134,6 +135,10 @@ app.on('second-instance', () => {
     if (mainWindow.isMinimized()) mainWindow.restore()
     if (!mainWindow.isVisible()) mainWindow.show()
     mainWindow.focus()
+    mainWindow.setAlwaysOnTop(true)
+    mainWindow.show()
+    mainWindow.focus()
+    mainWindow.setAlwaysOnTop(false)
   } else {
     createWindow()
   }
@@ -261,23 +266,22 @@ function createTray() {
 
   tray.setContextMenu(contextMenu)
 
-  tray.on('click', () => {
-    if (!mainWindow) {
+  const showMainWindow = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
       createWindow()
       return
     }
-    if (mainWindow.isVisible()) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore()
-        mainWindow.focus()
-      } else {
-        mainWindow.focus()
-      }
-    } else {
-      mainWindow.show()
-      mainWindow.focus()
-    }
-  })
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    if (!mainWindow.isVisible()) mainWindow.show()
+    mainWindow.focus()
+    mainWindow.setAlwaysOnTop(true)
+    mainWindow.show()
+    mainWindow.focus()
+    mainWindow.setAlwaysOnTop(false)
+  }
+
+  tray.on('click', showMainWindow)
+  tray.on('double-click', showMainWindow)
 }
 
 function createWindow() {
@@ -903,8 +907,7 @@ async function scrapeLinkPreview(targetUrl: string): Promise<WebPagePreview | nu
 function setupIpcHandlers() {
   // Window Controls
   ipcMain.handle('window:minimize', () => {
-    // Hide to system tray instead of leaving on taskbar
-    mainWindow?.hide()
+    mainWindow?.minimize()
   })
 
   ipcMain.handle('window:maximize', () => {
