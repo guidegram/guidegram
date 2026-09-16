@@ -130,10 +130,12 @@ let isQuitting = false
 // Focus primary window when user clicks pinned taskbar icon or second instance launches
 app.on('second-instance', () => {
   Logger.info('[App] Second instance launch detected. Focusing primary window.')
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
     if (!mainWindow.isVisible()) mainWindow.show()
     mainWindow.focus()
+  } else {
+    createWindow()
   }
 })
 
@@ -603,7 +605,11 @@ app.whenReady().then(async () => {
 
   updateManager = new UpdateManager()
 
-  setupIpcHandlers()
+  try {
+    setupIpcHandlers()
+  } catch (err: any) {
+    Logger.error('[Main] setupIpcHandlers failed:', err)
+  }
   createTray()
   createWindow()
 
@@ -1541,15 +1547,6 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.warn(`[IPC] getBotMenuButton error:`, err)
       return { type: 'default' }
-    }
-  })
-
-  ipcMain.handle('telegram:send-bot-callback', async (_event, { accountId, chatId, messageId, data, row, col }) => {
-    try {
-      return await accountManager.sendBotCallbackQuery(accountId, chatId, messageId, data, row, col)
-    } catch (err: any) {
-      Logger.error(`[IPC] sendBotCallbackQuery error:`, err)
-      throw err
     }
   })
 
