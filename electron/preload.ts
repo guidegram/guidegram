@@ -606,6 +606,54 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-installed-stickers', { accountId }),
   getStickerSet: (accountId: string, setId: string, accessHash: string): Promise<StickerSetItem | null> =>
     ipcRenderer.invoke('telegram:get-stickerset', { accountId, setId, accessHash }),
+  installStickerSet: (
+    accountId: string,
+    setId: string,
+    accessHash: string,
+    archived = false
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:install-stickerset', { accountId, setId, accessHash, archived }),
+  uninstallStickerSet: (accountId: string, setId: string, accessHash: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:uninstall-stickerset', { accountId, setId, accessHash }),
+  checkStickerShortName: (accountId: string, shortName: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:check-sticker-short-name', { accountId, shortName }),
+  suggestStickerShortName: (accountId: string, title: string): Promise<string> =>
+    ipcRenderer.invoke('telegram:suggest-sticker-short-name', { accountId, title }),
+  renameStickerSet: (
+    accountId: string,
+    setId: string,
+    accessHash: string,
+    title: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:rename-stickerset', { accountId, setId, accessHash, title }),
+  deleteStickerSet: (accountId: string, setId: string, accessHash: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-stickerset', { accountId, setId, accessHash }),
+  removeStickerFromSet: (
+    accountId: string,
+    docId: string,
+    accessHash: string,
+    fileReferenceHex?: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:remove-sticker-from-set', {
+      accountId,
+      docId,
+      accessHash,
+      fileReferenceHex,
+    }),
+  changeStickerPosition: (
+    accountId: string,
+    docId: string,
+    accessHash: string,
+    position: number,
+    fileReferenceHex?: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:change-sticker-position', {
+      accountId,
+      docId,
+      accessHash,
+      position,
+      fileReferenceHex,
+    }),
   sendSticker: (
     accountId: string,
     chatId: string,

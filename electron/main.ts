@@ -2050,6 +2050,78 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:install-stickerset', async (_event, { accountId, setId, accessHash, archived }) => {
+    try {
+      return await accountManager.installStickerSet(accountId, setId, accessHash, archived)
+    } catch (err: any) {
+      Logger.warn(`[IPC] installStickerSet error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:uninstall-stickerset', async (_event, { accountId, setId, accessHash }) => {
+    try {
+      return await accountManager.uninstallStickerSet(accountId, setId, accessHash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] uninstallStickerSet error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:check-sticker-short-name', async (_event, { accountId, shortName }) => {
+    try {
+      return await accountManager.checkStickerShortName(accountId, shortName)
+    } catch (err: any) {
+      Logger.warn(`[IPC] checkStickerShortName error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:suggest-sticker-short-name', async (_event, { accountId, title }) => {
+    try {
+      return await accountManager.suggestStickerShortName(accountId, title)
+    } catch (err: any) {
+      Logger.warn(`[IPC] suggestStickerShortName error:`, err)
+      return ''
+    }
+  })
+
+  ipcMain.handle('telegram:rename-stickerset', async (_event, { accountId, setId, accessHash, title }) => {
+    try {
+      return await accountManager.renameStickerSet(accountId, setId, accessHash, title)
+    } catch (err: any) {
+      Logger.warn(`[IPC] renameStickerSet error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:delete-stickerset', async (_event, { accountId, setId, accessHash }) => {
+    try {
+      return await accountManager.deleteStickerSet(accountId, setId, accessHash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteStickerSet error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:remove-sticker-from-set', async (_event, { accountId, docId, accessHash, fileReferenceHex }) => {
+    try {
+      return await accountManager.removeStickerFromSet(accountId, docId, accessHash, fileReferenceHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] removeStickerFromSet error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:change-sticker-position', async (_event, { accountId, docId, accessHash, position, fileReferenceHex }) => {
+    try {
+      return await accountManager.changeStickerPosition(accountId, docId, accessHash, position, fileReferenceHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] changeStickerPosition error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:send-sticker', async (_event, { accountId, chatId, documentId, accessHash, fileRef, replyToMsgId }) => {
     try {
       return await accountManager.sendSticker(accountId, chatId, documentId, accessHash, fileRef, replyToMsgId)

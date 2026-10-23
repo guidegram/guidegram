@@ -5,9 +5,9 @@
   "namespaces": {
     "messages": {
       "total_in_schema": 261,
-      "directly_implemented": 49,
-      "gap_unimplemented": 212,
-      "coverage_pct": 18.8,
+      "directly_implemented": 51,
+      "gap_unimplemented": 210,
+      "coverage_pct": 19.5,
       "implemented_list": [
         "messages.getMessages",
         "messages.getHistory",
@@ -24,6 +24,8 @@
         "messages.exportChatInvite",
         "messages.checkChatInvite",
         "messages.getStickerSet",
+        "messages.installStickerSet",
+        "messages.uninstallStickerSet",
         "messages.startBot",
         "messages.searchGlobal",
         "messages.getInlineBotResults",
@@ -200,10 +202,17 @@
     },
     "stickers": {
       "total_in_schema": 11,
-      "directly_implemented": 0,
-      "gap_unimplemented": 11,
-      "coverage_pct": 0.0,
-      "implemented_list": []
+      "directly_implemented": 6,
+      "gap_unimplemented": 5,
+      "coverage_pct": 54.5,
+      "implemented_list": [
+        "stickers.removeStickerFromSet",
+        "stickers.changeStickerPosition",
+        "stickers.checkShortName",
+        "stickers.suggestShortName",
+        "stickers.renameStickerSet",
+        "stickers.deleteStickerSet"
+      ]
     },
     "chatlists": {
       "total_in_schema": 11,
@@ -324,8 +333,8 @@
       "implemented_list": []
     }
   },
-  "overall_implemented_methods": 110,
-  "overall_unimplemented_methods": 749,
+  "overall_implemented_methods": 118,
+  "overall_unimplemented_methods": 741,
   "mockup_features": [
     "Secret Chats (messages.sendEncrypted - End-to-End Encryption Diffie-Hellman)",
     "VoIP P2P Raw RTP Media Transport (phone.requestCall - only signaling and WebRTC local UI implemented)",
@@ -334,5 +343,5 @@
     "Sticker Set Creation & Management (stickers.createStickerSet)",
     "Sponsored Messages / Telegram Ad Platform (messages.getSponsoredMessages)"
   ],
-  "overall_coverage_pct": 12.8
+  "overall_coverage_pct": 13.7
 }

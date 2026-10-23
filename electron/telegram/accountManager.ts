@@ -7394,6 +7394,192 @@ export class AccountManager {
     }
   }
 
+  public async installStickerSet(
+    accountId: string,
+    setId: string,
+    accessHash: string,
+    archived = false
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.installStickerSet',
+        stickerset: {
+          _: 'inputStickerSetID',
+          id: toLong(setId),
+          accessHash: toLong(accessHash),
+        },
+        archived: Boolean(archived),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] installStickerSet error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async uninstallStickerSet(
+    accountId: string,
+    setId: string,
+    accessHash: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.uninstallStickerSet',
+        stickerset: {
+          _: 'inputStickerSetID',
+          id: toLong(setId),
+          accessHash: toLong(accessHash),
+        },
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] uninstallStickerSet error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async checkStickerShortName(
+    accountId: string,
+    shortName: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'stickers.checkShortName',
+        short_name: shortName.trim(),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] checkStickerShortName error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async suggestStickerShortName(
+    accountId: string,
+    title: string
+  ): Promise<string> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return ''
+    try {
+      const res: any = await holder.client.call({
+        _: 'stickers.suggestShortName',
+        title: title.trim(),
+      } as any)
+      return res?.shortName || ''
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] suggestStickerShortName error:`, err?.message || err)
+      return ''
+    }
+  }
+
+  public async renameStickerSet(
+    accountId: string,
+    setId: string,
+    accessHash: string,
+    title: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'stickers.renameStickerSet',
+        stickerset: {
+          _: 'inputStickerSetID',
+          id: toLong(setId),
+          accessHash: toLong(accessHash),
+        },
+        title: title.trim(),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] renameStickerSet error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async deleteStickerSet(
+    accountId: string,
+    setId: string,
+    accessHash: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'stickers.deleteStickerSet',
+        stickerset: {
+          _: 'inputStickerSetID',
+          id: toLong(setId),
+          accessHash: toLong(accessHash),
+        },
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] deleteStickerSet error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async removeStickerFromSet(
+    accountId: string,
+    docId: string,
+    accessHash: string,
+    fileReferenceHex?: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const fileRef = fileReferenceHex ? Buffer.from(fileReferenceHex, 'hex') : Buffer.alloc(0)
+      const res: any = await holder.client.call({
+        _: 'stickers.removeStickerFromSet',
+        sticker: {
+          _: 'inputDocument',
+          id: toLong(docId),
+          accessHash: toLong(accessHash),
+          fileReference: fileRef,
+        },
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] removeStickerFromSet error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async changeStickerPosition(
+    accountId: string,
+    docId: string,
+    accessHash: string,
+    position: number,
+    fileReferenceHex?: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const fileRef = fileReferenceHex ? Buffer.from(fileReferenceHex, 'hex') : Buffer.alloc(0)
+      const res: any = await holder.client.call({
+        _: 'stickers.changeStickerPosition',
+        sticker: {
+          _: 'inputDocument',
+          id: toLong(docId),
+          accessHash: toLong(accessHash),
+          fileReference: fileRef,
+        },
+        position: Math.max(0, position),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] changeStickerPosition error:`, err?.message || err)
+      return false
+    }
+  }
+
   public async sendSticker(
     accountId: string,
     chatId: string,
