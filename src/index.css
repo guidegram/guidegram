@@ -195,3 +195,82 @@
   animation: none !important;
   box-shadow: 0 0 0 2px rgba(57, 198, 164, 0.9) !important;
 }
+
+/* ==========================================================================
+   Light Mode Theme Invariant: High-contrast, clean & ergonomic tokens
+   ========================================================================== */
+
+html.light,
+html.light body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+html.light .bg-dark-950 {
+  background-color: #F1F5F9 !important;
+}
+
+html.light .bg-dark-900 {
+  background-color: #F8FAFC !important;
+}
+
+html.light .bg-dark-850 {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-dark-800 {
+  background-color: #F1F5F9 !important;
+}
+
+html.light .bg-dark-750 {
+  background-color: #E2E8F0 !important;
+}
+
+html.light .bg-dark-700 {
+  background-color: #CBD5E1 !important;
+}
+
+html.light .text-white {
+  color: #0F172A !important;
+}
+
+html.light .text-gray-100 {
+  color: #1E293B !important;
+}
+
+html.light .text-gray-200 {
+  color: #334155 !important;
+}
+
+html.light .text-gray-300 {
+  color: #475569 !important;
+}
+
+html.light .text-gray-400 {
+  color: #64748B !important;
+}
+
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light .glass-modal {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18) !important;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.35) !important;
+}

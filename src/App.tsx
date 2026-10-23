@@ -529,6 +529,20 @@ export const App: React.FC = () => {
     }
   }, [config?.disableAnimations])
 
+  // Reactive toggle for Light / Dark Mode & Theme Invariant
+  useEffect(() => {
+    const isLight = config?.theme === 'light'
+    if (isLight) {
+      document.documentElement.classList.remove('dark')
+      document.documentElement.classList.add('light')
+      document.documentElement.setAttribute('data-theme', 'light')
+    } else {
+      document.documentElement.classList.remove('light')
+      document.documentElement.classList.add('dark')
+      document.documentElement.setAttribute('data-theme', 'dark')
+    }
+  }, [config?.theme])
+
   const configRef = useRef<AppConfig | null>(null)
   useEffect(() => {
     configRef.current = config
