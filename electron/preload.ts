@@ -1015,6 +1015,18 @@ const guidegramAPI = {
   securityUpdateColor: (accountId: string, color?: number, backgroundEmojiId?: bigint, forProfile = false): Promise<boolean> =>
     ipcRenderer.invoke('telegram:security-update-color', { accountId, color, backgroundEmojiId, forProfile }),
 
+  // Core Messaging Engine, Stories & Media Domain API (Phase 6)
+  messagingGetHistory: (accountId: string, peerId: string, offsetId = 0, offsetDate = 0, addOffset = 0, limit = 50, maxId = 0, minId = 0, hash = 0n): Promise<any> =>
+    ipcRenderer.invoke('telegram:messaging-get-history', { accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash }),
+  messagingSearchGlobal: (accountId: string, q = '', filter: any = { _: 'inputMessagesFilterEmpty' }, minDate = 0, maxDate = 0, offsetRate = 0, offsetId = 0, limit = 50): Promise<any> =>
+    ipcRenderer.invoke('telegram:messaging-search-global', { accountId, q, filter, minDate, maxDate, offsetRate, offsetId, limit }),
+  messagingSendReaction: (accountId: string, peerId: string, msgId: number, reaction?: any, big = false, addToRecent = true): Promise<any> =>
+    ipcRenderer.invoke('telegram:messaging-send-reaction', { accountId, peerId, msgId, reaction, big, addToRecent }),
+  messagingStoriesGetPeerStories: (accountId: string, peerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messaging-stories-get-peer-stories', { accountId, peerId }),
+  messagingStoriesSendStory: (accountId: string, peerId: string, media: any, privacyRules: any[] = [{ _: 'inputPrivacyValueAllowAll' }], caption = ''): Promise<any> =>
+    ipcRenderer.invoke('telegram:messaging-stories-send-story', { accountId, peerId, media, privacyRules, caption }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

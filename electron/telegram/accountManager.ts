@@ -40,6 +40,7 @@ import { ChannelsService } from './services/channelsService'
 import { BotsService } from './services/botsService'
 import { PaymentsService } from './services/paymentsService'
 import { AccountSecurityService } from './services/accountSecurityService'
+import { MessagingService } from './services/messagingService'
 import {
   AccountInfo,
   DialogItem,
@@ -885,6 +886,7 @@ export class AccountManager {
   public readonly botsService: BotsService
   public readonly paymentsService: PaymentsService
   public readonly securityService: AccountSecurityService
+  public readonly messagingService: MessagingService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -894,6 +896,7 @@ export class AccountManager {
     this.botsService = new BotsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.paymentsService = new PaymentsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.securityService = new AccountSecurityService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.messagingService = new MessagingService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -8080,6 +8083,41 @@ export class AccountManager {
     if (!holder?.client) return false
     const res = await this.securityService.updateColor(holder as any, forProfile, color)
     return Boolean(res)
+  }
+
+  // --- Core Messaging Engine, Stories & Media Domain Engine (Phase 6) ---
+  public getMessagingService(): MessagingService {
+    return this.messagingService
+  }
+
+  public async messagingGetHistory(accountId: string, peerId: string, offsetId = 0, offsetDate = 0, addOffset = 0, limit = 50, maxId = 0, minId = 0, hash = 0n): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getHistory(holder as any, accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+  }
+
+  public async messagingSearchGlobal(accountId: string, q = '', filter: any = { _: 'inputMessagesFilterEmpty' }, minDate = 0, maxDate = 0, offsetRate = 0, offsetId = 0, limit = 50): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchGlobal(holder as any, accountId, undefined, undefined, undefined, undefined, undefined, q, filter, minDate, maxDate, offsetRate, undefined, offsetId, limit)
+  }
+
+  public async messagingSendReaction(accountId: string, peerId: string, msgId: number, reaction?: any, big = false, addToRecent = true): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendReaction(holder as any, accountId, big, addToRecent, peerId, msgId, reaction)
+  }
+
+  public async messagingStoriesGetPeerStories(accountId: string, peerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getPeerStories(holder as any, accountId, peerId)
+  }
+
+  public async messagingStoriesSendStory(accountId: string, peerId: string, media: any, privacyRules: any[] = [{ _: 'inputPrivacyValueAllowAll' }], caption = ''): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_sendStory(holder as any, accountId, undefined, undefined, undefined, peerId, media, undefined, caption, undefined, privacyRules)
   }
 
   public async createPoll(

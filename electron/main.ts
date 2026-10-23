@@ -2886,6 +2886,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Core Messaging Engine, Stories & Media IPC (Phase 6) ---
+  ipcMain.handle('telegram:messaging-get-history', async (_event, { accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash }) => {
+    try {
+      return await accountManager.messagingGetHistory(accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] messagingGetHistory error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messaging-search-global', async (_event, { accountId, q, filter, minDate, maxDate, offsetRate, offsetId, limit }) => {
+    try {
+      return await accountManager.messagingSearchGlobal(accountId, q, filter, minDate, maxDate, offsetRate, offsetId, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] messagingSearchGlobal error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messaging-send-reaction', async (_event, { accountId, peerId, msgId, reaction, big, addToRecent }) => {
+    try {
+      return await accountManager.messagingSendReaction(accountId, peerId, msgId, reaction, big, addToRecent)
+    } catch (err: any) {
+      Logger.warn(`[IPC] messagingSendReaction error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messaging-stories-get-peer-stories', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.messagingStoriesGetPeerStories(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] messagingStoriesGetPeerStories error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messaging-stories-send-story', async (_event, { accountId, peerId, media, privacyRules, caption }) => {
+    try {
+      return await accountManager.messagingStoriesSendStory(accountId, peerId, media, privacyRules, caption)
+    } catch (err: any) {
+      Logger.warn(`[IPC] messagingStoriesSendStory error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)
