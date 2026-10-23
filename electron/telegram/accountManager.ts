@@ -37,6 +37,7 @@ import { DeviceProfileManager } from './deviceProfileManager'
 import { dispatchMtprotoRpc, ALL_MTPROTO_METHODS } from './mtprotoRegistry'
 import { ContactsService } from './services/contactsService'
 import { ChannelsService } from './services/channelsService'
+import { BotsService } from './services/botsService'
 import {
   AccountInfo,
   DialogItem,
@@ -879,12 +880,14 @@ export class AccountManager {
   private topMessageIds = new Map<string, number>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
+  public readonly botsService: BotsService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
     this.onEventCallback = onEvent
     this.contactsService = new ContactsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.channelsService = new ChannelsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.botsService = new BotsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -7836,6 +7839,83 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
     return this.channelsService.updatePaidMessagesPrice(holder as any, accountId, channelId, stars)
+  }
+
+  // --- Bots, Games & WebApps Domain Engine (Phase 3) ---
+  public getBotsService(): BotsService {
+    return this.botsService
+  }
+
+  public async botGetCommands(accountId: string, scope?: any, langCode = ''): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.botsService.getBotCommands(holder as any, scope, langCode)
+  }
+
+  public async botSetCommands(accountId: string, commands: any[], scope?: any, langCode = ''): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotCommands(holder as any, commands, scope, langCode)
+  }
+
+  public async botGetInfo(accountId: string, botId?: string, langCode = ''): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getBotInfo(holder as any, accountId, botId, langCode)
+  }
+
+  public async botSetInfo(
+    accountId: string,
+    botId?: string,
+    langCode = '',
+    name?: string,
+    about?: string,
+    description?: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotInfo(holder as any, accountId, botId, langCode, name, about, description)
+  }
+
+  public async botGetMenuButton(accountId: string, botId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getBotMenuButton(holder as any, accountId, botId)
+  }
+
+  public async botSetMenuButton(accountId: string, botId: string, button: any): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotMenuButton(holder as any, accountId, botId, button)
+  }
+
+  public async botGetAdminedBots(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.botsService.getAdminedBots(holder as any)
+  }
+
+  public async botGetPopularApps(accountId: string, offset = '', limit = 50): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getPopularAppBots(holder as any, offset, limit)
+  }
+
+  public async botGetRecommendations(accountId: string, botId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.botsService.getBotRecommendations(holder as any, accountId, botId)
+  }
+
+  public async botInvokeWebViewCustomMethod(
+    accountId: string,
+    botId: string,
+    customMethod: string,
+    params: any
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.invokeWebViewCustomMethod(holder as any, accountId, botId, customMethod, params)
   }
 
   public async createPoll(

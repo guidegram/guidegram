@@ -2604,6 +2604,97 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Bots, Games & WebApps IPC (Phase 3) ---
+  ipcMain.handle('telegram:bot-get-commands', async (_event, { accountId, scope, langCode }) => {
+    try {
+      return await accountManager.botGetCommands(accountId, scope, langCode)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botGetCommands error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:bot-set-commands', async (_event, { accountId, commands, scope, langCode }) => {
+    try {
+      return await accountManager.botSetCommands(accountId, commands, scope, langCode)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botSetCommands error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:bot-get-info', async (_event, { accountId, botId, langCode }) => {
+    try {
+      return await accountManager.botGetInfo(accountId, botId, langCode)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botGetInfo error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:bot-set-info', async (_event, { accountId, botId, langCode, name, about, description }) => {
+    try {
+      return await accountManager.botSetInfo(accountId, botId, langCode, name, about, description)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botSetInfo error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:bot-get-menu-button', async (_event, { accountId, botId }) => {
+    try {
+      return await accountManager.botGetMenuButton(accountId, botId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botGetMenuButton error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:bot-set-menu-button', async (_event, { accountId, botId, button }) => {
+    try {
+      return await accountManager.botSetMenuButton(accountId, botId, button)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botSetMenuButton error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:bot-get-admined-bots', async (_event, { accountId }) => {
+    try {
+      return await accountManager.botGetAdminedBots(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botGetAdminedBots error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:bot-get-popular-apps', async (_event, { accountId, offset, limit }) => {
+    try {
+      return await accountManager.botGetPopularApps(accountId, offset, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botGetPopularApps error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:bot-get-recommendations', async (_event, { accountId, botId }) => {
+    try {
+      return await accountManager.botGetRecommendations(accountId, botId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botGetRecommendations error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:bot-invoke-webview-custom-method', async (_event, { accountId, botId, customMethod, params }) => {
+    try {
+      return await accountManager.botInvokeWebViewCustomMethod(accountId, botId, customMethod, params)
+    } catch (err: any) {
+      Logger.warn(`[IPC] botInvokeWebViewCustomMethod error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

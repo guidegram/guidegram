@@ -935,6 +935,40 @@ const guidegramAPI = {
   channelUpdatePaidMessagesPrice: (accountId: string, channelId: string, stars: bigint): Promise<any> =>
     ipcRenderer.invoke('telegram:channel-update-paid-messages-price', { accountId, channelId, stars }),
 
+  // Bots, Games & WebApps Domain API (Phase 3)
+  botGetCommands: (accountId: string, scope?: any, langCode = ''): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:bot-get-commands', { accountId, scope, langCode }),
+  botSetCommands: (accountId: string, commands: any[], scope?: any, langCode = ''): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bot-set-commands', { accountId, commands, scope, langCode }),
+  botGetInfo: (accountId: string, botId?: string, langCode = ''): Promise<any> =>
+    ipcRenderer.invoke('telegram:bot-get-info', { accountId, botId, langCode }),
+  botSetInfo: (
+    accountId: string,
+    botId?: string,
+    langCode = '',
+    name?: string,
+    about?: string,
+    description?: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bot-set-info', { accountId, botId, langCode, name, about, description }),
+  botGetMenuButton: (accountId: string, botId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:bot-get-menu-button', { accountId, botId }),
+  botSetMenuButton: (accountId: string, botId: string, button: any): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bot-set-menu-button', { accountId, botId, button }),
+  botGetAdminedBots: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:bot-get-admined-bots', { accountId }),
+  botGetPopularApps: (accountId: string, offset = '', limit = 50): Promise<any> =>
+    ipcRenderer.invoke('telegram:bot-get-popular-apps', { accountId, offset, limit }),
+  botGetRecommendations: (accountId: string, botId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:bot-get-recommendations', { accountId, botId }),
+  botInvokeWebViewCustomMethod: (
+    accountId: string,
+    botId: string,
+    customMethod: string,
+    params: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:bot-invoke-webview-custom-method', { accountId, botId, customMethod, params }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),
