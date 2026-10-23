@@ -2213,6 +2213,219 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Fragment & Collectibles IPC ---
+  ipcMain.handle('telegram:get-collectible-info', async (_event, { accountId, query, type }) => {
+    try {
+      return await accountManager.getCollectibleInfo(accountId, query, type)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getCollectibleInfo error:`, err)
+      return null
+    }
+  })
+
+  // --- TON Center & Blockchain IPC ---
+  ipcMain.handle('telegram:perform-ton-api-request', async (_event, { accountId, endpoint, isPost, query, payload }) => {
+    try {
+      return await accountManager.performTonApiRequest(accountId, endpoint, isPost, query, payload)
+    } catch (err: any) {
+      Logger.warn(`[IPC] performTonApiRequest error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-ton-streaming-url', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getTonStreamingUrl(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getTonStreamingUrl error:`, err)
+      return null
+    }
+  })
+
+  // --- Onramp Payments IPC ---
+  ipcMain.handle('telegram:get-onramp-providers', async (_event, { accountId, cryptoCurrency }) => {
+    try {
+      return await accountManager.getOnrampProviders(accountId, cryptoCurrency)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getOnrampProviders error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-onramp-base-currencies', async (_event, { accountId, provider, cryptoCurrency }) => {
+    try {
+      return await accountManager.getOnrampBaseCurrencies(accountId, provider, cryptoCurrency)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getOnrampBaseCurrencies error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-onramp-availability', async (_event, { accountId, provider, cryptoCurrency, baseCurrency }) => {
+    try {
+      return await accountManager.getOnrampAvailability(accountId, provider, cryptoCurrency, baseCurrency)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getOnrampAvailability error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-onramp-limits', async (_event, { accountId, provider, cryptoCurrency, baseCurrency, paymentMethod }) => {
+    try {
+      return await accountManager.getOnrampLimits(accountId, provider, cryptoCurrency, baseCurrency, paymentMethod)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getOnrampLimits error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-onramp-quote', async (_event, { accountId, provider, cryptoCurrency, baseCurrency, baseAmount, cryptoAmount, paymentMethod }) => {
+    try {
+      return await accountManager.getOnrampQuote(accountId, provider, cryptoCurrency, baseCurrency, baseAmount, cryptoAmount, paymentMethod)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getOnrampQuote error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:create-onramp-session', async (_event, { accountId, provider, cryptoCurrency, address, options }) => {
+    try {
+      return await accountManager.createOnrampSession(accountId, provider, cryptoCurrency, address, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] createOnrampSession error:`, err)
+      return null
+    }
+  })
+
+  // --- Telegram Wallet & TonConnect IPC ---
+  ipcMain.handle('telegram:get-wallet-state', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getWalletState(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWalletState error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-wallet-user-addresses', async (_event, { accountId, userIds, addresses, force }) => {
+    try {
+      return await accountManager.getWalletUserAddresses(accountId, userIds, addresses, force)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWalletUserAddresses error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-wallet-transactions', async (_event, { accountId, offset, limit, inbound, outbound }) => {
+    try {
+      return await accountManager.getWalletTransactions(accountId, offset, limit, inbound, outbound)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWalletTransactions error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-wallet-nfts', async (_event, { accountId, offset, limit }) => {
+    try {
+      return await accountManager.getWalletNfts(accountId, offset, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWalletNfts error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-ton-connect-sessions', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getTonConnectSessions(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getTonConnectSessions error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:create-ton-connect-session', async (_event, { accountId, dappClientId, manifestUrl }) => {
+    try {
+      return await accountManager.createTonConnectSession(accountId, dappClientId, manifestUrl)
+    } catch (err: any) {
+      Logger.warn(`[IPC] createTonConnectSession error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:close-ton-connect-session', async (_event, { accountId, sessionId, bodyHex }) => {
+    try {
+      return await accountManager.closeTonConnectSession(accountId, sessionId, bodyHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] closeTonConnectSession error:`, err)
+      return false
+    }
+  })
+
+  // --- Telegram Passport & Identity IPC ---
+  ipcMain.handle('telegram:get-passport-config', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getPassportConfig(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getPassportConfig error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-all-secure-values', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAllSecureValues(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAllSecureValues error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-secure-value', async (_event, { accountId, types }) => {
+    try {
+      return await accountManager.getSecureValue(accountId, types)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSecureValue error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:save-secure-value', async (_event, { accountId, value, secureSecretId }) => {
+    try {
+      return await accountManager.saveSecureValue(accountId, value, secureSecretId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] saveSecureValue error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:delete-secure-value', async (_event, { accountId, types }) => {
+    try {
+      return await accountManager.deleteSecureValue(accountId, types)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteSecureValue error:`, err)
+      return false
+    }
+  })
+
+  // --- Sticker Creation IPC ---
+  ipcMain.handle('telegram:create-sticker-set', async (_event, { accountId, title, shortName, stickers, options }) => {
+    try {
+      return await accountManager.createStickerSet(accountId, title, shortName, stickers, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] createStickerSet error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:add-sticker-to-set', async (_event, { accountId, stickerset, sticker }) => {
+    try {
+      return await accountManager.addStickerToSet(accountId, stickerset, sticker)
+    } catch (err: any) {
+      Logger.warn(`[IPC] addStickerToSet error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

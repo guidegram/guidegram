@@ -76,14 +76,18 @@
     },
     "account": {
       "total_in_schema": 128,
-      "directly_implemented": 15,
-      "gap_unimplemented": 113,
-      "coverage_pct": 11.7,
+      "directly_implemented": 19,
+      "gap_unimplemented": 109,
+      "coverage_pct": 14.8,
       "implemented_list": [
         "account.updateNotifySettings",
         "account.getAuthorizations",
         "account.resetAuthorization",
         "account.getPassword",
+        "account.getAllSecureValues",
+        "account.getSecureValue",
+        "account.saveSecureValue",
+        "account.deleteSecureValue",
         "account.updateEmojiStatus",
         "account.getDefaultEmojiStatuses",
         "account.getRecentEmojiStatuses",
@@ -99,14 +103,20 @@
     },
     "payments": {
       "total_in_schema": 76,
-      "directly_implemented": 4,
-      "gap_unimplemented": 72,
-      "coverage_pct": 5.3,
+      "directly_implemented": 10,
+      "gap_unimplemented": 66,
+      "coverage_pct": 13.2,
       "implemented_list": [
         "payments.getStarsStatus",
         "payments.getStarsTransactions",
         "payments.getStarGifts",
-        "payments.getSavedStarGifts"
+        "payments.getSavedStarGifts",
+        "payments.getOnrampProviders",
+        "payments.getOnrampBaseCurrencies",
+        "payments.getOnrampAvailability",
+        "payments.getOnrampLimits",
+        "payments.getOnrampQuote",
+        "payments.createOnrampSession"
       ]
     },
     "channels": {
@@ -205,17 +215,27 @@
     },
     "wallet": {
       "total_in_schema": 26,
-      "directly_implemented": 0,
-      "gap_unimplemented": 26,
-      "coverage_pct": 0.0,
-      "implemented_list": []
+      "directly_implemented": 7,
+      "gap_unimplemented": 19,
+      "coverage_pct": 26.9,
+      "implemented_list": [
+        "wallet.getState",
+        "wallet.getUserAddresses",
+        "wallet.getTransactions",
+        "wallet.getNfts",
+        "wallet.tonConnectCreateSession",
+        "wallet.tonConnectCloseSession",
+        "wallet.tonConnectGetSessions"
+      ]
     },
     "help": {
       "total_in_schema": 25,
-      "directly_implemented": 0,
-      "gap_unimplemented": 25,
-      "coverage_pct": 0.0,
-      "implemented_list": []
+      "directly_implemented": 1,
+      "gap_unimplemented": 24,
+      "coverage_pct": 4.0,
+      "implemented_list": [
+        "help.getPassportConfig"
+      ]
     },
     "root": {
       "total_in_schema": 11,
@@ -226,12 +246,14 @@
     },
     "stickers": {
       "total_in_schema": 11,
-      "directly_implemented": 6,
-      "gap_unimplemented": 5,
-      "coverage_pct": 54.5,
+      "directly_implemented": 8,
+      "gap_unimplemented": 3,
+      "coverage_pct": 72.7,
       "implemented_list": [
+        "stickers.createStickerSet",
         "stickers.removeStickerFromSet",
         "stickers.changeStickerPosition",
+        "stickers.addStickerToSet",
         "stickers.checkShortName",
         "stickers.suggestShortName",
         "stickers.renameStickerSet",
@@ -337,10 +359,13 @@
     },
     "toncenter": {
       "total_in_schema": 2,
-      "directly_implemented": 0,
-      "gap_unimplemented": 2,
-      "coverage_pct": 0.0,
-      "implemented_list": []
+      "directly_implemented": 2,
+      "gap_unimplemented": 0,
+      "coverage_pct": 100.0,
+      "implemented_list": [
+        "toncenter.performApiRequest",
+        "toncenter.getStreamingUrl"
+      ]
     },
     "folders": {
       "total_in_schema": 1,
@@ -351,18 +376,16 @@
     },
     "fragment": {
       "total_in_schema": 1,
-      "directly_implemented": 0,
-      "gap_unimplemented": 1,
-      "coverage_pct": 0.0,
-      "implemented_list": []
+      "directly_implemented": 1,
+      "gap_unimplemented": 0,
+      "coverage_pct": 100.0,
+      "implemented_list": [
+        "fragment.getCollectibleInfo"
+      ]
     }
   },
-  "overall_implemented_methods": 142,
-  "overall_unimplemented_methods": 717,
-  "mockup_features": [
-    "Fragment Username & Phone Auction / TON DNS bidding",
-    "Telegram Passport (secure identity documents)",
-    "Sticker Set Creation & Management (stickers.createStickerSet)"
-  ],
-  "overall_coverage_pct": 16.5
+  "overall_implemented_methods": 165,
+  "overall_unimplemented_methods": 694,
+  "mockup_features": [],
+  "overall_coverage_pct": 19.2
 }

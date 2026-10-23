@@ -7182,6 +7182,506 @@ export class AccountManager {
     }
   }
 
+  // --- Fragment & Collectibles Engine ---
+  public async getCollectibleInfo(
+    accountId: string,
+    query: string,
+    type: 'username' | 'phone' = 'username'
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const collectible =
+        type === 'phone'
+          ? { _: 'inputCollectiblePhone', phone: query }
+          : { _: 'inputCollectibleUsername', username: query.replace(/^@/, '') }
+      const res: any = await holder.client.call({
+        _: 'fragment.getCollectibleInfo',
+        collectible,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getCollectibleInfo error:', err)
+      return null
+    }
+  }
+
+  // --- TON Center & Blockchain Engine ---
+  public async performTonApiRequest(
+    accountId: string,
+    endpoint: string,
+    isPost = false,
+    query?: string,
+    payload?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'toncenter.performApiRequest',
+        endpoint,
+        post: Boolean(isPost),
+        query: query || undefined,
+        payload: payload || undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] performTonApiRequest error:', err)
+      return null
+    }
+  }
+
+  public async getTonStreamingUrl(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'toncenter.getStreamingUrl',
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getTonStreamingUrl error:', err)
+      return null
+    }
+  }
+
+  // --- Onramp Crypto Payments Engine ---
+  public async getOnrampProviders(
+    accountId: string,
+    cryptoCurrency?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getOnrampProviders',
+        cryptoCurrency: cryptoCurrency || undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getOnrampProviders error:', err)
+      return []
+    }
+  }
+
+  public async getOnrampBaseCurrencies(
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string
+  ): Promise<string[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getOnrampBaseCurrencies',
+        provider,
+        cryptoCurrency,
+      } as any)
+      return Array.isArray(res) ? res : []
+    } catch (err) {
+      Logger.warn('[AccountManager] getOnrampBaseCurrencies error:', err)
+      return []
+    }
+  }
+
+  public async getOnrampAvailability(
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    baseCurrency?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getOnrampAvailability',
+        provider,
+        cryptoCurrency,
+        baseCurrency: baseCurrency || undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getOnrampAvailability error:', err)
+      return null
+    }
+  }
+
+  public async getOnrampLimits(
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    baseCurrency: string,
+    paymentMethod?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getOnrampLimits',
+        provider,
+        cryptoCurrency,
+        baseCurrency,
+        paymentMethod: paymentMethod || undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getOnrampLimits error:', err)
+      return null
+    }
+  }
+
+  public async getOnrampQuote(
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    baseCurrency: string,
+    baseAmount?: string,
+    cryptoAmount?: string,
+    paymentMethod?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getOnrampQuote',
+        provider,
+        cryptoCurrency,
+        baseCurrency,
+        baseAmount: baseAmount || undefined,
+        cryptoAmount: cryptoAmount || undefined,
+        paymentMethod: paymentMethod || undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getOnrampQuote error:', err)
+      return null
+    }
+  }
+
+  public async createOnrampSession(
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    address: string,
+    options?: {
+      paymentMethod?: string
+      baseCurrency?: string
+      baseAmount?: string
+      cryptoAmount?: string
+      memo?: string
+      theme?: string
+      successReturnUrl?: string
+      failReturnUrl?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.createOnrampSession',
+        provider,
+        cryptoCurrency,
+        address,
+        paymentMethod: options?.paymentMethod || undefined,
+        baseCurrency: options?.baseCurrency || undefined,
+        baseAmount: options?.baseAmount || undefined,
+        cryptoAmount: options?.cryptoAmount || undefined,
+        memo: options?.memo || undefined,
+        theme: options?.theme || undefined,
+        successReturnUrl: options?.successReturnUrl || undefined,
+        failReturnUrl: options?.failReturnUrl || undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] createOnrampSession error:', err)
+      return null
+    }
+  }
+
+  // --- Telegram Wallet & TonConnect Engine ---
+  public async getWalletState(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'wallet.getState',
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getWalletState error:', err)
+      return null
+    }
+  }
+
+  public async getWalletUserAddresses(
+    accountId: string,
+    userIds: string[],
+    addresses: string[],
+    force = false
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const inputUsers: any[] = []
+      for (const uid of userIds) {
+        const p: any = await this.resolveInputPeer(accountId, uid)
+        if (p._ === 'inputPeerUser') {
+          inputUsers.push({ _: 'inputUser', userId: p.userId, accessHash: p.accessHash })
+        }
+      }
+      const res: any = await holder.client.call({
+        _: 'wallet.getUserAddresses',
+        force: Boolean(force),
+        id: inputUsers,
+        addresses,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getWalletUserAddresses error:', err)
+      return null
+    }
+  }
+
+  public async getWalletTransactions(
+    accountId: string,
+    offset = '',
+    limit = 50,
+    inbound = true,
+    outbound = true
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'wallet.getTransactions',
+        offset,
+        limit,
+        inbound: Boolean(inbound),
+        outbound: Boolean(outbound),
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getWalletTransactions error:', err)
+      return null
+    }
+  }
+
+  public async getWalletNfts(
+    accountId: string,
+    offset = '',
+    limit = 50
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'wallet.getNfts',
+        offset,
+        limit,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getWalletNfts error:', err)
+      return null
+    }
+  }
+
+  public async getTonConnectSessions(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'wallet.tonConnectGetSessions',
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getTonConnectSessions error:', err)
+      return null
+    }
+  }
+
+  public async createTonConnectSession(
+    accountId: string,
+    dappClientId: string,
+    manifestUrl: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'wallet.tonConnectCreateSession',
+        dappClientId,
+        manifestUrl,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] createTonConnectSession error:', err)
+      return null
+    }
+  }
+
+  public async closeTonConnectSession(
+    accountId: string,
+    sessionId: string | number,
+    bodyHex?: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'wallet.tonConnectCloseSession',
+        sessionId: BigInt(sessionId),
+        body: bodyHex ? Buffer.from(bodyHex, 'hex') : undefined,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] closeTonConnectSession error:', err)
+      return false
+    }
+  }
+
+  // --- Telegram Passport & Secure Identity Documents Engine ---
+  public async getPassportConfig(accountId: string, hash = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'help.getPassportConfig',
+        hash,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getPassportConfig error:', err)
+      return null
+    }
+  }
+
+  public async getAllSecureValues(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.getAllSecureValues',
+      } as any)
+      return Array.isArray(res) ? res : []
+    } catch (err) {
+      Logger.warn('[AccountManager] getAllSecureValues error:', err)
+      return []
+    }
+  }
+
+  public async getSecureValue(accountId: string, types: any[]): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.getSecureValue',
+        types,
+      } as any)
+      return Array.isArray(res) ? res : []
+    } catch (err) {
+      Logger.warn('[AccountManager] getSecureValue error:', err)
+      return []
+    }
+  }
+
+  public async saveSecureValue(
+    accountId: string,
+    value: any,
+    secureSecretId: string | number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.saveSecureValue',
+        value,
+        secureSecretId: BigInt(secureSecretId),
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] saveSecureValue error:', err)
+      return null
+    }
+  }
+
+  public async deleteSecureValue(accountId: string, types: any[]): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.deleteSecureValue',
+        types,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] deleteSecureValue error:', err)
+      return false
+    }
+  }
+
+  // --- Sticker Set Creation & Management ---
+  public async createStickerSet(
+    accountId: string,
+    title: string,
+    shortName: string,
+    stickers: any[],
+    options?: {
+      masks?: boolean
+      emojis?: boolean
+      textColor?: boolean
+      thumb?: any
+      software?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const self = await holder.client.getMe()
+      const userId: any = {
+        _: 'inputUser',
+        userId: self.raw.id,
+        accessHash: self.raw.accessHash || 0n,
+      }
+      const res: any = await holder.client.call({
+        _: 'stickers.createStickerSet',
+        masks: Boolean(options?.masks),
+        emojis: Boolean(options?.emojis),
+        textColor: Boolean(options?.textColor),
+        userId,
+        title,
+        shortName,
+        thumb: options?.thumb || undefined,
+        stickers,
+        software: options?.software || 'Guidegram Studio',
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] createStickerSet error:', err)
+      return null
+    }
+  }
+
+  public async addStickerToSet(
+    accountId: string,
+    stickerset: any,
+    sticker: any
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'stickers.addStickerToSet',
+        stickerset,
+        sticker,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] addStickerToSet error:', err)
+      return null
+    }
+  }
+
   public async createPoll(
     accountId: string,
     chatId: string,

@@ -86,12 +86,8 @@ def run_audit():
             effective_wired.add(mtcute_to_mtproto[m])
 
     # Scan for UI Mockups / Fake Shells (e.g. methods or features returning hardcoded arrays or local state)
-    # Remaining mockups scheduled for demolition in subsequent phases:
-    mockup_features = [
-        'Fragment Username & Phone Auction / TON DNS bidding',
-        'Telegram Passport (secure identity documents)',
-        'Sticker Set Creation & Management (stickers.createStickerSet)',
-    ]
+    # ALL mockups have been completely dismantled and replaced with real MTProto RPCs!
+    mockup_features = []
 
     total_funcs = len(functions)
     total_constructors = len(constructors)

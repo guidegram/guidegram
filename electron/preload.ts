@@ -761,6 +761,126 @@ const guidegramAPI = {
       restricted,
     }),
 
+  // Fragment & Collectibles API
+  getCollectibleInfo: (
+    accountId: string,
+    query: string,
+    type: 'username' | 'phone' = 'username'
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-collectible-info', { accountId, query, type }),
+
+  // TON Center & Blockchain API
+  performTonApiRequest: (
+    accountId: string,
+    endpoint: string,
+    isPost = false,
+    query?: string,
+    payload?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:perform-ton-api-request', {
+      accountId,
+      endpoint,
+      isPost,
+      query,
+      payload,
+    }),
+  getTonStreamingUrl: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-ton-streaming-url', { accountId }),
+
+  // Onramp Payments API
+  getOnrampProviders: (accountId: string, cryptoCurrency?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-onramp-providers', { accountId, cryptoCurrency }),
+  getOnrampBaseCurrencies: (
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string
+  ): Promise<string[]> =>
+    ipcRenderer.invoke('telegram:get-onramp-base-currencies', { accountId, provider, cryptoCurrency }),
+  getOnrampAvailability: (
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    baseCurrency?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-onramp-availability', { accountId, provider, cryptoCurrency, baseCurrency }),
+  getOnrampLimits: (
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    baseCurrency: string,
+    paymentMethod?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-onramp-limits', { accountId, provider, cryptoCurrency, baseCurrency, paymentMethod }),
+  getOnrampQuote: (
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    baseCurrency: string,
+    baseAmount?: string,
+    cryptoAmount?: string,
+    paymentMethod?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-onramp-quote', { accountId, provider, cryptoCurrency, baseCurrency, baseAmount, cryptoAmount, paymentMethod }),
+  createOnrampSession: (
+    accountId: string,
+    provider: string,
+    cryptoCurrency: string,
+    address: string,
+    options?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:create-onramp-session', { accountId, provider, cryptoCurrency, address, options }),
+
+  // Telegram Wallet & TonConnect API
+  getWalletState: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-wallet-state', { accountId }),
+  getWalletUserAddresses: (
+    accountId: string,
+    userIds: string[],
+    addresses: string[],
+    force = false
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-wallet-user-addresses', { accountId, userIds, addresses, force }),
+  getWalletTransactions: (
+    accountId: string,
+    offset = '',
+    limit = 50,
+    inbound = true,
+    outbound = true
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-wallet-transactions', { accountId, offset, limit, inbound, outbound }),
+  getWalletNfts: (accountId: string, offset = '', limit = 50): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-wallet-nfts', { accountId, offset, limit }),
+  getTonConnectSessions: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-ton-connect-sessions', { accountId }),
+  createTonConnectSession: (accountId: string, dappClientId: string, manifestUrl: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:create-ton-connect-session', { accountId, dappClientId, manifestUrl }),
+  closeTonConnectSession: (accountId: string, sessionId: string | number, bodyHex?: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:close-ton-connect-session', { accountId, sessionId, bodyHex }),
+
+  // Telegram Passport & Secure Documents API
+  getPassportConfig: (accountId: string, hash = 0): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-passport-config', { accountId, hash }),
+  getAllSecureValues: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-all-secure-values', { accountId }),
+  getSecureValue: (accountId: string, types: any[]): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-secure-value', { accountId, types }),
+  saveSecureValue: (accountId: string, value: any, secureSecretId: string | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-secure-value', { accountId, value, secureSecretId }),
+  deleteSecureValue: (accountId: string, types: any[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-secure-value', { accountId, types }),
+
+  // Sticker Creation API
+  createStickerSet: (
+    accountId: string,
+    title: string,
+    shortName: string,
+    stickers: any[],
+    options?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:create-sticker-set', { accountId, title, shortName, stickers, options }),
+  addStickerToSet: (accountId: string, stickerset: any, sticker: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:add-sticker-to-set', { accountId, stickerset, sticker }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),
