@@ -1027,6 +1027,20 @@ const guidegramAPI = {
   messagingStoriesSendStory: (accountId: string, peerId: string, media: any, privacyRules: any[] = [{ _: 'inputPrivacyValueAllowAll' }], caption = ''): Promise<any> =>
     ipcRenderer.invoke('telegram:messaging-stories-send-story', { accountId, peerId, media, privacyRules, caption }),
 
+  // System & Specialized Namespaces Domain API (Phase 7)
+  systemGetConfig: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:system-get-config', { accountId }),
+  systemGetAppConfig: (accountId: string, hash = 0): Promise<any> =>
+    ipcRenderer.invoke('telegram:system-get-app-config', { accountId, hash }),
+  systemGetNearestDc: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:system-get-nearest-dc', { accountId }),
+  systemPhoneGetCallConfig: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:system-phone-get-call-config', { accountId }),
+  systemStatsGetBroadcastStats: (accountId: string, channelId: string, dark = false): Promise<any> =>
+    ipcRenderer.invoke('telegram:system-stats-get-broadcast-stats', { accountId, channelId, dark }),
+  systemChatlistsGetExportedInvites: (accountId: string, chatlistId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:system-chatlists-get-exported-invites', { accountId, chatlistId }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

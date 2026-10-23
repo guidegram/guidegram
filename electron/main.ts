@@ -2932,6 +2932,61 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- System & Specialized Namespaces IPC (Phase 7) ---
+  ipcMain.handle('telegram:system-get-config', async (_event, { accountId }) => {
+    try {
+      return await accountManager.systemGetConfig(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] systemGetConfig error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:system-get-app-config', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.systemGetAppConfig(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] systemGetAppConfig error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:system-get-nearest-dc', async (_event, { accountId }) => {
+    try {
+      return await accountManager.systemGetNearestDc(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] systemGetNearestDc error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:system-phone-get-call-config', async (_event, { accountId }) => {
+    try {
+      return await accountManager.systemPhoneGetCallConfig(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] systemPhoneGetCallConfig error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:system-stats-get-broadcast-stats', async (_event, { accountId, channelId, dark }) => {
+    try {
+      return await accountManager.systemStatsGetBroadcastStats(accountId, channelId, dark)
+    } catch (err: any) {
+      Logger.warn(`[IPC] systemStatsGetBroadcastStats error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:system-chatlists-get-exported-invites', async (_event, { accountId, chatlistId }) => {
+    try {
+      return await accountManager.systemChatlistsGetExportedInvites(accountId, chatlistId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] systemChatlistsGetExportedInvites error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

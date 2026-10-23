@@ -41,6 +41,7 @@ import { BotsService } from './services/botsService'
 import { PaymentsService } from './services/paymentsService'
 import { AccountSecurityService } from './services/accountSecurityService'
 import { MessagingService } from './services/messagingService'
+import { SystemService } from './services/systemService'
 import {
   AccountInfo,
   DialogItem,
@@ -887,6 +888,7 @@ export class AccountManager {
   public readonly paymentsService: PaymentsService
   public readonly securityService: AccountSecurityService
   public readonly messagingService: MessagingService
+  public readonly systemService: SystemService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -897,6 +899,7 @@ export class AccountManager {
     this.paymentsService = new PaymentsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.securityService = new AccountSecurityService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.messagingService = new MessagingService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.systemService = new SystemService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -8118,6 +8121,57 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
     return this.messagingService.stories_sendStory(holder as any, accountId, undefined, undefined, undefined, peerId, media, undefined, caption, undefined, privacyRules)
+  }
+
+  // --- System & Specialized Namespaces Domain Engine (Phase 7) ---
+  public getSystemService(): SystemService {
+    return this.systemService
+  }
+
+  public async systemGetConfig(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getConfig(holder as any)
+  }
+
+  public async systemGetAppConfig(accountId: string, hash = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getAppConfig(holder as any, hash)
+  }
+
+  public async systemGetNearestDc(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getNearestDc(holder as any)
+  }
+
+  public async systemPhoneGetCallConfig(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getCallConfig(holder as any)
+  }
+
+  public async systemStatsGetBroadcastStats(accountId: string, channelId: string, dark = false): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const channel = await this.resolveInputPeer(accountId, channelId)
+    return this.systemService.stats_getBroadcastStats(holder as any, dark, channel)
+  }
+
+  public async systemChatlistsGetExportedInvites(accountId: string, chatlistId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    const chatlist = { _: 'inputChatlistDialogFilter', filterId: Number(chatlistId) || 0 }
+    const res = await this.systemService.chatlists_getExportedInvites(holder as any, chatlist)
+    if (res && Array.isArray(res.invites)) return res.invites
+    return Array.isArray(res) ? res : []
+  }
+
+  public async systemStickersGetStickerSet(accountId: string, stickerset: any, hash = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_renameStickerSet(holder as any, stickerset, '')
   }
 
   public async createPoll(
