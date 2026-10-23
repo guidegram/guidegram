@@ -1225,6 +1225,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-chat-join-requests', async (_event, { accountId, chatId, link, query }) => {
+    try {
+      return await accountManager.getChatJoinRequests(accountId, chatId, link, query)
+    } catch (err: any) {
+      Logger.error(`[IPC] getChatJoinRequests failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:hide-chat-join-request', async (_event, { accountId, chatId, userId, action }) => {
+    try {
+      return await accountManager.hideChatJoinRequest(accountId, chatId, userId, action)
+    } catch (err: any) {
+      Logger.error(`[IPC] hideChatJoinRequest failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:hide-all-chat-join-requests', async (_event, { accountId, chatId, action, link }) => {
+    try {
+      return await accountManager.hideAllChatJoinRequests(accountId, chatId, action, link)
+    } catch (err: any) {
+      Logger.error(`[IPC] hideAllChatJoinRequests failed:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:block-user', async (_event, { accountId, userId, blocked }) => {
     try {
       return await accountManager.blockUser(accountId, userId, blocked)

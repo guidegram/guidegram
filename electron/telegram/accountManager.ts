@@ -17,6 +17,9 @@ import {
   setChatDescription as mtcuteSetChatDescription,
   setSlowMode as mtcuteSetSlowMode,
   toggleJoinRequests as mtcuteToggleJoinRequests,
+  getInviteLinkMembers as mtcuteGetInviteLinkMembers,
+  hideJoinRequest as mtcuteHideJoinRequest,
+  hideAllJoinRequests as mtcuteHideAllJoinRequests,
   setChatUsername as mtcuteSetChatUsername,
   setChatDefaultPermissions as mtcuteSetChatDefaultPermissions,
 } from '@mtcute/core/methods.js'
@@ -123,6 +126,11 @@ import {
   ChatInviteLinksQuery,
   ChatInviteLinkInput,
   ChatInviteLinkMutationResult,
+  ChatJoinRequestItem,
+  ChatJoinRequestsResult,
+  ChatJoinRequestAction,
+  ChatJoinRequestResolveResult,
+  ChatJoinRequestBulkResolveResult,
 } from './types'
 
 export interface ClientHolder {
@@ -5108,6 +5116,129 @@ export class AccountManager {
       link,
     } as any)
     return Boolean(res)
+  }
+
+  private serializeJoinRequestItem(accountId: string, member: any): ChatJoinRequestItem {
+    const user = member.user
+    const id = String(user.id)
+    const raw = (user as any).raw || {}
+
+    if (raw.accessHash) {
+      this.peerAccessHashes.set(`${accountId}_${id}`, raw.accessHash)
+    }
+
+    let avatarUrl: string | undefined = undefined
+    try {
+      const photo = user.photo
+      if (photo?.small) {
+        this.peerPhotos.set(`${accountId}_${id}`, photo.small)
+      }
+      const cacheKey = `${accountId}_${id}`
+      if (this.avatarCache.has(cacheKey)) {
+        avatarUrl = this.avatarCache.get(cacheKey)
+      } else if (photo?.thumb) {
+        avatarUrl = `data:image/jpeg;base64,${Buffer.from(photo.thumb).toString('base64')}`
+        this.avatarCache.set(cacheKey, avatarUrl)
+      }
+    } catch (_) {}
+
+    const dateUnix =
+      member.date instanceof Date
+        ? Math.floor(member.date.getTime() / 1000)
+        : Number(member.date) || Math.floor(Date.now() / 1000)
+
+    return {
+      userId: id,
+      name: user.displayName || (typeof user.firstName === 'string' ? `${user.firstName} ${user.lastName || ''}`.trim() : id),
+      username: user.username || undefined,
+      bio: member.bio || undefined,
+      date: dateUnix,
+      isBot: Boolean(user.isBot),
+      isPremium: Boolean(user.isPremium),
+      avatarUrl,
+    }
+  }
+
+  public async getChatJoinRequests(
+    accountId: string,
+    chatId: string,
+    link?: string,
+    query?: { query?: string; limit?: number; offsetDate?: number }
+  ): Promise<ChatJoinRequestsResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const limit = Math.min(Math.max(Number(query?.limit || 50), 1), 100)
+
+    const result: any = await mtcuteGetInviteLinkMembers(holder.client, inputPeer, {
+      link: link || undefined,
+      requested: true,
+      limit,
+      requestedSearch: query?.query?.trim() || undefined,
+      offsetDate: query?.offsetDate ? new Date(query.offsetDate * 1000) : undefined,
+    })
+
+    const requests: ChatJoinRequestItem[] = []
+    for (const member of result) {
+      try {
+        requests.push(this.serializeJoinRequestItem(accountId, member))
+      } catch (err: any) {
+        Logger.warn('[AccountManager] Failed to serialize join request:', err?.message || err)
+      }
+    }
+
+    return {
+      requests,
+      total: Number(result.total ?? requests.length),
+    }
+  }
+
+  public async hideChatJoinRequest(
+    accountId: string,
+    chatId: string,
+    userId: string,
+    action: ChatJoinRequestAction
+  ): Promise<ChatJoinRequestResolveResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveInputPeer(accountId, userId)
+
+    await mtcuteHideJoinRequest(holder.client, {
+      chatId: chatPeer,
+      user: userPeer,
+      action,
+    })
+
+    return {
+      userId,
+      action,
+    }
+  }
+
+  public async hideAllChatJoinRequests(
+    accountId: string,
+    chatId: string,
+    action: ChatJoinRequestAction,
+    link?: string
+  ): Promise<ChatJoinRequestBulkResolveResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+
+    const res: any = await mtcuteHideAllJoinRequests(holder.client, {
+      chatId: chatPeer,
+      action,
+      link: link || undefined,
+    })
+
+    return {
+      action,
+      count: Number(res?.count ?? 0),
+    }
   }
 
   public async joinChatInvite(

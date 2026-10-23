@@ -72,6 +72,10 @@ import {
   ChatInviteLinksQuery,
   ChatInviteLinkInput,
   ChatInviteLinkMutationResult,
+  ChatJoinRequestsResult,
+  ChatJoinRequestAction,
+  ChatJoinRequestResolveResult,
+  ChatJoinRequestBulkResolveResult,
   ForumTopicInput,
   ForumTopicMutationResult,
   ForumTopicCreateResult,
@@ -205,6 +209,27 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:revoke-chat-invite-link', { accountId, chatId, link }),
   deleteChatInviteLink: (accountId: string, chatId: string, link: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-chat-invite-link', { accountId, chatId, link }),
+  getChatJoinRequests: (
+    accountId: string,
+    chatId: string,
+    link?: string,
+    query?: { query?: string; limit?: number; offsetDate?: number }
+  ): Promise<ChatJoinRequestsResult> =>
+    ipcRenderer.invoke('telegram:get-chat-join-requests', { accountId, chatId, link, query }),
+  hideChatJoinRequest: (
+    accountId: string,
+    chatId: string,
+    userId: string,
+    action: ChatJoinRequestAction
+  ): Promise<ChatJoinRequestResolveResult> =>
+    ipcRenderer.invoke('telegram:hide-chat-join-request', { accountId, chatId, userId, action }),
+  hideAllChatJoinRequests: (
+    accountId: string,
+    chatId: string,
+    action: ChatJoinRequestAction,
+    link?: string
+  ): Promise<ChatJoinRequestBulkResolveResult> =>
+    ipcRenderer.invoke('telegram:hide-all-chat-join-requests', { accountId, chatId, action, link }),
   blockUser: (accountId: string, userId: string, blocked: boolean): Promise<boolean> =>
     ipcRenderer.invoke('telegram:block-user', { accountId, userId, blocked }),
   sendMedia: (

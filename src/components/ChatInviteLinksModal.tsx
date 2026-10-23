@@ -19,6 +19,7 @@ import {
 import { ChatDetails, ChatInviteLink, ChatInviteLinkInput } from '../types/telegram'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
+import { JoinRequestsModal } from './JoinRequestsModal'
 
 export interface ChatInviteLinksModalProps {
   isOpen: boolean
@@ -98,6 +99,7 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
     null
   )
   const [replacement, setReplacement] = useState<string | null>(null)
+  const [selectedJoinRequestLink, setSelectedJoinRequestLink] = useState<string | null>(null)
 
   const formatDate = (unixSeconds?: number): string => {
     if (!unixSeconds) return t('invite_links.never')
@@ -828,12 +830,17 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                             })}
                       </span>
                       {(link.requested || 0) > 0 && (
-                        <span className="flex items-center gap-1 text-accent-amber">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedJoinRequestLink(link.link)}
+                          className="flex items-center gap-1 text-accent-amber hover:underline cursor-pointer"
+                          title={t('join_requests.title')}
+                        >
                           <ShieldQuestion className="w-3 h-3" />
                           {t('invite_links.requested_badge', {
                             count: formatNumber(link.requested || 0),
                           })}
-                        </span>
+                        </button>
                       )}
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -851,6 +858,18 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
           )}
         </div>
       </div>
+
+      {selectedJoinRequestLink !== null && (
+        <JoinRequestsModal
+          isOpen={true}
+          accountId={accountId}
+          chatId={chatId}
+          chatTitle={chatTitle}
+          link={selectedJoinRequestLink || undefined}
+          onClose={() => setSelectedJoinRequestLink(null)}
+          onResolved={() => void fetchLinks(tab)}
+        />
+      )}
     </div>
   )
 }
