@@ -955,6 +955,7 @@ export interface StarGiftItem {
   id: string
   stars: number
   convertStars?: number
+  title?: string
   fromId?: string
   fromName?: string
   message?: string
@@ -962,6 +963,10 @@ export interface StarGiftItem {
   isAnonymous?: boolean
   isNameHidden?: boolean
   isSaved?: boolean
+  isLimited?: boolean
+  isSoldOut?: boolean
+  availabilityRemains?: number
+  availabilityTotal?: number
   canExportAt?: number
   transferStars?: number
 }

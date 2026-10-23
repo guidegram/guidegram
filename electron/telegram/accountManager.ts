@@ -7154,14 +7154,66 @@ export class AccountManager {
         limit: 50,
       })
 
+      const usersMap = new Map<string, any>()
+      if (Array.isArray(res.users)) {
+        for (const u of res.users) {
+          usersMap.set(u.id?.toString(), u)
+        }
+      }
+
+      return (res.gifts || []).map((g: any) => {
+        let fromId = ''
+        if (g.fromId?._ === 'peerUser') fromId = g.fromId.userId?.toString()
+        else if (g.fromId?._ === 'peerChannel') fromId = `-${g.fromId.channelId}`
+        else if (g.fromId?._ === 'peerChat') fromId = `-${g.fromId.chatId}`
+
+        const fromUser = usersMap.get(fromId)
+        const fromName = fromUser ? formatEntityName(fromUser) : undefined
+
+        return {
+          id: g.gift?.id?.toString() || Math.random().toString(),
+          stars: Number(g.gift?.stars || 0),
+          convertStars: Number(g.convertStars || 0),
+          title: g.gift?.title,
+          fromId,
+          fromName,
+          date: g.date ? g.date * 1000 : 0,
+          message: g.message?.text,
+          isAnonymous: Boolean(g.nameHidden),
+          isSaved: Boolean(g.saved),
+          canExportAt: g.canExportAt ? g.canExportAt * 1000 : undefined,
+          transferStars: g.transferStars ? Number(g.transferStars) : undefined,
+        }
+      })
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getSavedStarGifts error:', err?.message || err)
+      return []
+    }
+  }
+
+  public async getStarGifts(accountId: string): Promise<StarGiftItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.getStarGifts',
+        hash: 0,
+      })
+
       return (res.gifts || []).map((g: any) => ({
-        id: g.gift?.id?.toString() || Math.random().toString(),
-        stars: g.gift?.stars || 0,
-        date: g.date || 0,
-        message: g.message?.text,
-        isSaved: g.saved,
+        id: g.id?.toString() || Math.random().toString(),
+        stars: Number(g.stars || 0),
+        convertStars: Number(g.convertStars || 0),
+        title: g.title,
+        date: 0,
+        isLimited: Boolean(g.limited),
+        isSoldOut: Boolean(g.soldOut),
+        availabilityRemains: g.availabilityRemains,
+        availabilityTotal: g.availabilityTotal,
       }))
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getStarGifts error:', err?.message || err)
       return []
     }
   }

@@ -525,6 +525,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:delete-business-chat-link', { accountId, slug }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
+  getStarGifts: (accountId: string): Promise<StarGiftItem[]> =>
+    ipcRenderer.invoke('telegram:get-star-gift-catalog', { accountId }),
   sendPaidReaction: (
     accountId: string,
     chatId: string,

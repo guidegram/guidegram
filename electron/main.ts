@@ -1870,6 +1870,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-star-gift-catalog', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getStarGifts(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStarGiftCatalog error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:send-paid-reaction', async (_event, { accountId, chatId, messageId, count, isPrivate }) => {
     try {
       return await accountManager.sendPaidReaction(accountId, chatId, messageId, count, isPrivate)
