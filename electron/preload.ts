@@ -646,6 +646,48 @@ const guidegramAPI = {
     peerId?: string
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-story', { accountId, storyId, peerId }),
+  canSendStory: (accountId: string, peerId?: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:can-send-story', { accountId, peerId }),
+  exportStoryLink: (accountId: string, peerId: string, storyId: number): Promise<string | null> =>
+    ipcRenderer.invoke('telegram:export-story-link', { accountId, peerId, storyId }),
+  toggleStoryPinned: (
+    accountId: string,
+    storyIds: number[],
+    pinned: boolean,
+    peerId?: string
+  ): Promise<number[]> =>
+    ipcRenderer.invoke('telegram:toggle-story-pinned', { accountId, storyIds, pinned, peerId }),
+  getStoryViewsList: (
+    accountId: string,
+    storyId: number,
+    options?: { offset?: string; limit?: number; peerId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-story-views-list', { accountId, storyId, options }),
+  checkChatlistInvite: (accountId: string, slug: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:check-chatlist-invite', { accountId, slug }),
+  joinChatlistInvite: (accountId: string, slug: string, peerIds: string[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:join-chatlist-invite', { accountId, slug, peerIds }),
+  sendWebViewData: (
+    accountId: string,
+    botPeerId: string,
+    buttonText: string,
+    data: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-web-view-data', { accountId, botPeerId, buttonText, data }),
+  getInlineBotResults: (
+    accountId: string,
+    botUsername: string,
+    query: string,
+    offset?: string,
+    peerId?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-inline-bot-results', {
+      accountId,
+      botUsername,
+      query,
+      offset,
+      peerId,
+    }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>

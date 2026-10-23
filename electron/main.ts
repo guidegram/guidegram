@@ -2122,6 +2122,78 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:can-send-story', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.canSendStory(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] canSendStory error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:export-story-link', async (_event, { accountId, peerId, storyId }) => {
+    try {
+      return await accountManager.exportStoryLink(accountId, peerId, storyId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] exportStoryLink error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:toggle-story-pinned', async (_event, { accountId, storyIds, pinned, peerId }) => {
+    try {
+      return await accountManager.toggleStoryPinned(accountId, storyIds, pinned, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleStoryPinned error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-story-views-list', async (_event, { accountId, storyId, options }) => {
+    try {
+      return await accountManager.getStoryViewsList(accountId, storyId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStoryViewsList error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:check-chatlist-invite', async (_event, { accountId, slug }) => {
+    try {
+      return await accountManager.checkChatlistInvite(accountId, slug)
+    } catch (err: any) {
+      Logger.warn(`[IPC] checkChatlistInvite error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:join-chatlist-invite', async (_event, { accountId, slug, peerIds }) => {
+    try {
+      return await accountManager.joinChatlistInvite(accountId, slug, peerIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] joinChatlistInvite error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:send-web-view-data', async (_event, { accountId, botPeerId, buttonText, data }) => {
+    try {
+      return await accountManager.sendWebViewData(accountId, botPeerId, buttonText, data)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendWebViewData error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-inline-bot-results', async (_event, { accountId, botUsername, query, offset, peerId }) => {
+    try {
+      return await accountManager.getInlineBotResults(accountId, botUsername, query, offset, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getInlineBotResults error:`, err)
+      return null
+    }
+  })
+
   // Channel Boosts IPC
   ipcMain.handle('telegram:get-channel-boosts', async (_event, { accountId, channelId }) => {
     try {

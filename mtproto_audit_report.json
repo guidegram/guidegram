@@ -1,0 +1,338 @@
+{
+  "total_functions_in_schema": 859,
+  "total_constructors_in_schema": 1719,
+  "total_unique_namespaces": 28,
+  "namespaces": {
+    "messages": {
+      "total_in_schema": 261,
+      "directly_implemented": 49,
+      "gap_unimplemented": 212,
+      "coverage_pct": 18.8,
+      "implemented_list": [
+        "messages.getMessages",
+        "messages.getHistory",
+        "messages.search",
+        "messages.readHistory",
+        "messages.deleteMessages",
+        "messages.setTyping",
+        "messages.sendMessage",
+        "messages.sendMedia",
+        "messages.forwardMessages",
+        "messages.getFullChat",
+        "messages.createChat",
+        "messages.getAllStickers",
+        "messages.exportChatInvite",
+        "messages.checkChatInvite",
+        "messages.getStickerSet",
+        "messages.startBot",
+        "messages.searchGlobal",
+        "messages.getInlineBotResults",
+        "messages.editMessage",
+        "messages.getBotCallbackAnswer",
+        "messages.saveDraft",
+        "messages.getAllDrafts",
+        "messages.updatePinnedMessage",
+        "messages.sendVote",
+        "messages.editChatAbout",
+        "messages.editChatDefaultBannedRights",
+        "messages.getScheduledHistory",
+        "messages.sendScheduledMessages",
+        "messages.deleteScheduledMessages",
+        "messages.getDialogFilters",
+        "messages.getExportedChatInvites",
+        "messages.editExportedChatInvite",
+        "messages.deleteExportedChatInvite",
+        "messages.getChatInviteImporters",
+        "messages.hideChatJoinRequest",
+        "messages.hideAllChatJoinRequests",
+        "messages.sendReaction",
+        "messages.translateText",
+        "messages.requestWebView",
+        "messages.sendWebViewData",
+        "messages.getCustomEmojiDocuments",
+        "messages.getSavedDialogs",
+        "messages.getSavedReactionTags",
+        "messages.sendPaidReaction",
+        "messages.getForumTopics",
+        "messages.editForumTopic",
+        "messages.updatePinnedForumTopic",
+        "messages.createForumTopic",
+        "messages.deleteTopicHistory"
+      ]
+    },
+    "account": {
+      "total_in_schema": 128,
+      "directly_implemented": 14,
+      "gap_unimplemented": 114,
+      "coverage_pct": 10.9,
+      "implemented_list": [
+        "account.updateNotifySettings",
+        "account.getAuthorizations",
+        "account.resetAuthorization",
+        "account.getPassword",
+        "account.updateEmojiStatus",
+        "account.getDefaultEmojiStatuses",
+        "account.getRecentEmojiStatuses",
+        "account.updateBusinessWorkHours",
+        "account.updateBusinessLocation",
+        "account.updateBusinessIntro",
+        "account.createBusinessChatLink",
+        "account.deleteBusinessChatLink",
+        "account.getBusinessChatLinks",
+        "account.getCollectibleEmojiStatuses"
+      ]
+    },
+    "payments": {
+      "total_in_schema": 76,
+      "directly_implemented": 4,
+      "gap_unimplemented": 72,
+      "coverage_pct": 5.3,
+      "implemented_list": [
+        "payments.getStarsStatus",
+        "payments.getStarsTransactions",
+        "payments.getStarGifts",
+        "payments.getSavedStarGifts"
+      ]
+    },
+    "channels": {
+      "total_in_schema": 58,
+      "directly_implemented": 16,
+      "gap_unimplemented": 42,
+      "coverage_pct": 27.6,
+      "implemented_list": [
+        "channels.readHistory",
+        "channels.deleteMessages",
+        "channels.getMessages",
+        "channels.getParticipants",
+        "channels.getChannels",
+        "channels.getFullChannel",
+        "channels.createChannel",
+        "channels.editAdmin",
+        "channels.editTitle",
+        "channels.updateUsername",
+        "channels.inviteToChannel",
+        "channels.editBanned",
+        "channels.getAdminLog",
+        "channels.toggleSlowMode",
+        "channels.toggleJoinRequest",
+        "channels.toggleForum"
+      ]
+    },
+    "phone": {
+      "total_in_schema": 43,
+      "directly_implemented": 5,
+      "gap_unimplemented": 38,
+      "coverage_pct": 11.6,
+      "implemented_list": [
+        "phone.createGroupCall",
+        "phone.joinGroupCall",
+        "phone.leaveGroupCall",
+        "phone.getGroupCall",
+        "phone.editGroupCallParticipant"
+      ]
+    },
+    "bots": {
+      "total_in_schema": 40,
+      "directly_implemented": 2,
+      "gap_unimplemented": 38,
+      "coverage_pct": 5.0,
+      "implemented_list": [
+        "bots.getBotMenuButton",
+        "bots.getBotInfo"
+      ]
+    },
+    "stories": {
+      "total_in_schema": 33,
+      "directly_implemented": 9,
+      "gap_unimplemented": 24,
+      "coverage_pct": 27.3,
+      "implemented_list": [
+        "stories.canSendStory",
+        "stories.deleteStories",
+        "stories.togglePinned",
+        "stories.getAllStories",
+        "stories.getStoriesByID",
+        "stories.readStories",
+        "stories.getStoryViewsList",
+        "stories.exportStoryLink",
+        "stories.getPeerStories"
+      ]
+    },
+    "auth": {
+      "total_in_schema": 30,
+      "directly_implemented": 1,
+      "gap_unimplemented": 29,
+      "coverage_pct": 3.3,
+      "implemented_list": [
+        "auth.logOut"
+      ]
+    },
+    "contacts": {
+      "total_in_schema": 30,
+      "directly_implemented": 2,
+      "gap_unimplemented": 28,
+      "coverage_pct": 6.7,
+      "implemented_list": [
+        "contacts.search",
+        "contacts.resolveUsername"
+      ]
+    },
+    "wallet": {
+      "total_in_schema": 26,
+      "directly_implemented": 0,
+      "gap_unimplemented": 26,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "help": {
+      "total_in_schema": 25,
+      "directly_implemented": 0,
+      "gap_unimplemented": 25,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "root": {
+      "total_in_schema": 11,
+      "directly_implemented": 0,
+      "gap_unimplemented": 11,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "stickers": {
+      "total_in_schema": 11,
+      "directly_implemented": 0,
+      "gap_unimplemented": 11,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "chatlists": {
+      "total_in_schema": 11,
+      "directly_implemented": 2,
+      "gap_unimplemented": 9,
+      "coverage_pct": 18.2,
+      "implemented_list": [
+        "chatlists.checkChatlistInvite",
+        "chatlists.joinChatlistInvite"
+      ]
+    },
+    "communities": {
+      "total_in_schema": 9,
+      "directly_implemented": 0,
+      "gap_unimplemented": 9,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "upload": {
+      "total_in_schema": 8,
+      "directly_implemented": 0,
+      "gap_unimplemented": 8,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "stats": {
+      "total_in_schema": 8,
+      "directly_implemented": 2,
+      "gap_unimplemented": 6,
+      "coverage_pct": 25.0,
+      "implemented_list": [
+        "stats.getBroadcastStats",
+        "stats.getMegagroupStats"
+      ]
+    },
+    "ephemeral": {
+      "total_in_schema": 8,
+      "directly_implemented": 0,
+      "gap_unimplemented": 8,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "users": {
+      "total_in_schema": 7,
+      "directly_implemented": 2,
+      "gap_unimplemented": 5,
+      "coverage_pct": 28.6,
+      "implemented_list": [
+        "users.getUsers",
+        "users.getFullUser"
+      ]
+    },
+    "smsjobs": {
+      "total_in_schema": 7,
+      "directly_implemented": 0,
+      "gap_unimplemented": 7,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "aicompose": {
+      "total_in_schema": 7,
+      "directly_implemented": 0,
+      "gap_unimplemented": 7,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "photos": {
+      "total_in_schema": 5,
+      "directly_implemented": 1,
+      "gap_unimplemented": 4,
+      "coverage_pct": 20.0,
+      "implemented_list": [
+        "photos.getUserPhotos"
+      ]
+    },
+    "langpack": {
+      "total_in_schema": 5,
+      "directly_implemented": 0,
+      "gap_unimplemented": 5,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "premium": {
+      "total_in_schema": 5,
+      "directly_implemented": 1,
+      "gap_unimplemented": 4,
+      "coverage_pct": 20.0,
+      "implemented_list": [
+        "premium.getBoostsStatus"
+      ]
+    },
+    "updates": {
+      "total_in_schema": 3,
+      "directly_implemented": 0,
+      "gap_unimplemented": 3,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "toncenter": {
+      "total_in_schema": 2,
+      "directly_implemented": 0,
+      "gap_unimplemented": 2,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "folders": {
+      "total_in_schema": 1,
+      "directly_implemented": 0,
+      "gap_unimplemented": 1,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    },
+    "fragment": {
+      "total_in_schema": 1,
+      "directly_implemented": 0,
+      "gap_unimplemented": 1,
+      "coverage_pct": 0.0,
+      "implemented_list": []
+    }
+  },
+  "overall_implemented_methods": 110,
+  "overall_unimplemented_methods": 749,
+  "mockup_features": [
+    "Secret Chats (messages.sendEncrypted - End-to-End Encryption Diffie-Hellman)",
+    "VoIP P2P Raw RTP Media Transport (phone.requestCall - only signaling and WebRTC local UI implemented)",
+    "Fragment Username & Phone Auction / TON DNS bidding",
+    "Telegram Passport (secure identity documents)",
+    "Sticker Set Creation & Management (stickers.createStickerSet)",
+    "Sponsored Messages / Telegram Ad Platform (messages.getSponsoredMessages)"
+  ],
+  "overall_coverage_pct": 12.8
+}

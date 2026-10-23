@@ -7982,6 +7982,198 @@ export class AccountManager {
     }
   }
 
+  public async canSendStory(accountId: string, peerId?: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const targetPeer =
+        !peerId || peerId === 'self' || peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.canSendStory',
+        peer: targetPeer,
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] canSendStory error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async exportStoryLink(
+    accountId: string,
+    peerId: string,
+    storyId: number
+  ): Promise<string | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const targetPeer =
+        !peerId || peerId === 'self' || peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.exportStoryLink',
+        peer: targetPeer,
+        id: Number(storyId),
+      } as any)
+      return res?.link || null
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] exportStoryLink error:`, err?.message || err)
+      return null
+    }
+  }
+
+  public async toggleStoryPinned(
+    accountId: string,
+    storyIds: number[],
+    pinned: boolean,
+    peerId?: string
+  ): Promise<number[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const targetPeer =
+        !peerId || peerId === 'self' || peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.togglePinned',
+        peer: targetPeer,
+        id: storyIds.map(Number),
+        pinned: Boolean(pinned),
+      } as any)
+      return Array.isArray(res) ? res.map(Number) : []
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] toggleStoryPinned error:`, err?.message || err)
+      return []
+    }
+  }
+
+  public async getStoryViewsList(
+    accountId: string,
+    storyId: number,
+    options?: { offset?: string; limit?: number; peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const targetPeer =
+        !options?.peerId || options.peerId === 'self' || options.peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, options.peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.getStoryViewsList',
+        peer: targetPeer,
+        id: Number(storyId),
+        offset: options?.offset || '',
+        limit: options?.limit || 50,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getStoryViewsList error:`, err?.message || err)
+      return null
+    }
+  }
+
+  public async checkChatlistInvite(accountId: string, slug: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const cleanSlug = slug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+      const res: any = await holder.client.call({
+        _: 'chatlists.checkChatlistInvite',
+        slug: cleanSlug,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] checkChatlistInvite error:`, err?.message || err)
+      return null
+    }
+  }
+
+  public async joinChatlistInvite(
+    accountId: string,
+    slug: string,
+    peerIds: string[]
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const cleanSlug = slug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+      const peers = await Promise.all(peerIds.map((id) => this.resolveInputPeer(accountId, id)))
+      const res: any = await holder.client.call({
+        _: 'chatlists.joinChatlistInvite',
+        slug: cleanSlug,
+        peers,
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] joinChatlistInvite error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async sendWebViewData(
+    accountId: string,
+    botPeerId: string,
+    buttonText: string,
+    data: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const inputPeer: any = await this.resolveInputPeer(accountId, botPeerId)
+      const botUser =
+        inputPeer._ === 'inputPeerUser'
+          ? { _: 'inputUser', userId: inputPeer.userId, accessHash: inputPeer.accessHash }
+          : { _: 'inputUserSelf' }
+      const randomId = Math.floor(Math.random() * 1000000000)
+      const res: any = await holder.client.call({
+        _: 'messages.sendWebViewData',
+        bot: botUser,
+        random_id: randomId,
+        button_text: buttonText,
+        data,
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] sendWebViewData error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async getInlineBotResults(
+    accountId: string,
+    botUsername: string,
+    query: string,
+    offset?: string,
+    peerId?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const botPeer: any = await this.resolveInputPeer(accountId, botUsername)
+      const botUser =
+        botPeer._ === 'inputPeerUser'
+          ? { _: 'inputUser', userId: botPeer.userId, accessHash: botPeer.accessHash }
+          : { _: 'inputUserSelf' }
+      const targetPeer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+      const res: any = await holder.client.call({
+        _: 'messages.getInlineBotResults',
+        bot: botUser,
+        peer: targetPeer,
+        query: query || '',
+        offset: offset || '',
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getInlineBotResults error:`, err?.message || err)
+      return null
+    }
+  }
+
   public async getChannelBoostStatus(
     accountId: string,
     channelId: string

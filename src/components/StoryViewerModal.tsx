@@ -13,6 +13,9 @@ import {
   Pause,
   Play,
   Trash2,
+  Share2,
+  Pin,
+  Check,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -63,6 +66,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [progress, setProgress] = useState(0)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [copyingLink, setCopyingLink] = useState(false)
+  const [pinning, setPinning] = useState(false)
+  const [pinnedState, setPinnedState] = useState<boolean | undefined>(undefined)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const pausedRef = useRef(false)
@@ -226,6 +232,35 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
   }, [accountId, currentStoryId, deleting, onClose, onDeleted, peerId])
 
+  const handleCopyLink = useCallback(async () => {
+    if (!currentStoryId || copyingLink) return
+    setCopyingLink(true)
+    try {
+      const link = await window.guidegram.exportStoryLink(accountId, peerId, currentStoryId)
+      if (link) {
+        await navigator.clipboard.writeText(link)
+        setTimeout(() => setCopyingLink(false), 2000)
+      } else {
+        setCopyingLink(false)
+      }
+    } catch (_) {
+      setCopyingLink(false)
+    }
+  }, [accountId, peerId, currentStoryId, copyingLink])
+
+  const handleTogglePin = useCallback(async () => {
+    if (!currentStoryId || pinning) return
+    setPinning(true)
+    try {
+      const nextPinned = pinnedState !== undefined ? !pinnedState : !currentStory?.isPinned
+      await window.guidegram.toggleStoryPinned(accountId, [currentStoryId], nextPinned, peerId)
+      setPinnedState(nextPinned)
+    } catch (_) {
+    } finally {
+      setPinning(false)
+    }
+  }, [accountId, peerId, currentStoryId, pinning, pinnedState, currentStory])
+
   useEffect(() => {
     if (!isOpen || !currentStoryId || !mediaUrl || mediaLoading || isVideo) return
     let frame = 0
@@ -349,6 +384,33 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 )}
               </div>
             </div>
+            {currentStoryId && !loading && (
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-black/60 hover:text-white"
+                title={copyingLink ? 'Copied story link!' : 'Copy official story link'}
+                aria-label="Share story link"
+              >
+                {copyingLink ? <Check className="h-4 w-4 text-emerald-400" /> : <Share2 className="h-4 w-4" />}
+              </button>
+            )}
+            {isOwnStory && currentStoryId && !loading && (
+              <button
+                type="button"
+                onClick={handleTogglePin}
+                disabled={pinning}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-60 ${
+                  (pinnedState ?? currentStory?.isPinned)
+                    ? 'bg-primary-500/80 text-white'
+                    : 'bg-black/35 text-white/90 hover:bg-black/60 hover:text-white'
+                }`}
+                title={(pinnedState ?? currentStory?.isPinned) ? 'Unpin story' : 'Pin story to profile'}
+                aria-label="Pin story"
+              >
+                {pinning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className="h-4 w-4" />}
+              </button>
+            )}
             {isOwnStory && currentStoryId && !loading && (
               <button
                 type="button"
