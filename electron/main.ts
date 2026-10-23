@@ -2786,6 +2786,106 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Security, Authentication & Account Suite IPC (Phase 5) ---
+  ipcMain.handle('telegram:security-get-notify-settings', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.securityGetNotifySettings(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityGetNotifySettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:security-update-notify-settings', async (_event, { accountId, peerId, settings }) => {
+    try {
+      return await accountManager.securityUpdateNotifySettings(accountId, peerId, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityUpdateNotifySettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:security-reset-notify-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.securityResetNotifySettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityResetNotifySettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:security-get-authorizations', async (_event, { accountId }) => {
+    try {
+      return await accountManager.securityGetAuthorizations(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityGetAuthorizations error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:security-reset-authorizations', async (_event, { accountId }) => {
+    try {
+      return await accountManager.securityResetAuthorizations(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityResetAuthorizations error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:security-get-password', async (_event, { accountId }) => {
+    try {
+      return await accountManager.securityGetPassword(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityGetPassword error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:security-get-privacy', async (_event, { accountId, key }) => {
+    try {
+      return await accountManager.securityGetPrivacy(accountId, key)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityGetPrivacy error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:security-set-privacy', async (_event, { accountId, key, rules }) => {
+    try {
+      return await accountManager.securitySetPrivacy(accountId, key, rules)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securitySetPrivacy error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:security-get-wallpapers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.securityGetWallpapers(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityGetWallpapers error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:security-update-personal-channel', async (_event, { accountId, channelId }) => {
+    try {
+      return await accountManager.securityUpdatePersonalChannel(accountId, channelId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityUpdatePersonalChannel error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:security-update-color', async (_event, { accountId, color, backgroundEmojiId, forProfile }) => {
+    try {
+      return await accountManager.securityUpdateColor(accountId, color, backgroundEmojiId, forProfile)
+    } catch (err: any) {
+      Logger.warn(`[IPC] securityUpdateColor error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

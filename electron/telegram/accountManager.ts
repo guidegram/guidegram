@@ -39,6 +39,7 @@ import { ContactsService } from './services/contactsService'
 import { ChannelsService } from './services/channelsService'
 import { BotsService } from './services/botsService'
 import { PaymentsService } from './services/paymentsService'
+import { AccountSecurityService } from './services/accountSecurityService'
 import {
   AccountInfo,
   DialogItem,
@@ -883,6 +884,7 @@ export class AccountManager {
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
   public readonly paymentsService: PaymentsService
+  public readonly securityService: AccountSecurityService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -891,6 +893,7 @@ export class AccountManager {
     this.channelsService = new ChannelsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.botsService = new BotsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.paymentsService = new PaymentsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.securityService = new AccountSecurityService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -7996,6 +7999,87 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
     return this.paymentsService.sendStarsForm(holder as any, formId, invoice)
+  }
+
+  // --- Security, Authentication & Account Suite Domain Engine (Phase 5) ---
+  public getSecurityService(): AccountSecurityService {
+    return this.securityService
+  }
+
+  public async securityGetNotifySettings(accountId: string, peerId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : undefined
+    return this.securityService.getNotifySettings(holder as any, peer)
+  }
+
+  public async securityUpdateNotifySettings(accountId: string, peerId: string, settings: any): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const peer = await this.resolveInputPeer(accountId, peerId)
+    const res = await this.securityService.updateNotifySettings(holder as any, peer, settings)
+    return Boolean(res)
+  }
+
+  public async securityResetNotifySettings(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.securityService.resetNotifySettings(holder as any)
+    return Boolean(res)
+  }
+
+  public async securityGetAuthorizations(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    const res = await this.securityService.getAuthorizations(holder as any)
+    if (res && Array.isArray(res.authorizations)) return res.authorizations
+    return Array.isArray(res) ? res : []
+  }
+
+  public async securityResetAuthorizations(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.securityService.auth_resetAuthorizations(holder as any)
+    return Boolean(res)
+  }
+
+  public async securityGetPassword(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.getPassword(holder as any)
+  }
+
+  public async securityGetPrivacy(accountId: string, key: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.getPrivacy(holder as any, key)
+  }
+
+  public async securitySetPrivacy(accountId: string, key: any, rules: any[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.setPrivacy(holder as any, key, rules)
+  }
+
+  public async securityGetWallpapers(accountId: string, hash = 0n): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.getWallPapers(holder as any, hash)
+  }
+
+  public async securityUpdatePersonalChannel(accountId: string, channelId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const channel = await this.resolveInputPeer(accountId, channelId)
+    const res = await this.securityService.updatePersonalChannel(holder as any, channel)
+    return Boolean(res)
+  }
+
+  public async securityUpdateColor(accountId: string, color?: number, backgroundEmojiId?: bigint, forProfile = false): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.securityService.updateColor(holder as any, forProfile, color)
+    return Boolean(res)
   }
 
   public async createPoll(

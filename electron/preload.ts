@@ -991,6 +991,30 @@ const guidegramAPI = {
   paymentSendStarsForm: (accountId: string, formId: bigint, invoice: any): Promise<any> =>
     ipcRenderer.invoke('telegram:payment-send-stars-form', { accountId, formId, invoice }),
 
+  // Security, Authentication & Account Suite Domain API (Phase 5)
+  securityGetNotifySettings: (accountId: string, peerId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:security-get-notify-settings', { accountId, peerId }),
+  securityUpdateNotifySettings: (accountId: string, peerId: string, settings: any): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:security-update-notify-settings', { accountId, peerId, settings }),
+  securityResetNotifySettings: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:security-reset-notify-settings', { accountId }),
+  securityGetAuthorizations: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:security-get-authorizations', { accountId }),
+  securityResetAuthorizations: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:security-reset-authorizations', { accountId }),
+  securityGetPassword: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:security-get-password', { accountId }),
+  securityGetPrivacy: (accountId: string, key: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:security-get-privacy', { accountId, key }),
+  securitySetPrivacy: (accountId: string, key: any, rules: any[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:security-set-privacy', { accountId, key, rules }),
+  securityGetWallpapers: (accountId: string, hash = 0n): Promise<any> =>
+    ipcRenderer.invoke('telegram:security-get-wallpapers', { accountId, hash }),
+  securityUpdatePersonalChannel: (accountId: string, channelId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:security-update-personal-channel', { accountId, channelId }),
+  securityUpdateColor: (accountId: string, color?: number, backgroundEmojiId?: bigint, forProfile = false): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:security-update-color', { accountId, color, backgroundEmojiId, forProfile }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),
