@@ -2426,6 +2426,20 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Universal MTProto Layer 229+ RPC Dispatcher (100% Protocol Parity) ---
+  ipcMain.handle('telegram:invoke-mtproto-rpc', async (_event, { accountId, method, params }) => {
+    try {
+      return await accountManager.invokeMtprotoRpc(accountId, method, params)
+    } catch (err: any) {
+      Logger.warn(`[IPC] invokeMtprotoRpc error (${method}):`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:get-all-mtproto-methods', async () => {
+    return accountManager.getAllMtprotoMethods()
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

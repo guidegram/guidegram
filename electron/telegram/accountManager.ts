@@ -34,6 +34,7 @@ import { SessionStore } from './sessionStore'
 import { ProxyManager } from './proxyManager'
 import { Logger } from './logger'
 import { DeviceProfileManager } from './deviceProfileManager'
+import { dispatchMtprotoRpc, ALL_MTPROTO_METHODS } from './mtprotoRegistry'
 import {
   AccountInfo,
   DialogItem,
@@ -7684,6 +7685,29 @@ export class AccountManager {
 
   public pruneExpiredCache(maxAgeDays = 14): { removedFiles: number; freedBytes: number } {
     return this.store.pruneExpiredCache(maxAgeDays)
+  }
+
+  /**
+   * Universal MTProto Layer 229+ RPC Dispatcher (100% Protocol Parity Engine)
+   * Dispatches any of the 859 official MTProto functions directly to the connected client.
+   */
+  public async invokeMtprotoRpc(
+    accountId: string,
+    method: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      return await dispatchMtprotoRpc(holder.client, method, params)
+    } catch (err) {
+      Logger.warn(`[AccountManager] invokeMtprotoRpc error (${method}):`, err)
+      throw err
+    }
+  }
+
+  public getAllMtprotoMethods(): readonly string[] {
+    return ALL_MTPROTO_METHODS
   }
 
   public async createPoll(

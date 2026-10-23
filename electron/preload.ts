@@ -881,6 +881,12 @@ const guidegramAPI = {
   addStickerToSet: (accountId: string, stickerset: any, sticker: any): Promise<any> =>
     ipcRenderer.invoke('telegram:add-sticker-to-set', { accountId, stickerset, sticker }),
 
+  // Universal MTProto Layer 229+ RPC Dispatcher (100% Coverage Engine)
+  invokeMtprotoRpc: (accountId: string, method: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:invoke-mtproto-rpc', { accountId, method, params }),
+  getAllMtprotoMethods: (): Promise<readonly string[]> =>
+    ipcRenderer.invoke('telegram:get-all-mtproto-methods'),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),
