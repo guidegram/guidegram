@@ -36,6 +36,7 @@ import { Logger } from './logger'
 import { DeviceProfileManager } from './deviceProfileManager'
 import { dispatchMtprotoRpc, ALL_MTPROTO_METHODS } from './mtprotoRegistry'
 import { ContactsService } from './services/contactsService'
+import { ChannelsService } from './services/channelsService'
 import {
   AccountInfo,
   DialogItem,
@@ -877,11 +878,13 @@ export class AccountManager {
   private peerAccessHashes = new Map<string, Long>()
   private topMessageIds = new Map<string, number>()
   public readonly contactsService: ContactsService
+  public readonly channelsService: ChannelsService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
     this.onEventCallback = onEvent
     this.contactsService = new ContactsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.channelsService = new ChannelsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -7780,6 +7783,59 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return []
     return this.contactsService.getRequirementsToContact(holder as any, accountId, userIds)
+  }
+
+  // --- Channels & Supergroups Administration Domain Engine (Phase 2) ---
+  public getChannelsService(): ChannelsService {
+    return this.channelsService
+  }
+
+  public async channelGetParticipants(accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getParticipants(holder as any, accountId, channelId, filterName, offset, limit)
+  }
+
+  public async channelGetAdminLog(accountId: string, channelId: string, options?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getAdminLog(holder as any, accountId, channelId, options)
+  }
+
+  public async channelToggleSlowMode(accountId: string, channelId: string, seconds: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleSlowMode(holder as any, accountId, channelId, seconds)
+  }
+
+  public async channelToggleJoinRequest(accountId: string, channelId: string, enabled: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleJoinRequest(holder as any, accountId, channelId, enabled)
+  }
+
+  public async channelToggleAntiSpam(accountId: string, channelId: string, enabled: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleAntiSpam(holder as any, accountId, channelId, enabled)
+  }
+
+  public async channelToggleForum(accountId: string, channelId: string, enabled: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleForum(holder as any, accountId, channelId, enabled)
+  }
+
+  public async channelGetRecommendations(accountId: string, channelId?: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getChannelRecommendations(holder as any, accountId, channelId)
+  }
+
+  public async channelUpdatePaidMessagesPrice(accountId: string, channelId: string, stars: bigint): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.updatePaidMessagesPrice(holder as any, accountId, channelId, stars)
   }
 
   public async createPoll(

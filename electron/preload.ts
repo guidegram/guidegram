@@ -917,6 +917,24 @@ const guidegramAPI = {
   getRequirementsToContact: (accountId: string, userIds: string[]): Promise<any[]> =>
     ipcRenderer.invoke('telegram:get-requirements-to-contact', { accountId, userIds }),
 
+  // Channels & Supergroups Administration Domain API (Phase 2)
+  channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-get-participants', { accountId, channelId, filterName, offset, limit }),
+  channelGetAdminLog: (accountId: string, channelId: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-get-admin-log', { accountId, channelId, options }),
+  channelToggleSlowMode: (accountId: string, channelId: string, seconds: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-toggle-slow-mode', { accountId, channelId, seconds }),
+  channelToggleJoinRequest: (accountId: string, channelId: string, enabled: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-toggle-join-request', { accountId, channelId, enabled }),
+  channelToggleAntiSpam: (accountId: string, channelId: string, enabled: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-toggle-anti-spam', { accountId, channelId, enabled }),
+  channelToggleForum: (accountId: string, channelId: string, enabled: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-toggle-forum', { accountId, channelId, enabled }),
+  channelGetRecommendations: (accountId: string, channelId?: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channel-get-recommendations', { accountId, channelId }),
+  channelUpdatePaidMessagesPrice: (accountId: string, channelId: string, stars: bigint): Promise<any> =>
+    ipcRenderer.invoke('telegram:channel-update-paid-messages-price', { accountId, channelId, stars }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

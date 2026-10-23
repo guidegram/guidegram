@@ -2531,6 +2531,79 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Channels & Supergroups Administration IPC (Phase 2) ---
+  ipcMain.handle('telegram:channel-get-participants', async (_event, { accountId, channelId, filterName, offset, limit }) => {
+    try {
+      return await accountManager.channelGetParticipants(accountId, channelId, filterName, offset, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelGetParticipants error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channel-get-admin-log', async (_event, { accountId, channelId, options }) => {
+    try {
+      return await accountManager.channelGetAdminLog(accountId, channelId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelGetAdminLog error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channel-toggle-slow-mode', async (_event, { accountId, channelId, seconds }) => {
+    try {
+      return await accountManager.channelToggleSlowMode(accountId, channelId, seconds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelToggleSlowMode error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channel-toggle-join-request', async (_event, { accountId, channelId, enabled }) => {
+    try {
+      return await accountManager.channelToggleJoinRequest(accountId, channelId, enabled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelToggleJoinRequest error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channel-toggle-anti-spam', async (_event, { accountId, channelId, enabled }) => {
+    try {
+      return await accountManager.channelToggleAntiSpam(accountId, channelId, enabled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelToggleAntiSpam error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channel-toggle-forum', async (_event, { accountId, channelId, enabled }) => {
+    try {
+      return await accountManager.channelToggleForum(accountId, channelId, enabled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelToggleForum error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channel-get-recommendations', async (_event, { accountId, channelId }) => {
+    try {
+      return await accountManager.channelGetRecommendations(accountId, channelId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelGetRecommendations error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:channel-update-paid-messages-price', async (_event, { accountId, channelId, stars }) => {
+    try {
+      return await accountManager.channelUpdatePaidMessagesPrice(accountId, channelId, stars)
+    } catch (err: any) {
+      Logger.warn(`[IPC] channelUpdatePaidMessagesPrice error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)
