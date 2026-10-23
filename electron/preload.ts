@@ -887,6 +887,36 @@ const guidegramAPI = {
   getAllMtprotoMethods: (): Promise<readonly string[]> =>
     ipcRenderer.invoke('telegram:get-all-mtproto-methods'),
 
+  // Contacts & Users Domain API (Phase 1)
+  getFullUser: (accountId: string, userId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-full-user', { accountId, userId }),
+  importContacts: (accountId: string, contacts: any[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:import-contacts', { accountId, contacts }),
+  addContact: (
+    accountId: string,
+    userId: string,
+    firstName: string,
+    lastName = '',
+    phone = '',
+    addPhonePrivacyException = false,
+    note?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:add-contact', { accountId, userId, firstName, lastName, phone, addPhonePrivacyException, note }),
+  blockPeer: (accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:block-peer', { accountId, peerId, myStoriesFrom }),
+  unblockPeer: (accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:unblock-peer', { accountId, peerId, myStoriesFrom }),
+  getBlockedPeers: (accountId: string, offset = 0, limit = 50, myStoriesFrom = false): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-blocked-peers', { accountId, offset, limit, myStoriesFrom }),
+  getTopPeers: (accountId: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-top-peers', { accountId, options }),
+  getBirthdays: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-birthdays', { accountId }),
+  updateContactNote: (accountId: string, userId: string, note: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-contact-note', { accountId, userId, note }),
+  getRequirementsToContact: (accountId: string, userIds: string[]): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-requirements-to-contact', { accountId, userIds }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

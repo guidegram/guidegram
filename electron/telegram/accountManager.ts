@@ -35,6 +35,7 @@ import { ProxyManager } from './proxyManager'
 import { Logger } from './logger'
 import { DeviceProfileManager } from './deviceProfileManager'
 import { dispatchMtprotoRpc, ALL_MTPROTO_METHODS } from './mtprotoRegistry'
+import { ContactsService } from './services/contactsService'
 import {
   AccountInfo,
   DialogItem,
@@ -875,10 +876,12 @@ export class AccountManager {
   private peerBigPhotos = new Map<string, any>()
   private peerAccessHashes = new Map<string, Long>()
   private topMessageIds = new Map<string, number>()
+  public readonly contactsService: ContactsService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
     this.onEventCallback = onEvent
+    this.contactsService = new ContactsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -7708,6 +7711,75 @@ export class AccountManager {
 
   public getAllMtprotoMethods(): readonly string[] {
     return ALL_MTPROTO_METHODS
+  }
+
+  // --- Contacts & Users Domain Engine (Phase 1) ---
+  public async getFullUser(accountId: string, userId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.getFullUser(holder as any, accountId, userId)
+  }
+
+  public async importContacts(accountId: string, contacts: any[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.importContacts(holder as any, contacts)
+  }
+
+  public async addContact(
+    accountId: string,
+    userId: string,
+    firstName: string,
+    lastName = '',
+    phone = '',
+    addPhonePrivacyException = false,
+    note?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.addContact(holder as any, accountId, userId, firstName, lastName, phone, addPhonePrivacyException, note)
+  }
+
+  public async blockPeer(accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.block(holder as any, accountId, peerId, myStoriesFrom)
+  }
+
+  public async unblockPeer(accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.unblock(holder as any, accountId, peerId, myStoriesFrom)
+  }
+
+  public async getBlockedPeers(accountId: string, offset = 0, limit = 50, myStoriesFrom = false): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.getBlocked(holder as any, offset, limit, myStoriesFrom)
+  }
+
+  public async getTopPeers(accountId: string, options?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.getTopPeers(holder as any, options)
+  }
+
+  public async getBirthdays(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getBirthdays(holder as any)
+  }
+
+  public async updateContactNote(accountId: string, userId: string, note: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.updateContactNote(holder as any, accountId, userId, note)
+  }
+
+  public async getRequirementsToContact(accountId: string, userIds: string[]): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getRequirementsToContact(holder as any, accountId, userIds)
   }
 
   public async createPoll(

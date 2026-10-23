@@ -2440,6 +2440,97 @@ function setupIpcHandlers() {
     return accountManager.getAllMtprotoMethods()
   })
 
+  // --- Contacts & Users Service IPC (Phase 1) ---
+  ipcMain.handle('telegram:get-full-user', async (_event, { accountId, userId }) => {
+    try {
+      return await accountManager.getFullUser(accountId, userId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getFullUser error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:import-contacts', async (_event, { accountId, contacts }) => {
+    try {
+      return await accountManager.importContacts(accountId, contacts)
+    } catch (err: any) {
+      Logger.warn(`[IPC] importContacts error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:add-contact', async (_event, { accountId, userId, firstName, lastName, phone, addPhonePrivacyException, note }) => {
+    try {
+      return await accountManager.addContact(accountId, userId, firstName, lastName, phone, addPhonePrivacyException, note)
+    } catch (err: any) {
+      Logger.warn(`[IPC] addContact error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:block-peer', async (_event, { accountId, peerId, myStoriesFrom }) => {
+    try {
+      return await accountManager.blockPeer(accountId, peerId, myStoriesFrom)
+    } catch (err: any) {
+      Logger.warn(`[IPC] blockPeer error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:unblock-peer', async (_event, { accountId, peerId, myStoriesFrom }) => {
+    try {
+      return await accountManager.unblockPeer(accountId, peerId, myStoriesFrom)
+    } catch (err: any) {
+      Logger.warn(`[IPC] unblockPeer error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-blocked-peers', async (_event, { accountId, offset, limit, myStoriesFrom }) => {
+    try {
+      return await accountManager.getBlockedPeers(accountId, offset, limit, myStoriesFrom)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getBlockedPeers error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-top-peers', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.getTopPeers(accountId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getTopPeers error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-birthdays', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getBirthdays(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getBirthdays error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:update-contact-note', async (_event, { accountId, userId, note }) => {
+    try {
+      return await accountManager.updateContactNote(accountId, userId, note)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateContactNote error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-requirements-to-contact', async (_event, { accountId, userIds }) => {
+    try {
+      return await accountManager.getRequirementsToContact(accountId, userIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getRequirementsToContact error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)
