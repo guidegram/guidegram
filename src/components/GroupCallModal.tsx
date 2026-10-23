@@ -53,6 +53,13 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   const [callDuration, setCallDuration] = useState(0)
   const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [audioLevel, setAudioLevel] = useState(0)
+
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const videoStreamRef = useRef<MediaStream | null>(null)
+  const audioStreamRef = useRef<MediaStream | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const hasJoinedRef = useRef(false)
 
   // 1. Duration Timer
   useEffect(() => {
@@ -66,7 +73,7 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     return () => clearInterval(timer)
   }, [isOpen])
 
-  // 2. Fetch Group Call & Participants from Backend
+  // 2. Fetch Group Call & Auto-Join from Backend
   useEffect(() => {
     if (!isOpen) return
     let isCancelled = false
@@ -82,6 +89,10 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
           )
           if (!isCancelled && res) {
             setCallInfo(res.call)
+            if (!hasJoinedRef.current && window.guidegram?.joinGroupCall) {
+              hasJoinedRef.current = true
+              window.guidegram.joinGroupCall(accountId, res.call.id, res.call.accessHash, isMuted).catch(() => {})
+            }
             if (res.participants && res.participants.length > 0) {
               setParticipants(res.participants)
               const firstSpeaker = res.participants.find((p) => !p.isMuted) || res.participants[0]
@@ -95,13 +106,83 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
 
     loadCallData()
-    const pollInterval = setInterval(loadCallData, 5000)
+    const pollInterval = setInterval(loadCallData, 4000)
 
     return () => {
       isCancelled = true
       clearInterval(pollInterval)
     }
-  }, [isOpen, accountId, chatId, initialCallId, initialAccessHash])
+  }, [isOpen, accountId, chatId, initialCallId, initialAccessHash, isMuted])
+
+  // 3. WebRTC Local Microphone Analyzer
+  useEffect(() => {
+    if (!isOpen || isMuted) {
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t) => t.stop())
+        audioStreamRef.current = null
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {})
+        audioContextRef.current = null
+      }
+      setAudioLevel(0)
+      return
+    }
+
+    let intervalId: any = null
+    navigator.mediaDevices
+      ?.getUserMedia({ audio: true })
+      .then((stream) => {
+        audioStreamRef.current = stream
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const source = audioCtx.createMediaStreamSource(stream)
+          const analyser = audioCtx.createAnalyser()
+          analyser.fftSize = 64
+          source.connect(analyser)
+          audioContextRef.current = audioCtx
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount)
+          intervalId = setInterval(() => {
+            analyser.getByteFrequencyData(dataArray)
+            let sum = 0
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i]
+            const avg = sum / dataArray.length
+            setAudioLevel(Math.min(100, Math.round((avg / 255) * 100)))
+          }, 100)
+        } catch (_) {}
+      })
+      .catch((err) => {
+        console.warn('[WebRTC] Microphone access denied:', err)
+      })
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t) => t.stop())
+        audioStreamRef.current = null
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {})
+        audioContextRef.current = null
+      }
+    }
+  }, [isOpen, isMuted])
+
+  // Cleanup all streams on unmount
+  useEffect(() => {
+    return () => {
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach((t) => t.stop())
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t) => t.stop())
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {})
+      }
+    }
+  }, [])
 
   // Fallback participants if empty
   const activeParticipants = participants.length > 0
@@ -157,11 +238,73 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Handle Camera Video Toggle
+  const handleToggleVideo = async () => {
+    if (isVideoOn) {
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach((t) => t.stop())
+        videoStreamRef.current = null
+      }
+      setIsVideoOn(false)
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+        videoStreamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        setIsVideoOn(true)
+        setIsScreenSharing(false)
+      } catch (err) {
+        console.warn('Failed to access camera:', err)
+      }
+    }
+  }
+
+  // Handle Screen Share Toggle
+  const handleToggleScreenShare = async () => {
+    if (isScreenSharing) {
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach((t) => t.stop())
+        videoStreamRef.current = null
+      }
+      setIsScreenSharing(false)
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        videoStreamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        stream.getVideoTracks()[0].onended = () => {
+          setIsScreenSharing(false)
+        }
+        setIsScreenSharing(true)
+        setIsVideoOn(false)
+      } catch (err) {
+        console.warn('Failed to access screen share:', err)
+      }
+    }
+  }
+
   // Handle Leave
   const handleLeave = async () => {
+    if (videoStreamRef.current) {
+      videoStreamRef.current.getTracks().forEach((t) => t.stop())
+      videoStreamRef.current = null
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((t) => t.stop())
+      audioStreamRef.current = null
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {})
+      audioContextRef.current = null
+    }
     if (callInfo && window.guidegram?.leaveGroupCall) {
       window.guidegram.leaveGroupCall(accountId, callInfo.id, callInfo.accessHash).catch(() => {})
     }
+    hasJoinedRef.current = false
     if (onLeaveCall) onLeaveCall()
     onClose()
   }
@@ -222,65 +365,87 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
         <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden bg-gradient-to-b from-dark-900 to-dark-950">
           {/* Main Stage: Active Speaker or Video Feed */}
           <div className="flex-1 relative flex flex-col items-center justify-center p-8 overflow-hidden">
-            {/* Concentric Audio Ripples */}
-            <div className="relative flex items-center justify-center">
-              {!activeSpeaker?.isMuted && (
-                <>
-                  <div className="absolute w-56 h-56 rounded-full bg-emerald-500/10 animate-ping duration-1000" />
-                  <div className="absolute w-44 h-44 rounded-full bg-emerald-500/15 animate-pulse duration-700" />
-                </>
-              )}
+            {isVideoOn || isScreenSharing ? (
+              <div className="w-full h-full relative flex items-center justify-center bg-black/90 rounded-2xl overflow-hidden border border-white/10">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-emerald-300">
+                  {isVideoOn && <Video className="w-3.5 h-3.5" />}
+                  {isScreenSharing && <Monitor className="w-3.5 h-3.5" />}
+                  <span>{isScreenSharing ? t('group_call.share_screen') : t('group_call.camera')}</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Concentric Audio Ripples */}
+                <div className="relative flex items-center justify-center">
+                  {!activeSpeaker?.isMuted && (
+                    <>
+                      <div
+                        className="absolute rounded-full bg-emerald-500/10 transition-all duration-150"
+                        style={{
+                          width: `${14 + (audioLevel > 5 ? (audioLevel / 100) * 10 : 2)}rem`,
+                          height: `${14 + (audioLevel > 5 ? (audioLevel / 100) * 10 : 2)}rem`,
+                        }}
+                      />
+                      <div
+                        className="absolute rounded-full bg-emerald-500/15 transition-all duration-150"
+                        style={{
+                          width: `${11 + (audioLevel > 5 ? (audioLevel / 100) * 6 : 1)}rem`,
+                          height: `${11 + (audioLevel > 5 ? (audioLevel / 100) * 6 : 1)}rem`,
+                        }}
+                      />
+                    </>
+                  )}
 
-              <div
-                className={`w-32 h-32 rounded-full border-4 flex items-center justify-center text-4xl font-bold transition-all shadow-2xl relative z-10 ${
-                  activeSpeaker?.isMuted
-                    ? 'border-gray-700 bg-dark-800 text-gray-400'
-                    : 'border-emerald-400 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-glow'
-                }`}
-              >
-                {activeSpeaker?.avatarUrl ? (
-                  <img
-                    src={activeSpeaker.avatarUrl}
-                    alt={activeSpeaker.name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span>{activeSpeaker?.name.charAt(0).toUpperCase()}</span>
-                )}
+                  <div
+                    className={`w-32 h-32 rounded-full border-4 flex items-center justify-center text-4xl font-bold transition-all shadow-2xl relative z-10 ${
+                      activeSpeaker?.isMuted
+                        ? 'border-gray-700 bg-dark-800 text-gray-400'
+                        : 'border-emerald-400 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-glow'
+                    }`}
+                  >
+                    {activeSpeaker?.avatarUrl ? (
+                      <img
+                        src={activeSpeaker.avatarUrl}
+                        alt={activeSpeaker.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span>{activeSpeaker?.name.charAt(0).toUpperCase()}</span>
+                    )}
 
-                {/* Hand Raised badge */}
-                {activeSpeaker?.raisedHand && (
-                  <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-amber-500 text-dark-950 flex items-center justify-center shadow-glow border-2 border-dark-900 animate-bounce">
-                    <Hand className="w-4 h-4 fill-current" />
+                    {/* Hand Raised badge */}
+                    {activeSpeaker?.raisedHand && (
+                      <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-amber-500 text-dark-950 flex items-center justify-center shadow-glow border-2 border-dark-900 animate-bounce">
+                        <Hand className="w-4 h-4 fill-current" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            <div className="mt-6 text-center z-10">
-              <div className="font-bold text-lg text-white">{activeSpeaker?.name}</div>
-              <div className="text-xs text-gray-400 flex items-center justify-center gap-1.5 mt-1">
-                {activeSpeaker?.isMuted ? (
-                  <span className="flex items-center gap-1 text-gray-500">
-                    <MicOff className="w-3.5 h-3.5" />
-                    <span>{t('group_call.listening')}</span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                    <Mic className="w-3.5 h-3.5 animate-pulse" />
-                    <span>{t('group_call.speaking')}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Video / Screen Share indicator bar if active */}
-            {(isVideoOn || isScreenSharing) && (
-              <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-emerald-300">
-                {isVideoOn && <Video className="w-3.5 h-3.5" />}
-                {isScreenSharing && <Monitor className="w-3.5 h-3.5" />}
-                <span>{isScreenSharing ? t('group_call.share_screen') : t('group_call.camera')}</span>
-              </div>
+                <div className="mt-6 text-center z-10">
+                  <div className="font-bold text-lg text-white">{activeSpeaker?.name}</div>
+                  <div className="text-xs text-gray-400 flex items-center justify-center gap-1.5 mt-1">
+                    {activeSpeaker?.isMuted ? (
+                      <span className="flex items-center gap-1 text-gray-500">
+                        <MicOff className="w-3.5 h-3.5" />
+                        <span>{t('group_call.listening')}</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                        <Mic className="w-3.5 h-3.5 animate-pulse" />
+                        <span>{t('group_call.speaking')}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -352,7 +517,7 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
           {/* Video Toggle */}
           <button
             type="button"
-            onClick={() => setIsVideoOn(!isVideoOn)}
+            onClick={handleToggleVideo}
             className={`p-3.5 rounded-2xl transition-all cursor-pointer ${
               isVideoOn
                 ? 'bg-primary-500 text-white shadow-glow'
@@ -366,7 +531,7 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
           {/* Screen Share Toggle */}
           <button
             type="button"
-            onClick={() => setIsScreenSharing(!isScreenSharing)}
+            onClick={handleToggleScreenShare}
             className={`p-3.5 rounded-2xl transition-all cursor-pointer ${
               isScreenSharing
                 ? 'bg-accent-cyan text-dark-950 shadow-glow'

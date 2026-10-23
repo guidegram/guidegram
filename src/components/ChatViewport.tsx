@@ -4034,6 +4034,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </button>
           )}
 
+          {/* 1-on-1 Direct Voice Call Trigger */}
+          {!chat.isGroup && !chat.isChannel && !chat.isBot && !chat.isSavedMessages && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsGroupCallModalOpen(true)
+                showToast(`Connecting direct call with ${chat.title}...`)
+              }}
+              title="Voice Call"
+              className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-emerald-400 border border-white/10 transition-colors cursor-pointer"
+            >
+              <Phone className="w-4 h-4 text-emerald-400" />
+            </button>
+          )}
+
           {/* In-Chat Search Toggle (Ctrl+F) */}
           <button
             onClick={() => setIsSearchOpen((prev) => !prev)}
