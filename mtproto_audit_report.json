@@ -5,9 +5,9 @@
   "namespaces": {
     "messages": {
       "total_in_schema": 261,
-      "directly_implemented": 51,
-      "gap_unimplemented": 210,
-      "coverage_pct": 19.5,
+      "directly_implemented": 59,
+      "gap_unimplemented": 202,
+      "coverage_pct": 22.6,
       "implemented_list": [
         "messages.getMessages",
         "messages.getHistory",
@@ -20,6 +20,14 @@
         "messages.forwardMessages",
         "messages.getFullChat",
         "messages.createChat",
+        "messages.getDhConfig",
+        "messages.requestEncryption",
+        "messages.acceptEncryption",
+        "messages.discardEncryption",
+        "messages.setEncryptedTyping",
+        "messages.readEncryptedHistory",
+        "messages.sendEncrypted",
+        "messages.sendEncryptedService",
         "messages.getAllStickers",
         "messages.exportChatInvite",
         "messages.checkChatInvite",
@@ -343,14 +351,13 @@
       "implemented_list": []
     }
   },
-  "overall_implemented_methods": 128,
-  "overall_unimplemented_methods": 731,
+  "overall_implemented_methods": 136,
+  "overall_unimplemented_methods": 723,
   "mockup_features": [
-    "Secret Chats (messages.sendEncrypted - End-to-End Encryption Diffie-Hellman)",
     "Fragment Username & Phone Auction / TON DNS bidding",
     "Telegram Passport (secure identity documents)",
     "Sticker Set Creation & Management (stickers.createStickerSet)",
     "Sponsored Messages / Telegram Ad Platform (messages.getSponsoredMessages)"
   ],
-  "overall_coverage_pct": 14.9
+  "overall_coverage_pct": 15.8
 }

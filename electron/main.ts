@@ -2085,6 +2085,79 @@ function setupIpcHandlers() {
     }
   })
 
+  // End-to-End Secret Chats (MTProto messages.*)
+  ipcMain.handle('telegram:get-dh-config', async (_event, { accountId, version, randomLength }) => {
+    try {
+      return await accountManager.getDhConfig(accountId, version, randomLength)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getDhConfig error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:request-encryption', async (_event, { accountId, userId, gAHex }) => {
+    try {
+      return await accountManager.requestEncryption(accountId, userId, gAHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] requestEncryption error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:accept-encryption', async (_event, { accountId, chatId, accessHash, gBHex, keyFingerprint }) => {
+    try {
+      return await accountManager.acceptEncryption(accountId, chatId, accessHash, gBHex, keyFingerprint)
+    } catch (err: any) {
+      Logger.warn(`[IPC] acceptEncryption error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:discard-encryption', async (_event, { accountId, chatId, deleteHistory }) => {
+    try {
+      return await accountManager.discardEncryption(accountId, chatId, deleteHistory)
+    } catch (err: any) {
+      Logger.warn(`[IPC] discardEncryption error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:set-encrypted-typing', async (_event, { accountId, chatId, accessHash, typing }) => {
+    try {
+      return await accountManager.setEncryptedTyping(accountId, chatId, accessHash, typing)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setEncryptedTyping error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:read-encrypted-history', async (_event, { accountId, chatId, accessHash, maxDate }) => {
+    try {
+      return await accountManager.readEncryptedHistory(accountId, chatId, accessHash, maxDate)
+    } catch (err: any) {
+      Logger.warn(`[IPC] readEncryptedHistory error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:send-encrypted', async (_event, { accountId, chatId, accessHash, dataHex, silent }) => {
+    try {
+      return await accountManager.sendEncrypted(accountId, chatId, accessHash, dataHex, silent)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendEncrypted error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:send-encrypted-service', async (_event, { accountId, chatId, accessHash, dataHex }) => {
+    try {
+      return await accountManager.sendEncryptedService(accountId, chatId, accessHash, dataHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendEncryptedService error:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

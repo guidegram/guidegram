@@ -654,6 +654,73 @@ const guidegramAPI = {
       canSelfUnmute,
     }),
 
+  // End-to-End Secret Chats (MTProto messages.*)
+  getDhConfig: (accountId: string, version = 0, randomLength = 256): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-dh-config', { accountId, version, randomLength }),
+  requestEncryption: (accountId: string, userId: string, gAHex?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:request-encryption', { accountId, userId, gAHex }),
+  acceptEncryption: (
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    gBHex?: string,
+    keyFingerprint?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:accept-encryption', {
+      accountId,
+      chatId,
+      accessHash,
+      gBHex,
+      keyFingerprint,
+    }),
+  discardEncryption: (accountId: string, chatId: number, deleteHistory = true): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:discard-encryption', { accountId, chatId, deleteHistory }),
+  setEncryptedTyping: (
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    typing = true
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-encrypted-typing', { accountId, chatId, accessHash, typing }),
+  readEncryptedHistory: (
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    maxDate?: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:read-encrypted-history', {
+      accountId,
+      chatId,
+      accessHash,
+      maxDate,
+    }),
+  sendEncrypted: (
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    dataHex: string,
+    silent = false
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:send-encrypted', {
+      accountId,
+      chatId,
+      accessHash,
+      dataHex,
+      silent,
+    }),
+  sendEncryptedService: (
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    dataHex: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:send-encrypted-service', {
+      accountId,
+      chatId,
+      accessHash,
+      dataHex,
+    }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

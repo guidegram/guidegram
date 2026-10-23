@@ -6848,6 +6848,212 @@ export class AccountManager {
     }
   }
 
+  public async getDhConfig(
+    accountId: string,
+    version = 0,
+    randomLength = 256
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getDhConfig',
+        version,
+        randomLength,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getDhConfig error:', err)
+      return null
+    }
+  }
+
+  public async requestEncryption(
+    accountId: string,
+    userId: string,
+    gAHex?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const targetUser: any = await this.resolveInputPeer(accountId, userId)
+      const inputUser =
+        targetUser._ === 'inputPeerUser'
+          ? { _: 'inputUser', userId: targetUser.userId, accessHash: targetUser.accessHash }
+          : { _: 'inputUserSelf' }
+
+      const randomId = Math.floor(Math.random() * 2147483647)
+      const gA = gAHex ? Buffer.from(gAHex, 'hex') : Buffer.alloc(256, 3)
+
+      const res: any = await holder.client.call({
+        _: 'messages.requestEncryption',
+        userId: inputUser,
+        randomId,
+        gA,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] requestEncryption error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async acceptEncryption(
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    gBHex?: string,
+    keyFingerprint?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const gB = gBHex ? Buffer.from(gBHex, 'hex') : Buffer.alloc(256, 4)
+      const res: any = await holder.client.call({
+        _: 'messages.acceptEncryption',
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(chatId),
+          accessHash: toLong(accessHash),
+        },
+        gB,
+        keyFingerprint: toLong(keyFingerprint || '987654321'),
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] acceptEncryption error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async discardEncryption(
+    accountId: string,
+    chatId: number,
+    deleteHistory = true
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.discardEncryption',
+        chatId: Number(chatId),
+        deleteHistory: Boolean(deleteHistory),
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] discardEncryption error:', err)
+      return false
+    }
+  }
+
+  public async setEncryptedTyping(
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    typing = true
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.setEncryptedTyping',
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(chatId),
+          accessHash: toLong(accessHash),
+        },
+        typing: Boolean(typing),
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] setEncryptedTyping error:', err)
+      return false
+    }
+  }
+
+  public async readEncryptedHistory(
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    maxDate = Math.floor(Date.now() / 1000)
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.readEncryptedHistory',
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(chatId),
+          accessHash: toLong(accessHash),
+        },
+        maxDate,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] readEncryptedHistory error:', err)
+      return false
+    }
+  }
+
+  public async sendEncrypted(
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    dataHex: string,
+    silent = false
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const data = Buffer.from(dataHex, 'hex')
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const res: any = await holder.client.call({
+        _: 'messages.sendEncrypted',
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(chatId),
+          accessHash: toLong(accessHash),
+        },
+        randomId,
+        data,
+        silent: Boolean(silent),
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendEncrypted error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async sendEncryptedService(
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    dataHex: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const data = Buffer.from(dataHex, 'hex')
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const res: any = await holder.client.call({
+        _: 'messages.sendEncryptedService',
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(chatId),
+          accessHash: toLong(accessHash),
+        },
+        randomId,
+        data,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendEncryptedService error:', err?.message || err)
+      throw err
+    }
+  }
+
   public async createPoll(
     accountId: string,
     chatId: string,

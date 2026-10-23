@@ -88,7 +88,6 @@ def run_audit():
     # Scan for UI Mockups / Fake Shells (e.g. methods or features returning hardcoded arrays or local state)
     # Remaining mockups scheduled for demolition in subsequent phases:
     mockup_features = [
-        'Secret Chats (messages.sendEncrypted - End-to-End Encryption Diffie-Hellman)',
         'Fragment Username & Phone Auction / TON DNS bidding',
         'Telegram Passport (secure identity documents)',
         'Sticker Set Creation & Management (stickers.createStickerSet)',
