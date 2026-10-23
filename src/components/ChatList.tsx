@@ -520,6 +520,8 @@ export const ChatList: React.FC<ChatListProps> = ({
 
       {/* Chat List Viewport */}
       <div
+        role="listbox"
+        aria-label={t('app.all_chats') || 'Chat Conversations'}
         onScroll={(e) => {
           const el = e.currentTarget
           if (
@@ -529,7 +531,7 @@ export const ChatList: React.FC<ChatListProps> = ({
             onLoadMoreDialogs?.()
           }
         }}
-        className="flex-1 overflow-y-auto min-h-0"
+        className="flex-1 overflow-y-auto min-h-0 focus-visible:outline-none"
       >
         {/* If user is searching and has results */}
         {searchQuery.trim().length > 0 ? (
@@ -719,8 +721,18 @@ export const DialogListItem = React.memo<DialogListItemProps>(
   ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory }) => {
     return (
       <div
+        role="option"
+        tabIndex={0}
+        aria-selected={isSelected}
+        aria-label={`${dialog.title}${dialog.unreadCount ? `, ${dialog.unreadCount} unread` : ''}`}
         onClick={() => onSelect(dialog.id)}
-        className={`px-3 py-2.5 transition-colors cursor-pointer border-b border-white/5 relative group ${
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onSelect(dialog.id)
+          }
+        }}
+        className={`chat-virtual-item px-3 py-2.5 transition-colors cursor-pointer border-b border-white/5 relative group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/50 ${
           isSelected ? 'bg-primary-600/20' : 'hover:bg-dark-800/60'
         }`}
       >
