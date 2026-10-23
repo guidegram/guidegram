@@ -764,4 +764,33 @@ export class SessionStore {
     }
     return []
   }
+
+  /**
+   * Prune stale cache files older than maxAgeDays to free memory and disk (Phase 18-19)
+   */
+  public pruneExpiredCache(maxAgeDays = 14): { removedFiles: number; freedBytes: number } {
+    let removedFiles = 0
+    let freedBytes = 0
+    try {
+      if (!fs.existsSync(this.cacheDir)) return { removedFiles, freedBytes }
+      const now = Date.now()
+      const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000
+      const entries = fs.readdirSync(this.cacheDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          const fullPath = path.join(this.cacheDir, entry.name)
+          const stat = fs.statSync(fullPath)
+          if (now - stat.mtimeMs > maxAgeMs) {
+            freedBytes += stat.size
+            fs.unlinkSync(fullPath)
+            removedFiles++
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[SessionStore] pruneExpiredCache error:', err)
+    }
+    return { removedFiles, freedBytes }
+  }
 }
+

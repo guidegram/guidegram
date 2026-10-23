@@ -333,3 +333,33 @@ html.light ::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* ==========================================================================
+   Phase 17: Mobile & Touch Ergonomics Audit
+   Touch targets >= 44x44px, safe-area insets, and touch manipulation
+   ========================================================================== */
+
+@media (pointer: coarse) {
+  button, 
+  [role="button"], 
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .chat-virtual-item {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+

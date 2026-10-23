@@ -7682,6 +7682,10 @@ export class AccountManager {
     }
   }
 
+  public pruneExpiredCache(maxAgeDays = 14): { removedFiles: number; freedBytes: number } {
+    return this.store.pruneExpiredCache(maxAgeDays)
+  }
+
   public async createPoll(
     accountId: string,
     chatId: string,
