@@ -2158,6 +2158,61 @@ function setupIpcHandlers() {
     }
   })
 
+  // Telegram Ad Platform & Sponsored Messages
+  ipcMain.handle('telegram:get-sponsored-messages', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.getSponsoredMessages(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSponsoredMessages error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:view-sponsored-message', async (_event, { accountId, randomIdHex }) => {
+    try {
+      return await accountManager.viewSponsoredMessage(accountId, randomIdHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] viewSponsoredMessage error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:click-sponsored-message', async (_event, { accountId, randomIdHex, media, fullscreen }) => {
+    try {
+      return await accountManager.clickSponsoredMessage(accountId, randomIdHex, media, fullscreen)
+    } catch (err: any) {
+      Logger.warn(`[IPC] clickSponsoredMessage error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:report-sponsored-message', async (_event, { accountId, randomIdHex, optionHex }) => {
+    try {
+      return await accountManager.reportSponsoredMessage(accountId, randomIdHex, optionHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] reportSponsoredMessage error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:toggle-sponsored-messages', async (_event, { accountId, enabled }) => {
+    try {
+      return await accountManager.toggleSponsoredMessages(accountId, enabled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleSponsoredMessages error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:restrict-sponsored-messages', async (_event, { accountId, channelId, restricted }) => {
+    try {
+      return await accountManager.restrictSponsoredMessages(accountId, channelId, restricted)
+    } catch (err: any) {
+      Logger.warn(`[IPC] restrictSponsoredMessages error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

@@ -91,7 +91,6 @@ def run_audit():
         'Fragment Username & Phone Auction / TON DNS bidding',
         'Telegram Passport (secure identity documents)',
         'Sticker Set Creation & Management (stickers.createStickerSet)',
-        'Sponsored Messages / Telegram Ad Platform (messages.getSponsoredMessages)',
     ]
 
     total_funcs = len(functions)

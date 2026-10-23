@@ -721,6 +721,46 @@ const guidegramAPI = {
       dataHex,
     }),
 
+  // Telegram Ad Platform & Sponsored Messages
+  getSponsoredMessages: (accountId: string, peerId: string, msgId?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-sponsored-messages', { accountId, peerId, msgId }),
+  viewSponsoredMessage: (accountId: string, randomIdHex: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:view-sponsored-message', { accountId, randomIdHex }),
+  clickSponsoredMessage: (
+    accountId: string,
+    randomIdHex: string,
+    media = false,
+    fullscreen = false
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:click-sponsored-message', {
+      accountId,
+      randomIdHex,
+      media,
+      fullscreen,
+    }),
+  reportSponsoredMessage: (
+    accountId: string,
+    randomIdHex: string,
+    optionHex: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:report-sponsored-message', {
+      accountId,
+      randomIdHex,
+      optionHex,
+    }),
+  toggleSponsoredMessages: (accountId: string, enabled: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:toggle-sponsored-messages', { accountId, enabled }),
+  restrictSponsoredMessages: (
+    accountId: string,
+    channelId: string,
+    restricted: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:restrict-sponsored-messages', {
+      accountId,
+      channelId,
+      restricted,
+    }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

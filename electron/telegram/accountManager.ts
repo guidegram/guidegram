@@ -7054,6 +7054,134 @@ export class AccountManager {
     }
   }
 
+  public async getSponsoredMessages(
+    accountId: string,
+    peerId: string,
+    msgId?: number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'messages.getSponsoredMessages',
+        peer: inputPeer,
+        msgId: msgId ? Number(msgId) : undefined,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] getSponsoredMessages error:', err)
+      return null
+    }
+  }
+
+  public async viewSponsoredMessage(
+    accountId: string,
+    randomIdHex: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const randomId = Buffer.from(randomIdHex, 'hex')
+      const res: any = await holder.client.call({
+        _: 'messages.viewSponsoredMessage',
+        randomId,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] viewSponsoredMessage error:', err)
+      return false
+    }
+  }
+
+  public async clickSponsoredMessage(
+    accountId: string,
+    randomIdHex: string,
+    media = false,
+    fullscreen = false
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const randomId = Buffer.from(randomIdHex, 'hex')
+      const res: any = await holder.client.call({
+        _: 'messages.clickSponsoredMessage',
+        randomId,
+        media: Boolean(media),
+        fullscreen: Boolean(fullscreen),
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] clickSponsoredMessage error:', err)
+      return false
+    }
+  }
+
+  public async reportSponsoredMessage(
+    accountId: string,
+    randomIdHex: string,
+    optionHex: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const randomId = Buffer.from(randomIdHex, 'hex')
+      const option = Buffer.from(optionHex, 'hex')
+      const res: any = await holder.client.call({
+        _: 'messages.reportSponsoredMessage',
+        randomId,
+        option,
+      } as any)
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] reportSponsoredMessage error:', err)
+      return null
+    }
+  }
+
+  public async toggleSponsoredMessages(
+    accountId: string,
+    enabled: boolean
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.toggleSponsoredMessages',
+        enabled: Boolean(enabled),
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] toggleSponsoredMessages error:', err)
+      return false
+    }
+  }
+
+  public async restrictSponsoredMessages(
+    accountId: string,
+    channelId: string,
+    restricted: boolean
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const targetChannel: any = await this.resolveInputPeer(accountId, channelId)
+      const inputChannel =
+        targetChannel._ === 'inputPeerChannel'
+          ? { _: 'inputChannel', channelId: targetChannel.channelId, accessHash: targetChannel.accessHash }
+          : { _: 'inputChannelEmpty' }
+      const res: any = await holder.client.call({
+        _: 'channels.restrictSponsoredMessages',
+        channel: inputChannel,
+        restricted: Boolean(restricted),
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] restrictSponsoredMessages error:', err)
+      return false
+    }
+  }
+
   public async createPoll(
     accountId: string,
     chatId: string,

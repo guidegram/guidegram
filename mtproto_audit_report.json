@@ -5,9 +5,9 @@
   "namespaces": {
     "messages": {
       "total_in_schema": 261,
-      "directly_implemented": 59,
-      "gap_unimplemented": 202,
-      "coverage_pct": 22.6,
+      "directly_implemented": 63,
+      "gap_unimplemented": 198,
+      "coverage_pct": 24.1,
       "implemented_list": [
         "messages.getMessages",
         "messages.getHistory",
@@ -63,6 +63,10 @@
         "messages.getSavedDialogs",
         "messages.getSavedReactionTags",
         "messages.sendPaidReaction",
+        "messages.viewSponsoredMessage",
+        "messages.clickSponsoredMessage",
+        "messages.reportSponsoredMessage",
+        "messages.getSponsoredMessages",
         "messages.getForumTopics",
         "messages.editForumTopic",
         "messages.updatePinnedForumTopic",
@@ -72,9 +76,9 @@
     },
     "account": {
       "total_in_schema": 128,
-      "directly_implemented": 14,
-      "gap_unimplemented": 114,
-      "coverage_pct": 10.9,
+      "directly_implemented": 15,
+      "gap_unimplemented": 113,
+      "coverage_pct": 11.7,
       "implemented_list": [
         "account.updateNotifySettings",
         "account.getAuthorizations",
@@ -89,6 +93,7 @@
         "account.createBusinessChatLink",
         "account.deleteBusinessChatLink",
         "account.getBusinessChatLinks",
+        "account.toggleSponsoredMessages",
         "account.getCollectibleEmojiStatuses"
       ]
     },
@@ -106,9 +111,9 @@
     },
     "channels": {
       "total_in_schema": 58,
-      "directly_implemented": 16,
-      "gap_unimplemented": 42,
-      "coverage_pct": 27.6,
+      "directly_implemented": 17,
+      "gap_unimplemented": 41,
+      "coverage_pct": 29.3,
       "implemented_list": [
         "channels.readHistory",
         "channels.deleteMessages",
@@ -125,7 +130,8 @@
         "channels.getAdminLog",
         "channels.toggleSlowMode",
         "channels.toggleJoinRequest",
-        "channels.toggleForum"
+        "channels.toggleForum",
+        "channels.restrictSponsoredMessages"
       ]
     },
     "phone": {
@@ -351,13 +357,12 @@
       "implemented_list": []
     }
   },
-  "overall_implemented_methods": 136,
-  "overall_unimplemented_methods": 723,
+  "overall_implemented_methods": 142,
+  "overall_unimplemented_methods": 717,
   "mockup_features": [
     "Fragment Username & Phone Auction / TON DNS bidding",
     "Telegram Passport (secure identity documents)",
-    "Sticker Set Creation & Management (stickers.createStickerSet)",
-    "Sponsored Messages / Telegram Ad Platform (messages.getSponsoredMessages)"
+    "Sticker Set Creation & Management (stickers.createStickerSet)"
   ],
-  "overall_coverage_pct": 15.8
+  "overall_coverage_pct": 16.5
 }
