@@ -1995,6 +1995,96 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-call-config', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getCallConfig(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getCallConfig error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:request-call', async (_event, { accountId, userId, isVideo }) => {
+    try {
+      return await accountManager.requestCall(accountId, userId, isVideo)
+    } catch (err: any) {
+      Logger.warn(`[IPC] requestCall error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:accept-call', async (_event, { accountId, callId, accessHash, gBHex }) => {
+    try {
+      return await accountManager.acceptCall(accountId, callId, accessHash, gBHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] acceptCall error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:confirm-call', async (_event, { accountId, callId, accessHash, gAHex, keyFingerprint }) => {
+    try {
+      return await accountManager.confirmCall(accountId, callId, accessHash, gAHex, keyFingerprint)
+    } catch (err: any) {
+      Logger.warn(`[IPC] confirmCall error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:received-call', async (_event, { accountId, callId, accessHash }) => {
+    try {
+      return await accountManager.receivedCall(accountId, callId, accessHash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] receivedCall error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:discard-call', async (_event, { accountId, callId, accessHash, duration, reason }) => {
+    try {
+      return await accountManager.discardCall(accountId, callId, accessHash, duration, reason)
+    } catch (err: any) {
+      Logger.warn(`[IPC] discardCall error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:send-call-signaling-data', async (_event, { accountId, callId, accessHash, dataHex }) => {
+    try {
+      return await accountManager.sendCallSignalingData(accountId, callId, accessHash, dataHex)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendCallSignalingData error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:invite-to-group-call', async (_event, { accountId, callId, accessHash, userIds }) => {
+    try {
+      return await accountManager.inviteToGroupCall(accountId, callId, accessHash, userIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] inviteToGroupCall error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:discard-group-call', async (_event, { accountId, callId, accessHash }) => {
+    try {
+      return await accountManager.discardGroupCall(accountId, callId, accessHash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] discardGroupCall error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:export-group-call-invite', async (_event, { accountId, callId, accessHash, canSelfUnmute }) => {
+    try {
+      return await accountManager.exportGroupCallInvite(accountId, callId, accessHash, canSelfUnmute)
+    } catch (err: any) {
+      Logger.warn(`[IPC] exportGroupCallInvite error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

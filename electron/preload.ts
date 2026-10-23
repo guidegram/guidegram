@@ -590,6 +590,69 @@ const guidegramAPI = {
     volume?: number
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:edit-group-call-participant', { accountId, callId, accessHash, participantId, muted, raiseHand, volume }),
+  getCallConfig: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-call-config', { accountId }),
+  requestCall: (accountId: string, userId: string, isVideo = false): Promise<any> =>
+    ipcRenderer.invoke('telegram:request-call', { accountId, userId, isVideo }),
+  acceptCall: (accountId: string, callId: string, accessHash: string, gBHex?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:accept-call', { accountId, callId, accessHash, gBHex }),
+  confirmCall: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    gAHex?: string,
+    keyFingerprint?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:confirm-call', {
+      accountId,
+      callId,
+      accessHash,
+      gAHex,
+      keyFingerprint,
+    }),
+  receivedCall: (accountId: string, callId: string, accessHash: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:received-call', { accountId, callId, accessHash }),
+  discardCall: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    duration = 0,
+    reason = 'hangup'
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:discard-call', { accountId, callId, accessHash, duration, reason }),
+  sendCallSignalingData: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    dataHex: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-call-signaling-data', {
+      accountId,
+      callId,
+      accessHash,
+      dataHex,
+    }),
+  inviteToGroupCall: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    userIds: string[]
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:invite-to-group-call', { accountId, callId, accessHash, userIds }),
+  discardGroupCall: (accountId: string, callId: string, accessHash: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:discard-group-call', { accountId, callId, accessHash }),
+  exportGroupCallInvite: (
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    canSelfUnmute?: boolean
+  ): Promise<string | null> =>
+    ipcRenderer.invoke('telegram:export-group-call-invite', {
+      accountId,
+      callId,
+      accessHash,
+      canSelfUnmute,
+    }),
 
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>

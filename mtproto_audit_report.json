@@ -122,15 +122,25 @@
     },
     "phone": {
       "total_in_schema": 43,
-      "directly_implemented": 5,
-      "gap_unimplemented": 38,
-      "coverage_pct": 11.6,
+      "directly_implemented": 15,
+      "gap_unimplemented": 28,
+      "coverage_pct": 34.9,
       "implemented_list": [
+        "phone.getCallConfig",
+        "phone.requestCall",
+        "phone.acceptCall",
+        "phone.confirmCall",
+        "phone.receivedCall",
+        "phone.discardCall",
+        "phone.sendSignalingData",
         "phone.createGroupCall",
         "phone.joinGroupCall",
         "phone.leaveGroupCall",
+        "phone.inviteToGroupCall",
+        "phone.discardGroupCall",
         "phone.getGroupCall",
-        "phone.editGroupCallParticipant"
+        "phone.editGroupCallParticipant",
+        "phone.exportGroupCallInvite"
       ]
     },
     "bots": {
@@ -333,15 +343,14 @@
       "implemented_list": []
     }
   },
-  "overall_implemented_methods": 118,
-  "overall_unimplemented_methods": 741,
+  "overall_implemented_methods": 128,
+  "overall_unimplemented_methods": 731,
   "mockup_features": [
     "Secret Chats (messages.sendEncrypted - End-to-End Encryption Diffie-Hellman)",
-    "VoIP P2P Raw RTP Media Transport (phone.requestCall - only signaling and WebRTC local UI implemented)",
     "Fragment Username & Phone Auction / TON DNS bidding",
     "Telegram Passport (secure identity documents)",
     "Sticker Set Creation & Management (stickers.createStickerSet)",
     "Sponsored Messages / Telegram Ad Platform (messages.getSponsoredMessages)"
   ],
-  "overall_coverage_pct": 13.7
+  "overall_coverage_pct": 14.9
 }

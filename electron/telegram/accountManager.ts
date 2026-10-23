@@ -6540,6 +6540,284 @@ export class AccountManager {
     }
   }
 
+  public async getCallConfig(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const res: any = await holder.client.call({
+        _: 'phone.getCallConfig',
+      } as any)
+      return res?.data ? JSON.parse(res.data) : res
+    } catch (err) {
+      Logger.warn('[AccountManager] getCallConfig error:', err)
+      return null
+    }
+  }
+
+  public async requestCall(
+    accountId: string,
+    userId: string,
+    isVideo = false
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const targetUser: any = await this.resolveInputPeer(accountId, userId)
+      const inputUser =
+        targetUser._ === 'inputPeerUser'
+          ? { _: 'inputUser', userId: targetUser.userId, accessHash: targetUser.accessHash }
+          : { _: 'inputUserSelf' }
+
+      const randomId = Math.floor(Math.random() * 2147483647)
+      const fakeDhBytes = Buffer.alloc(32, 1)
+
+      const res: any = await holder.client.call({
+        _: 'phone.requestCall',
+        video: Boolean(isVideo),
+        userId: inputUser,
+        randomId,
+        gAHash: fakeDhBytes,
+        protocol: {
+          _: 'phoneCallProtocol',
+          udpP2p: true,
+          udpReflector: true,
+          minLayer: 65,
+          maxLayer: 92,
+          libraryVersions: ['3.0.0'],
+        },
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] requestCall error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async acceptCall(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    gBHex?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const gB = gBHex ? Buffer.from(gBHex, 'hex') : Buffer.alloc(32, 2)
+      const res: any = await holder.client.call({
+        _: 'phone.acceptCall',
+        peer: {
+          _: 'inputPhoneCall',
+          id: toLong(callId),
+          accessHash: toLong(accessHash),
+        },
+        gB,
+        protocol: {
+          _: 'phoneCallProtocol',
+          udpP2p: true,
+          udpReflector: true,
+          minLayer: 65,
+          maxLayer: 92,
+          libraryVersions: ['3.0.0'],
+        },
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] acceptCall error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async confirmCall(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    gAHex?: string,
+    keyFingerprint?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const gA = gAHex ? Buffer.from(gAHex, 'hex') : Buffer.alloc(32, 1)
+      const res: any = await holder.client.call({
+        _: 'phone.confirmCall',
+        peer: {
+          _: 'inputPhoneCall',
+          id: toLong(callId),
+          accessHash: toLong(accessHash),
+        },
+        gA,
+        keyFingerprint: toLong(keyFingerprint || '123456789'),
+        protocol: {
+          _: 'phoneCallProtocol',
+          udpP2p: true,
+          udpReflector: true,
+          minLayer: 65,
+          maxLayer: 92,
+          libraryVersions: ['3.0.0'],
+        },
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] confirmCall error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async receivedCall(
+    accountId: string,
+    callId: string,
+    accessHash: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'phone.receivedCall',
+        peer: {
+          _: 'inputPhoneCall',
+          id: toLong(callId),
+          accessHash: toLong(accessHash),
+        },
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] receivedCall error:', err)
+      return false
+    }
+  }
+
+  public async discardCall(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    duration = 0,
+    reason = 'hangup'
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const reasonObj =
+        reason === 'missed'
+          ? { _: 'phoneCallDiscardReasonMissed' }
+          : reason === 'busy'
+            ? { _: 'phoneCallDiscardReasonBusy' }
+            : reason === 'disconnect'
+              ? { _: 'phoneCallDiscardReasonDisconnect' }
+              : { _: 'phoneCallDiscardReasonHangup' }
+
+      const res: any = await holder.client.call({
+        _: 'phone.discardCall',
+        peer: {
+          _: 'inputPhoneCall',
+          id: toLong(callId),
+          accessHash: toLong(accessHash),
+        },
+        duration: Math.max(0, duration),
+        reason: reasonObj,
+        connectionId: toLong(0),
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] discardCall error:', err)
+      return false
+    }
+  }
+
+  public async sendCallSignalingData(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    dataHex: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const data = Buffer.from(dataHex, 'hex')
+      const res: any = await holder.client.call({
+        _: 'phone.sendSignalingData',
+        peer: {
+          _: 'inputPhoneCall',
+          id: toLong(callId),
+          accessHash: toLong(accessHash),
+        },
+        data,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] sendCallSignalingData error:', err)
+      return false
+    }
+  }
+
+  public async inviteToGroupCall(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    userIds: string[]
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const users = await Promise.all(
+        userIds.map(async (uid) => {
+          const peer: any = await this.resolveInputPeer(accountId, uid)
+          return peer._ === 'inputPeerUser'
+            ? { _: 'inputUser', userId: peer.userId, accessHash: peer.accessHash }
+            : { _: 'inputUserSelf' }
+        })
+      )
+      const res: any = await holder.client.call({
+        _: 'phone.inviteToGroupCall',
+        call: { _: 'inputGroupCall', id: toLong(callId), accessHash: toLong(accessHash) },
+        users,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] inviteToGroupCall error:', err)
+      return false
+    }
+  }
+
+  public async discardGroupCall(
+    accountId: string,
+    callId: string,
+    accessHash: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const res: any = await holder.client.call({
+        _: 'phone.discardGroupCall',
+        call: { _: 'inputGroupCall', id: toLong(callId), accessHash: toLong(accessHash) },
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] discardGroupCall error:', err)
+      return false
+    }
+  }
+
+  public async exportGroupCallInvite(
+    accountId: string,
+    callId: string,
+    accessHash: string,
+    canSelfUnmute?: boolean
+  ): Promise<string | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'phone.exportGroupCallInvite',
+        call: { _: 'inputGroupCall', id: toLong(callId), accessHash: toLong(accessHash) },
+        canSelfUnmute: Boolean(canSelfUnmute),
+      } as any)
+      return res?.link || null
+    } catch (err) {
+      Logger.warn('[AccountManager] exportGroupCallInvite error:', err)
+      return null
+    }
+  }
+
   public async sendVote(
     accountId: string,
     chatId: string,

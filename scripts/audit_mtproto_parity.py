@@ -89,7 +89,6 @@ def run_audit():
     # Remaining mockups scheduled for demolition in subsequent phases:
     mockup_features = [
         'Secret Chats (messages.sendEncrypted - End-to-End Encryption Diffie-Hellman)',
-        'VoIP P2P Raw RTP Media Transport (phone.requestCall - only signaling and WebRTC local UI implemented)',
         'Fragment Username & Phone Auction / TON DNS bidding',
         'Telegram Passport (secure identity documents)',
         'Sticker Set Creation & Management (stickers.createStickerSet)',
