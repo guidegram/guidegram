@@ -79,6 +79,7 @@ import {
   ForumTopicInput,
   ForumTopicMutationResult,
   ForumTopicCreateResult,
+  SendableTypingStatus,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -172,7 +173,7 @@ const guidegramAPI = {
   sendTyping: (
     accountId: string,
     chatId: string,
-    status?: 'typing' | 'cancel'
+    status?: SendableTypingStatus
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:send-typing', { accountId, chatId, status }),
   exportChatInvite: (accountId: string, chatId: string): Promise<string | null> =>

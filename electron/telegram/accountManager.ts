@@ -22,6 +22,10 @@ import {
   hideAllJoinRequests as mtcuteHideAllJoinRequests,
   setChatUsername as mtcuteSetChatUsername,
   setChatDefaultPermissions as mtcuteSetChatDefaultPermissions,
+  editMessage as mtcuteEditMessage,
+  pinMessage as mtcutePinMessage,
+  unpinMessage as mtcuteUnpinMessage,
+  setTyping as mtcuteSetTyping,
 } from '@mtcute/core/methods.js'
 import { writeStringSession } from '@mtcute/core/utils.js'
 import { convertFromGramjsSession } from '@mtcute/convert'
@@ -131,6 +135,7 @@ import {
   ChatJoinRequestAction,
   ChatJoinRequestResolveResult,
   ChatJoinRequestBulkResolveResult,
+  SendableTypingStatus,
 } from './types'
 
 export interface ClientHolder {
@@ -4905,7 +4910,7 @@ export class AccountManager {
   public async sendTyping(
     accountId: string,
     chatId: string,
-    status: 'typing' | 'cancel' = 'typing'
+    status: SendableTypingStatus = 'typing'
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return false

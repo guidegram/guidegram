@@ -2300,8 +2300,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setIsRecordingVoice(true)
       setRecordingDuration(0)
 
+      if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+        window.guidegram.sendTyping(chat.accountId, chat.id, 'record_voice').catch(() => {})
+      }
+
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration((prev) => prev + 1)
+        setRecordingDuration((prev) => {
+          const next = prev + 1
+          if (next % 4 === 0 && chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+            window.guidegram.sendTyping(chat.accountId, chat.id, 'record_voice').catch(() => {})
+          }
+          return next
+        })
       }, 1000)
     } catch (err: any) {
       console.error('Microphone access error:', err)
@@ -2310,6 +2320,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }
 
   const handleCancelRecording = () => {
+    if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+      window.guidegram.sendTyping(chat.accountId, chat.id, 'cancel').catch(() => {})
+    }
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current)
       recordingTimerRef.current = null
@@ -2353,6 +2366,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       analyserIntervalRef.current = null
     }
     setIsUploadingVoice(true)
+    if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+      window.guidegram.sendTyping(chat.accountId, chat.id, 'upload_voice').catch(() => {})
+    }
 
     const recorder = mediaRecorderRef.current
     const duration = recordingDuration
@@ -2488,6 +2504,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             percent: Math.round((i / itemsToSend.length) * 100),
             fileName: itemsToSend.length > 1 ? `[${i + 1}/${itemsToSend.length}] ${item.name}` : item.name,
           })
+          if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+            const typingAction = item.type === 'media' ? 'upload_photo' : 'upload_document'
+            window.guidegram.sendTyping(chat.accountId, chat.id, typingAction).catch(() => {})
+          }
           if (onSendMedia) {
             await onSendMedia(item.path, {
               caption: fileCaption,

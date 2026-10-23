@@ -114,6 +114,7 @@ import type {
   ForumTopicInput,
   ForumTopicMutationResult,
   ForumTopicCreateResult,
+  SendableTypingStatus,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -243,6 +244,7 @@ export type {
   ForumTopicInput,
   ForumTopicMutationResult,
   ForumTopicCreateResult,
+  SendableTypingStatus,
 }
 
 

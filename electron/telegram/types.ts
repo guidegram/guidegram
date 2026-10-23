@@ -1353,6 +1353,20 @@ export interface GroupCallInfo {
   recordStartDate?: number
 }
 
-
-
-
+export type SendableTypingStatus =
+  | 'typing'
+  | 'cancel'
+  | 'record_video'
+  | 'upload_video'
+  | 'record_voice'
+  | 'upload_voice'
+  | 'upload_photo'
+  | 'upload_document'
+  | 'geo'
+  | 'contact'
+  | 'game'
+  | 'record_round'
+  | 'upload_round'
+  | 'speak_call'
+  | 'history_import'
+  | 'sticker'
