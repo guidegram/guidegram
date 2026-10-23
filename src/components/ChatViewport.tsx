@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Search,
   Pin,
+  Pencil,
   Camera,
   Sparkles,
   CornerUpLeft,
@@ -71,6 +72,9 @@ import {
   Star,
   Lock,
   PhoneCall,
+  Ban,
+  UserCheck,
+  Settings,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -78,6 +82,7 @@ import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
 import { GroupStatsModal } from './GroupStatsModal'
 import { ForumTopicsBar } from './ForumTopicsBar'
+import { ForumTopicsModal } from './ForumTopicsModal'
 import { ScheduledMessagesModal } from './ScheduledMessagesModal'
 import { StickerPickerDrawer } from './StickerPickerDrawer'
 import { SharedMediaDrawer } from './SharedMediaDrawer'
@@ -85,6 +90,9 @@ import { PollWidget } from './PollWidget'
 import { CreatePollModal } from './CreatePollModal'
 import { MiniAppModal } from './MiniAppModal'
 import { AdminLogModal } from './AdminLogModal'
+import { ChatMembersModal } from './ChatMembersModal'
+import { ChatSettingsModal } from './ChatSettingsModal'
+import { ChatInviteLinksModal } from './ChatInviteLinksModal'
 import { PaidReactionModal } from './PaidReactionModal'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
@@ -94,8 +102,9 @@ import { BotMenuDrawer, BotMenuButtonType } from './chat/BotMenuDrawer'
 import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeyboardPanel'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
-import { isRTL, formatFileSize, formatDuration, formatNumber } from '../utils/textUtils'
+import { isRTL, formatFileSize, formatDuration } from '../utils/textUtils'
 import { parseTelegramUrl } from '../utils/telegramLink'
+import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
 
 interface ChatViewportProps {
   chat: DialogItem | null
@@ -134,6 +143,7 @@ interface ChatViewportProps {
   onOpenDirectForward: (message: MessageItem) => void
   onQuickForwardToSaved?: (message: MessageItem) => Promise<boolean> | void
   onDeleteMessage?: (message: MessageItem) => Promise<boolean> | void
+  onEditMessage?: (message: MessageItem, newText: string) => Promise<void> | void
   onToggleGhostMode: () => void
   onSelectUserOrChat?: (target: string, targetMsgId?: number) => void
   initialScrollMsgId?: number | null
@@ -166,6 +176,37 @@ function classifyDroppedFile(file: File): 'media' | 'document' | 'audio' {
     return 'audio'
   }
   return 'document'
+}
+
+function typingStatusLabel(status: string): string {
+  switch (status) {
+    case 'record_voice':
+      return 'is recording a voice message…'
+    case 'upload_voice':
+      return 'is sending a voice message…'
+    case 'record_video':
+    case 'record_round':
+      return 'is recording a video…'
+    case 'upload_video':
+    case 'upload_round':
+      return 'is sending a video…'
+    case 'upload_photo':
+      return 'is sending a photo…'
+    case 'upload_document':
+      return 'is sending a file…'
+    case 'sticker':
+      return 'is choosing a sticker…'
+    case 'geo':
+      return 'is sharing a location…'
+    case 'contact':
+      return 'is sharing a contact…'
+    case 'game':
+      return 'is playing a game…'
+    case 'speak_call':
+      return 'is speaking…'
+    default:
+      return 'is typing…'
+  }
 }
 
 function extractFirstUrl(text: string): string | null {
@@ -601,6 +642,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onOpenDirectForward,
   onQuickForwardToSaved,
   onDeleteMessage,
+  onEditMessage,
   onToggleGhostMode,
   onSelectUserOrChat,
   initialScrollMsgId,
@@ -612,7 +654,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [copiedChatId, setCopiedChatId] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null)
   const [hoveredMessage, setHoveredMessage] = useState<MessageItem | null>(null)
-  const { t } = useI18n()
+  const { t, formatNumber: formatLocalizedNumber } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
   const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
 
@@ -634,6 +676,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [userProfilePeerId, setUserProfilePeerId] = useState<string | null>(null)
   const [userProfileDetails, setUserProfileDetails] = useState<ChatDetails | null>(null)
   const [isLoadingUserProfile, setIsLoadingUserProfile] = useState(false)
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [isExportingInvite, setIsExportingInvite] = useState(false)
 
   // Bot Subsystem State (MTProto Layer 180+)
   const [isReplyKeyboardOpen, setIsReplyKeyboardOpen] = useState(true)
@@ -658,6 +702,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   // Forum Topics (MTProto channels.getForumTopics)
   const [forumTopics, setForumTopics] = useState<ForumTopicItem[]>([])
   const [activeTopicId, setActiveTopicId] = useState<number | null>(null)
+  const [isForumTopicsModalOpen, setIsForumTopicsModalOpen] = useState(false)
 
   // Infinite Scroll & Message History Pagination
   const [isLoadingOlder, setIsLoadingOlder] = useState(false)
@@ -723,7 +768,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setReactionOverrides({})
     if (!chat?.accountId || !chat?.id) return
 
-    if (chat.isGroup || chat.isForum) {
+    if (chat.isGroup || chat.isForum || chatDetails?.isForum) {
       window.guidegram?.getForumTopics?.(chat.accountId, chat.id)
         .then((topics) => {
           if (topics && topics.length > 0) {
@@ -732,7 +777,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         })
         .catch(() => {})
     }
-  }, [chat?.accountId, chat?.id, chat?.isGroup, chat?.isForum])
+  }, [chat?.accountId, chat?.id, chat?.isGroup, chat?.isForum, chatDetails?.isForum])
 
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false)
   const [isSharedMediaOpen, setIsSharedMediaOpen] = useState(false)
@@ -749,7 +794,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     id?: string
     name?: string
   } | null>(null)
-  const [memberSearchQuery, setMemberSearchQuery] = useState('')
   const [pendingExternalUrl, setPendingExternalUrl] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -766,6 +810,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Reply bar state
   const [replyMessage, setReplyMessage] = useState<MessageItem | null>(null)
+  const [editingMessage, setEditingMessage] = useState<MessageItem | null>(null)
+  const [typingUsers, setTypingUsers] = useState<
+    Array<{ userId: string; name: string; status: string }>
+  >([])
+  const typingExpiryRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const lastTypingSentRef = useRef(0)
+  const editingDraftBackupRef = useRef('')
+  const messagesRef = useRef(messages)
 
   // Debounced cloud draft synchronization
   const draftDebounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -795,6 +847,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false)
   const [isAdminLogOpen, setIsAdminLogOpen] = useState(false)
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false)
+  const [isChatSettingsModalOpen, setIsChatSettingsModalOpen] = useState(false)
+  const [isInviteLinksModalOpen, setIsInviteLinksModalOpen] = useState(false)
   const [paidReactionModalState, setPaidReactionModalState] = useState<{
     isOpen: boolean
     messageId: number | null
@@ -1411,9 +1466,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setIsSearchOpen(false)
     setSearchQuery('')
     setSearchSenderFilter(null)
-    setMemberSearchQuery('')
+    setIsMembersModalOpen(false)
+    setIsChatSettingsModalOpen(false)
+    setIsInviteLinksModalOpen(false)
     setPendingExternalUrl(null)
     setReplyMessage(null)
+    setEditingMessage(null)
+    setInviteLink(null)
+    setIsExportingInvite(false)
+    setTypingUsers([])
+    typingExpiryRef.current.forEach((timer) => clearTimeout(timer))
+    typingExpiryRef.current.clear()
     setStagedAttachments([])
     setIsAttachMenuOpen(false)
     setSavedSourceFilter(null)
@@ -1448,6 +1511,59 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setBotMenuButtonState(null)
     }
   }, [chat?.id])
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  // Live typing indicators from other participants
+  useEffect(() => {
+    if (!chat || !window.guidegram?.on) return
+    const unsubscribe = window.guidegram.on('telegram:user-typing', (payload: any) => {
+      if (!payload) return
+      if (String(payload.accountId) !== String(chat.accountId)) return
+      if (String(payload.chatId) !== String(chat.id)) return
+      if (
+        activeTopicId !== null &&
+        payload.threadId != null &&
+        Number(payload.threadId) !== Number(activeTopicId)
+      ) {
+        return
+      }
+
+      const userId = String(payload.userId)
+      const status = String(payload.status || '')
+
+      if (!status || status === 'cancel') {
+        setTypingUsers((prev) => prev.filter((u) => u.userId !== userId))
+        const timer = typingExpiryRef.current.get(userId)
+        if (timer) clearTimeout(timer)
+        typingExpiryRef.current.delete(userId)
+        return
+      }
+
+      const known = messagesRef.current.find((m) => String(m.senderId) === userId)
+      const name = chat.isUser ? chat.title : known?.senderName || 'Someone'
+      setTypingUsers((prev) => [
+        ...prev.filter((u) => u.userId !== userId),
+        { userId, name, status },
+      ])
+
+      const existing = typingExpiryRef.current.get(userId)
+      if (existing) clearTimeout(existing)
+      const timer = setTimeout(() => {
+        setTypingUsers((prev) => prev.filter((u) => u.userId !== userId))
+        typingExpiryRef.current.delete(userId)
+      }, 6500)
+      typingExpiryRef.current.set(userId, timer)
+    })
+
+    return () => {
+      unsubscribe()
+      typingExpiryRef.current.forEach((timer) => clearTimeout(timer))
+      typingExpiryRef.current.clear()
+    }
+  }, [chat?.id, chat?.accountId, chat?.isUser, chat?.title, activeTopicId])
 
   // Active persistent ReplyKeyboardMarkup from bot messages (Layer 180+)
   const activeReplyMarkup = useMemo(() => {
@@ -1823,6 +1939,49 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       return false
     },
     [chat, chatDetails]
+  )
+
+  // Check whether current user can pin messages in this chat
+  const canPinMessage = useCallback(() => {
+    if (!chat) return false
+    if (!chat.isGroup && !chat.isChannel) return true
+    return chatDetails?.permissionsMatrix?.pinMessages !== false
+  }, [chat, chatDetails])
+
+  // Whether a given message is currently pinned
+  const isMessagePinned = useCallback(
+    (messageId: number) => {
+      const pinned = chatDetails?.pinnedMessages?.length
+        ? chatDetails.pinnedMessages
+        : chatDetails?.pinnedMessage
+        ? [chatDetails.pinnedMessage]
+        : []
+      return pinned.some((item) => item.id === messageId)
+    },
+    [chatDetails]
+  )
+
+  // Pin or unpin a message via MTProto and refresh local chat details
+  const handleTogglePinMessage = useCallback(
+    async (message: MessageItem) => {
+      if (!chat) return
+      const pinned = isMessagePinned(message.id)
+      try {
+        if (pinned) {
+          await window.guidegram.unpinMessage(chat.accountId, chat.id, message.id)
+        } else {
+          await window.guidegram.pinMessage(chat.accountId, chat.id, message.id, true)
+        }
+        const details = await window.guidegram.getChatDetails(chat.accountId, chat.id)
+        if (details) setChatDetails(details)
+        showToast(pinned ? 'Message unpinned' : 'Message pinned')
+      } catch (err: any) {
+        showToast(
+          `Failed to ${pinned ? 'unpin' : 'pin'} message: ${err?.message || err}`
+        )
+      }
+    },
+    [chat, isMessagePinned]
   )
 
   // Lazy download media (photo thumbnail or full media)
@@ -2201,7 +2360,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     recorder.onstop = async () => {
       try {
         const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType })
-        const buffer = await blob.arrayBuffer()
+        let buffer: ArrayBuffer | Uint8Array = await blob.arrayBuffer()
+
+        // Chromium records Opus inside WebM, but Telegram only keeps voice notes
+        // when the upload is OGG/Opus. Repackage without re-encoding.
+        if (isWebmBuffer(buffer)) {
+          try {
+            buffer = remuxWebmOpusToOgg(buffer)
+          } catch (remuxError) {
+            console.error('Failed to convert WebM recording to OGG/Opus:', remuxError)
+          }
+        }
+
         const tempPath = await window.guidegram.saveTempFile({
           buffer,
           filename: `voice_${Date.now()}.ogg`,
@@ -2211,13 +2381,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           await onSendMedia(tempPath, {
             isVoice: true,
             duration,
-            replyToMsgId: replyMessage?.id,
+            replyToMsgId: replyMessage?.id ?? activeTopicId ?? undefined,
           })
         } else if (chat?.accountId && chat?.id && window.guidegram?.sendMedia) {
           await window.guidegram.sendMedia(chat.accountId, chat.id, tempPath, {
             isVoice: true,
             duration,
-            replyToMsgId: replyMessage?.id,
+            replyToMsgId: replyMessage?.id ?? activeTopicId ?? undefined,
           })
         }
         setReplyMessage(null)
@@ -2270,11 +2440,31 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     if (isRecordingVoice) return
     setIsSendMenuOpen(false)
 
+    // Editing an existing message takes precedence over sending
+    if (editingMessage) {
+      const newText = inputText.trim()
+      if (!newText) return
+      try {
+        await onEditMessage?.(editingMessage, newText)
+        setEditingMessage(null)
+        setInputText('')
+        setDismissedComposerUrl(null)
+        if (chat && window.guidegram?.saveDraft) {
+          window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
+        }
+        showToast('Message edited')
+      } catch (err: any) {
+        console.error('Failed to edit message:', err)
+        showToast(`Failed to edit message: ${err?.message || err}`)
+      }
+      return
+    }
+
     // Handle sending staged attachments (Feature 17)
     if (stagedAttachments.length > 0) {
       const itemsToSend = [...stagedAttachments]
       const caption = inputText.trim()
-      const replyId = replyMessage?.id
+      const replyId = replyMessage?.id ?? activeTopicId ?? undefined
 
       setStagedAttachments([])
       setInputText('')
@@ -2445,7 +2635,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const handleSendAsFile = async () => {
     if (!inputText.trim()) return
     const textToSend = inputText
-    const replyId = replyMessage?.id
+    const replyId = replyMessage?.id ?? activeTopicId ?? undefined
     try {
       showToast('Creating text document...')
       const encoder = new TextEncoder()
@@ -3729,13 +3919,30 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </div>
 
             <div className="text-[11px] text-gray-400 truncate">
-              {isChannel
-                ? 'Broadcast Channel'
-                : isGroup
-                ? 'Group Chat'
-                : isBot
-                ? 'Bot'
-                : 'Online'}
+              {typingUsers.length > 0 ? (
+                <span className="text-accent-cyan flex items-center gap-1.5">
+                  <span className="flex items-end gap-0.5 shrink-0">
+                    <span className="w-1 h-1 rounded-full bg-accent-cyan animate-bounce" />
+                    <span className="w-1 h-1 rounded-full bg-accent-cyan animate-bounce [animation-delay:120ms]" />
+                    <span className="w-1 h-1 rounded-full bg-accent-cyan animate-bounce [animation-delay:240ms]" />
+                  </span>
+                  <span className="truncate">
+                    {typingUsers.length === 1
+                      ? `${typingUsers[0].name} ${typingStatusLabel(typingUsers[0].status)}`
+                      : typingUsers.length === 2
+                      ? `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`
+                      : 'Several people are typing…'}
+                  </span>
+                </span>
+              ) : isChannel ? (
+                'Broadcast Channel'
+              ) : isGroup ? (
+                'Group Chat'
+              ) : isBot ? (
+                'Bot'
+              ) : (
+                'Online'
+              )}
             </div>
           </div>
         </div>
@@ -4112,13 +4319,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       })()}
 
       {/* Forum Topics Bar for Supergroups */}
-      {forumTopics.length > 0 && (
-        <ForumTopicsBar
-          topics={forumTopics}
-          activeTopicId={activeTopicId}
-          onSelectTopic={(topicId) => setActiveTopicId(topicId)}
-        />
-      )}
+      {Boolean(chatDetails?.isForum ?? chat?.isForum) &&
+        (forumTopics.length > 0 || Boolean(chatDetails?.canManageTopics)) && (
+          <ForumTopicsBar
+            topics={forumTopics}
+            activeTopicId={activeTopicId}
+            onSelectTopic={(topicId) => setActiveTopicId(topicId)}
+            canManage={Boolean(chatDetails?.canManageTopics)}
+            onManage={() => setIsForumTopicsModalOpen(true)}
+          />
+        )}
 
       {/* Saved Messages 2.0 Dual-Pane Filter & Tags Bar */}
       {chat?.isSavedMessages && (
@@ -4553,8 +4763,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       </div>
                     )}
 
-                    {/* Reply Quote Banner */}
-                    {msg.replyToMsgId && (() => {
+                    {/* Reply Quote Banner (hidden for the topic root itself) */}
+                    {msg.replyToMsgId && msg.replyToMsgId !== activeTopicId && (() => {
                       const repliedMsg = messages.find((m) => m.id === msg.replyToMsgId)
                       const rName = msg.replyTo?.senderName || repliedMsg?.senderName || 'Reply'
                       const rSenderId = msg.replyTo?.senderId || repliedMsg?.senderId
@@ -5198,6 +5408,37 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           </div>
         )}
 
+        {/* Edit Message Bar above Input */}
+        {editingMessage && (
+          <div className="px-4 py-2 bg-accent-cyan/10 border-b border-accent-cyan/20 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2 duration-150 backdrop-blur-md">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-1 self-stretch bg-accent-cyan rounded-full shrink-0" />
+              <Pencil className="w-4 h-4 text-accent-cyan shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-semibold text-accent-cyan">Editing message</div>
+                <div
+                  dir={isRTL(editingMessage.text) ? 'rtl' : 'ltr'}
+                  className="text-xs text-gray-300 truncate font-normal leading-normal"
+                >
+                  {editingMessage.text || 'Media message'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMessage(null)
+                setInputText(editingDraftBackupRef.current)
+                setTimeout(() => textareaRef.current?.focus(), 50)
+              }}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer shrink-0"
+              title="Cancel editing (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Feature 22: Docked Interactive Composer Link Preview Bar */}
         {(() => {
           const detectedUrl = extractFirstUrl(inputText)
@@ -5729,13 +5970,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <textarea
                     ref={textareaRef}
                     dir={isRTL(inputText) ? 'rtl' : 'ltr'}
-                    placeholder="Write a message... (Enter to send, Shift+Enter for newline, Alt+F to forward)"
+                    placeholder={editingMessage ? 'Edit message...' : 'Write a message... (Enter to send, Shift+Enter for newline, Alt+F to forward)'}
                     value={inputText}
                     rows={1}
                     style={{ maxHeight: '160px' }}
                     onChange={(e) => {
                       const val = e.target.value
                       setInputText(val)
+                      if (val.trim() && chat && Date.now() - lastTypingSentRef.current > 3000) {
+                        lastTypingSentRef.current = Date.now()
+                        window.guidegram.sendTyping(chat.accountId, chat.id, 'typing').catch(() => {})
+                      }
                       const cursorPos = e.target.selectionEnd || val.length
                       const textBefore = val.slice(0, cursorPos)
                       const match = textBefore.match(/@([a-zA-Z0-9_\u0600-\u06FF]*)$/)
@@ -5766,6 +6011,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           applyTextFormat('__')
                           return
                         }
+                      }
+
+                      if (e.key === 'Escape' && editingMessage) {
+                        e.preventDefault()
+                        setEditingMessage(null)
+                        setInputText(editingDraftBackupRef.current)
+                        return
                       }
 
                       if (e.key === 'Escape' && replyMessage) {
@@ -6047,7 +6299,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             {/* Drawer Header */}
             <div className="h-16 px-5 border-b border-white/5 flex items-center justify-between shrink-0">
               <div className="text-sm font-bold text-gray-100">
-                {isChannel ? 'Channel Info' : isGroup ? 'Group Info' : 'User Info'}
+                {isChannel ? t('info.channel') : isGroup ? t('info.group') : t('info.user')}
               </div>
               <button
                 onClick={() => setIsInfoOpen(false)}
@@ -6109,22 +6361,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   {isChannel ? (
                     <span className="flex items-center gap-1 text-primary-400">
                       <Radio className="w-3 h-3" />
-                      <span>Broadcast Channel</span>
+                      <span>{t('info.broadcast_channel')}</span>
                     </span>
                   ) : isGroup ? (
                     <span className="flex items-center gap-1 text-accent-cyan">
                       <Users className="w-3 h-3" />
-                      <span>Group Chat</span>
+                      <span>{t('info.group_chat')}</span>
                     </span>
                   ) : isBot ? (
                     <span className="flex items-center gap-1 text-accent-violet">
                       <Bot className="w-3 h-3" />
-                      <span>Bot</span>
+                      <span>{t('info.bot')}</span>
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-gray-300">
                       <User className="w-3 h-3" />
-                      <span>Personal Contact</span>
+                      <span>{t('info.personal_contact')}</span>
                     </span>
                   )}
                 </div>
@@ -6193,10 +6445,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 <div className="p-3 rounded-2xl bg-dark-850/90 border border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-400 text-xs">
                     <Users className="w-4 h-4 text-primary-400" />
-                    <span>{isChannel ? 'Subscribers' : 'Members'}</span>
+                    <span>{isChannel ? t('info.subscribers') : t('info.members')}</span>
                   </div>
                   <span className="text-xs font-bold text-gray-100">
-                    {formatNumber(chatDetails.membersCount)}
+                    {formatLocalizedNumber(chatDetails.membersCount)}
                   </span>
                 </div>
               )}
@@ -6256,7 +6508,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {chatDetails?.username && (
                 <div className="p-3 rounded-2xl bg-dark-850/90 border border-white/5 space-y-1">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Username
+                    {t('info.username')}
                   </div>
                   <div className="flex items-center justify-between">
                     <button
@@ -6275,7 +6527,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         showToast(`Copied @${chatDetails.username}`)
                       }}
                       className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-dark-750 transition-colors cursor-pointer"
-                      title="Copy username"
+                      title={t('info.copy_username')}
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
@@ -6287,7 +6539,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {chatDetails?.about && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-1">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    About / Description
+                    {t('info.about')}
                   </div>
                   <div
                     dir={isRTL(chatDetails.about) ? 'rtl' : 'ltr'}
@@ -6302,7 +6554,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <div className="p-3 rounded-2xl bg-dark-850/90 border border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <Hash className="w-4 h-4 text-primary-400" />
-                  <span>{chat.isUser ? 'Numeric User ID' : 'Numeric Chat ID'}</span>
+                  <span>{chat.isUser ? t('info.numeric_user_id') : t('info.numeric_chat_id')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-mono text-xs font-bold text-gray-200">{chat.id}</span>
@@ -6310,12 +6562,87 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     type="button"
                     onClick={handleCopyChatId}
                     className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-dark-750 transition-colors cursor-pointer"
-                    title={chat.isUser ? 'Copy User ID' : 'Copy numeric ID'}
+                    title={chat.isUser ? t('info.copy_user_id') : t('info.copy_chat_id')}
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
+
+              {/* Invite Link Card for Groups & Channels */}
+              {(chat.isGroup || chat.isChannel) &&
+                (chat.isChannel
+                  ? chatDetails?.isAdmin || chatDetails?.isCreator
+                  : chatDetails?.permissionsMatrix?.inviteUsers !== false) && (
+                  <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        <LinkIcon className="w-3.5 h-3.5 text-accent-cyan" />
+                        <span>{t('info.invite_link')}</span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isExportingInvite}
+                        onClick={async () => {
+                          if (!chat) return
+                          if (inviteLink) {
+                            await copyTextToClipboard(inviteLink)
+                            showToast('Invite link copied')
+                            return
+                          }
+                          setIsExportingInvite(true)
+                          try {
+                            const link = await window.guidegram.exportChatInvite(
+                              chat.accountId,
+                              chat.id
+                            )
+                            if (link) {
+                              setInviteLink(link)
+                              await copyTextToClipboard(link)
+                              showToast('Invite link created & copied')
+                            } else {
+                              showToast('Could not create invite link')
+                            }
+                          } catch (err: any) {
+                            showToast(`Failed to create invite link: ${err?.message || err}`)
+                          } finally {
+                            setIsExportingInvite(false)
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/25 text-accent-cyan text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        {isExportingInvite ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : inviteLink ? (
+                          <Copy className="w-3 h-3" />
+                        ) : (
+                          <LinkIcon className="w-3 h-3" />
+                        )}
+                        <span>{inviteLink ? t('info.invite_copy') : t('info.invite_create')}</span>
+                      </button>
+                    </div>
+                    {inviteLink ? (
+                      <div className="font-mono text-[11px] text-accent-cyan break-all select-text leading-relaxed">
+                        {inviteLink}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-400 leading-normal">
+                        {t('info.invite_hint')}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsInviteLinksModalOpen(true)}
+                      className="w-full pt-2 mt-0.5 border-t border-white/5 flex items-center justify-between gap-2 text-[11px] font-bold text-gray-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Settings className="w-3.5 h-3.5 text-accent-cyan" />
+                        {t('info.invite_manage')}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                    </button>
+                  </div>
+                )}
 
               {/* Group Statistics Action Card */}
               {chat.isGroup && (
@@ -6368,30 +6695,39 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {chat.isGroup && !chat.isChannel && !chatDetails?.isBroadcast && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Chat Permissions</span>
-                    <span className="text-[9px] text-gray-500 font-mono">Permissions Matrix</span>
+                    <span>{t('info.chat_permissions')}</span>
+                    <span className="text-[9px] text-gray-500 font-mono">{t('info.permissions_matrix')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {[
-                      { key: 'sendMessages', label: 'Send Messages' },
-                      { key: 'sendMedia', label: 'Send Media' },
-                      { key: 'sendStickers', label: 'Stickers & GIFs' },
-                      { key: 'sendPolls', label: 'Send Polls' },
-                      { key: 'embedLinks', label: 'Embed Links' },
-                      { key: 'inviteUsers', label: 'Add Members' },
-                      { key: 'pinMessages', label: 'Pin Messages' },
-                      { key: 'changeInfo', label: 'Change Info' },
+                      { key: 'sendMessages', label: 'info.perm_send_messages' },
+                      { key: 'sendMedia', label: 'info.perm_send_media' },
+                      { key: 'sendStickers', label: 'info.perm_send_stickers' },
+                      { key: 'sendPolls', label: 'info.perm_send_polls' },
+                      { key: 'embedLinks', label: 'info.perm_embed_links' },
+                      { key: 'inviteUsers', label: 'info.perm_add_members' },
+                      { key: 'pinMessages', label: 'info.perm_pin_messages' },
+                      { key: 'changeInfo', label: 'info.perm_change_info' },
                     ].map((perm) => {
-                      const allowed = chatDetails?.permissionsMatrix
-                        ? chatDetails.permissionsMatrix[perm.key as keyof typeof chatDetails.permissionsMatrix] !== false
-                        : chatDetails?.canSendMessages !== false
+                      const rawRestriction =
+                        chatDetails?.defaultRestrictions?.[
+                          perm.key as keyof NonNullable<typeof chatDetails.defaultRestrictions>
+                        ]
+                      const allowed =
+                        rawRestriction !== undefined
+                          ? rawRestriction !== true
+                          : chatDetails?.permissionsMatrix
+                            ? chatDetails.permissionsMatrix[
+                                perm.key as keyof typeof chatDetails.permissionsMatrix
+                              ] !== false
+                            : chatDetails?.canSendMessages !== false
 
                       return (
                         <div
                           key={perm.key}
                           className="flex items-center justify-between p-1.5 rounded-lg bg-dark-800/80 border border-white/5"
                         >
-                          <span className="text-[11px] text-gray-300 truncate">{perm.label}</span>
+                          <span className="text-[11px] text-gray-300 truncate">{t(perm.label)}</span>
                           <span
                             className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
                               allowed
@@ -6399,7 +6735,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                 : 'bg-accent-rose/15 text-accent-rose border-accent-rose/30'
                             }`}
                           >
-                            {allowed ? 'Allowed' : 'Restricted'}
+                            {allowed ? t('info.allowed') : t('info.restricted')}
                           </span>
                         </div>
                       )
@@ -6462,124 +6798,62 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </div>
               )}
 
-              {/* 64Gram Power Feature: Group Members List with Admin Badges & 1-Click Copy User ID Pills */}
-              {chat.isGroup && (
-                <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    <span className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-primary-400" />
-                      <span>Members & Administrators</span>
-                    </span>
-                    {chatDetails?.participants && (
-                      <span className="font-mono text-gray-400">{chatDetails.participants.length}</span>
-                    )}
+              {/* Member management & chat settings */}
+              {(chat.isGroup || chat.isChannel) && (
+                <button
+                  type="button"
+                  onClick={() => setIsMembersModalOpen(true)}
+                  className="w-full p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 hover:border-primary-500/30 hover:bg-dark-850 transition-colors flex items-center gap-3 text-start cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-primary-500/15 border border-primary-500/25 flex items-center justify-center text-primary-400 shrink-0">
+                    <Users className="w-4 h-4" />
                   </div>
-
-                  {/* Local member search input */}
-                  {chatDetails?.participants && chatDetails.participants.length > 5 && (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Search members..."
-                        value={memberSearchQuery}
-                        onChange={(e) => setMemberSearchQuery(e.target.value)}
-                        className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
-                      />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-gray-100">
+                      {chatDetails?.canManageMembers
+                        ? t('members.manage_title')
+                        : t('members.open')}
                     </div>
-                  )}
-
-                  {/* Participants Scroll List */}
-                  <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
-                    {chatDetails?.participants && chatDetails.participants.length > 0 ? (
-                      chatDetails.participants
-                        .filter((p) => {
-                          if (!memberSearchQuery.trim()) return true
-                          const q = memberSearchQuery.toLowerCase()
-                          return (
-                            (p.name || '').toLowerCase().includes(q) ||
-                            (p.username && p.username.toLowerCase().includes(q)) ||
-                            (p.id || '').includes(q)
-                          )
-                        })
-                        .map((p) => (
-                          <div
-                            key={p.id}
-                            onClick={() => handleOpenUserProfile(p.id, p.name)}
-                            className="p-2 rounded-xl bg-dark-800/80 hover:bg-dark-750 flex items-center justify-between gap-2 border border-white/5 transition-colors group cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Avatar
-                                accountId={chat.accountId}
-                                peerId={p.id}
-                                title={p.name}
-                                avatarUrl={p.avatarUrl}
-                                size="sm"
-                              />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-semibold text-gray-100 truncate">
-                                    {p.name}
-                                  </span>
-                                  {p.role === 'creator' ? (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                                      {p.customTitle || 'Owner'}
-                                    </span>
-                                  ) : p.role === 'admin' ? (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30">
-                                      {p.customTitle || 'Admin'}
-                                    </span>
-                                  ) : p.customTitle ? (
-                                    <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-accent-violet/15 text-accent-violet border border-accent-violet/30">
-                                      {p.customTitle}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                {p.username && (
-                                  <div className="text-[10px] text-gray-400 truncate">@{p.username}</div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Right side: 1-Click Copy User ID Pill + Search button */}
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation()
-                                  await copyTextToClipboard(p.id)
-                                  showToast(`Copied User ID: ${p.id}`)
-                                }}
-                                title={`Copy User ID (${p.id})`}
-                                className="px-1.5 py-0.5 rounded-lg bg-black/40 hover:bg-black/60 text-gray-300 hover:text-white font-mono text-[10px] flex items-center gap-1 border border-white/5 transition-colors cursor-pointer"
-                              >
-                                <Hash className="w-2.5 h-2.5 text-accent-cyan" />
-                                <span>{p.id}</span>
-                                <Copy className="w-2.5 h-2.5 opacity-60" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setIsInfoOpen(false)
-                                  handleSearchFromUser(p.id, p.name)
-                                }}
-                                title={`Search messages from ${p.name}`}
-                                className="p-1 rounded-lg text-gray-400 hover:text-accent-cyan hover:bg-white/5 transition-colors cursor-pointer"
-                              >
-                                <Search className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <div className="text-center py-3 text-xs text-gray-500">
-                        {chatDetails ? 'No members visible' : 'Loading participants...'}
-                      </div>
-                    )}
+                    <div className="text-[10px] text-gray-500 truncate">
+                      {chatDetails?.canManageMembers
+                        ? t('members.manage_subtitle')
+                        : (chatDetails?.isChannel ?? chat.isChannel)
+                          ? t('chat.subscribers_count', {
+                              count: formatLocalizedNumber(chatDetails?.membersCount || 0),
+                            })
+                          : t('chat.members_count', {
+                              count: formatLocalizedNumber(chatDetails?.membersCount || 0),
+                            })}
+                    </div>
                   </div>
-                </div>
+                  <ChevronRight className="w-4 h-4 text-gray-500 rtl:rotate-180 shrink-0" />
+                </button>
               )}
+
+              {chatDetails &&
+                (chatDetails.canChangeInfo ||
+                  chatDetails.canSetDescription ||
+                  chatDetails.canSetSlowMode ||
+                  chatDetails.canManageJoinRequests) && (
+                  <button
+                    type="button"
+                    onClick={() => setIsChatSettingsModalOpen(true)}
+                    className="w-full p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 hover:border-accent-cyan/30 hover:bg-dark-850 transition-colors flex items-center gap-3 text-start cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-accent-cyan/15 border border-accent-cyan/25 flex items-center justify-center text-accent-cyan shrink-0">
+                      <Settings className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-gray-100">
+                        {t('chat_settings.open')}
+                      </div>
+                      <div className="text-[10px] text-gray-500 truncate">
+                        {t('chat_settings.open_hint')}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-500 rtl:rotate-180 shrink-0" />
+                  </button>
+                )}
 
               {/* Notifications Toggle */}
               <div className="p-3 rounded-2xl bg-dark-850/90 border border-white/5 flex items-center justify-between">
@@ -6589,7 +6863,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   ) : (
                     <Volume2 className="w-4 h-4 text-accent-emerald" />
                   )}
-                  <span>Notifications</span>
+                  <span>{t('info.notifications')}</span>
                 </div>
                 <button
                   type="button"
@@ -6600,7 +6874,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       : 'bg-accent-emerald/20 text-accent-emerald border border-accent-emerald/30'
                   }`}
                 >
-                  {isMuted ? 'Muted' : 'Enabled'}
+                  {isMuted ? t('info.muted') : t('info.enabled')}
                 </button>
               </div>
 
@@ -6617,7 +6891,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all shadow-glow flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  <span>Open in Telegram Official</span>
+                  <span>{t('info.open_telegram_official')}</span>
                 </button>
               </div>
             </div>
@@ -6753,6 +7027,58 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <span className="text-[10px]">Mention</span>
                 </button>
               </div>
+
+              {/* Block / Unblock User */}
+              {userProfilePeerId !== chat?.id && !userProfileDetails?.isBot && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!chat || !userProfilePeerId) return
+                    const nextBlocked = !userProfileDetails?.isBlocked
+                    try {
+                      await window.guidegram.blockUser(
+                        chat.accountId,
+                        userProfilePeerId,
+                        nextBlocked
+                      )
+                      const details = await window.guidegram.getChatDetails(
+                        chat.accountId,
+                        userProfilePeerId
+                      )
+                      if (details) setUserProfileDetails(details)
+                      if (String(chat.id) === String(userProfilePeerId)) {
+                        const current = await window.guidegram.getChatDetails(
+                          chat.accountId,
+                          chat.id
+                        )
+                        if (current) setChatDetails(current)
+                      }
+                      showToast(nextBlocked ? 'User blocked' : 'User unblocked')
+                    } catch (err: any) {
+                      showToast(
+                        `Failed to ${nextBlocked ? 'block' : 'unblock'} user: ${err?.message || err}`
+                      )
+                    }
+                  }}
+                  className={`w-full p-3 rounded-2xl border flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                    userProfileDetails?.isBlocked
+                      ? 'bg-accent-emerald/10 hover:bg-accent-emerald/20 border-accent-emerald/25 text-accent-emerald'
+                      : 'bg-accent-rose/10 hover:bg-accent-rose/20 border-accent-rose/25 text-accent-rose'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5 text-xs font-semibold">
+                    {userProfileDetails?.isBlocked ? (
+                      <UserCheck className="w-4 h-4" />
+                    ) : (
+                      <Ban className="w-4 h-4" />
+                    )}
+                    <span>{userProfileDetails?.isBlocked ? 'Unblock User' : 'Block User'}</span>
+                  </span>
+                  <span className="text-[10px] opacity-70">
+                    {userProfileDetails?.isBlocked ? 'Restore contact' : 'Stop messages'}
+                  </span>
+                </button>
+              )}
 
               {/* Bio / About */}
               {userProfileDetails?.about && (
@@ -6960,6 +7286,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             type="button"
             onClick={() => {
               setReplyMessage(contextMenu.message)
+              setEditingMessage(null)
               setContextMenu(null)
               setTimeout(() => textareaRef.current?.focus(), 50)
             }}
@@ -6968,6 +7295,43 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <Reply className="w-3.5 h-3.5 shrink-0 text-primary-400" />
             <span>{t('app.reply') || 'Reply'}</span>
           </button>
+
+          {/* Edit own text message */}
+          {contextMenu.message.isOutgoing &&
+            !contextMenu.message.isService &&
+            !!contextMenu.message.text?.trim() && (
+              <button
+                type="button"
+                onClick={() => {
+                  editingDraftBackupRef.current = inputText
+                  setEditingMessage(contextMenu.message)
+                  setReplyMessage(null)
+                  setInputText(contextMenu.message.text)
+                  setContextMenu(null)
+                  setTimeout(() => textareaRef.current?.focus(), 50)
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-accent-cyan hover:text-white hover:bg-accent-cyan/15 transition-colors text-left cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                <span>Edit Message</span>
+              </button>
+            )}
+
+          {/* Pin / Unpin message */}
+          {canPinMessage() && (
+            <button
+              type="button"
+              onClick={async () => {
+                const msg = contextMenu.message
+                setContextMenu(null)
+                await handleTogglePinMessage(msg)
+              }}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+            >
+              <Pin className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+              <span>{isMessagePinned(contextMenu.message.id) ? 'Unpin Message' : 'Pin Message'}</span>
+            </button>
+          )}
 
           {/* Quote Selection into Input (if text selected) */}
           {contextMenu.selectedText && (
@@ -7506,6 +7870,83 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chatId={chat.id}
           chatTitle={chat.title}
           onClose={() => setIsAdminLogOpen(false)}
+        />
+      )}
+
+      {/* 11b. Group / Channel Member Management */}
+      {isMembersModalOpen && chat && (
+        <ChatMembersModal
+          isOpen={isMembersModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chatDetails?.title || chat.title}
+          details={chatDetails}
+          onClose={() => setIsMembersModalOpen(false)}
+          onOpenProfile={(peerId, name) => {
+            setIsMembersModalOpen(false)
+            setIsInfoOpen(false)
+            handleOpenUserProfile(peerId, name)
+          }}
+          onSearchMessages={(peerId, name) => {
+            setIsMembersModalOpen(false)
+            setIsInfoOpen(false)
+            handleSearchFromUser(peerId, name)
+          }}
+          onChanged={() => {
+            if (!window.guidegram?.getChatDetails) return
+            window.guidegram
+              .getChatDetails(chat.accountId, chat.id)
+              .then((next) => {
+                if (next) setChatDetails(next)
+              })
+              .catch(() => {})
+          }}
+        />
+      )}
+
+      {/* 11c. Group / Channel Settings */}
+      {isChatSettingsModalOpen && chat && (
+        <ChatSettingsModal
+          isOpen={isChatSettingsModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chatDetails?.title || chat.title}
+          details={chatDetails}
+          onClose={() => setIsChatSettingsModalOpen(false)}
+          onUpdated={(next) => setChatDetails(next)}
+        />
+      )}
+
+      {/* 11d. Forum Topic Management */}
+      {isForumTopicsModalOpen && chat && (
+        <ForumTopicsModal
+          isOpen={isForumTopicsModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chatDetails?.title || chat.title}
+          topics={forumTopics}
+          canManage={Boolean(chatDetails?.canManageTopics)}
+          onClose={() => setIsForumTopicsModalOpen(false)}
+          onTopicsChange={(next) => {
+            setForumTopics(next)
+            if (activeTopicId !== null && !next.some((topic) => topic.id === activeTopicId)) {
+              setActiveTopicId(null)
+            }
+          }}
+          onOpenTopic={(topicId) => setActiveTopicId(topicId)}
+        />
+      )}
+
+      {/* 11e. Invite Link Management */}
+      {isInviteLinksModalOpen && chat && (
+        <ChatInviteLinksModal
+          isOpen={isInviteLinksModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chatDetails?.title || chat.title}
+          details={chatDetails}
+          onClose={() => setIsInviteLinksModalOpen(false)}
+          onInviteLinkChange={(link) => setInviteLink(link)}
         />
       )}
 

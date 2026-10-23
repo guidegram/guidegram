@@ -17,6 +17,9 @@ importers:
       '@mtcute/node':
         specifier: 0.32.1
         version: 0.32.1
+      '@mtcute/wasm':
+        specifier: 0.32.0
+        version: 0.32.0
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

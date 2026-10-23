@@ -20,6 +20,8 @@ import {
   CustomEmojiPayload,
   ForumTopicItem,
   ContactItem,
+  CallLogResult,
+  ChatStatsResult,
   ScheduledMessageItem,
   StarGiftItem,
   ActiveSessionItem,
@@ -29,10 +31,17 @@ import {
   StickerItem,
   StoryItemPayload,
   PeerStoriesPayload,
+  StoryMediaResult,
+  SendStoryOptions,
+  SendStoryResult,
+  ActiveStoryPeer,
+  ActiveStoriesResult,
   ChannelBoostStatus,
   TwoFactorStatus,
   CacheStats,
   MyFullProfile,
+  EmojiStatusesResult,
+  SetEmojiStatusOptions,
   PrivacySecuritySettings,
   AutoHarvestStatus,
   WarpStatus,
@@ -51,6 +60,21 @@ import {
   SavedReactionTagItem,
   GroupCallInfo,
   GroupCallParticipantItem,
+  ChatMembersResult,
+  ChatMembersQuery,
+  AddChatMembersResult,
+  ChatAdminRightsPayload,
+  ChatRestrictionsPayload,
+  ChatSettingsInput,
+  ChatSettingsUpdateResult,
+  ChatInviteLink,
+  ChatInviteLinksResult,
+  ChatInviteLinksQuery,
+  ChatInviteLinkInput,
+  ChatInviteLinkMutationResult,
+  ForumTopicInput,
+  ForumTopicMutationResult,
+  ForumTopicCreateResult,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -95,6 +119,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-dialogs', { accountId, limit, offsetDate, offsetId }),
   getContacts: (accountId: string): Promise<ContactItem[]> =>
     ipcRenderer.invoke('telegram:get-contacts', { accountId }),
+  getCallLog: (
+    accountId: string,
+    limit?: number,
+    offsetId?: number,
+    missedOnly?: boolean
+  ): Promise<CallLogResult> =>
+    ipcRenderer.invoke('telegram:get-call-log', { accountId, limit, offsetId, missedOnly }),
+  getChatStats: (accountId: string, chatId: string): Promise<ChatStatsResult> =>
+    ipcRenderer.invoke('telegram:get-chat-stats', { accountId, chatId }),
   getMessages: (
     accountId: string,
     chatId: string,
@@ -111,6 +144,69 @@ const guidegramAPI = {
     options?: SendMessageOptions
   ): Promise<MessageItem> =>
     ipcRenderer.invoke('telegram:send-message', { accountId, chatId, text, replyToMsgId, options }),
+  editMessage: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    text: string
+  ): Promise<MessageItem> =>
+    ipcRenderer.invoke('telegram:edit-message', { accountId, chatId, messageId, text }),
+  pinMessage: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    notify?: boolean,
+    bothSides?: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:pin-message', { accountId, chatId, messageId, notify, bothSides }),
+  unpinMessage: (
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:unpin-message', { accountId, chatId, messageId }),
+  sendTyping: (
+    accountId: string,
+    chatId: string,
+    status?: 'typing' | 'cancel'
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-typing', { accountId, chatId, status }),
+  exportChatInvite: (accountId: string, chatId: string): Promise<string | null> =>
+    ipcRenderer.invoke('telegram:export-chat-invite', { accountId, chatId }),
+  joinChatInvite: (
+    accountId: string,
+    inviteLink: string
+  ): Promise<{ status: 'ok' | 'request_sent' | 'webview'; chatId?: string; title?: string }> =>
+    ipcRenderer.invoke('telegram:join-chat-invite', { accountId, inviteLink }),
+  getChatInviteLinks: (
+    accountId: string,
+    chatId: string,
+    query?: ChatInviteLinksQuery
+  ): Promise<ChatInviteLinksResult> =>
+    ipcRenderer.invoke('telegram:get-chat-invite-links', { accountId, chatId, query }),
+  createChatInviteLink: (
+    accountId: string,
+    chatId: string,
+    input: ChatInviteLinkInput
+  ): Promise<ChatInviteLink> =>
+    ipcRenderer.invoke('telegram:create-chat-invite-link', { accountId, chatId, input }),
+  editChatInviteLink: (
+    accountId: string,
+    chatId: string,
+    link: string,
+    input: ChatInviteLinkInput
+  ): Promise<ChatInviteLinkMutationResult> =>
+    ipcRenderer.invoke('telegram:edit-chat-invite-link', { accountId, chatId, link, input }),
+  revokeChatInviteLink: (
+    accountId: string,
+    chatId: string,
+    link: string
+  ): Promise<ChatInviteLinkMutationResult> =>
+    ipcRenderer.invoke('telegram:revoke-chat-invite-link', { accountId, chatId, link }),
+  deleteChatInviteLink: (accountId: string, chatId: string, link: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-chat-invite-link', { accountId, chatId, link }),
+  blockUser: (accountId: string, userId: string, blocked: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:block-user', { accountId, userId, blocked }),
   sendMedia: (
     accountId: string,
     chatId: string,
@@ -200,6 +296,68 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:save-media-to-file', { accountId, chatId, messageId, defaultName }),
   getChatDetails: (accountId: string, chatId: string): Promise<ChatDetails> =>
     ipcRenderer.invoke('telegram:get-chat-details', { accountId, chatId }),
+  getChatMembers: (
+    accountId: string,
+    chatId: string,
+    options?: ChatMembersQuery
+  ): Promise<ChatMembersResult> =>
+    ipcRenderer.invoke('telegram:get-chat-members', { accountId, chatId, options }),
+  addChatMembers: (
+    accountId: string,
+    chatId: string,
+    userIds: string[]
+  ): Promise<AddChatMembersResult> =>
+    ipcRenderer.invoke('telegram:add-chat-members', { accountId, chatId, userIds }),
+  kickChatMember: (accountId: string, chatId: string, userId: string): Promise<void> =>
+    ipcRenderer.invoke('telegram:kick-chat-member', { accountId, chatId, userId }),
+  banChatMember: (
+    accountId: string,
+    chatId: string,
+    userId: string,
+    untilDate?: number
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:ban-chat-member', { accountId, chatId, userId, untilDate }),
+  unbanChatMember: (accountId: string, chatId: string, userId: string): Promise<void> =>
+    ipcRenderer.invoke('telegram:unban-chat-member', { accountId, chatId, userId }),
+  restrictChatMember: (
+    accountId: string,
+    chatId: string,
+    userId: string,
+    restrictions: ChatRestrictionsPayload
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:restrict-chat-member', {
+      accountId,
+      chatId,
+      userId,
+      restrictions,
+    }),
+  promoteChatMember: (
+    accountId: string,
+    chatId: string,
+    userId: string,
+    rights: ChatAdminRightsPayload,
+    rank?: string
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:promote-chat-member', {
+      accountId,
+      chatId,
+      userId,
+      rights,
+      rank,
+    }),
+  setChatMemberRank: (
+    accountId: string,
+    chatId: string,
+    userId: string,
+    rank: string | null
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:set-chat-member-rank', { accountId, chatId, userId, rank }),
+  updateChatSettings: (
+    accountId: string,
+    chatId: string,
+    settings: ChatSettingsInput
+  ): Promise<ChatSettingsUpdateResult> =>
+    ipcRenderer.invoke('telegram:update-chat-settings', { accountId, chatId, settings }),
   resolvePeer: (accountId: string, target: string): Promise<any> =>
     ipcRenderer.invoke('telegram:resolve-peer', { accountId, target }),
   toggleChatNotifications: (accountId: string, chatId: string, mute: boolean): Promise<boolean> =>
@@ -220,6 +378,26 @@ const guidegramAPI = {
   // Forum Topics, Scheduled Messages, Reactions & Star Gifts
   getForumTopics: (accountId: string, chatId: string): Promise<ForumTopicItem[]> =>
     ipcRenderer.invoke('telegram:get-forum-topics', { accountId, chatId }),
+  setChatForumEnabled: (accountId: string, chatId: string, enabled: boolean): Promise<ChatDetails> =>
+    ipcRenderer.invoke('telegram:set-chat-forum-enabled', { accountId, chatId, enabled }),
+  createForumTopic: (accountId: string, chatId: string, title: string): Promise<ForumTopicCreateResult> =>
+    ipcRenderer.invoke('telegram:create-forum-topic', { accountId, chatId, title }),
+  editForumTopic: (
+    accountId: string,
+    chatId: string,
+    topicId: number,
+    input: ForumTopicInput
+  ): Promise<ForumTopicMutationResult> =>
+    ipcRenderer.invoke('telegram:edit-forum-topic', { accountId, chatId, topicId, input }),
+  setForumTopicPinned: (
+    accountId: string,
+    chatId: string,
+    topicId: number,
+    pinned: boolean
+  ): Promise<ForumTopicMutationResult> =>
+    ipcRenderer.invoke('telegram:set-forum-topic-pinned', { accountId, chatId, topicId, pinned }),
+  deleteForumTopic: (accountId: string, chatId: string, topicId: number): Promise<ForumTopicMutationResult> =>
+    ipcRenderer.invoke('telegram:delete-forum-topic', { accountId, chatId, topicId }),
   getScheduledMessages: (accountId: string, chatId: string): Promise<ScheduledMessageItem[]> =>
     ipcRenderer.invoke('telegram:get-scheduled-messages', { accountId, chatId }),
   sendScheduledMessageNow: (accountId: string, chatId: string, messageId: number): Promise<boolean> =>
@@ -416,10 +594,30 @@ const guidegramAPI = {
     fileRef?: string
   ): Promise<{ format: 'lottie' | 'image' | 'video'; url?: string; data?: any } | null> =>
     ipcRenderer.invoke('telegram:get-sticker-data', { accountId, documentId, accessHash, fileRef }),
+  getAllStories: (accountId: string): Promise<ActiveStoriesResult> =>
+    ipcRenderer.invoke('telegram:get-all-stories', { accountId }),
   getPeerStories: (accountId: string, peerId: string): Promise<PeerStoriesPayload | null> =>
     ipcRenderer.invoke('telegram:get-peer-stories', { accountId, peerId }),
+  getStoryMedia: (
+    accountId: string,
+    peerId: string,
+    storyId: number
+  ): Promise<StoryMediaResult> =>
+    ipcRenderer.invoke('telegram:get-story-media', { accountId, peerId, storyId }),
   readStories: (accountId: string, peerId: string, maxId: number): Promise<boolean> =>
     ipcRenderer.invoke('telegram:read-stories', { accountId, peerId, maxId }),
+  sendStory: (
+    accountId: string,
+    filePath: string,
+    options?: SendStoryOptions
+  ): Promise<SendStoryResult> =>
+    ipcRenderer.invoke('telegram:send-story', { accountId, filePath, options }),
+  deleteStory: (
+    accountId: string,
+    storyId: number,
+    peerId?: string
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-story', { accountId, storyId, peerId }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>
@@ -428,6 +626,13 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-my-full-profile', { accountId }),
   getPrivacySettings: (accountId: string): Promise<PrivacySecuritySettings> =>
     ipcRenderer.invoke('telegram:get-privacy-settings', { accountId }),
+  getEmojiStatuses: (accountId: string): Promise<EmojiStatusesResult> =>
+    ipcRenderer.invoke('telegram:get-emoji-statuses', { accountId }),
+  setEmojiStatus: (
+    accountId: string,
+    options: SetEmojiStatusOptions
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:set-emoji-status', { accountId, ...options }),
   createGroup: (accountId: string, title: string, userIds: string[]): Promise<DialogItem | null> =>
     ipcRenderer.invoke('telegram:create-group', { accountId, title, userIds }),
   createChannel: (accountId: string, title: string, about: string, isMegagroup?: boolean): Promise<DialogItem | null> =>

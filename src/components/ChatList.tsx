@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck } from 'lucide-react'
-import { DialogItem, AccountInfo, MessageItem, CloudFolderItem } from '../types/telegram'
+import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus } from 'lucide-react'
+import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
 import { Avatar } from './Avatar'
 import { isRTL } from '../utils/textUtils'
@@ -8,6 +8,7 @@ import { CustomEmojiView } from './ChatViewport'
 import { useI18n } from '../i18n'
 
 const StoryViewerModal = React.lazy(() => import('./StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })))
+const StoryComposerModal = React.lazy(() => import('./StoryComposerModal').then((m) => ({ default: m.StoryComposerModal })))
 
 interface ChatListProps {
   account: AccountInfo | null
@@ -49,6 +50,9 @@ export const ChatList: React.FC<ChatListProps> = ({
   const [globalMessages, setGlobalMessages] = useState<MessageItem[]>([])
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false)
   const [viewingStoryPeer, setViewingStoryPeer] = useState<{ id: string; title: string } | null>(null)
+  const [isStoryComposerOpen, setIsStoryComposerOpen] = useState(false)
+  const [activeStoryPeers, setActiveStoryPeers] = useState<ActiveStoryPeer[]>([])
+  const [storyRefreshKey, setStoryRefreshKey] = useState(0)
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -83,6 +87,60 @@ export const ChatList: React.FC<ChatListProps> = ({
       localStorage.removeItem('guidegram_recent_searches')
     } catch (_) {}
   }
+
+  const handleOpenStory = useCallback((peerId: string, title: string) => {
+    setViewingStoryPeer({ id: peerId, title })
+  }, [])
+
+  const handleCloseStoryViewer = useCallback(() => {
+    const closedPeerId = viewingStoryPeer?.id
+    if (closedPeerId && !ghostMode) {
+      // Optimistically clear the ring; the refresh below reconciles with the server.
+      setActiveStoryPeers((prev) =>
+        prev.map((peer) =>
+          peer.peerId === closedPeerId ? { ...peer, hasUnread: false } : peer
+        )
+      )
+    }
+    setViewingStoryPeer(null)
+    window.setTimeout(() => setStoryRefreshKey((key) => key + 1), 700)
+  }, [viewingStoryPeer?.id, ghostMode])
+
+  const handleStoryPosted = useCallback(() => {
+    setStoryRefreshKey((key) => key + 1)
+    // Telegram can take a moment to expose the new story in getAllStories.
+    window.setTimeout(() => setStoryRefreshKey((key) => key + 1), 1500)
+  }, [])
+
+  // Load active stories for rings and the story strip.
+  useEffect(() => {
+    let cancelled = false
+    setActiveStoryPeers([])
+
+    if (
+      !account?.id ||
+      account.status !== 'connected' ||
+      !window.guidegram?.getAllStories
+    ) {
+      return
+    }
+
+    window.guidegram
+      .getAllStories(account.id)
+      .then((result) => {
+        if (cancelled) return
+        setActiveStoryPeers(result?.peers || [])
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.warn('Failed to load active stories:', err)
+        setActiveStoryPeers([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [account?.id, account?.status, storyRefreshKey])
 
   // Filter local dialogs based on active tab & search query
   const cleanQuery = searchQuery.trim().toLowerCase().replace(/^@/, '')
@@ -180,6 +238,8 @@ export const ChatList: React.FC<ChatListProps> = ({
 
     return true
   })
+
+  const storyPeerMap = new Map(activeStoryPeers.map((peer) => [peer.peerId, peer]))
 
   // Debounced Telegram MTProto Global Search
   const searchTimeoutRef = useRef<any>(null)
@@ -387,6 +447,77 @@ export const ChatList: React.FC<ChatListProps> = ({
         )}
       </div>
 
+      {/* Active Stories Strip */}
+      {!searchQuery.trim() && account?.status === 'connected' && (
+        <div className="shrink-0 border-b border-white/5 px-2 pt-2 pb-2">
+          <div className="flex items-center justify-between px-1 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              {t('stories.title')}
+            </span>
+            {activeStoryPeers.length > 0 && (
+              <span className="text-[10px] font-mono text-gray-500">
+                {formatNumber(activeStoryPeers.length)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-start gap-2.5 overflow-x-auto pb-2.5">
+            <button
+              type="button"
+              onClick={() => setIsStoryComposerOpen(true)}
+              title={t('stories.add')}
+              aria-label={t('stories.add')}
+              className="w-16 shrink-0 flex flex-col items-center gap-1.5 cursor-pointer group"
+            >
+              <div className="rounded-[14px] p-[2px] bg-gradient-to-tr from-primary-500/60 via-fuchsia-500/45 to-amber-400/45 transition-transform group-hover:scale-[1.03]">
+                <div className="rounded-[12px] bg-dark-850 p-[1.5px]">
+                  <div className="w-8 h-8 rounded-xl bg-[#0e1621] flex items-center justify-center text-primary-400 group-hover:text-white group-hover:bg-primary-500/20 transition-colors">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] leading-4 text-gray-300 truncate w-full text-center">
+                {t('stories.add')}
+              </span>
+            </button>
+            {activeStoryPeers.map((peer) => (
+              <button
+                key={peer.peerId}
+                type="button"
+                onClick={() =>
+                  handleOpenStory(peer.peerId, peer.isSelf ? t('stories.mine') : peer.title)
+                }
+                title={
+                  peer.hasUnread
+                    ? t('stories.new_count', { count: formatNumber(peer.storyCount) })
+                    : t('stories.count', { count: formatNumber(peer.storyCount) })
+                }
+                className="w-16 shrink-0 flex flex-col items-center gap-1.5 cursor-pointer group"
+              >
+                <div
+                  className={`rounded-[14px] p-[2px] transition-transform group-hover:scale-[1.03] ${
+                    peer.hasUnread || peer.isSelf
+                      ? 'bg-gradient-to-tr from-primary-500 via-fuchsia-500 to-amber-400'
+                      : 'bg-white/15'
+                  }`}
+                >
+                  <div className="rounded-[12px] bg-dark-850 p-[1.5px]">
+                    <Avatar
+                      accountId={account?.id}
+                      peerId={peer.peerId}
+                      title={peer.title}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+                <span className="text-[10px] leading-4 text-gray-300 truncate w-full text-center">
+                  {peer.isSelf ? t('stories.mine') : peer.title}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Chat List Viewport */}
       <div
         onScroll={(e) => {
@@ -419,6 +550,8 @@ export const ChatList: React.FC<ChatListProps> = ({
                     formatNumber={formatNumber}
                     t={t}
                     onSelect={handleSelectDialog}
+                    story={storyPeerMap.get(dialog.id)}
+                    onOpenStory={handleOpenStory}
                   />
                 ))}
               </div>
@@ -527,6 +660,8 @@ export const ChatList: React.FC<ChatListProps> = ({
               formatNumber={formatNumber}
               t={t}
               onSelect={handleSelectDialog}
+              story={storyPeerMap.get(dialog.id)}
+              onOpenStory={handleOpenStory}
             />
           ))
         )}
@@ -543,11 +678,24 @@ export const ChatList: React.FC<ChatListProps> = ({
         <React.Suspense fallback={null}>
           <StoryViewerModal
             isOpen={!!viewingStoryPeer}
-            onClose={() => setViewingStoryPeer(null)}
+            onClose={handleCloseStoryViewer}
             accountId={account.id}
             peerId={viewingStoryPeer.id}
             peerTitle={viewingStoryPeer.title}
             ghostMode={ghostMode}
+            onDeleted={handleStoryPosted}
+          />
+        </React.Suspense>
+      )}
+
+      {isStoryComposerOpen && account && (
+        <React.Suspense fallback={null}>
+          <StoryComposerModal
+            isOpen={isStoryComposerOpen}
+            onClose={() => setIsStoryComposerOpen(false)}
+            accountId={account.id}
+            isPremium={Boolean(account.isPremium)}
+            onPosted={handleStoryPosted}
           />
         </React.Suspense>
       )}
@@ -563,10 +711,12 @@ interface DialogListItemProps {
   formatNumber: (n: number) => string
   t: (key: string, params?: any) => string
   onSelect: (id: string) => void
+  story?: ActiveStoryPeer
+  onOpenStory: (peerId: string, title: string) => void
 }
 
 export const DialogListItem = React.memo<DialogListItemProps>(
-  ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect }) => {
+  ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory }) => {
     return (
       <div
         onClick={() => onSelect(dialog.id)}
@@ -576,14 +726,45 @@ export const DialogListItem = React.memo<DialogListItemProps>(
       >
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            <Avatar
-              accountId={dialog.accountId}
-              peerId={dialog.id}
-              title={dialog.title}
-              initials={dialog.avatarInitials}
-              avatarUrl={dialog.avatarUrl}
-              size="md"
-            />
+            {story ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onOpenStory(dialog.id, dialog.title)
+                }}
+                title={
+                  story.hasUnread
+                    ? t('stories.new_count', { count: formatNumber(story.storyCount) })
+                    : t('stories.count', { count: formatNumber(story.storyCount) })
+                }
+                className={`block rounded-[18px] p-[2px] cursor-pointer transition-transform hover:scale-[1.03] active:scale-95 ${
+                  story.hasUnread
+                    ? 'bg-gradient-to-tr from-primary-500 via-fuchsia-500 to-amber-400'
+                    : 'bg-white/15'
+                }`}
+              >
+                <span className="block rounded-[16px] bg-dark-850 p-[1.5px]">
+                  <Avatar
+                    accountId={dialog.accountId}
+                    peerId={dialog.id}
+                    title={dialog.title}
+                    initials={dialog.avatarInitials}
+                    avatarUrl={dialog.avatarUrl}
+                    size="md"
+                  />
+                </span>
+              </button>
+            ) : (
+              <Avatar
+                accountId={dialog.accountId}
+                peerId={dialog.id}
+                title={dialog.title}
+                initials={dialog.avatarInitials}
+                avatarUrl={dialog.avatarUrl}
+                size="md"
+              />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -706,7 +887,12 @@ export const DialogListItem = React.memo<DialogListItemProps>(
       prev.dialog.isPinned === next.dialog.isPinned &&
       prev.dialog.isMuted === next.dialog.isMuted &&
       prev.dialog.customEmojiStatusId === next.dialog.customEmojiStatusId &&
-      prev.dialog.isPremium === next.dialog.isPremium
+      prev.dialog.isPremium === next.dialog.isPremium &&
+      prev.onOpenStory === next.onOpenStory &&
+      prev.story?.peerId === next.story?.peerId &&
+      prev.story?.maxStoryId === next.story?.maxStoryId &&
+      prev.story?.storyCount === next.story?.storyCount &&
+      prev.story?.hasUnread === next.story?.hasUnread
     )
   }
 )

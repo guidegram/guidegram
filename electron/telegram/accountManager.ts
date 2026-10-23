@@ -3,7 +3,23 @@ import path from 'path'
 import zlib from 'zlib'
 import { app, BrowserWindow, dialog } from 'electron'
 import { TelegramClient, MemoryStorage } from '@mtcute/node'
-import { tl, Long } from '@mtcute/core'
+import { tl, Long, InputMedia } from '@mtcute/core'
+import {
+  getChatMembers as mtcuteGetChatMembers,
+  addChatMembers as mtcuteAddChatMembers,
+  kickChatMember as mtcuteKickChatMember,
+  banChatMember as mtcuteBanChatMember,
+  unbanChatMember as mtcuteUnbanChatMember,
+  restrictChatMember as mtcuteRestrictChatMember,
+  editAdminRights as mtcuteEditAdminRights,
+  editChatMemberRank as mtcuteEditChatMemberRank,
+  setChatTitle as mtcuteSetChatTitle,
+  setChatDescription as mtcuteSetChatDescription,
+  setSlowMode as mtcuteSetSlowMode,
+  toggleJoinRequests as mtcuteToggleJoinRequests,
+  setChatUsername as mtcuteSetChatUsername,
+  setChatDefaultPermissions as mtcuteSetChatDefaultPermissions,
+} from '@mtcute/core/methods.js'
 import { writeStringSession } from '@mtcute/core/utils.js'
 import { convertFromGramjsSession } from '@mtcute/convert'
 import QRCode from 'qrcode'
@@ -30,7 +46,19 @@ import {
   BotCallbackResult,
   CustomEmojiPayload,
   ForumTopicItem,
+  ForumTopicInput,
+  ForumTopicMutationResult,
+  ForumTopicCreateResult,
   ContactItem,
+  CallLogItem,
+  CallLogResult,
+  CallDiscardReason,
+  ChatStatsResult,
+  ChatStatsPayload,
+  StatsValuePair,
+  ChatStatsTopPoster,
+  ChatStatsTopAdmin,
+  ChatStatsTopInviter,
   ScheduledMessageItem,
   StarGiftItem,
   ActiveSessionItem,
@@ -40,9 +68,18 @@ import {
   StickerItem,
   StoryItemPayload,
   PeerStoriesPayload,
+  StoryMediaResult,
+  SendStoryOptions,
+  SendStoryResult,
+  ActiveStoryPeer,
+  ActiveStoriesResult,
   ChannelBoostStatus,
   TwoFactorStatus,
   MyFullProfile,
+  EmojiStatusItem,
+  EmojiStatusSource,
+  EmojiStatusesResult,
+  SetEmojiStatusOptions,
   PrivacySecuritySettings,
   SharedMediaFilterType,
   SharedMediaItem,
@@ -72,6 +109,20 @@ import {
   RichTableCell,
   RichTableRow,
   RichDetailsBlock,
+  ChatMemberPayload,
+  ChatMembersResult,
+  ChatMembersQuery,
+  ChatMemberFilter,
+  AddChatMembersResult,
+  ChatAdminRightsPayload,
+  ChatRestrictionsPayload,
+  ChatSettingsInput,
+  ChatSettingsUpdateResult,
+  ChatInviteLink,
+  ChatInviteLinksResult,
+  ChatInviteLinksQuery,
+  ChatInviteLinkInput,
+  ChatInviteLinkMutationResult,
 } from './types'
 
 export interface ClientHolder {
@@ -2045,9 +2096,7 @@ export class AccountManager {
 
   public async getContacts(accountId: string): Promise<ContactItem[]> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) {
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
-    }
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
       const contacts = await holder.client.getContacts()
@@ -2079,7 +2128,7 @@ export class AccountManager {
         }
       })
     } catch (err: any) {
-      Logger.error(`[AccountManager] getContacts error for :, err`)
+      Logger.error(`[AccountManager] getContacts error for ${accountId}:`, err)
       return []
     }
   }
@@ -3918,6 +3967,7 @@ export class AccountManager {
           isGroup: false,
           isChannel: false,
           isBot: !!u?.bot,
+          isBlocked: !!res.fullUser?.blocked,
           verified: !!u?.verified,
           isPremium: !!u?.premium,
           customEmojiStatusId: u?.emojiStatus?.documentId?.toString(),
@@ -3974,8 +4024,17 @@ export class AccountManager {
         const isCreator = Boolean(c?.creator)
         const adminRights = c?.adminRights
         const isAdmin = isCreator || Boolean(adminRights)
+        const isSupergroup = !c?.broadcast
         const canManageCalls = isCreator || Boolean(adminRights?.manageCall)
+        const canManageTopics = isCreator || Boolean(adminRights?.manageTopics)
         const canViewAdminLog = isCreator || Boolean(res.fullChat?.canViewAdminLog || adminRights)
+        const canChangeInfo = isCreator || Boolean(adminRights?.changeInfo)
+        const canBanMembers = isCreator || Boolean(adminRights?.banUsers)
+        const canAddMembers = isCreator || Boolean(adminRights?.inviteUsers)
+        const canPromoteMembers = isCreator || Boolean(adminRights?.addAdmins)
+        const canManageMembers = isCreator || Boolean(
+          adminRights?.banUsers || adminRights?.inviteUsers || adminRights?.addAdmins || adminRights?.other
+        )
         const canPostMessages = c?.broadcast
           ? (isCreator || Boolean(adminRights?.postMessages))
           : !c?.defaultBannedRights?.sendMessages
@@ -3983,11 +4042,13 @@ export class AccountManager {
         details = {
           id: chatId,
           title: c?.title || 'Channel',
+          username: c?.username || undefined,
           about: res.fullChat?.about,
           membersCount: res.fullChat?.participantsCount,
           isChannel: !!c?.broadcast,
           isBroadcast: !!c?.broadcast,
-          isGroup: !c?.broadcast,
+          isGroup: isSupergroup,
+          isSupergroup,
           isUser: false,
           isBot: false,
           isMuted,
@@ -4002,7 +4063,20 @@ export class AccountManager {
           isCreator,
           isAdmin,
           canManageCalls,
+          canManageTopics,
           canViewAdminLog,
+          canManageMembers,
+          canPromoteMembers,
+          canChangeInfo,
+          canSetDescription: canChangeInfo,
+          canBanMembers,
+          canAddMembers,
+          canSetSlowMode: isSupergroup && canChangeInfo,
+          canManageJoinRequests: isCreator || Boolean(adminRights?.inviteUsers || adminRights?.banUsers),
+          canEditPermissions: isCreator || Boolean(adminRights?.banUsers),
+          defaultRestrictions: this.mapChatRestrictions(c?.defaultBannedRights),
+          slowModeSeconds: isSupergroup ? Number(res.fullChat?.slowmodeSeconds || 0) : 0,
+          joinRequestsEnabled: Boolean(res.fullChat?.joinRequest),
           canSendMessages: canPostMessages,
           permissionsMatrix: {
             sendMessages: canPostMessages,
@@ -4063,7 +4137,12 @@ export class AccountManager {
         const adminRights = c?.adminRights
         const isAdmin = isCreator || Boolean(adminRights)
         const canManageCalls = isCreator || Boolean(adminRights?.manageCall)
+        const canManageTopics = false
         const canViewAdminLog = isCreator || Boolean(adminRights)
+        const canChangeInfo = isCreator || Boolean(adminRights?.changeInfo)
+        const canBanMembers = isCreator || Boolean(adminRights?.banUsers)
+        const canAddMembers = isCreator || Boolean(adminRights?.inviteUsers)
+        const canSendMessages = !c?.defaultBannedRights?.sendMessages
 
         details = {
           id: chatId,
@@ -4071,6 +4150,7 @@ export class AccountManager {
           membersCount: res.fullChat?.participants?.participants?.length,
           isGroup: true,
           isChannel: false,
+          isSupergroup: false,
           isUser: false,
           isBot: false,
           isMuted,
@@ -4083,7 +4163,31 @@ export class AccountManager {
           isCreator,
           isAdmin,
           canManageCalls,
+          canManageTopics,
           canViewAdminLog,
+          canManageMembers: canBanMembers || canAddMembers,
+          canPromoteMembers: false,
+          canChangeInfo,
+          canSetDescription: false,
+          canBanMembers,
+          canAddMembers,
+          canSetSlowMode: false,
+          canManageJoinRequests: false,
+          canEditPermissions: isCreator || Boolean(adminRights?.banUsers),
+          defaultRestrictions: this.mapChatRestrictions(c?.defaultBannedRights),
+          slowModeSeconds: 0,
+          joinRequestsEnabled: false,
+          canSendMessages,
+          permissionsMatrix: {
+            sendMessages: canSendMessages,
+            sendMedia: !c?.defaultBannedRights?.sendMedia,
+            sendStickers: !c?.defaultBannedRights?.sendStickers,
+            sendPolls: !c?.defaultBannedRights?.sendPolls,
+            embedLinks: !c?.defaultBannedRights?.embedLinks,
+            inviteUsers: isCreator || Boolean(adminRights?.inviteUsers) || !c?.defaultBannedRights?.inviteUsers,
+            pinMessages: isCreator || Boolean(adminRights?.pinMessages) || !c?.defaultBannedRights?.pinMessages,
+            changeInfo: isCreator || Boolean(adminRights?.changeInfo) || !c?.defaultBannedRights?.changeInfo,
+          },
         }
       }
     } catch (err: any) {
@@ -4091,6 +4195,493 @@ export class AccountManager {
     }
 
     return details
+  }
+
+  private mapChatAdminRights(raw: any): ChatAdminRightsPayload | undefined {
+    if (!raw) return undefined
+    return {
+      changeInfo: !!raw.changeInfo,
+      postMessages: !!raw.postMessages,
+      editMessages: !!raw.editMessages,
+      deleteMessages: !!raw.deleteMessages,
+      banUsers: !!raw.banUsers,
+      inviteUsers: !!raw.inviteUsers,
+      pinMessages: !!raw.pinMessages,
+      addAdmins: !!raw.addAdmins,
+      anonymous: !!raw.anonymous,
+      manageCall: !!raw.manageCall,
+      other: !!raw.other,
+      manageTopics: !!raw.manageTopics,
+      postStories: !!raw.postStories,
+      editStories: !!raw.editStories,
+      deleteStories: !!raw.deleteStories,
+      manageDirectMessages: !!raw.manageDirectMessages,
+      manageRanks: !!raw.manageRanks,
+      manageLinkedPeers: !!raw.manageLinkedPeers,
+      manageWelcomeMessages: !!raw.manageWelcomeMessages,
+    }
+  }
+
+  private mapChatRestrictions(raw: any): ChatRestrictionsPayload | undefined {
+    if (!raw) return undefined
+    const untilDate = Number(raw.untilDate || 0)
+    return {
+      viewMessages: !!raw.viewMessages,
+      sendMessages: !!raw.sendMessages,
+      sendMedia: !!raw.sendMedia,
+      sendStickers: !!raw.sendStickers,
+      sendGifs: !!raw.sendGifs,
+      sendGames: !!raw.sendGames,
+      sendInline: !!raw.sendInline,
+      embedLinks: !!raw.embedLinks,
+      sendPolls: !!raw.sendPolls,
+      changeInfo: !!raw.changeInfo,
+      inviteUsers: !!raw.inviteUsers,
+      pinMessages: !!raw.pinMessages,
+      manageTopics: !!raw.manageTopics,
+      sendPhotos: !!raw.sendPhotos,
+      sendVideos: !!raw.sendVideos,
+      sendRoundvideos: !!raw.sendRoundvideos,
+      sendAudios: !!raw.sendAudios,
+      sendVoices: !!raw.sendVoices,
+      sendDocs: !!raw.sendDocs,
+      sendPlain: !!raw.sendPlain,
+      editRank: !!raw.editRank,
+      sendReactions: !!raw.sendReactions,
+      manageLinkedPeers: !!raw.manageLinkedPeers,
+      untilDate: untilDate > 0 ? untilDate : undefined,
+    }
+  }
+
+  private serializeChatMember(accountId: string, member: any): ChatMemberPayload {
+    const user = member.user
+    const id = String(user.id)
+    const raw = (user as any).raw || {}
+
+    if (raw.accessHash) {
+      this.peerAccessHashes.set(`${accountId}_${id}`, raw.accessHash)
+    }
+
+    let avatarUrl: string | undefined = undefined
+    try {
+      const photo = user.photo
+      if (photo?.small) {
+        this.peerPhotos.set(`${accountId}_${id}`, photo.small)
+      }
+      const cacheKey = `${accountId}_${id}`
+      if (this.avatarCache.has(cacheKey)) {
+        avatarUrl = this.avatarCache.get(cacheKey)
+      } else if (photo?.thumb) {
+        avatarUrl = `data:image/jpeg;base64,${Buffer.from(photo.thumb).toString('base64')}`
+        this.avatarCache.set(cacheKey, avatarUrl)
+      }
+    } catch (_) {}
+
+    const joinedDate = member.joinedDate
+    const subscriptionUntilDate = member.subscriptionUntilDate
+    const permissions = member.permissions
+    const restrictions = member.restrictions
+
+    return {
+      id,
+      name: user.displayName || formatEntityName(raw) || id,
+      username: user.username || undefined,
+      phone: user.phoneNumber || undefined,
+      isBot: !!user.isBot,
+      isPremium: !!user.isPremium,
+      isSelf: !!user.isSelf,
+      isContact: !!user.isContact,
+      isDeleted: !!user.isDeleted,
+      status: (member.status || 'member') as ChatMemberPayload['status'],
+      rank: member.title || undefined,
+      joinedDate: joinedDate ? Math.floor(new Date(joinedDate).getTime() / 1000) : undefined,
+      subscriptionUntilDate: subscriptionUntilDate
+        ? Math.floor(new Date(subscriptionUntilDate).getTime() / 1000)
+        : undefined,
+      adminRights: permissions ? this.mapChatAdminRights(permissions) : undefined,
+      restrictions: restrictions ? this.mapChatRestrictions(restrictions.raw) : undefined,
+      avatarUrl,
+    }
+  }
+
+  public async getChatMembers(
+    accountId: string,
+    chatId: string,
+    options?: ChatMembersQuery
+  ): Promise<ChatMembersResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const limit = Math.min(200, Math.max(1, Number(options?.limit || 200)))
+    const offset = Math.max(0, Number(options?.offset || 0))
+    const filter: ChatMemberFilter = options?.filter || 'all'
+    const query = (options?.query || '').trim()
+
+    const result: any = await mtcuteGetChatMembers(holder.client, inputPeer, {
+      query,
+      offset,
+      limit,
+      type: filter,
+    })
+
+    const members: ChatMemberPayload[] = []
+    for (const member of result) {
+      try {
+        members.push(this.serializeChatMember(accountId, member))
+      } catch (err: any) {
+        Logger.warn(`[AccountManager] Failed to serialize chat member:`, err?.message || err)
+      }
+    }
+
+    return {
+      members,
+      total: Number(result.total ?? members.length),
+    }
+  }
+
+  public async addChatMembers(
+    accountId: string,
+    chatId: string,
+    userIds: string[]
+  ): Promise<AddChatMembersResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const uniqueIds = Array.from(
+      new Set((userIds || []).map((id) => String(id).trim()).filter(Boolean))
+    )
+    if (!uniqueIds.length) throw new Error('No users selected.')
+
+    const users: tl.TypeInputPeer[] = []
+    for (const userId of uniqueIds) {
+      const userPeer = await this.resolveInputPeer(accountId, userId)
+      if (userPeer._ !== 'inputPeerUser') {
+        throw new Error(`User ${userId} was not found.`)
+      }
+      users.push(userPeer)
+    }
+
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const missing: any[] = await mtcuteAddChatMembers(holder.client, chatPeer, users, {
+      forwardCount: 0,
+    })
+
+    return {
+      invitedCount: Math.max(0, users.length - missing.length),
+      missing: (missing || []).map((item: any) => ({
+        userId: String(item.userId),
+        premiumWouldAllowInvite: !!item.premiumWouldAllowInvite,
+        premiumRequiredForPm: !!item.premiumRequiredForPm,
+      })),
+    }
+  }
+
+  private async resolveParticipantPeer(accountId: string, userId: string): Promise<tl.TypeInputPeer> {
+    const peer = await this.resolveInputPeer(accountId, userId)
+    if (peer._ !== 'inputPeerUser') throw new Error(`User ${userId} was not found.`)
+    return peer
+  }
+
+  public async kickChatMember(accountId: string, chatId: string, userId: string): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+    await mtcuteKickChatMember(holder.client, { chatId: chatPeer, userId: userPeer })
+  }
+
+  public async banChatMember(
+    accountId: string,
+    chatId: string,
+    userId: string,
+    untilDate?: number
+  ): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+    const until = untilDate && untilDate > 0 ? new Date(untilDate * 1000) : undefined
+    await mtcuteBanChatMember(holder.client, { chatId: chatPeer, participantId: userPeer, untilDate: until })
+  }
+
+  public async unbanChatMember(accountId: string, chatId: string, userId: string): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+    await mtcuteUnbanChatMember(holder.client, { chatId: chatPeer, participantId: userPeer })
+  }
+
+  public async restrictChatMember(
+    accountId: string,
+    chatId: string,
+    userId: string,
+    restrictions: ChatRestrictionsPayload
+  ): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const rawRestrictions: Record<string, boolean> = {}
+    for (const [key, value] of Object.entries(restrictions || {})) {
+      if (key === 'untilDate' || key === '_') continue
+      if (value !== undefined) rawRestrictions[key] = !!value
+    }
+
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+    const until =
+      restrictions?.untilDate && restrictions.untilDate > 0
+        ? new Date(restrictions.untilDate * 1000)
+        : undefined
+
+    await mtcuteRestrictChatMember(holder.client, {
+      chatId: chatPeer,
+      userId: userPeer,
+      restrictions: rawRestrictions,
+      until,
+    })
+  }
+
+  public async promoteChatMember(
+    accountId: string,
+    chatId: string,
+    userId: string,
+    rights: ChatAdminRightsPayload,
+    rank?: string
+  ): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const rawRights: Record<string, boolean> = {}
+    for (const [key, value] of Object.entries(rights || {})) {
+      if (key === '_') continue
+      if (value !== undefined) rawRights[key] = !!value
+    }
+
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+    await mtcuteEditAdminRights(holder.client, {
+      chatId: chatPeer,
+      userId: userPeer,
+      rights: rawRights,
+      rank: rank?.trim() || undefined,
+    })
+  }
+
+  public async setChatMemberRank(
+    accountId: string,
+    chatId: string,
+    userId: string,
+    rank: string | null
+  ): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+    await mtcuteEditChatMemberRank(holder.client, {
+      chatId: chatPeer,
+      participantId: userPeer,
+      rank: rank?.trim() || null,
+    })
+  }
+
+  public async updateChatSettings(
+    accountId: string,
+    chatId: string,
+    input: ChatSettingsInput
+  ): Promise<ChatSettingsUpdateResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const details = await this.getChatDetails(accountId, chatId)
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const errors: string[] = []
+    const isChannelLike = details.isChannel || details.isSupergroup
+    let effectiveUsername = (details.username || '').toLowerCase()
+
+    if (input.title !== undefined) {
+      const title = input.title.trim()
+      if (!title) {
+        errors.push('title: Title cannot be empty.')
+      } else if (title.length > 255) {
+        errors.push('title: Title is too long (max 255 characters).')
+      } else if (title !== details.title) {
+        try {
+          await mtcuteSetChatTitle(holder.client, chatPeer, title)
+        } catch (err: any) {
+          errors.push(`title: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.description !== undefined) {
+      if (!isChannelLike) {
+        errors.push('description: Legacy groups do not support a description.')
+      } else if (input.description.trim() !== (details.about || '').trim()) {
+        try {
+          await mtcuteSetChatDescription(holder.client, chatPeer, input.description.trim())
+        } catch (err: any) {
+          errors.push(`description: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.username !== undefined) {
+      const rawUsername = String(input.username ?? '').trim()
+      const normalized = rawUsername
+        .replace(/^https?:\/\/(?:www\.)?t\.me\//i, '')
+        .replace(/^@/, '')
+        .trim()
+        .toLowerCase()
+
+      if (!isChannelLike) {
+        errors.push('username: Public links are only available for channels and supergroups.')
+      } else if (normalized && !/^[a-z][a-z0-9_]{4,31}$/.test(normalized)) {
+        errors.push(
+          'username: Username must be 5-32 characters, start with a letter, and contain only letters, numbers, and underscores.'
+        )
+      } else if (normalized !== (details.username || '').toLowerCase()) {
+        try {
+          await mtcuteSetChatUsername(holder.client, chatPeer, normalized || null)
+          effectiveUsername = normalized
+        } catch (err: any) {
+          errors.push(`username: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.slowModeSeconds !== undefined) {
+      const validValues = [0, 10, 30, 60, 300, 900, 3600]
+      if (!isChannelLike) {
+        errors.push('slowMode: Slow mode is only available in supergroups.')
+      } else if (!details.isSupergroup) {
+        errors.push('slowMode: Slow mode is not available in channels.')
+      } else if (!validValues.includes(Number(input.slowModeSeconds))) {
+        errors.push('slowMode: Invalid slow mode value.')
+      } else if (Number(input.slowModeSeconds) !== Number(details.slowModeSeconds || 0)) {
+        try {
+          await mtcuteSetSlowMode(holder.client, chatPeer, Number(input.slowModeSeconds))
+        } catch (err: any) {
+          errors.push(`slowMode: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.joinRequestsEnabled !== undefined) {
+      if (!isChannelLike) {
+        errors.push('joinRequests: Join requests are not available in legacy groups.')
+      } else if (Boolean(input.joinRequestsEnabled) && !effectiveUsername) {
+        errors.push('joinRequests: Join requests require a public group. Set a public link first.')
+      } else if (Boolean(input.joinRequestsEnabled) !== Boolean(details.joinRequestsEnabled)) {
+        try {
+          await mtcuteToggleJoinRequests(holder.client, chatPeer, Boolean(input.joinRequestsEnabled))
+        } catch (err: any) {
+          errors.push(`joinRequests: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.isForum !== undefined) {
+      if (!details.isSupergroup || details.isChannel) {
+        errors.push('forum: Forum mode is only available in supergroups.')
+      } else if (!details.isCreator) {
+        errors.push('forum: Only the group creator can change forum mode.')
+      } else if (Boolean(input.isForum) !== Boolean(details.isForum)) {
+        try {
+          await this.setChatForumEnabled(accountId, chatId, Boolean(input.isForum))
+        } catch (err: any) {
+          errors.push(`forum: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.defaultRestrictions !== undefined) {
+      if (!details.isGroup || details.isBroadcast) {
+        errors.push('permissions: Default permissions are only available for groups.')
+      } else if (!details.canEditPermissions) {
+        errors.push('permissions: You do not have permission to change default permissions.')
+      } else {
+        try {
+          const keys = [
+            'viewMessages',
+            'sendMessages',
+            'sendMedia',
+            'sendStickers',
+            'sendGifs',
+            'sendGames',
+            'sendInline',
+            'embedLinks',
+            'sendPolls',
+            'changeInfo',
+            'inviteUsers',
+            'pinMessages',
+            'manageTopics',
+            'sendPhotos',
+            'sendVideos',
+            'sendRoundvideos',
+            'sendAudios',
+            'sendVoices',
+            'sendDocs',
+            'sendPlain',
+            'editRank',
+            'sendReactions',
+            'manageLinkedPeers',
+          ] as const
+
+          const current: Record<string, boolean> = {}
+          const next: Record<string, boolean> = {}
+          for (const key of keys) {
+            current[key] = Boolean(details.defaultRestrictions?.[key])
+            next[key] = current[key]
+          }
+
+          for (const key of keys) {
+            const value = input.defaultRestrictions[key]
+            if (value !== undefined) next[key] = Boolean(value)
+          }
+
+          // Telegram treats sendMedia/sendStickers as aggregate flags. Keep their
+          // concrete sub-flags in sync so a later "allow" actually clears them.
+          if (input.defaultRestrictions.sendMedia !== undefined) {
+            const restricted = Boolean(input.defaultRestrictions.sendMedia)
+            next.sendMedia = restricted
+            for (const key of [
+              'sendPhotos',
+              'sendVideos',
+              'sendRoundvideos',
+              'sendAudios',
+              'sendVoices',
+              'sendDocs',
+            ] as const) {
+              next[key] = restricted
+            }
+          }
+          if (input.defaultRestrictions.sendStickers !== undefined) {
+            const restricted = Boolean(input.defaultRestrictions.sendStickers)
+            next.sendStickers = restricted
+            next.sendGifs = restricted
+          }
+
+          const changed = keys.some((key) => next[key] !== current[key])
+          const merged: Record<string, boolean> = {}
+          for (const key of keys) {
+            if (next[key]) merged[key] = true
+          }
+
+          if (changed) {
+            await mtcuteSetChatDefaultPermissions(holder.client, chatPeer, merged as any)
+          }
+        } catch (err: any) {
+          errors.push(`permissions: ${err?.message || err}`)
+        }
+      }
+    }
+
+    return {
+      details: await this.getChatDetails(accountId, chatId),
+      errors,
+    }
   }
 
   public async toggleChatNotifications(
@@ -4187,6 +4778,416 @@ export class AccountManager {
     return item
   }
 
+  public async editMessage(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    text: string
+  ): Promise<MessageItem> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    let edited: any = null
+
+    try {
+      edited = await holder.client.editMessage({
+        chatId: inputPeer as any,
+        message: messageId,
+        text,
+      })
+    } catch (err: any) {
+      Logger.warn(
+        `[AccountManager] editMessage high-level failed for ${chatId}/${messageId}, using raw TL:`,
+        err?.message || err
+      )
+      edited = await holder.client.call({
+        _: 'messages.editMessage',
+        peer: inputPeer,
+        id: messageId,
+        message: text,
+      } as any)
+    }
+
+    const editDate = edited?.editDate
+      ? Math.floor(edited.editDate.getTime() / 1000)
+      : Math.floor(Date.now() / 1000)
+    const entities = parseMtprotoEntities(edited?.raw?.entities)
+
+    const stored = this.store.recordMessageEdit(
+      accountId,
+      chatId,
+      messageId,
+      edited?.text ?? text,
+      editDate,
+      entities
+    )
+
+    return stored || {
+      id: messageId,
+      chatId,
+      accountId,
+      text: edited?.text ?? text,
+      date: edited?.date ? Math.floor(edited.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
+      editDate,
+      isOutgoing: edited?.isOutgoing ?? true,
+      entities,
+    }
+  }
+
+  public async pinMessage(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    notify = true,
+    bothSides = false
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    try {
+      await holder.client.pinMessage({
+        chatId: inputPeer as any,
+        message: messageId,
+        notify,
+        bothSides,
+      })
+      return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] pinMessage high-level failed for ${chatId}/${messageId}, using raw TL:`, err?.message || err)
+      await holder.client.call({
+        _: 'messages.updatePinnedMessage',
+        peer: inputPeer,
+        id: messageId,
+        silent: !notify,
+        pmOneside: !bothSides,
+      } as any)
+      return true
+    }
+  }
+
+  public async unpinMessage(
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    try {
+      await holder.client.unpinMessage({
+        chatId: inputPeer as any,
+        message: messageId,
+      })
+      return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] unpinMessage high-level failed for ${chatId}/${messageId}, using raw TL:`, err?.message || err)
+      await holder.client.call({
+        _: 'messages.updatePinnedMessage',
+        peer: inputPeer,
+        id: messageId,
+        unpin: true,
+      } as any)
+      return true
+    }
+  }
+
+  public async sendTyping(
+    accountId: string,
+    chatId: string,
+    status: 'typing' | 'cancel' = 'typing'
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.sendTyping(inputPeer as any, status)
+      return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] sendTyping failed for ${chatId}:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async exportChatInvite(accountId: string, chatId: string): Promise<string | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    try {
+      const link = await holder.client.exportInviteLink(inputPeer as any)
+      return link.link || null
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] exportChatInvite high-level failed for ${chatId}, using raw TL:`, err?.message || err)
+      const res: any = await holder.client.call({
+        _: 'messages.exportChatInvite',
+        peer: inputPeer,
+      } as any)
+      return res?.link || null
+    }
+  }
+
+  private mapExportedInvite(raw: any): ChatInviteLink {
+    return {
+      link: raw.link,
+      title: raw.title || undefined,
+      adminId: raw.adminId != null ? String(raw.adminId) : undefined,
+      date: Number(raw.date || 0),
+      startDate: raw.startDate != null ? Number(raw.startDate) : undefined,
+      expireDate: raw.expireDate != null ? Number(raw.expireDate) : undefined,
+      usageLimit: raw.usageLimit != null ? Number(raw.usageLimit) : undefined,
+      usage: raw.usage != null ? Number(raw.usage) : undefined,
+      requested: raw.requested != null ? Number(raw.requested) : undefined,
+      revoked: Boolean(raw.revoked),
+      permanent: Boolean(raw.permanent),
+      requestNeeded: Boolean(raw.requestNeeded),
+    }
+  }
+
+  public async getChatInviteLinks(
+    accountId: string,
+    chatId: string,
+    query?: ChatInviteLinksQuery
+  ): Promise<ChatInviteLinksResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const limit = Math.min(Math.max(Number(query?.limit || 100), 1), 100)
+    const res: any = await holder.client.call({
+      _: 'messages.getExportedChatInvites',
+      peer: inputPeer,
+      adminId: { _: 'inputUserSelf' },
+      limit,
+      revoked: query?.revokedOnly ? true : undefined,
+    } as any)
+
+    const links = (res?.invites || [])
+      .filter((invite: any) => invite?._ === 'chatInviteExported')
+      .map((invite: any) => this.mapExportedInvite(invite))
+
+    return {
+      links,
+      total: Number(res?.count ?? links.length),
+    }
+  }
+
+  public async createChatInviteLink(
+    accountId: string,
+    chatId: string,
+    input: ChatInviteLinkInput
+  ): Promise<ChatInviteLink> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const title = input.title?.trim() || undefined
+    if (title && title.length > 32) {
+      throw new Error('Invite link title is too long (max 32 characters).')
+    }
+    if (
+      input.usageLimit != null &&
+      (!Number.isFinite(Number(input.usageLimit)) || Number(input.usageLimit) < 0)
+    ) {
+      throw new Error('Usage limit must be a non-negative number.')
+    }
+    if (input.expireDate != null && Number(input.expireDate) <= Math.floor(Date.now() / 1000)) {
+      throw new Error('Expiry date must be in the future.')
+    }
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const usageLimit = Number(input.usageLimit)
+    const res: any = await holder.client.call({
+      _: 'messages.exportChatInvite',
+      peer: inputPeer,
+      title,
+      expireDate: input.expireDate ? Number(input.expireDate) : undefined,
+      usageLimit: usageLimit > 0 ? usageLimit : undefined,
+      requestNeeded: input.requestNeeded ? true : undefined,
+    } as any)
+
+    if (res?._ !== 'chatInviteExported') {
+      throw new Error('Telegram returned an unexpected invite link response.')
+    }
+    return this.mapExportedInvite(res)
+  }
+
+  public async editChatInviteLink(
+    accountId: string,
+    chatId: string,
+    link: string,
+    input: ChatInviteLinkInput
+  ): Promise<ChatInviteLinkMutationResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    if (input.title !== undefined && input.title.trim().length > 32) {
+      throw new Error('Invite link title is too long (max 32 characters).')
+    }
+    if (
+      input.usageLimit != null &&
+      (!Number.isFinite(Number(input.usageLimit)) || Number(input.usageLimit) < 0)
+    ) {
+      throw new Error('Usage limit must be a non-negative number.')
+    }
+    if (input.expireDate != null && Number(input.expireDate) <= Math.floor(Date.now() / 1000)) {
+      throw new Error('Expiry date must be in the future.')
+    }
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const res: any = await holder.client.call({
+      _: 'messages.editExportedChatInvite',
+      peer: inputPeer,
+      link,
+      title: input.title !== undefined ? input.title.trim() : undefined,
+      expireDate: input.expireDate !== undefined ? Number(input.expireDate) || 0 : undefined,
+      usageLimit: input.usageLimit !== undefined ? Number(input.usageLimit) || 0 : undefined,
+      requestNeeded: input.requestNeeded !== undefined ? Boolean(input.requestNeeded) : undefined,
+    } as any)
+
+    if (res?._ === 'messages.exportedChatInviteReplaced') {
+      return {
+        link: res.invite ? this.mapExportedInvite(res.invite) : undefined,
+        replacement: res.newInvite ? this.mapExportedInvite(res.newInvite) : undefined,
+      }
+    }
+    if (res?._ === 'messages.exportedChatInvite') {
+      return { link: res.invite ? this.mapExportedInvite(res.invite) : undefined }
+    }
+    if (res?._ === 'chatInviteExported') {
+      return { link: this.mapExportedInvite(res) }
+    }
+    throw new Error('Telegram returned an unexpected invite link response.')
+  }
+
+  public async revokeChatInviteLink(
+    accountId: string,
+    chatId: string,
+    link: string
+  ): Promise<ChatInviteLinkMutationResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const res: any = await holder.client.call({
+      _: 'messages.editExportedChatInvite',
+      peer: inputPeer,
+      link,
+      revoked: true,
+    } as any)
+
+    if (res?._ === 'messages.exportedChatInviteReplaced') {
+      return {
+        link: res.invite ? this.mapExportedInvite(res.invite) : undefined,
+        replacement: res.newInvite ? this.mapExportedInvite(res.newInvite) : undefined,
+      }
+    }
+    if (res?._ === 'messages.exportedChatInvite') {
+      return { link: res.invite ? this.mapExportedInvite(res.invite) : undefined }
+    }
+    if (res?._ === 'chatInviteExported') {
+      return { link: this.mapExportedInvite(res) }
+    }
+    return {}
+  }
+
+  public async deleteChatInviteLink(
+    accountId: string,
+    chatId: string,
+    link: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const res: any = await holder.client.call({
+      _: 'messages.deleteExportedChatInvite',
+      peer: inputPeer,
+      link,
+    } as any)
+    return Boolean(res)
+  }
+
+  public async joinChatInvite(
+    accountId: string,
+    inviteLink: string
+  ): Promise<{ status: 'ok' | 'request_sent' | 'webview'; chatId?: string; title?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const normalizedLink = inviteLink.trim()
+    const inviteMatch = normalizedLink.match(
+      /^(?:https?:\/\/)?(?:www\.)?t(?:elegram)?\.(?:org|me|dog)\/(?:joinchat\/|\+)([\w-]+)/i
+    )
+    const inviteHash = inviteMatch?.[1]
+    const canonicalLink = inviteHash ? `https://t.me/+${inviteHash}` : normalizedLink
+
+    const toResult = (chat: any) => ({
+      status: 'ok' as const,
+      chatId: chat?.id != null ? String(chat.id) : undefined,
+      title: chat?.title || chat?.displayName || chat?.name,
+    })
+
+    // `messages.importChatInvite` throws USER_ALREADY_PARTICIPANT for chats we
+    // are already in. Detect that up-front and return the existing chat instead.
+    if (inviteHash) {
+      try {
+        const invite: any = await holder.client.call({
+          _: 'messages.checkChatInvite',
+          hash: inviteHash,
+        } as any)
+        if (invite?._ === 'chatInviteAlready') {
+          try {
+            const chat: any = await holder.client.getChat(canonicalLink as any)
+            return toResult(chat)
+          } catch {
+            return toResult(invite.chat)
+          }
+        }
+      } catch (err: any) {
+        // Expired/invalid links should surface the canonical error from joinChat.
+        Logger.warn(`[AccountManager] checkChatInvite failed for ${inviteHash}:`, err?.message || err)
+      }
+    }
+
+    try {
+      const result = await holder.client.joinChat(canonicalLink as any)
+      if (result.status === 'ok') {
+        return toResult((result as any).chat)
+      }
+      if (result.status === 'request_sent') return { status: 'request_sent' }
+      return { status: 'webview' }
+    } catch (err: any) {
+      // Race between the pre-check and the join: resolve the chat and return it.
+      if (inviteHash && /USER_ALREADY_PARTICIPANT/.test(String(err?.message || ''))) {
+        try {
+          const chat: any = await holder.client.getChat(canonicalLink as any)
+          return toResult(chat)
+        } catch (resolveErr: any) {
+          Logger.warn(
+            `[AccountManager] failed to resolve already-joined invite ${inviteHash}:`,
+            resolveErr?.message || resolveErr
+          )
+        }
+      }
+      throw err
+    }
+  }
+
+  public async blockUser(accountId: string, userId: string, blocked: boolean): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, userId)
+    await holder.client.call({
+      _: blocked ? 'contacts.block' : 'contacts.unblock',
+      id: inputPeer,
+    } as any)
+    return true
+  }
+
   public async sendMedia(
     accountId: string,
     chatId: string,
@@ -4198,7 +5199,6 @@ export class AccountManager {
 
     const targetPeer = await this.resolveInputPeer(accountId, chatId)
 
-    let uploaded: any
     if (options?.isVoice) {
       // Ensure voice notes are cached in mediaDir before temporary file cleanup
       const cacheKey = `voice_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
@@ -4208,23 +5208,36 @@ export class AccountManager {
       } catch (e) {
         Logger.warn('[AccountManager] Failed to cache voice note to mediaDir:', e)
       }
+    }
 
-      // Handled with DocumentAttributeAudio voice parameters and 4 upload workers
-      uploaded = await holder.client.sendMedia(targetPeer as any, filePath, {
-        caption: options?.caption,
-        replyTo: options?.replyToMsgId,
-        silent: options?.silent,
-        schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
-        workers: 4,
-      } as any)
-    } else {
-      uploaded = await holder.client.sendMedia(targetPeer as any, filePath, {
-        caption: options?.caption,
-        replyTo: options?.replyToMsgId,
-        silent: options?.silent,
-        schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
-        workers: 4,
-      } as any)
+    // mtcute treats every plain string as a Telegram file ID. Local paths must
+    // be prefixed with `file:` so they are uploaded from disk instead.
+    const mediaFile = /^(file:|https?:\/\/)/.test(filePath) ? filePath : `file:${filePath}`
+    const media: any = {
+      type: options?.isVoice ? 'voice' : options?.forceDocument ? 'document' : 'auto',
+      file: mediaFile,
+    }
+    if (options?.isVoice) {
+      media.duration = options.duration ?? 0
+      // Force the container MIME so mtcute does not sniff a WebM fallback and
+      // Telegram keeps the upload classified as a voice note.
+      media.fileMime = 'audio/ogg'
+      media.fileName = path.basename(filePath)
+    }
+
+    const uploaded = await holder.client.sendMedia(targetPeer as any, media, {
+      caption: options?.caption,
+      replyTo: options?.replyToMsgId,
+      silent: options?.silent,
+      schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
+      workers: 4,
+    } as any)
+
+    let mediaFileSize: number | undefined
+    try {
+      mediaFileSize = (await fs.promises.stat(filePath)).size
+    } catch {
+      mediaFileSize = undefined
     }
 
     return {
@@ -4234,7 +5247,11 @@ export class AccountManager {
       text: options?.caption || '',
       date: Math.floor(Date.now() / 1000),
       isOutgoing: true,
-      mediaType: 'document',
+      mediaType: options?.isVoice ? 'voice' : options?.forceDocument ? 'document' : 'photo',
+      isVoice: options?.isVoice,
+      mediaFileName: path.basename(filePath),
+      mediaFileSize,
+      mediaDuration: options?.duration,
     }
   }
 
@@ -4401,7 +5418,7 @@ export class AccountManager {
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
       if (inputPeer._ !== 'inputPeerChannel') return []
 
       const res: any = await holder.client.call({
@@ -4413,17 +5430,241 @@ export class AccountManager {
         limit: 100,
       })
 
-      return (res.topics || []).map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        iconColor: t.iconColor,
-        unreadCount: t.unreadCount,
-        isPinned: t.pinned,
-        isClosed: t.closed,
-      }))
+      return (res.topics || [])
+        .filter((t: any) => t && t._ !== 'forumTopicDeleted')
+        .map((t: any) => ({
+          id: Number(t.id),
+          title: t.title || (Number(t.id) === 1 ? 'General' : `Topic ${t.id}`),
+          iconColor: t.iconColor ?? undefined,
+          iconEmojiId: t.iconEmojiId && !t.iconEmojiId.isZero?.() ? String(t.iconEmojiId) : undefined,
+          topMessageId: Number(t.topMessage || t.id) || undefined,
+          readInboxMaxId: t.readInboxMaxId ? Number(t.readInboxMaxId) : undefined,
+          unreadCount: Number(t.unreadCount || 0),
+          isClosed: !!t.closed,
+          isHidden: !!t.hidden,
+          isPinned: !!t.pinned,
+          date: t.date,
+        }))
     } catch (_) {
       return []
     }
+  }
+
+  public async setChatForumEnabled(
+    accountId: string,
+    chatId: string,
+    enabled: boolean
+  ): Promise<ChatDetails> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    if (inputPeer._ !== 'inputPeerChannel') {
+      throw new Error('Forum mode is only available in supergroups.')
+    }
+
+    await holder.client.call({
+      _: 'channels.toggleForum',
+      channel: {
+        _: 'inputChannel',
+        channelId: inputPeer.channelId,
+        accessHash: inputPeer.accessHash,
+      },
+      enabled,
+      tabs: false,
+    })
+
+    return this.getChatDetails(accountId, chatId)
+  }
+
+  private async resolveForumPeer(accountId: string, chatId: string) {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    if (inputPeer._ !== 'inputPeerChannel') {
+      throw new Error('Forum topics are only available in supergroups.')
+    }
+
+    return { holder, inputPeer }
+  }
+
+  /**
+   * Telegram can briefly return stale forum topic metadata immediately after a
+   * mutation (the mutation response and a subsequent getForumTopics request may
+   * be served by different replicas). Poll until the requested change is
+   * visible, then return the refreshed list.
+   */
+  private async getForumTopicsUntil(
+    accountId: string,
+    chatId: string,
+    predicate: (topics: ForumTopicItem[]) => boolean,
+    attempts = 6,
+    delayMs = 250
+  ): Promise<ForumTopicItem[]> {
+    let topics = await this.getForumTopics(accountId, chatId)
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      if (predicate(topics)) return topics
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+      topics = await this.getForumTopics(accountId, chatId)
+    }
+    return topics
+  }
+
+  private normalizeForumTopicTitle(title: string): string {
+    const trimmed = title.trim()
+    if (!trimmed) throw new Error('Topic title cannot be empty.')
+    if (Buffer.byteLength(trimmed, 'utf8') > 128) {
+      throw new Error('Topic title is too long (max 128 UTF-8 bytes).')
+    }
+    return trimmed
+  }
+
+  public async createForumTopic(
+    accountId: string,
+    chatId: string,
+    title: string
+  ): Promise<ForumTopicCreateResult> {
+    const { holder, inputPeer } = await this.resolveForumPeer(accountId, chatId)
+    const normalizedTitle = this.normalizeForumTopicTitle(title)
+
+    const res: any = await holder.client!.call({
+      _: 'messages.createForumTopic',
+      peer: inputPeer,
+      title: normalizedTitle,
+      iconColor: 0x6fb9f0,
+      randomId: Long.fromString(
+        `${Date.now()}${String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')}`
+      ),
+    })
+
+    let topicId: number | undefined
+    for (const update of res.updates || []) {
+      const msg = update?.message
+      if (msg?.action?._ === 'messageActionTopicCreate') {
+        topicId = Number(msg.id)
+      }
+    }
+
+    const topics = await this.getForumTopics(accountId, chatId)
+    if (!topicId) {
+      const match = topics
+        .filter((topic) => topic.title === normalizedTitle)
+        .sort((a, b) => (b.date || 0) - (a.date || 0))[0]
+      topicId = match?.id
+    }
+
+    if (!topicId) {
+      throw new Error('Topic was created but its ID could not be resolved.')
+    }
+
+    return { topicId, topics }
+  }
+
+  public async editForumTopic(
+    accountId: string,
+    chatId: string,
+    topicId: number,
+    input: ForumTopicInput
+  ): Promise<ForumTopicMutationResult> {
+    const { holder, inputPeer } = await this.resolveForumPeer(accountId, chatId)
+    if (!Number.isInteger(topicId) || topicId <= 0) {
+      throw new Error('Invalid topic ID.')
+    }
+
+    const hasTitle = input.title !== undefined
+    const hasClosed = input.closed !== undefined
+    const hasHidden = input.hidden !== undefined
+    const hasIcon = input.iconEmojiId !== undefined
+
+    if (!hasTitle && !hasClosed && !hasHidden && !hasIcon) {
+      throw new Error('No changes to save.')
+    }
+    if (hasClosed && (hasTitle || hasHidden || hasIcon)) {
+      throw new Error('Close/reopen must be saved separately from other topic changes.')
+    }
+
+    const request: any = {
+      _: 'messages.editForumTopic',
+      peer: inputPeer,
+      topicId,
+    }
+
+    if (hasTitle) request.title = this.normalizeForumTopicTitle(input.title || '')
+    if (hasClosed) request.closed = Boolean(input.closed)
+    if (hasHidden) request.hidden = Boolean(input.hidden)
+    if (hasIcon) {
+      request.iconEmojiId = input.iconEmojiId ? Long.fromString(input.iconEmojiId) : Long.ZERO
+    }
+
+    await holder.client!.call(request)
+
+    const topics = await this.getForumTopicsUntil(accountId, chatId, (list) => {
+      const topic = list.find((item) => item.id === topicId)
+      if (!topic) return false
+      if (hasTitle && topic.title !== request.title) return false
+      if (hasClosed && topic.isClosed !== Boolean(input.closed)) return false
+      if (hasHidden && topic.isHidden !== Boolean(input.hidden)) return false
+      if (hasIcon) {
+        const expected = input.iconEmojiId ? String(input.iconEmojiId) : undefined
+        if ((topic.iconEmojiId || undefined) !== expected) return false
+      }
+      return true
+    })
+
+    return { topicId, topics }
+  }
+
+  public async setForumTopicPinned(
+    accountId: string,
+    chatId: string,
+    topicId: number,
+    pinned: boolean
+  ): Promise<ForumTopicMutationResult> {
+    const { holder, inputPeer } = await this.resolveForumPeer(accountId, chatId)
+    if (!Number.isInteger(topicId) || topicId <= 0) {
+      throw new Error('Invalid topic ID.')
+    }
+
+    await holder.client!.call({
+      _: 'messages.updatePinnedForumTopic',
+      peer: inputPeer,
+      topicId,
+      pinned,
+    })
+
+    const topics = await this.getForumTopicsUntil(accountId, chatId, (list) => {
+      const topic = list.find((item) => item.id === topicId)
+      return Boolean(topic && topic.isPinned === pinned)
+    })
+
+    return { topicId, topics }
+  }
+
+  public async deleteForumTopic(
+    accountId: string,
+    chatId: string,
+    topicId: number
+  ): Promise<ForumTopicMutationResult> {
+    const { holder, inputPeer } = await this.resolveForumPeer(accountId, chatId)
+    if (!Number.isInteger(topicId) || topicId <= 0) {
+      throw new Error('Invalid topic ID.')
+    }
+    if (topicId === 1) {
+      throw new Error('The General topic cannot be deleted.')
+    }
+
+    await holder.client!.call({
+      _: 'messages.deleteTopicHistory',
+      peer: inputPeer,
+      topMsgId: topicId,
+    })
+
+    const topics = await this.getForumTopicsUntil(accountId, chatId, (list) =>
+      list.every((topic) => topic.id !== topicId)
+    )
+
+    return { topicId, topics }
   }
 
   public async getScheduledMessages(
@@ -4710,6 +5951,248 @@ export class AccountManager {
     } catch (err) {
       Logger.warn('[AccountManager] getSavedReactionTags error:', err)
       return []
+    }
+  }
+
+  /**
+   * Real Telegram phone-call log.
+   *
+   * Telegram does not expose a dedicated "get call log" method; official
+   * clients search messages globally with `inputMessagesFilterPhoneCalls`.
+   * Call events are service messages with `messageActionPhoneCall`.
+   */
+  public async getCallLog(
+    accountId: string,
+    limit = 50,
+    offsetId = 0,
+    missedOnly = false
+  ): Promise<CallLogResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { items: [], total: 0 }
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.search',
+        peer: { _: 'inputPeerEmpty' },
+        q: '',
+        filter: missedOnly
+          ? { _: 'inputMessagesFilterPhoneCalls', missed: true }
+          : { _: 'inputMessagesFilterPhoneCalls' },
+        minDate: 0,
+        maxDate: 0,
+        offsetId: offsetId || 0,
+        addOffset: 0,
+        limit: Math.max(1, Math.min(100, limit)),
+        maxId: 0,
+        minId: 0,
+        hash: Long.ZERO,
+      })
+
+      const users = new Map<string, any>()
+      for (const user of res.users || []) {
+        if (user?._ === 'user') users.set(String(user.id), user)
+      }
+
+      const reasonFromRaw = (raw?: string): CallDiscardReason => {
+        switch (raw) {
+          case 'phoneCallDiscardReasonMissed':
+            return 'missed'
+          case 'phoneCallDiscardReasonBusy':
+            return 'busy'
+          case 'phoneCallDiscardReasonHangup':
+            return 'hangup'
+          case 'phoneCallDiscardReasonDisconnect':
+            return 'disconnect'
+          default:
+            return 'unknown'
+        }
+      }
+
+      const items: CallLogItem[] = []
+      for (const message of Array.isArray(res.messages) ? res.messages : []) {
+        if (!message || message._ === 'messageEmpty') continue
+        if (message.action?._ !== 'messageActionPhoneCall') continue
+
+        const peerRaw = message.peerId
+        let peerId = ''
+        if (peerRaw?._ === 'peerUser') peerId = String(peerRaw.userId)
+        else if (peerRaw?._ === 'peerChat') peerId = `-${peerRaw.chatId}`
+        else if (peerRaw?._ === 'peerChannel') peerId = `-100${peerRaw.channelId}`
+        else continue
+
+        const user = peerRaw?._ === 'peerUser' ? users.get(String(peerRaw.userId)) : undefined
+        const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim()
+        const title = fullName || (user?.username ? `@${user.username}` : peerId)
+        const reason = reasonFromRaw(message.action.reason?._)
+
+        items.push({
+          id: message.id,
+          peerId,
+          title,
+          username: user?.username || undefined,
+          date: message.date || 0,
+          duration: Number(message.action.duration || 0),
+          isOutgoing: Boolean(message.out),
+          // Incoming unanswered calls are "missed"; outgoing unanswered calls are "cancelled".
+          isMissed: !message.out && reason === 'missed',
+          isVideo: Boolean(message.action.video),
+          reason,
+        })
+      }
+
+      return { items, total: Number(res.count ?? items.length) }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getCallLog failed for ${accountId}:`, err?.message || err)
+      return { items: [], total: 0 }
+    }
+  }
+
+  /**
+   * Real Telegram statistics for a supergroup or broadcast channel.
+   *
+   * Uses the official `stats.getMegagroupStats` / `stats.getBroadcastStats`
+   * methods. Statistics require admin rights; callers should keep the local
+   * crawl as a fallback when `ok` is false.
+   */
+  public async getChatStats(accountId: string, chatId: string): Promise<ChatStatsResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) {
+      return { ok: false, error: 'unavailable', message: 'Telegram client is not connected.' }
+    }
+
+    try {
+      const peer = await this.resolveInputPeer(accountId, chatId)
+      if (peer._ !== 'inputPeerChannel') {
+        return {
+          ok: false,
+          error: 'not_supergroup',
+          message: 'Official statistics are only available for supergroups and channels.',
+        }
+      }
+
+      // Resolve the access hash/marked ID from the AccountManager cache and
+      // inspect the raw channel to distinguish a broadcast channel from a
+      // supergroup. Passing the string chatId directly to mtcute would be
+      // interpreted as a username.
+      const inputChannel: any = {
+        _: 'inputChannel',
+        channelId: peer.channelId,
+        accessHash: peer.accessHash,
+      }
+      const channelRes: any = await holder.client.call({
+        _: 'channels.getChannels',
+        id: [inputChannel],
+      })
+      const channel: any = channelRes?.chats?.[0]
+      const kind: 'megagroup' | 'broadcast' = channel?.broadcast ? 'broadcast' : 'megagroup'
+
+      const res: any = await holder.client.call(
+        kind === 'broadcast'
+          ? { _: 'stats.getBroadcastStats', channel: inputChannel }
+          : { _: 'stats.getMegagroupStats', channel: inputChannel }
+      )
+
+      const pair = (value: any): StatsValuePair | undefined => {
+        if (!value) return undefined
+        return {
+          current: Number(value.current || 0),
+          previous: Number(value.previous || 0),
+        }
+      }
+
+      const users = new Map<string, any>()
+      for (const user of res.users || []) {
+        if (user?._ === 'user') users.set(String(user.id), user)
+      }
+      const displayName = (userId: any) => {
+        const user = users.get(String(userId))
+        return formatEntityName(user, String(userId))
+      }
+
+      const topPosters: ChatStatsTopPoster[] = (res.topPosters || []).map((item: any) => ({
+        peerId: String(item.userId),
+        title: displayName(item.userId),
+        messages: Number(item.messages || 0),
+        avgChars: Number(item.avgChars || 0),
+      }))
+      const topAdmins: ChatStatsTopAdmin[] = (res.topAdmins || []).map((item: any) => ({
+        peerId: String(item.userId),
+        title: displayName(item.userId),
+        deleted: Number(item.deleted || 0),
+        kicked: Number(item.kicked || 0),
+        banned: Number(item.banned || 0),
+        reports: Number(item.reports || 0),
+      }))
+      const topInviters: ChatStatsTopInviter[] = (res.topInviters || []).map((item: any) => ({
+        peerId: String(item.userId),
+        title: displayName(item.userId),
+        invitations: Number(item.invitations || 0),
+      }))
+
+      const stats: ChatStatsPayload = {
+        kind,
+        period: res.period
+          ? {
+              minDate: Number(res.period.minDate || 0),
+              maxDate: Number(res.period.maxDate || 0),
+            }
+          : null,
+        members: pair(res.members),
+        messages: pair(res.messages),
+        viewers: pair(res.viewers),
+        posters: pair(res.posters),
+        followers: pair(res.followers),
+        viewsPerPost: pair(res.viewsPerPost),
+        sharesPerPost: pair(res.sharesPerPost),
+        reactionsPerPost: pair(res.reactionsPerPost),
+        viewsPerStory: pair(res.viewsPerStory),
+        sharesPerStory: pair(res.sharesPerStory),
+        reactionsPerStory: pair(res.reactionsPerStory),
+        enabledNotifications: res.enabledNotifications
+          ? {
+              part: Number(res.enabledNotifications.part || 0),
+              total: Number(res.enabledNotifications.total || 0),
+            }
+          : undefined,
+        topPosters,
+        topAdmins,
+        topInviters,
+      }
+
+      return { ok: true, kind, stats }
+    } catch (err: any) {
+      const msg = String(err?.message || err || '')
+      if (msg.includes('CHAT_ADMIN_REQUIRED')) {
+        return {
+          ok: false,
+          error: 'admin_required',
+          message:
+            'Telegram did not return statistics. This usually happens when the chat is too small or inactive, or your account does not have admin rights.',
+        }
+      }
+      if (msg.includes('MEGAGROUP_REQUIRED')) {
+        return {
+          ok: false,
+          error: 'not_supergroup',
+          message: 'This chat is not a supergroup.',
+        }
+      }
+      if (msg.includes('BROADCAST_REQUIRED')) {
+        return {
+          ok: false,
+          error: 'not_channel',
+          message: 'This chat is not a broadcast channel.',
+        }
+      }
+      if (msg.includes('CHANNEL_INVALID') || msg.includes('CHANNEL_PRIVATE')) {
+        return {
+          ok: false,
+          error: 'unavailable',
+          message: 'This chat is not available for statistics.',
+        }
+      }
+      Logger.warn(`[AccountManager] getChatStats failed for ${accountId}/${chatId}:`, msg)
+      return { ok: false, error: 'unknown', message: msg || 'Failed to load Telegram statistics.' }
     }
   }
 
@@ -5795,32 +7278,350 @@ export class AccountManager {
     }
   }
 
+  public async getAllStories(accountId: string): Promise<ActiveStoriesResult> {
+    const empty: ActiveStoriesResult = { peers: [], totalCount: 0, hasMore: false }
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return empty
+
+    try {
+      const collected = new Map<string, ActiveStoryPeer>()
+      let state: string | undefined
+      let next = false
+      let hasMore = false
+
+      // The initial response is normally enough for the story rings, but follow
+      // Telegram's pagination protocol for accounts that follow many peers.
+      for (let page = 0; page < 5; page++) {
+        const request: any = { _: 'stories.getAllStories' }
+        if (next && state) {
+          request.next = true
+          request.state = state
+        }
+
+        const res: any = await holder.client.call(request)
+        state = res.state || state
+        hasMore = Boolean(res.hasMore)
+
+        const users = new Map<string, any>(
+          (res.users || []).map((user: any) => [String(user.id), user])
+        )
+        const chats = new Map<string, any>(
+          (res.chats || []).map((chat: any) => [String(chat.id), chat])
+        )
+
+        for (const peerStories of res.peerStories || []) {
+          const rawPeer = peerStories?.peer
+          if (!rawPeer) continue
+
+          let peerId = ''
+          let entityId = ''
+          let isSelf = false
+
+          if (rawPeer._ === 'peerUser') {
+            entityId = String(rawPeer.userId)
+            peerId = entityId
+          } else if (rawPeer._ === 'peerChat') {
+            entityId = String(rawPeer.chatId)
+            peerId = `-${entityId}`
+          } else if (rawPeer._ === 'peerChannel') {
+            entityId = String(rawPeer.channelId)
+            peerId = `-100${entityId}`
+          } else if (rawPeer._ === 'peerSelf') {
+            entityId = String(holder.info.id)
+            peerId = entityId
+            isSelf = true
+          } else {
+            continue
+          }
+
+          // Telegram normally returns our own stories as peerSelf, but some
+          // layers/accounts return peerUser with our own ID instead.
+          if (rawPeer._ === 'peerUser' && entityId === String(holder.info.id)) {
+            isSelf = true
+          }
+
+          const stories = (peerStories.stories || []).filter(
+            (story: any) => story?._ === 'storyItem'
+          )
+          if (stories.length === 0) continue
+
+          const entity = users.get(entityId) || chats.get(entityId)
+          const fullName = entity
+            ? [entity.firstName, entity.lastName].filter(Boolean).join(' ')
+            : ''
+          const selfName = [holder.info.firstName, holder.info.lastName]
+            .filter(Boolean)
+            .join(' ')
+          const title =
+            (isSelf ? selfName || entity?.title : fullName || entity?.title) ||
+            entity?.username ||
+            (isSelf ? 'My Story' : `Story ${peerId}`)
+
+          const storyIds = stories.map((story: any) => Number(story.id) || 0)
+          const maxStoryId = Math.max(...storyIds)
+          const maxReadId =
+            peerStories.maxReadId !== undefined
+              ? Number(peerStories.maxReadId)
+              : undefined
+          const hasUnread = isSelf
+            ? false
+            : maxReadId === undefined || storyIds.some((id: number) => id > maxReadId)
+
+          collected.set(peerId, {
+            peerId,
+            title,
+            username: entity?.username || (isSelf ? holder.info.username : undefined),
+            maxStoryId,
+            maxReadId,
+            storyCount: stories.length,
+            hasUnread,
+            isSelf,
+          })
+        }
+
+        if (!hasMore || !state) break
+        next = true
+      }
+
+      // Keep the server's ordering within each bucket: own stories first,
+      // then peers with unseen stories, then fully-read peers.
+      const peers = [...collected.values()]
+      const bucket = (peer: ActiveStoryPeer) => (peer.isSelf ? 0 : peer.hasUnread ? 1 : 2)
+      peers.sort((a, b) => bucket(a) - bucket(b))
+
+      return {
+        peers,
+        totalCount: peers.length,
+        hasMore,
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getAllStories error for ${accountId}:`, err?.message || err)
+      return empty
+    }
+  }
+
   public async getPeerStories(accountId: string, peerId: string): Promise<PeerStoriesPayload | null> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
 
     try {
-      const inputPeer = toRawPeer(peerId)
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
       const res: any = await holder.client.call({
         _: 'stories.getPeerStories',
         peer: inputPeer,
       })
 
-      const stories = (res.stories?.stories || []).map((s: any) => ({
-        id: s.id,
-        date: s.date,
-        expireDate: s.expireDate,
-        caption: s.caption,
-        viewsCount: s.views?.viewsCount,
-      }))
+      const stories = (res.stories?.stories || [])
+        .filter((s: any) => s?._ === 'storyItem')
+        .map((s: any) => {
+          const media = s.media
+          const mediaIsPhoto = media?._ === 'messageMediaPhoto' && Boolean(media.photo)
+          const mediaIsVideo =
+            media?._ === 'messageMediaDocument' &&
+            Boolean(media.document) &&
+            ((Array.isArray(media.document.attributes) &&
+              media.document.attributes.some(
+                (a: any) =>
+                  a?._ === 'documentAttributeVideo' ||
+                  a?._ === 'documentAttributeAnimated'
+              )) ||
+              /^video\//i.test(media.document.mimeType || ''))
+
+          const privacy: StoryItemPayload['privacy'] = s.closeFriends
+            ? 'close_friends'
+            : s.contacts
+              ? 'contacts'
+              : s.selectedContacts
+                ? 'selected_contacts'
+                : s.public
+                  ? 'everyone'
+                  : undefined
+
+          return {
+            id: s.id,
+            date: s.date,
+            expireDate: s.expireDate,
+            caption: s.caption || undefined,
+            isVideo: mediaIsVideo,
+            mediaType: mediaIsPhoto ? 'photo' : mediaIsVideo ? 'video' : 'unsupported',
+            hasPhoto: mediaIsPhoto,
+            hasVideo: mediaIsVideo,
+            isPinned: Boolean(s.pinned),
+            isPublic: Boolean(s.public),
+            isOut: Boolean(s.out),
+            privacy,
+            forbidForwards: Boolean(s.noforwards),
+            viewsCount: s.views?.viewsCount,
+            forwardsCount: s.views?.forwardsCount,
+            reactionsCount: s.views?.reactionsCount,
+            hasViewers: Boolean(s.views?.hasViewers),
+          } satisfies StoryItemPayload
+        })
 
       return {
         peerId,
         maxReadId: res.stories?.maxReadId,
         stories,
       }
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getPeerStories error for ${peerId}:`, err?.message || err)
       return null
+    }
+  }
+
+  public async getStoryMedia(
+    accountId: string,
+    peerId: string,
+    storyId: number
+  ): Promise<StoryMediaResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { error: 'Account is not connected.' }
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.getStoriesByID',
+        peer: inputPeer,
+        id: [storyId],
+      })
+
+      const story = (res?.stories || []).find(
+        (s: any) => s?._ === 'storyItem' && Number(s.id) === Number(storyId)
+      )
+      const media = story?.media
+      if (!media || media._ === 'messageMediaEmpty') {
+        return { error: 'This story has no downloadable media.' }
+      }
+
+      let mediaLocation: any = null
+      let mediaDcId: number | undefined
+      let mediaFileSize: number | undefined
+      let mimeType = ''
+      let ext = '.bin'
+      let isVideo = false
+
+      if (media._ === 'messageMediaPhoto' && media.photo) {
+        const photo = media.photo
+        const photoSizes = Array.isArray(photo.sizes) ? photo.sizes : []
+        let bestSize: any = null
+        let bestArea = -1
+
+        for (const size of photoSizes) {
+          if (size?._ === 'photoStrippedSize' || size?._ === 'photoCachedSize') continue
+          const area = Number(size?.w || 0) * Number(size?.h || 0)
+          if (area > bestArea) {
+            bestArea = area
+            bestSize = size
+          }
+        }
+
+        if (!photo.id || !photo.accessHash) {
+          return { error: 'This story photo has no download location.' }
+        }
+
+        const progressiveSizes = Array.isArray(bestSize?.sizes) ? bestSize.sizes : []
+        mediaFileSize = Number(
+          progressiveSizes.length > 0
+            ? progressiveSizes[progressiveSizes.length - 1]
+            : bestSize?.size || 0
+        ) || undefined
+        mediaDcId = photo.dcId ? Number(photo.dcId) : undefined
+
+        mediaLocation = {
+          _: 'inputPhotoFileLocation',
+          id: photo.id,
+          accessHash: photo.accessHash,
+          fileReference: photo.fileReference || Buffer.alloc(0),
+          thumbSize: bestSize?.type || 'y',
+        }
+        mimeType = 'image/jpeg'
+        ext = '.jpg'
+      } else if (media._ === 'messageMediaDocument' && media.document) {
+        const doc = media.document
+        const hasVideoAttribute =
+          Array.isArray(doc.attributes) &&
+          doc.attributes.some(
+            (a: any) =>
+              a?._ === 'documentAttributeVideo' || a?._ === 'documentAttributeAnimated'
+          )
+        isVideo = hasVideoAttribute || /^video\//i.test(doc.mimeType || '')
+        mimeType = doc.mimeType || ''
+
+        if (!doc.id || !doc.accessHash) {
+          return { error: 'This story document has no download location.' }
+        }
+
+        mediaLocation = {
+          _: 'inputDocumentFileLocation',
+          id: doc.id,
+          accessHash: doc.accessHash,
+          fileReference: doc.fileReference || Buffer.alloc(0),
+          thumbSize: '',
+        }
+        mediaDcId = doc.dcId ? Number(doc.dcId) : undefined
+        mediaFileSize = Number(doc.size || 0) || undefined
+
+        if (/^video\/mp4/i.test(mimeType)) ext = '.mp4'
+        else if (/^video\/webm/i.test(mimeType)) ext = '.webm'
+        else if (/^video\//i.test(mimeType)) ext = '.video'
+        else if (/^image\/jpe?g/i.test(mimeType)) ext = '.jpg'
+        else if (/^image\/png/i.test(mimeType)) ext = '.png'
+        else if (/^image\/webp/i.test(mimeType)) ext = '.webp'
+        else if (/^image\/gif/i.test(mimeType)) ext = '.gif'
+        else if (/^image\//i.test(mimeType)) ext = '.img'
+        else ext = '.bin'
+      } else {
+        return { error: 'Unsupported story media type.' }
+      }
+
+      const safePeer = String(peerId).replace(/[^a-zA-Z0-9_-]/g, '_')
+      const cachePrefix = `story_${accountId}_${safePeer}_${Number(storyId)}`
+      let cachedFile: string | null = null
+
+      try {
+        const existing = fs
+          .readdirSync(this.mediaDir)
+          .find((f) => f.startsWith(`${cachePrefix}.`))
+        if (existing) {
+          const existingPath = path.join(this.mediaDir, existing)
+          if (fs.statSync(existingPath).size > 0) {
+            cachedFile = existingPath
+          } else {
+            try {
+              fs.unlinkSync(existingPath)
+            } catch (_) {}
+
+            // Proceed to a fresh download instead of reusing an empty cache entry.
+          }
+        }
+      } catch (_) {
+        // media dir may not exist yet
+      }
+
+      if (!cachedFile) {
+        cachedFile = path.join(this.mediaDir, `${cachePrefix}${ext}`)
+        await holder.client.downloadToFile(cachedFile, mediaLocation, {
+          partSize: 512,
+          dcId: mediaDcId,
+          fileSize: mediaFileSize,
+        } as any)
+      }
+
+      if (!fs.existsSync(cachedFile) || fs.statSync(cachedFile).size === 0) {
+        return { error: 'Story media download failed.' }
+      }
+
+      return {
+        mediaUrl: `guidegram-media://${cachedFile.replace(/\\/g, '/')}`,
+        isVideo,
+        mimeType: mimeType || undefined,
+      }
+    } catch (err: any) {
+      Logger.warn(
+        `[AccountManager] getStoryMedia error for ${peerId}/${storyId}:`,
+        err?.message || err
+      )
+      return { error: err?.message || 'Failed to load story media.' }
     }
   }
 
@@ -5829,14 +7630,166 @@ export class AccountManager {
     if (!holder?.client) return false
 
     try {
-      const inputPeer = toRawPeer(peerId)
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
       await holder.client.call({
         _: 'stories.readStories',
         peer: inputPeer,
         maxId,
       })
       return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] readStories error for ${peerId}:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async sendStory(
+    accountId: string,
+    filePath: string,
+    options?: SendStoryOptions
+  ): Promise<SendStoryResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error('Account is not connected.')
+
+    let fileStat: fs.Stats
+    try {
+      fileStat = await fs.promises.stat(filePath)
     } catch (_) {
+      throw new Error('STORY_FILE_NOT_FOUND')
+    }
+    if (!fileStat.isFile() || fileStat.size <= 0) {
+      throw new Error('STORY_FILE_NOT_FOUND')
+    }
+
+    const caption = options?.caption?.trim() || ''
+    if (caption.length > 2048) throw new Error('STORY_CAPTION_TOO_LONG')
+
+    const extension = path.extname(filePath).toLowerCase()
+    const videoExtensions = new Set(['.mp4', '.mov', '.m4v', '.webm', '.mkv', '.avi'])
+    const isVideo = options?.isVideo ?? videoExtensions.has(extension)
+
+    let media: any
+    if (isVideo) {
+      const duration = Math.round(Number(options?.duration) || 0)
+      const width = Math.round(Number(options?.width) || 0)
+      const height = Math.round(Number(options?.height) || 0)
+      if (duration <= 0 || width <= 0 || height <= 0) {
+        throw new Error('STORY_VIDEO_METADATA_MISSING')
+      }
+
+      media = InputMedia.video(`file:${filePath}`, {
+        duration,
+        width,
+        height,
+        supportsStreaming: true,
+      })
+    } else {
+      media = InputMedia.photo(`file:${filePath}`)
+    }
+
+    const privacyRules =
+      options?.privacy === 'contacts'
+        ? [{ _: 'inputPrivacyValueAllowContacts' }]
+        : options?.privacy === 'close_friends'
+          ? [{ _: 'inputPrivacyValueAllowCloseFriends' }]
+          : [{ _: 'inputPrivacyValueAllowAll' }]
+
+    const period = Math.round(Number(options?.period) || 86400)
+
+    try {
+      const story: any = await holder.client.sendStory({
+        media,
+        caption: caption || undefined,
+        privacyRules: privacyRules as any,
+        pinned: Boolean(options?.pinned),
+        forbidForwards: Boolean(options?.forbidForwards),
+        period,
+      })
+
+      const raw = story?.raw || {}
+      const date = Number(raw.date) || Math.floor(Date.now() / 1000)
+      return {
+        id: Number(raw.id) || 0,
+        date,
+        expireDate: Number(raw.expireDate) || date + period,
+        isVideo: Boolean(isVideo),
+      }
+    } catch (err: any) {
+      const message = String(err?.message || err || '')
+      const upper = message.toUpperCase()
+
+      Logger.warn(`[AccountManager] sendStory error:`, message)
+
+      if (upper.includes('PREMIUM_ACCOUNT_REQUIRED')) {
+        throw new Error('STORY_PREMIUM_REQUIRED')
+      }
+      const floodMatch = upper.match(/FLOOD_WAIT_(\d+)/)
+      if (floodMatch) {
+        throw new Error(`STORY_FLOOD_WAIT_${floodMatch[1]}`)
+      }
+      if (upper.includes('STORY_VIDEO_TOO_LONG') || upper.includes('VIDEO_TOO_LONG')) {
+        throw new Error('STORY_VIDEO_TOO_LONG')
+      }
+      if (upper.includes('STORY_PERIOD_INVALID') || upper.includes('PERIOD_INVALID')) {
+        throw new Error('STORY_PERIOD_INVALID')
+      }
+      if (upper.includes('FILE_TOO_LARGE') || upper.includes('FILE_PART_TOO_BIG')) {
+        throw new Error('STORY_FILE_TOO_LARGE')
+      }
+      if (
+        upper.includes('PHOTO_EXT_INVALID') ||
+        upper.includes('VIDEO_FILE_INVALID') ||
+        upper.includes('MEDIA_FILE_INVALID') ||
+        upper.includes('MEDIA_EMPTY') ||
+        upper.includes('FILE_PART_')
+      ) {
+        throw new Error('STORY_MEDIA_INVALID')
+      }
+
+      throw err
+    }
+  }
+
+  public async deleteStory(
+    accountId: string,
+    storyId: number,
+    peerId?: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const targetPeer =
+        !peerId || peerId === accountId || peerId === String(holder.info.id)
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+
+      await holder.client.call({
+        _: 'stories.deleteStories',
+        peer: targetPeer,
+        id: [Number(storyId)],
+      } as any)
+
+      // Remove cached copies so a deleted story cannot reappear from disk.
+      try {
+        const suffix = `_${Number(storyId)}.`
+        for (const file of fs.readdirSync(this.mediaDir)) {
+          if (file.startsWith(`story_${accountId}_`) && file.includes(suffix)) {
+            try {
+              fs.unlinkSync(path.join(this.mediaDir, file))
+            } catch (_) {}
+          }
+        }
+      } catch (_) {
+        // media cache may not exist
+      }
+
+      return true
+    } catch (err: any) {
+      Logger.warn(
+        `[AccountManager] deleteStory error for ${peerId || 'self'}/${storyId}:`,
+        err?.message || err
+      )
       return false
     }
   }
@@ -5885,6 +7838,104 @@ export class AccountManager {
     } catch (_) {
       return null
     }
+  }
+
+  public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) {
+      throw new Error('Telegram client is not connected.')
+    }
+
+    const mapStatuses = (res: any, source: EmojiStatusSource): EmojiStatusItem[] => {
+      if (res?._ !== 'account.emojiStatuses' || !Array.isArray(res.statuses)) return []
+      const items: EmojiStatusItem[] = []
+      for (const status of res.statuses) {
+        if (status?._ === 'emojiStatusCollectible') {
+          if (!status.documentId) continue
+          items.push({
+            documentId: String(status.documentId),
+            source,
+            collectibleId: status.collectibleId ? String(status.collectibleId) : undefined,
+            title: status.title || undefined,
+            slug: status.slug || undefined,
+            until: status.until || undefined,
+          })
+        } else if (status?._ === 'emojiStatus' && status.documentId) {
+          items.push({
+            documentId: String(status.documentId),
+            source,
+            until: status.until || undefined,
+          })
+        }
+      }
+      return items
+    }
+
+    const [defaults, recent, collectible, fullUser] = await Promise.all([
+      holder.client.call({
+        _: 'account.getDefaultEmojiStatuses',
+        hash: toLong(0),
+      }),
+      holder.client.call({
+        _: 'account.getRecentEmojiStatuses',
+        hash: toLong(0),
+      }),
+      holder.client.call({
+        _: 'account.getCollectibleEmojiStatuses',
+        hash: toLong(0),
+      }),
+      holder.client.call({
+        _: 'users.getFullUser',
+        id: { _: 'inputUserSelf' },
+      }).catch(() => null),
+    ])
+
+    const current: any =
+      (fullUser as any)?.users?.[0]?.emojiStatus || null
+    const isCollectible = current?._ === 'emojiStatusCollectible'
+
+    return {
+      currentDocumentId: current?.documentId ? String(current.documentId) : undefined,
+      currentCollectibleId: isCollectible && current?.collectibleId
+        ? String(current.collectibleId)
+        : undefined,
+      currentUntil: current?.until || undefined,
+      default: mapStatuses(defaults, 'default'),
+      recent: mapStatuses(recent, 'recent'),
+      collectible: mapStatuses(collectible, 'collectible'),
+    }
+  }
+
+  public async setEmojiStatus(
+    accountId: string,
+    options: SetEmojiStatusOptions
+  ): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) {
+      throw new Error('Telegram client is not connected.')
+    }
+
+    let emojiStatus: any = { _: 'emojiStatusEmpty' }
+    if (options.documentId) {
+      if (options.collectibleId) {
+        emojiStatus = {
+          _: 'inputEmojiStatusCollectible',
+          collectibleId: toLong(options.collectibleId),
+          ...(options.until ? { until: options.until } : {}),
+        }
+      } else {
+        emojiStatus = {
+          _: 'emojiStatus',
+          documentId: toLong(options.documentId),
+          ...(options.until ? { until: options.until } : {}),
+        }
+      }
+    }
+
+    await holder.client.call({
+      _: 'account.updateEmojiStatus',
+      emojiStatus,
+    })
   }
 
   public async getMyFullProfile(accountId: string): Promise<MyFullProfile | null> {
@@ -6292,6 +8343,22 @@ export class AccountManager {
         this.onEventCallback?.('telegram:message-edited', { accountId, chatId, message: item })
       } catch (e) {
         Logger.warn('[AccountManager] Error processing edit message update:', e)
+      }
+    })
+
+    client.onUserTyping.add((update: any) => {
+      try {
+        const chatId = update.chatId != null ? String(update.chatId) : ''
+        if (!chatId) return
+        this.onEventCallback?.('telegram:user-typing', {
+          accountId,
+          chatId,
+          userId: String(update.userId),
+          status: update.status,
+          threadId: update.threadId ?? null,
+        })
+      } catch (e) {
+        Logger.warn('[AccountManager] Error processing user typing update:', e)
       }
     })
 

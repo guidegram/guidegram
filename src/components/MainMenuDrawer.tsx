@@ -19,11 +19,14 @@ import {
   Gift,
   Laptop,
   Heart,
+  Link2,
+  Loader2,
 } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
 import { StarGiftsModal } from './StarGiftsModal'
 import { ActiveSessionsModal } from './ActiveSessionsModal'
+import { EmojiStatusModal } from './EmojiStatusModal'
 import { useI18n } from '../i18n'
 import logoImg from '../assets/logo.png'
 
@@ -44,6 +47,7 @@ interface MainMenuDrawerProps {
   onOpenNewChannel?: () => void
   onOpenContacts?: () => void
   onOpenCalls?: () => void
+  onJoinedChat?: (chatId: string) => void
   archivedUnreadCount?: number
   unreadCountsByAccount?: Record<string, number>
   isNightMode?: boolean
@@ -69,6 +73,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   onOpenNewChannel,
   onOpenContacts,
   onOpenCalls,
+  onJoinedChat,
   archivedUnreadCount = 0,
   unreadCountsByAccount = {},
   isNightMode = true,
@@ -80,8 +85,42 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   const [isAccountsExpanded, setIsAccountsExpanded] = useState(true)
   const [isStarGiftsOpen, setIsStarGiftsOpen] = useState(false)
   const [isActiveSessionsOpen, setIsActiveSessionsOpen] = useState(false)
+  const [isEmojiStatusOpen, setIsEmojiStatusOpen] = useState(false)
+  const [isJoinOpen, setIsJoinOpen] = useState(false)
+  const [joinLink, setJoinLink] = useState('')
+  const [joinStatus, setJoinStatus] = useState<string | null>(null)
+  const [isJoining, setIsJoining] = useState(false)
 
   if (!isOpen) return null
+
+  const handleJoinByLink = async () => {
+    if (!activeAccount || !joinLink.trim() || isJoining) return
+    setIsJoining(true)
+    setJoinStatus(null)
+    try {
+      const result = await window.guidegram.joinChatInvite(
+        activeAccount.id,
+        joinLink.trim()
+      )
+      if (result.status === 'ok') {
+        setJoinStatus('Joined successfully. Opening chat…')
+        setJoinLink('')
+        if (result.chatId) onJoinedChat?.(result.chatId)
+        setTimeout(() => {
+          setIsJoinOpen(false)
+          onClose()
+        }, 600)
+      } else if (result.status === 'request_sent') {
+        setJoinStatus('Join request sent. An admin must approve it.')
+      } else {
+        setJoinStatus('This invite requires approval in the official Telegram app.')
+      }
+    } catch (err: any) {
+      setJoinStatus(`Failed to join: ${err?.message || err}`)
+    } finally {
+      setIsJoining(false)
+    }
+  }
 
   const formatBadge = (num?: number): string => {
     if (!num || num <= 0) return ''
@@ -135,13 +174,10 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose()
-                      onOpenProfile()
-                    }}
+                    onClick={() => setIsEmojiStatusOpen(true)}
                     className="text-xs text-accent-cyan hover:underline truncate mt-0.5 cursor-pointer block text-left"
                   >
-                    Set Emoji Status
+                    {t('emoji.set')}
                   </button>
                 </div>
 
@@ -307,6 +343,19 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <Megaphone className="w-4 h-4 text-gray-400" />
                 <span>{t('app.new_channel')}</span>
+              </button>
+
+              {/* Join by Invite Link */}
+              <button
+                type="button"
+                onClick={() => {
+                  setJoinStatus(null)
+                  setIsJoinOpen(true)
+                }}
+                className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer"
+              >
+                <Link2 className="w-4 h-4 text-gray-400" />
+                <span>Join by Link</span>
               </button>
 
               {/* Contacts */}
@@ -526,6 +575,92 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
             onClose={() => setIsActiveSessionsOpen(false)}
             accountId={activeAccount.id}
           />
+
+          <EmojiStatusModal
+            isOpen={isEmojiStatusOpen}
+            onClose={() => setIsEmojiStatusOpen(false)}
+            accountId={activeAccount.id}
+            isPremium={activeAccount.isPremium}
+          />
+
+          {isJoinOpen && (
+            <div
+              dir={isRTL ? 'rtl' : 'ltr'}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+              onClick={() => !isJoining && setIsJoinOpen(false)}
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleJoinByLink()
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md rounded-2xl bg-[#17212b] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+              >
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-accent-cyan/15 text-accent-cyan flex items-center justify-center">
+                      <Link2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white">Join by Link</div>
+                      <div className="text-[11px] text-gray-400">
+                        Paste a t.me invite link or @username
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isJoining}
+                    onClick={() => setIsJoinOpen(false)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  <input
+                    autoFocus
+                    value={joinLink}
+                    onChange={(e) => setJoinLink(e.target.value)}
+                    placeholder="https://t.me/+AbCdEfGhIjK or @channel"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e1621] border border-white/10 focus:border-accent-cyan/60 focus:outline-none text-xs text-gray-100 placeholder:text-gray-500 font-mono"
+                  />
+
+                  {joinStatus && (
+                    <div
+                      className={`text-[11px] leading-relaxed px-3 py-2 rounded-xl border ${
+                        joinStatus.startsWith('Failed')
+                          ? 'bg-accent-rose/10 border-accent-rose/25 text-accent-rose'
+                          : 'bg-accent-cyan/10 border-accent-cyan/25 text-accent-cyan'
+                      }`}
+                    >
+                      {joinStatus}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={!joinLink.trim() || isJoining}
+                    className="w-full py-2.5 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isJoining ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Joining…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-4 h-4" />
+                        <span>Join Chat</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </>
       )}
     </div>

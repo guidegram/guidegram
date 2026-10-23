@@ -409,6 +409,7 @@ export interface ChatDetails {
   isGroup: boolean
   isUser: boolean
   isBot: boolean
+  isBlocked?: boolean
   avatarUrl?: string
   verified?: boolean
   fake?: boolean
@@ -421,6 +422,7 @@ export interface ChatDetails {
   isCreator?: boolean
   isAdmin?: boolean
   canManageCalls?: boolean
+  canManageTopics?: boolean
   canViewAdminLog?: boolean
   permissionsMatrix?: {
     sendMessages: boolean
@@ -456,6 +458,7 @@ export interface ChatDetails {
   stargiftsCount?: number
   birthday?: string
   isBroadcast?: boolean
+  isSupergroup?: boolean
   isForum?: boolean
   isMuted?: boolean
   availableReactions?: string[]
@@ -464,6 +467,198 @@ export interface ChatDetails {
   groupCallId?: string
   groupCallAccessHash?: string
   groupCallParticipantsCount?: number
+  canManageMembers?: boolean
+  canPromoteMembers?: boolean
+  canChangeInfo?: boolean
+  canSetDescription?: boolean
+  canBanMembers?: boolean
+  canAddMembers?: boolean
+  canSetSlowMode?: boolean
+  canManageJoinRequests?: boolean
+  canEditPermissions?: boolean
+  /** Raw default member restrictions (true = restricted). */
+  defaultRestrictions?: ChatRestrictionsPayload
+  slowModeSeconds?: number
+  joinRequestsEnabled?: boolean
+}
+
+export type ChatMemberStatus = 'creator' | 'admin' | 'member' | 'restricted' | 'banned' | 'left'
+
+export type ChatMemberFilter = 'all' | 'admins' | 'restricted' | 'banned' | 'bots' | 'contacts' | 'recent'
+
+export interface ChatAdminRightsPayload {
+  changeInfo?: boolean
+  postMessages?: boolean
+  editMessages?: boolean
+  deleteMessages?: boolean
+  banUsers?: boolean
+  inviteUsers?: boolean
+  pinMessages?: boolean
+  addAdmins?: boolean
+  anonymous?: boolean
+  manageCall?: boolean
+  other?: boolean
+  manageTopics?: boolean
+  postStories?: boolean
+  editStories?: boolean
+  deleteStories?: boolean
+  manageDirectMessages?: boolean
+  manageRanks?: boolean
+  manageLinkedPeers?: boolean
+  manageWelcomeMessages?: boolean
+}
+
+export interface ChatRestrictionsPayload {
+  viewMessages?: boolean
+  sendMessages?: boolean
+  sendMedia?: boolean
+  sendStickers?: boolean
+  sendGifs?: boolean
+  sendGames?: boolean
+  sendInline?: boolean
+  embedLinks?: boolean
+  sendPolls?: boolean
+  changeInfo?: boolean
+  inviteUsers?: boolean
+  pinMessages?: boolean
+  manageTopics?: boolean
+  sendPhotos?: boolean
+  sendVideos?: boolean
+  sendRoundvideos?: boolean
+  sendAudios?: boolean
+  sendVoices?: boolean
+  sendDocs?: boolean
+  sendPlain?: boolean
+  editRank?: boolean
+  sendReactions?: boolean
+  manageLinkedPeers?: boolean
+  untilDate?: number
+}
+
+export interface ChatMemberPayload {
+  id: string
+  name: string
+  username?: string
+  phone?: string
+  isBot: boolean
+  isPremium: boolean
+  isSelf: boolean
+  isContact: boolean
+  isDeleted: boolean
+  status: ChatMemberStatus
+  rank?: string
+  joinedDate?: number
+  subscriptionUntilDate?: number
+  adminRights?: ChatAdminRightsPayload
+  restrictions?: ChatRestrictionsPayload
+  avatarUrl?: string
+}
+
+export interface ChatMembersResult {
+  members: ChatMemberPayload[]
+  total: number
+}
+
+export interface ChatMembersQuery {
+  query?: string
+  offset?: number
+  limit?: number
+  filter?: ChatMemberFilter
+}
+
+export interface AddChatMembersResult {
+  invitedCount: number
+  missing: Array<{
+    userId: string
+    premiumWouldAllowInvite: boolean
+    premiumRequiredForPm: boolean
+  }>
+}
+
+export interface ChatSettingsInput {
+  title?: string
+  description?: string
+  slowModeSeconds?: number
+  joinRequestsEnabled?: boolean
+  /** Enable or disable forum mode in an owned supergroup. */
+  isForum?: boolean
+  /** Public username (without @); empty string or null removes the public link. */
+  username?: string | null
+  /** Default member restrictions to set (true = restricted). Unspecified flags keep their current value. */
+  defaultRestrictions?: ChatRestrictionsPayload
+}
+
+export interface ChatSettingsUpdateResult {
+  details: ChatDetails
+  errors: string[]
+}
+
+export interface ChatInviteLink {
+  link: string
+  title?: string
+  adminId?: string
+  date: number
+  startDate?: number
+  expireDate?: number
+  usageLimit?: number
+  usage?: number
+  requested?: number
+  revoked: boolean
+  permanent: boolean
+  requestNeeded: boolean
+}
+
+export interface ChatInviteLinksResult {
+  links: ChatInviteLink[]
+  total: number
+}
+
+export interface ChatInviteLinksQuery {
+  /** When true, fetch revoked links instead of active links. */
+  revokedOnly?: boolean
+  limit?: number
+}
+
+export interface ChatInviteLinkInput {
+  title?: string
+  /** Unix timestamp in seconds. Omit or null for no expiry. */
+  expireDate?: number | null
+  /** Maximum number of joiners. Omit or null for unlimited. */
+  usageLimit?: number | null
+  requestNeeded?: boolean
+}
+
+export interface ChatInviteLinkMutationResult {
+  link?: ChatInviteLink
+  replacement?: ChatInviteLink
+}
+
+export interface ChatJoinRequestItem {
+  userId: string
+  name: string
+  username?: string
+  bio?: string
+  date: number
+  isBot?: boolean
+  isPremium?: boolean
+  avatarUrl?: string
+}
+
+export interface ChatJoinRequestsResult {
+  requests: ChatJoinRequestItem[]
+  total: number
+}
+
+export type ChatJoinRequestAction = 'approve' | 'decline'
+
+export interface ChatJoinRequestResolveResult {
+  userId: string
+  action: ChatJoinRequestAction
+}
+
+export interface ChatJoinRequestBulkResolveResult {
+  action: ChatJoinRequestAction
+  count: number
 }
 
 export interface ContactItem {
@@ -473,6 +668,93 @@ export interface ContactItem {
   phone?: string
   username?: string
   avatarUrl?: string
+}
+
+export type CallDiscardReason = 'missed' | 'busy' | 'hangup' | 'disconnect' | 'unknown'
+
+export interface CallLogItem {
+  id: number
+  peerId: string
+  title: string
+  username?: string
+  date: number
+  duration: number
+  isOutgoing: boolean
+  isMissed: boolean
+  isVideo: boolean
+  reason?: CallDiscardReason
+}
+
+export interface CallLogResult {
+  items: CallLogItem[]
+  total: number
+}
+
+export interface StatsValuePair {
+  current: number
+  previous: number
+}
+
+export interface ChatStatsPeriod {
+  minDate: number
+  maxDate: number
+}
+
+export interface ChatStatsTopPoster {
+  peerId: string
+  title: string
+  messages: number
+  avgChars: number
+}
+
+export interface ChatStatsTopAdmin {
+  peerId: string
+  title: string
+  deleted: number
+  kicked: number
+  banned: number
+  reports: number
+}
+
+export interface ChatStatsTopInviter {
+  peerId: string
+  title: string
+  invitations: number
+}
+
+export interface ChatStatsPayload {
+  kind: 'megagroup' | 'broadcast'
+  period: ChatStatsPeriod | null
+  members?: StatsValuePair
+  messages?: StatsValuePair
+  viewers?: StatsValuePair
+  posters?: StatsValuePair
+  followers?: StatsValuePair
+  viewsPerPost?: StatsValuePair
+  sharesPerPost?: StatsValuePair
+  reactionsPerPost?: StatsValuePair
+  viewsPerStory?: StatsValuePair
+  sharesPerStory?: StatsValuePair
+  reactionsPerStory?: StatsValuePair
+  enabledNotifications?: { part: number; total: number }
+  topPosters: ChatStatsTopPoster[]
+  topAdmins: ChatStatsTopAdmin[]
+  topInviters: ChatStatsTopInviter[]
+}
+
+export type ChatStatsError =
+  | 'admin_required'
+  | 'not_supergroup'
+  | 'not_channel'
+  | 'unavailable'
+  | 'unknown'
+
+export interface ChatStatsResult {
+  ok: boolean
+  kind?: 'megagroup' | 'broadcast'
+  stats?: ChatStatsPayload
+  error?: ChatStatsError
+  message?: string
 }
 
 export interface ForwardOptions {
@@ -643,6 +925,22 @@ export interface ForumTopicItem {
   date?: number
 }
 
+export interface ForumTopicInput {
+  title?: string
+  closed?: boolean
+  hidden?: boolean
+  iconEmojiId?: string | null
+}
+
+export interface ForumTopicMutationResult {
+  topicId?: number
+  topics: ForumTopicItem[]
+}
+
+export interface ForumTopicCreateResult extends ForumTopicMutationResult {
+  topicId: number
+}
+
 export interface ScheduledMessageItem {
   id: number
   text?: string
@@ -729,6 +1027,8 @@ export interface StickerSetItem {
   stickers: StickerItem[]
 }
 
+export type StoryMediaType = 'photo' | 'video' | 'unsupported'
+
 export interface StoryItemPayload {
   id: number
   date: number
@@ -736,13 +1036,72 @@ export interface StoryItemPayload {
   caption?: string
   mediaUrl?: string
   isVideo?: boolean
+  /** Actual media kind as reported by Telegram's storyItem. */
+  mediaType?: StoryMediaType
+  hasPhoto?: boolean
+  hasVideo?: boolean
+  isPinned?: boolean
+  isPublic?: boolean
+  isOut?: boolean
+  /** Story audience. `selected_contacts` is Telegram's custom contact list mode. */
+  privacy?: StoryPrivacy | 'selected_contacts'
+  forbidForwards?: boolean
   viewsCount?: number
+  forwardsCount?: number
+  reactionsCount?: number
+  hasViewers?: boolean
 }
 
 export interface PeerStoriesPayload {
   peerId: string
   maxReadId?: number
   stories: StoryItemPayload[]
+}
+
+export interface StoryMediaResult {
+  mediaUrl?: string
+  isVideo?: boolean
+  mimeType?: string
+  error?: string
+}
+
+export type StoryPrivacy = 'everyone' | 'contacts' | 'close_friends'
+
+export interface SendStoryOptions {
+  caption?: string
+  privacy?: StoryPrivacy
+  pinned?: boolean
+  forbidForwards?: boolean
+  /** Story lifetime in seconds. Telegram defaults to 86400 (24 hours). */
+  period?: number
+  isVideo?: boolean
+  duration?: number
+  width?: number
+  height?: number
+}
+
+export interface SendStoryResult {
+  id: number
+  date: number
+  expireDate: number
+  isVideo: boolean
+}
+
+export interface ActiveStoryPeer {
+  peerId: string
+  title: string
+  username?: string
+  maxStoryId: number
+  maxReadId?: number
+  storyCount: number
+  hasUnread: boolean
+  isSelf?: boolean
+}
+
+export interface ActiveStoriesResult {
+  peers: ActiveStoryPeer[]
+  totalCount: number
+  hasMore: boolean
 }
 
 export interface ChannelBoostStatus {
@@ -781,6 +1140,35 @@ export interface MyFullProfile {
   blockedCount?: number
   activeSessionsCount?: number
   hasTwoStepAuth?: boolean
+}
+
+export type EmojiStatusSource = 'default' | 'recent' | 'collectible'
+
+export interface EmojiStatusItem {
+  documentId: string
+  source: EmojiStatusSource
+  collectibleId?: string
+  title?: string
+  slug?: string
+  until?: number
+}
+
+export interface EmojiStatusesResult {
+  currentDocumentId?: string
+  currentCollectibleId?: string
+  currentUntil?: number
+  default: EmojiStatusItem[]
+  recent: EmojiStatusItem[]
+  collectible: EmojiStatusItem[]
+}
+
+export interface SetEmojiStatusOptions {
+  /** Custom emoji document ID. Omit or pass null to clear the status. */
+  documentId?: string | null
+  /** Required when setting an owned collectible gift as the status. */
+  collectibleId?: string
+  /** Unix timestamp at which the status should expire. Omit for forever. */
+  until?: number
 }
 
 export interface PrivacySecuritySettings {

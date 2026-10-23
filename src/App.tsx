@@ -17,6 +17,7 @@ const UnifiedInbox = React.lazy(() => import('./components/UnifiedInbox').then((
 const MainMenuDrawer = React.lazy(() => import('./components/MainMenuDrawer').then((m) => ({ default: m.MainMenuDrawer })))
 const MyProfileDrawer = React.lazy(() => import('./components/MyProfileDrawer').then((m) => ({ default: m.MyProfileDrawer })))
 const ContactsModal = React.lazy(() => import('./components/ContactsModal').then((m) => ({ default: m.ContactsModal })))
+const CallsModal = React.lazy(() => import('./components/CallsModal').then((m) => ({ default: m.CallsModal })))
 const CreateChatModal = React.lazy(() => import('./components/CreateChatModal').then((m) => ({ default: m.CreateChatModal })))
 const CloseConfirmModal = React.lazy(() => import('./components/CloseConfirmModal').then((m) => ({ default: m.CloseConfirmModal })))
 const WhatsNewModal = React.lazy(() => import('./components/WhatsNewModal').then((m) => ({ default: m.WhatsNewModal })))
@@ -63,6 +64,7 @@ export const App: React.FC = () => {
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false)
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false)
   const [isContactsOpen, setIsContactsOpen] = useState(false)
+  const [isCallsOpen, setIsCallsOpen] = useState(false)
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
   const [createChatState, setCreateChatState] = useState<{ isOpen: boolean; mode: 'group' | 'channel' }>({
     isOpen: false,
@@ -727,6 +729,13 @@ export const App: React.FC = () => {
     }
   }
 
+  const handleJoinedChat = async (chatId: string) => {
+    if (!activeAccountId) return
+    setIsMainMenuOpen(false)
+    await loadDialogsForAccount(activeAccountId)
+    handleSelectChat(chatId)
+  }
+
   const handleSendMessage = async (
     text: string,
     replyToMsgId?: number,
@@ -785,6 +794,36 @@ export const App: React.FC = () => {
       })
     } catch (err) {
       console.error('Failed to send message:', err)
+      throw err
+    }
+  }
+
+  const handleEditMessage = async (message: MessageItem, newText: string) => {
+    if (!activeAccountId) return
+    try {
+      const updated = await window.guidegram.editMessage(
+        activeAccountId,
+        message.chatId,
+        message.id,
+        newText
+      )
+      setMessagesByChat((prev) => {
+        const list = prev[message.chatId] || []
+        return {
+          ...prev,
+          [message.chatId]: list.map((m) =>
+            m.id === message.id
+              ? {
+                  ...m,
+                  text: updated?.text ?? newText,
+                  editDate: updated?.editDate || Math.floor(Date.now() / 1000),
+                }
+              : m
+          ),
+        }
+      })
+    } catch (err) {
+      console.error('Failed to edit message:', err)
       throw err
     }
   }
@@ -1367,6 +1406,7 @@ export const App: React.FC = () => {
             onOpenDirectForward={(msg) => setForwardMessage(msg)}
             onQuickForwardToSaved={handleQuickForwardToSaved}
             onDeleteMessage={handleDeleteMessage}
+            onEditMessage={handleEditMessage}
             onToggleGhostMode={handleToggleGhostMode}
             onSelectUserOrChat={handleSelectUserOrChat}
             initialScrollMsgId={initialScrollMsgId}
@@ -1422,8 +1462,9 @@ export const App: React.FC = () => {
             }}
             onOpenCalls={() => {
               setIsMainMenuOpen(false)
-              setIsContactsOpen(true)
+              setIsCallsOpen(true)
             }}
+            onJoinedChat={handleJoinedChat}
             onOpenArchivedChats={() => {
               setIsMainMenuOpen(false)
               setActiveTab('archived' as any)
@@ -1455,6 +1496,18 @@ export const App: React.FC = () => {
             onSelectContact={(contactId) => {
               setIsContactsOpen(false)
               handleSelectUserOrChat(contactId)
+            }}
+          />
+        )}
+
+        {isCallsOpen && (
+          <CallsModal
+            isOpen={isCallsOpen}
+            accountId={currentAccount?.id}
+            onClose={() => setIsCallsOpen(false)}
+            onSelectPeer={(peerId) => {
+              setIsCallsOpen(false)
+              handleSelectUserOrChat(peerId)
             }}
           />
         )}

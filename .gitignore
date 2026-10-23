@@ -38,3 +38,7 @@ Thumbs.db
 # AI Agent Workspace (internal, not project source)
 .agents/
 ORIGINAL_REQUEST.md
+
+# Perpetual Engine local cache & state
+.perpetual/
+.tmp_story_build/

@@ -18,6 +18,7 @@
     "@mtcute/convert": "0.32.1",
     "@mtcute/core": "0.32.1",
     "@mtcute/node": "0.32.1",
+    "@mtcute/wasm": "0.32.0",
     "clsx": "^2.1.1",
     "lottie-web": "^5.13.0",
     "lucide-react": "^1.16.0",

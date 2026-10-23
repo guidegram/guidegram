@@ -39,9 +39,12 @@ const __dirname = path.dirname(__filename)
 // Configure 100% Portable User Data Directory BEFORE requesting single instance lock
 // (Chromium requires userData path to be set first so singleton pipe & lock use the same path)
 const isDev = !app.isPackaged
-const portableDataDir = isDev
-  ? path.resolve(__dirname, '../data')
-  : path.join(path.dirname(app.getPath('exe')), 'data')
+const dataDirOverride = process.env.GUIDEGRAM_DATA_DIR?.trim()
+const portableDataDir = dataDirOverride
+  ? path.resolve(dataDirOverride)
+  : isDev
+    ? path.resolve(__dirname, '../data')
+    : path.join(path.dirname(app.getPath('exe')), 'data')
 
 app.setPath('userData', portableDataDir)
 
@@ -1117,6 +1120,120 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:edit-message', async (_event, { accountId, chatId, messageId, text }) => {
+    try {
+      return await accountManager.editMessage(accountId, chatId, messageId, text)
+    } catch (err: any) {
+      Logger.error(`[IPC] editMessage failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:pin-message', async (_event, { accountId, chatId, messageId, notify, bothSides }) => {
+    try {
+      return await accountManager.pinMessage(accountId, chatId, messageId, notify, bothSides)
+    } catch (err: any) {
+      Logger.error(`[IPC] pinMessage failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:unpin-message', async (_event, { accountId, chatId, messageId }) => {
+    try {
+      return await accountManager.unpinMessage(accountId, chatId, messageId)
+    } catch (err: any) {
+      Logger.error(`[IPC] unpinMessage failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:send-typing', async (_event, { accountId, chatId, status }) => {
+    try {
+      return await accountManager.sendTyping(accountId, chatId, status)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendTyping failed:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:export-chat-invite', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.exportChatInvite(accountId, chatId)
+    } catch (err: any) {
+      Logger.error(`[IPC] exportChatInvite failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:join-chat-invite', async (_event, { accountId, inviteLink }) => {
+    try {
+      return await accountManager.joinChatInvite(accountId, inviteLink)
+    } catch (err: any) {
+      Logger.error(`[IPC] joinChatInvite failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:get-chat-invite-links', async (_event, { accountId, chatId, query }) => {
+    try {
+      return await accountManager.getChatInviteLinks(accountId, chatId, query)
+    } catch (err: any) {
+      Logger.error(`[IPC] getChatInviteLinks failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:create-chat-invite-link',
+    async (_event, { accountId, chatId, input }) => {
+      try {
+        return await accountManager.createChatInviteLink(accountId, chatId, input)
+      } catch (err: any) {
+        Logger.error(`[IPC] createChatInviteLink failed:`, err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'telegram:edit-chat-invite-link',
+    async (_event, { accountId, chatId, link, input }) => {
+      try {
+        return await accountManager.editChatInviteLink(accountId, chatId, link, input)
+      } catch (err: any) {
+        Logger.error(`[IPC] editChatInviteLink failed:`, err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:revoke-chat-invite-link', async (_event, { accountId, chatId, link }) => {
+    try {
+      return await accountManager.revokeChatInviteLink(accountId, chatId, link)
+    } catch (err: any) {
+      Logger.error(`[IPC] revokeChatInviteLink failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:delete-chat-invite-link', async (_event, { accountId, chatId, link }) => {
+    try {
+      return await accountManager.deleteChatInviteLink(accountId, chatId, link)
+    } catch (err: any) {
+      Logger.error(`[IPC] deleteChatInviteLink failed:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:block-user', async (_event, { accountId, userId, blocked }) => {
+    try {
+      return await accountManager.blockUser(accountId, userId, blocked)
+    } catch (err: any) {
+      Logger.error(`[IPC] blockUser failed:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:send-media', async (_event, { accountId, chatId, filePath, options }) => {
     try {
       return await accountManager.sendMedia(accountId, chatId, filePath, options)
@@ -1305,6 +1422,87 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-chat-members', async (_event, { accountId, chatId, options }) => {
+    try {
+      return await accountManager.getChatMembers(accountId, chatId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getChatMembers error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:add-chat-members', async (_event, { accountId, chatId, userIds }) => {
+    try {
+      return await accountManager.addChatMembers(accountId, chatId, userIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] addChatMembers error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:kick-chat-member', async (_event, { accountId, chatId, userId }) => {
+    try {
+      return await accountManager.kickChatMember(accountId, chatId, userId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] kickChatMember error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ban-chat-member', async (_event, { accountId, chatId, userId, untilDate }) => {
+    try {
+      return await accountManager.banChatMember(accountId, chatId, userId, untilDate)
+    } catch (err: any) {
+      Logger.warn(`[IPC] banChatMember error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:unban-chat-member', async (_event, { accountId, chatId, userId }) => {
+    try {
+      return await accountManager.unbanChatMember(accountId, chatId, userId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] unbanChatMember error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:restrict-chat-member', async (_event, { accountId, chatId, userId, restrictions }) => {
+    try {
+      return await accountManager.restrictChatMember(accountId, chatId, userId, restrictions)
+    } catch (err: any) {
+      Logger.warn(`[IPC] restrictChatMember error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:promote-chat-member', async (_event, { accountId, chatId, userId, rights, rank }) => {
+    try {
+      return await accountManager.promoteChatMember(accountId, chatId, userId, rights, rank)
+    } catch (err: any) {
+      Logger.warn(`[IPC] promoteChatMember error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:set-chat-member-rank', async (_event, { accountId, chatId, userId, rank }) => {
+    try {
+      return await accountManager.setChatMemberRank(accountId, chatId, userId, rank)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setChatMemberRank error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:update-chat-settings', async (_event, { accountId, chatId, settings }) => {
+    try {
+      return await accountManager.updateChatSettings(accountId, chatId, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateChatSettings error:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:resolve-peer', async (_event, { accountId, target }) => {
     try {
       return await accountManager.resolvePeer(accountId, target)
@@ -1433,6 +1631,26 @@ function setupIpcHandlers() {
       Logger.warn(`[IPC] getForumTopics error:`, err)
       return []
     }
+  })
+
+  ipcMain.handle('telegram:set-chat-forum-enabled', async (_event, { accountId, chatId, enabled }) => {
+    return await accountManager.setChatForumEnabled(accountId, chatId, !!enabled)
+  })
+
+  ipcMain.handle('telegram:create-forum-topic', async (_event, { accountId, chatId, title }) => {
+    return await accountManager.createForumTopic(accountId, chatId, title)
+  })
+
+  ipcMain.handle('telegram:edit-forum-topic', async (_event, { accountId, chatId, topicId, input }) => {
+    return await accountManager.editForumTopic(accountId, chatId, Number(topicId), input)
+  })
+
+  ipcMain.handle('telegram:set-forum-topic-pinned', async (_event, { accountId, chatId, topicId, pinned }) => {
+    return await accountManager.setForumTopicPinned(accountId, chatId, Number(topicId), !!pinned)
+  })
+
+  ipcMain.handle('telegram:delete-forum-topic', async (_event, { accountId, chatId, topicId }) => {
+    return await accountManager.deleteForumTopic(accountId, chatId, Number(topicId))
   })
 
   ipcMain.handle('telegram:get-scheduled-messages', async (_event, { accountId, chatId }) => {
@@ -1670,6 +1888,31 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle(
+    'telegram:get-call-log',
+    async (_event, { accountId, limit, offsetId, missedOnly }) => {
+      try {
+        return await accountManager.getCallLog(accountId, limit, offsetId, missedOnly)
+      } catch (err: any) {
+        Logger.warn(`[IPC] getCallLog error:`, err)
+        return { items: [], total: 0 }
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:get-chat-stats', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.getChatStats(accountId, chatId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getChatStats error:`, err)
+      return {
+        ok: false,
+        error: 'unknown',
+        message: 'Failed to load Telegram statistics.',
+      }
+    }
+  })
+
   // Telegram Group Calls / Live Streams (MTProto phone.*)
   ipcMain.handle('telegram:get-group-call', async (_event, { accountId, chatId, callId, accessHash }) => {
     try {
@@ -1789,6 +2032,15 @@ function setupIpcHandlers() {
   })
 
   // Stories IPC
+  ipcMain.handle('telegram:get-all-stories', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAllStories(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAllStories error:`, err)
+      return { peers: [], totalCount: 0, hasMore: false }
+    }
+  })
+
   ipcMain.handle('telegram:get-peer-stories', async (_event, { accountId, peerId }) => {
     try {
       return await accountManager.getPeerStories(accountId, peerId)
@@ -1798,11 +2050,38 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-story-media', async (_event, { accountId, peerId, storyId }) => {
+    try {
+      return await accountManager.getStoryMedia(accountId, peerId, storyId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStoryMedia error:`, err)
+      return { error: err?.message || 'Failed to load story media.' }
+    }
+  })
+
   ipcMain.handle('telegram:read-stories', async (_event, { accountId, peerId, maxId }) => {
     try {
       return await accountManager.readStories(accountId, peerId, maxId)
     } catch (err: any) {
       Logger.warn(`[IPC] readStories error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:send-story', async (_event, { accountId, filePath, options }) => {
+    try {
+      return await accountManager.sendStory(accountId, filePath, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendStory error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:delete-story', async (_event, { accountId, storyId, peerId }) => {
+    try {
+      return await accountManager.deleteStory(accountId, storyId, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteStory error:`, err)
       return false
     }
   })
@@ -1834,6 +2113,28 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.warn(`[IPC] getMyFullProfile error:`, err)
       return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-emoji-statuses', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getEmojiStatuses(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getEmojiStatuses error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:set-emoji-status', async (_event, { accountId, documentId, collectibleId, until }) => {
+    try {
+      return await accountManager.setEmojiStatus(accountId, {
+        documentId,
+        collectibleId,
+        until,
+      })
+    } catch (err: any) {
+      Logger.warn(`[IPC] setEmojiStatus error:`, err)
+      throw err
     }
   })
 

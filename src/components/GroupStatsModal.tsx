@@ -23,8 +23,10 @@ import {
   FileSpreadsheet,
   FileJson,
   ChevronDown,
+  BadgeCheck,
+  Info,
 } from 'lucide-react'
-import { DialogItem, MessageItem, ChatDetails } from '../types/telegram'
+import { DialogItem, MessageItem, ChatDetails, ChatStatsPayload, StatsValuePair } from '../types/telegram'
 import { Avatar } from './Avatar'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
@@ -219,6 +221,13 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [hasMoreHistory, setHasMoreHistory] = useState(true)
 
+  // Official Telegram statistics (server-side, admin-only). The crawl below is
+  // kept as a local estimate for chats where Telegram does not expose stats.
+  const [officialStats, setOfficialStats] = useState<ChatStatsPayload | null>(null)
+  const [officialState, setOfficialState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle')
+  const [officialErrorCode, setOfficialErrorCode] = useState<string | undefined>(undefined)
+  const [officialErrorMessage, setOfficialErrorMessage] = useState('')
+
   useEffect(() => {
     setAllMessages((prev) => {
       const map = new Map<number, MessageItem>()
@@ -233,6 +242,89 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     if (!ts) return 0
     return ts < 1e11 ? ts * 1000 : ts
   }
+
+  const formatOfficialPeriod = (stats: ChatStatsPayload | null): string => {
+    if (!stats?.period?.minDate || !stats?.period?.maxDate) return ''
+    const start = new Date(normalizeTimestamp(stats.period.minDate))
+    const end = new Date(normalizeTimestamp(stats.period.maxDate))
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+    const locale = isPersian ? 'fa-IR' : 'en-US'
+    return `${start.toLocaleDateString(locale, options)} – ${end.toLocaleDateString(locale, options)}`
+  }
+
+  const getOfficialErrorText = (code?: string, fallback?: string): string => {
+    if (code === 'admin_required') {
+      return isPersian
+        ? 'آمار رسمی برای این گفتگو در دسترس نیست؛ معمولاً به این دلیل که گفتگو کوچک/کم‌فعالیت است یا حساب شما مدیر نیست.'
+        : 'Official statistics are unavailable. This usually means the chat is too small/inactive, or your account does not have admin rights.'
+    }
+    if (code === 'not_supergroup') {
+      return isPersian
+        ? 'آمار رسمی فقط برای سوپرگروه‌ها و کانال‌ها در دسترس است.'
+        : 'Official statistics are only available for supergroups and channels.'
+    }
+    if (code === 'not_channel') {
+      return isPersian
+        ? 'این گفتگو کانال پخش (Broadcast) نیست.'
+        : 'This chat is not a broadcast channel.'
+    }
+    if (code === 'unavailable') {
+      return isPersian
+        ? 'آمار رسمی این گفتگو در دسترس نیست.'
+        : 'Official statistics are not available for this chat.'
+    }
+    return fallback || (isPersian ? 'آمار رسمی در دسترس نیست.' : 'Official statistics are not available.')
+  }
+
+  // Fetch real server-side stats whenever the modal opens. This is independent
+  // from the selected timeframe because Telegram reports a fixed period.
+  useEffect(() => {
+    if (!isOpen) return
+    let cancelled = false
+
+    setOfficialStats(null)
+    setOfficialErrorCode(undefined)
+    setOfficialErrorMessage('')
+    setOfficialState('loading')
+
+    const loadOfficialStats = async () => {
+      try {
+        if (!window.guidegram?.getChatStats) {
+          if (!cancelled) {
+            setOfficialState('unavailable')
+            setOfficialErrorCode('unavailable')
+            setOfficialErrorMessage('')
+          }
+          return
+        }
+
+        const result = await window.guidegram.getChatStats(chat.accountId, chat.id)
+        if (cancelled) return
+
+        if (result?.ok && result.stats) {
+          setOfficialStats(result.stats)
+          setOfficialState('ready')
+          return
+        }
+
+        setOfficialStats(null)
+        setOfficialState('unavailable')
+        setOfficialErrorCode(result?.error)
+        setOfficialErrorMessage(result?.message || '')
+      } catch (err: any) {
+        if (cancelled) return
+        setOfficialStats(null)
+        setOfficialState('unavailable')
+        setOfficialErrorCode('unknown')
+        setOfficialErrorMessage(String(err?.message || err || ''))
+      }
+    }
+
+    void loadOfficialStats()
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, chat.accountId, chat.id])
 
   // Format human date reached in backward scanning
   const formatReachedDate = (ts: number) => {
@@ -717,6 +809,25 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     URL.revokeObjectURL(url)
   }
 
+  const officialPeriodLabel = formatOfficialPeriod(officialStats)
+  const officialTiles: Array<{ label: string; pair: StatsValuePair }> = officialStats
+    ? (
+        officialStats.kind === 'megagroup'
+          ? [
+              { label: t('stats.members'), pair: officialStats.members },
+              { label: t('stats.total_messages'), pair: officialStats.messages },
+              { label: t('stats.viewers'), pair: officialStats.viewers },
+              { label: t('stats.posters'), pair: officialStats.posters },
+            ]
+          : [
+              { label: t('stats.followers'), pair: officialStats.followers },
+              { label: t('stats.views_per_post'), pair: officialStats.viewsPerPost },
+              { label: t('stats.shares_per_post'), pair: officialStats.sharesPerPost },
+              { label: t('stats.reactions_per_post'), pair: officialStats.reactionsPerPost },
+            ]
+      ).filter((item): item is { label: string; pair: StatsValuePair } => !!item.pair)
+    : []
+
   return (
     <div
       onClick={onClose}
@@ -1077,6 +1188,73 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
+              {officialState === 'loading' && (
+                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/15 text-[11px] font-medium text-emerald-200/80">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  <span>{t('stats.official_loading')}</span>
+                </div>
+              )}
+
+              {officialState === 'unavailable' && (
+                <div className="flex items-start gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-[11px] text-gray-400">
+                  <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-500" />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-gray-300">{t('stats.official_unavailable')}</div>
+                    <div className="mt-0.5 text-gray-500 break-words">
+                      {getOfficialErrorText(officialErrorCode, officialErrorMessage)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {officialStats && (
+                <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] overflow-hidden">
+                  <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-emerald-500/15">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-xs font-bold text-emerald-200 truncate">{t('stats.official_title')}</span>
+                    </div>
+                    {officialPeriodLabel && (
+                      <span className="text-[10px] text-emerald-200/60 font-mono shrink-0">{officialPeriodLabel}</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3">
+                    {officialTiles.map(({ label, pair }) => (
+                      <div key={label} className="rounded-xl bg-dark-900/60 border border-white/5 p-2.5 min-w-0">
+                        <div className="text-[10px] text-gray-400 truncate">{label}</div>
+                        <div className="text-base font-bold text-white mt-0.5 font-mono">{formatNumber(pair.current)}</div>
+                        <div className="text-[10px] text-gray-500 font-mono mt-0.5 truncate">
+                          {t('stats.previous_period_short')} {formatNumber(pair.previous)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {officialStats.kind === 'broadcast' && officialStats.enabledNotifications && officialStats.enabledNotifications.total > 0 && (
+                    <div className="px-4 pb-3 -mt-1">
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                        <span>{isPersian ? 'اعلان‌های فعال' : 'Notifications enabled'}</span>
+                        <span className="font-mono text-emerald-300">
+                          {formatNumber(Math.round((officialStats.enabledNotifications.part / officialStats.enabledNotifications.total) * 100))}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-dark-950 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-400"
+                          style={{ width: `${Math.min(100, Math.round((officialStats.enabledNotifications.part / officialStats.enabledNotifications.total) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{t('stats.local_estimate')}</span>
+                <div className="h-px flex-1 bg-white/5" />
+              </div>
+
               {/* Stat Cards Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex flex-col">
@@ -1154,6 +1332,76 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {officialStats && officialStats.topPosters.length > 0 && (
+                <div className="p-4 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/15 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-emerald-200 uppercase tracking-wider flex items-center gap-1.5">
+                      <BadgeCheck className="w-3.5 h-3.5" />
+                      {t('stats.official_top_posters')}
+                    </h4>
+                    {officialPeriodLabel && <span className="text-[10px] text-gray-500 font-mono">{officialPeriodLabel}</span>}
+                  </div>
+                  <div className="space-y-2">
+                    {officialStats.topPosters.slice(0, 5).map((poster, idx) => (
+                      <div key={poster.peerId} className="flex items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span className="text-[11px] font-bold font-mono text-gray-500 w-4 text-center">#{idx + 1}</span>
+                          <Avatar
+                            accountId={chat.accountId}
+                            peerId={poster.peerId}
+                            title={poster.title}
+                            initials={poster.title.substring(0, 2).toUpperCase()}
+                            size="sm"
+                          />
+                          <span className="font-semibold text-gray-200 truncate">{poster.title}</span>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 font-mono">
+                          <span className="font-bold text-white">{formatNumber(poster.messages)}</span>
+                          <span className="text-[10px] text-gray-500">
+                            {formatNumber(poster.avgChars)} {isPersian ? 'کاراکتر/پیام' : 'chars/msg'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {officialStats && (officialStats.topAdmins.length > 0 || officialStats.topInviters.length > 0) && (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {officialStats.topAdmins.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
+                      <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">{t('stats.official_top_admins')}</h4>
+                      <div className="space-y-2">
+                        {officialStats.topAdmins.slice(0, 3).map((admin) => (
+                          <div key={admin.peerId} className="flex items-center justify-between gap-2 text-[11px]">
+                            <span className="text-gray-200 truncate">{admin.title}</span>
+                            <span className="text-gray-500 font-mono shrink-0">
+                              {isPersian
+                                ? `${formatNumber(admin.deleted)} حذف • ${formatNumber(admin.banned)} مسدود`
+                                : `${formatNumber(admin.deleted)} del • ${formatNumber(admin.banned)} ban`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {officialStats.topInviters.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
+                      <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">{t('stats.official_top_inviters')}</h4>
+                      <div className="space-y-2">
+                        {officialStats.topInviters.slice(0, 3).map((inviter) => (
+                          <div key={inviter.peerId} className="flex items-center justify-between gap-2 text-[11px]">
+                            <span className="text-gray-200 truncate">{inviter.title}</span>
+                            <span className="text-emerald-300 font-mono shrink-0">+{formatNumber(inviter.invitations)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Top 3 senders preview */}
               <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 space-y-3">
