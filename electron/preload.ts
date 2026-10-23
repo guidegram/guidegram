@@ -969,6 +969,28 @@ const guidegramAPI = {
   ): Promise<any> =>
     ipcRenderer.invoke('telegram:bot-invoke-webview-custom-method', { accountId, botId, customMethod, params }),
 
+  // Payments, Invoices & Telegram Stars Domain API (Phase 4)
+  paymentGetPaymentForm: (accountId: string, invoice: any, themeParams?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-payment-form', { accountId, invoice, themeParams }),
+  paymentGetStarsStatus: (accountId: string, peerId?: string, ton = false): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-stars-status', { accountId, peerId, ton }),
+  paymentGetStarsTransactions: (accountId: string, peerId?: string, offset = '', limit = 50, options: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-stars-transactions', { accountId, peerId, offset, limit, options }),
+  paymentGetStarsTopupOptions: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:payment-get-stars-topup-options', { accountId }),
+  paymentGetStarGifts: (accountId: string, hash = 0): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-star-gifts', { accountId, hash }),
+  paymentGetSavedStarGifts: (accountId: string, peerId: string, options: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-saved-star-gifts', { accountId, peerId, options }),
+  paymentGetStarsRevenueStats: (accountId: string, peerId: string, dark = false, ton = false): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-stars-revenue-stats', { accountId, peerId, dark, ton }),
+  paymentGetConnectedStarRefBots: (accountId: string, peerId: string, offsetDate = 0, offsetLink = '', limit = 50): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-get-connected-star-ref-bots', { accountId, peerId, offsetDate, offsetLink, limit }),
+  paymentConnectStarRefBot: (accountId: string, peerId: string, botId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-connect-star-ref-bot', { accountId, peerId, botId }),
+  paymentSendStarsForm: (accountId: string, formId: bigint, invoice: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:payment-send-stars-form', { accountId, formId, invoice }),
+
   // MTProto Sessions, Cloud Folders & Translation
   getActiveSessions: (accountId: string): Promise<ActiveSessionItem[]> =>
     ipcRenderer.invoke('telegram:get-active-sessions', { accountId }),

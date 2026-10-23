@@ -2695,6 +2695,97 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Payments, Invoices & Telegram Stars IPC (Phase 4) ---
+  ipcMain.handle('telegram:payment-get-payment-form', async (_event, { accountId, invoice, themeParams }) => {
+    try {
+      return await accountManager.paymentGetPaymentForm(accountId, invoice, themeParams)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetPaymentForm error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-stars-status', async (_event, { accountId, peerId, ton }) => {
+    try {
+      return await accountManager.paymentGetStarsStatus(accountId, peerId, ton)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetStarsStatus error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-stars-transactions', async (_event, { accountId, peerId, offset, limit, options }) => {
+    try {
+      return await accountManager.paymentGetStarsTransactions(accountId, peerId, offset, limit, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetStarsTransactions error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-stars-topup-options', async (_event, { accountId }) => {
+    try {
+      return await accountManager.paymentGetStarsTopupOptions(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetStarsTopupOptions error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-star-gifts', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.paymentGetStarGifts(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetStarGifts error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-saved-star-gifts', async (_event, { accountId, peerId, options }) => {
+    try {
+      return await accountManager.paymentGetSavedStarGifts(accountId, peerId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetSavedStarGifts error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-stars-revenue-stats', async (_event, { accountId, peerId, dark, ton }) => {
+    try {
+      return await accountManager.paymentGetStarsRevenueStats(accountId, peerId, dark, ton)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetStarsRevenueStats error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-get-connected-star-ref-bots', async (_event, { accountId, peerId, offsetDate, offsetLink, limit }) => {
+    try {
+      return await accountManager.paymentGetConnectedStarRefBots(accountId, peerId, offsetDate, offsetLink, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentGetConnectedStarRefBots error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-connect-star-ref-bot', async (_event, { accountId, peerId, botId }) => {
+    try {
+      return await accountManager.paymentConnectStarRefBot(accountId, peerId, botId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentConnectStarRefBot error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:payment-send-stars-form', async (_event, { accountId, formId, invoice }) => {
+    try {
+      return await accountManager.paymentSendStarsForm(accountId, formId, invoice)
+    } catch (err: any) {
+      Logger.warn(`[IPC] paymentSendStarsForm error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:get-active-sessions', async (_event, { accountId }) => {
     try {
       return await accountManager.getActiveSessions(accountId)

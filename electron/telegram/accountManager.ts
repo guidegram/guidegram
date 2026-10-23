@@ -38,6 +38,7 @@ import { dispatchMtprotoRpc, ALL_MTPROTO_METHODS } from './mtprotoRegistry'
 import { ContactsService } from './services/contactsService'
 import { ChannelsService } from './services/channelsService'
 import { BotsService } from './services/botsService'
+import { PaymentsService } from './services/paymentsService'
 import {
   AccountInfo,
   DialogItem,
@@ -881,6 +882,7 @@ export class AccountManager {
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
+  public readonly paymentsService: PaymentsService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -888,6 +890,7 @@ export class AccountManager {
     this.contactsService = new ContactsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.channelsService = new ChannelsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.botsService = new BotsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.paymentsService = new PaymentsService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -7916,6 +7919,83 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
     return this.botsService.invokeWebViewCustomMethod(holder as any, accountId, botId, customMethod, params)
+  }
+
+  // --- Payments, Invoices & Telegram Stars Domain Engine (Phase 4) ---
+  public getPaymentsService(): PaymentsService {
+    return this.paymentsService
+  }
+
+  public async paymentGetPaymentForm(accountId: string, invoice: any, themeParams?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getPaymentForm(holder as any, invoice, themeParams)
+  }
+
+  public async paymentGetStarsStatus(accountId: string, peerId?: string, ton = false): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsStatus(holder as any, accountId, peerId, ton)
+  }
+
+  public async paymentGetStarsTransactions(accountId: string, peerId?: string, offset = '', limit = 50, options: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsTransactions(
+      holder as any,
+      accountId,
+      peerId,
+      offset,
+      limit,
+      options.inbound,
+      options.outbound,
+      options.ascending,
+      options.ton,
+      options.subscriptionId
+    )
+  }
+
+  public async paymentGetStarsTopupOptions(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    const res = await this.paymentsService.getStarsTopupOptions(holder as any)
+    return Array.isArray(res) ? res : []
+  }
+
+  public async paymentGetStarGifts(accountId: string, hash = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGifts(holder as any, hash)
+  }
+
+  public async paymentGetSavedStarGifts(accountId: string, peerId: string, options: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getSavedStarGifts(holder as any, accountId, peerId, options)
+  }
+
+  public async paymentGetStarsRevenueStats(accountId: string, peerId: string, dark = false, ton = false): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsRevenueStats(holder as any, accountId, peerId, dark, ton)
+  }
+
+  public async paymentGetConnectedStarRefBots(accountId: string, peerId: string, offsetDate = 0, offsetLink = '', limit = 50): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getConnectedStarRefBots(holder as any, accountId, peerId, offsetDate, offsetLink, limit)
+  }
+
+  public async paymentConnectStarRefBot(accountId: string, peerId: string, botId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.connectStarRefBot(holder as any, accountId, peerId, botId)
+  }
+
+  public async paymentSendStarsForm(accountId: string, formId: bigint, invoice: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.sendStarsForm(holder as any, formId, invoice)
   }
 
   public async createPoll(
