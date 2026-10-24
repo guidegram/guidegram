@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { X, Search, UserPlus, Phone, AtSign, Users, Star, Cake, ShieldAlert, Check, Plus } from 'lucide-react'
 import { ContactItem } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -105,7 +106,13 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#17212b] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[75vh] max-h-[640px] animate-in zoom-in-95 duration-150 select-none">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="bg-[#17212b] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[75vh] max-h-[640px] select-none"
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -124,41 +131,40 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
 
         {/* Tab Switcher */}
         <div className="flex items-center border-b border-white/5 px-3 py-2 gap-1 bg-dark-900/50">
-          <button
-            type="button"
-            onClick={() => setActiveTab('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'all' ? 'bg-primary-500/20 text-accent-cyan' : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>All ({contacts.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('top')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'top' ? 'bg-primary-500/20 text-accent-cyan' : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5 text-amber-400" />
-            <span>Top Peers</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('birthdays')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'birthdays' ? 'bg-primary-500/20 text-accent-cyan' : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            <Cake className="w-3.5 h-3.5 text-rose-400" />
-            <span>Birthdays</span>
-          </button>
+          {[
+            { id: 'all' as const, label: `All (${contacts.length})`, icon: <Users className="w-3.5 h-3.5" /> },
+            { id: 'top' as const, label: 'Top Peers', icon: <Star className="w-3.5 h-3.5 text-amber-400" /> },
+            { id: 'birthdays' as const, label: 'Birthdays', icon: <Cake className="w-3.5 h-3.5 text-rose-400" /> },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  isActive ? 'text-accent-cyan font-bold' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeContactTabIndicator"
+                    transition={{ type: 'spring', damping: 24, stiffness: 350 }}
+                    className="absolute inset-0 bg-primary-500/20 rounded-xl"
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </span>
+              </button>
+            )
+          })}
           <button
             type="button"
             onClick={() => setActiveTab('add')}
-            className={`ml-auto px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
-              activeTab === 'add' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-emerald-400'
+            className={`ml-auto relative px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
+              activeTab === 'add' ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'text-gray-400 hover:text-emerald-400'
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -340,7 +346,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
             </div>
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }
