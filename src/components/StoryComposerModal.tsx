@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -196,9 +197,13 @@ export const StoryComposerModal: React.FC<StoryComposerModalProps> = ({
         if (!posting) onClose()
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-lg max-h-[88vh] rounded-2xl bg-[#17212b] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col"
+        className="w-full max-w-lg max-h-[88vh] rounded-2xl bg-[#17212b] border border-white/10 shadow-2xl overflow-hidden flex flex-col"
       >
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -540,7 +545,7 @@ export const StoryComposerModal: React.FC<StoryComposerModalProps> = ({
             {posting ? t('stories.posting') : t('stories.post')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
