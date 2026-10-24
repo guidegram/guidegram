@@ -1333,6 +1333,7 @@ export const App: React.FC = () => {
             onToggleUnifiedInbox={() => setIsUnifiedInboxOpen(!isUnifiedInboxOpen)}
             onOpenProxyModal={() => setIsProxyModalOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenMcpHub={() => setIsMcpHubOpen(true)}
           />
           <React.Suspense fallback={<div className="flex-1 flex items-center justify-center bg-dark-900 text-gray-400 text-sm">Loading Unified Inbox...</div>}>
             <UnifiedInbox
@@ -1359,6 +1360,7 @@ export const App: React.FC = () => {
             onToggleUnifiedInbox={() => setIsUnifiedInboxOpen(!isUnifiedInboxOpen)}
             onOpenProxyModal={() => setIsProxyModalOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenMcpHub={() => setIsMcpHubOpen(true)}
           />
 
           {/* Resizable Chat List Column with Telegram Tabs */}
@@ -1450,7 +1452,12 @@ export const App: React.FC = () => {
             }}
             onOpenSettings={() => {
               setIsMainMenuOpen(false)
+              setSettingsInitialTab('general')
               setIsSettingsOpen(true)
+            }}
+            onOpenMcpHub={() => {
+              setIsMainMenuOpen(false)
+              setIsMcpHubOpen(true)
             }}
             onOpenProxyModal={() => {
               setIsMainMenuOpen(false)
@@ -1578,11 +1585,24 @@ export const App: React.FC = () => {
           <SettingsModal
             isOpen={isSettingsOpen}
             accounts={accounts}
+            initialTab={settingsInitialTab}
             onClose={() => setIsSettingsOpen(false)}
             onLogoutAccount={handleLogoutAccount}
             onConfigUpdated={(newCfg) => setConfig(newCfg)}
             onUpdateFound={(info) => setUpdateInfo(info)}
             onOpenSupport={() => setIsSupportModalOpen(true)}
+          />
+        )}
+
+        {isMcpHubOpen && (
+          <McpHubModal
+            isOpen={isMcpHubOpen}
+            onClose={() => setIsMcpHubOpen(false)}
+            onOpenSettings={(tab) => {
+              setIsMcpHubOpen(false)
+              setSettingsInitialTab(tab || 'mcp')
+              setIsSettingsOpen(true)
+            }}
           />
         )}
 
