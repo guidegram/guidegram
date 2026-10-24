@@ -10,6 +10,7 @@ import { UpdateManager } from './telegram/updateManager'
 import type { WebPagePreview, McpServerConfig } from './telegram/types'
 import { GuidegramMcpServer } from './mcp/mcpServer'
 import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSchema, AccountIdSchema } from './ipcValidation'
+import { globalIpcRateLimiter } from './rateLimiter'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1065,6 +1066,7 @@ function setupIpcHandlers() {
   })
 
   ipcMain.handle('telegram:start-phone-auth', async (_event, rawPayload: any) => {
+    globalIpcRateLimiter.checkOrThrow('start-phone-auth', 1, { capacity: 10, refillTokensPerSec: 1 })
     const { phone, proxy } = validateIpcPayload(PhoneAuthSchema, rawPayload, 'telegram:start-phone-auth')
     Logger.info(`[IPC] telegram:start-phone-auth for ${phone}`)
     try {
@@ -1087,6 +1089,7 @@ function setupIpcHandlers() {
   })
 
   ipcMain.handle('telegram:login-bot', async (_event, rawPayload: any) => {
+    globalIpcRateLimiter.checkOrThrow('login-bot', 1, { capacity: 15, refillTokensPerSec: 2 })
     const { token, proxy } = validateIpcPayload(BotAuthSchema, rawPayload, 'telegram:login-bot')
     Logger.info('[IPC] telegram:login-bot')
     try {
