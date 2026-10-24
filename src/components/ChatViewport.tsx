@@ -1986,8 +1986,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Lazy download media (photo thumbnail or full media)
   const requestMediaDownload = useCallback(
-    async (msg: MessageItem, thumb = true) => {
+    async (msg: MessageItem, thumb = true, force = false) => {
       const cacheKey = thumb ? `${msg.id}_thumb` : `${msg.id}`
+      if (force) {
+        failedMediaKeysRef.current.delete(cacheKey)
+      }
       if (
         downloadedMedia[cacheKey] ||
         loadingMediaIds[cacheKey] ||
@@ -2007,6 +2010,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         )
         if (dataUrl) {
           setDownloadedMedia((prev) => ({ ...prev, [cacheKey]: dataUrl }))
+          failedMediaKeysRef.current.delete(cacheKey)
           return dataUrl
         } else {
           failedMediaKeysRef.current.add(cacheKey)
@@ -3478,7 +3482,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </div>
           ) : (
             <div
-              onClick={() => requestMediaDownload(msg, false)}
+              onClick={() => requestMediaDownload(msg, false, true)}
               className="relative w-72 h-48 bg-dark-850 flex flex-col items-center justify-center text-gray-400 cursor-pointer overflow-hidden group"
             >
               {msg.strippedThumb ? (
@@ -3689,6 +3693,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     // 3. Document / File Card
     if (msg.mediaType === 'document') {
+      const isDownloaded = Boolean(mediaUrl)
+      const isLoading = Boolean(loadingMediaIds[msg.id])
+
       return (
         <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-850/80 p-3">
           <div className="flex items-center gap-3">
@@ -3707,11 +3714,25 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
             <button
               type="button"
-              onClick={() => requestMediaDownload(msg, false)}
-              title="Download File"
+              onClick={async () => {
+                if (isDownloaded) {
+                  if (window.guidegram?.saveMediaToFile) {
+                    await window.guidegram.saveMediaToFile(msg.accountId, msg.chatId, msg.id, msg.mediaFileName)
+                  }
+                } else {
+                  await requestMediaDownload(msg, false, true)
+                }
+              }}
+              title={isDownloaded ? 'Save File to Computer' : 'Download File'}
               className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
             >
-              <Download className="w-4 h-4" />
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+              ) : isDownloaded ? (
+                <Check className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>

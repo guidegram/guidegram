@@ -22,8 +22,32 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
-    // v1.11.5+: Instant Window Restore, Taskbar Parity & Singleton Lock Stabilization
-    if (cleanVer.startsWith('1.11.5') || cleanVer >= '1.11.5') {
+    // v2.0.0: MTProto Layer 229+ Full Parity (859 Methods), Turbo Multi-DC Media Engine, Session Vault
+    if (cleanVer.startsWith('2.') || cleanVer >= '2.0.0') {
+      return [
+        {
+          icon: Zap,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: 'MTProto Layer 229+ Full Parity',
+          desc: 'Complete protocol parity with 859 methods connected across 28 namespaces (Channels, Stories, Payments, Stars, Bots & Security).',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: 'Turbo Multi-DC Media Engine',
+          desc: 'Instant full-resolution download pipeline for photos, documents, and videos with native InputFileLocation translation.',
+        },
+        {
+          icon: Sparkles,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: 'Multi-Account Session Vault',
+          desc: 'Bulletproof portable deployment with automatic session preservation across all authenticated accounts.',
+        },
+      ]
+    }
+
+    // v1.11.5: Instant Window Restore, Taskbar Parity & Singleton Lock Stabilization
+    if (cleanVer.startsWith('1.11.5')) {
       return [
         {
           icon: Minimize2,

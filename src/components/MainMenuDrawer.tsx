@@ -174,6 +174,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                   </div>
                   <button
                     type="button"
+                    title="Set Emoji Status"
                     onClick={() => setIsEmojiStatusOpen(true)}
                     className="text-xs text-accent-cyan hover:underline truncate mt-0.5 cursor-pointer block text-left"
                   >

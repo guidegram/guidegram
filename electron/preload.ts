@@ -93,6 +93,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('window:confirm-close', { action, remember }),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
 
+  // MTProto Engine Status
+  getMtprotoStatus: (): Promise<{
+    layer: number
+    totalMethods: number
+    totalNamespaces: number
+    status: string
+    services: Array<{ name: string; methods: number; desc: string }>
+  }> => ipcRenderer.invoke('telegram:get-mtproto-status'),
+
   // Accounts
   getAccounts: (): Promise<AccountInfo[]> => ipcRenderer.invoke('telegram:get-accounts'),
   startPhoneAuth: (phone: string, proxy?: ProxyConfig) =>

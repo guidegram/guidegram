@@ -298,9 +298,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   }, [paused, muted, isVideo, mediaUrl, currentStoryId])
 
   useEffect(() => {
-    if (!isOpen || ghostMode || !currentStoryId || !mediaUrl) return
-    const request = window.guidegram?.readStories?.(accountId, peerId, currentStoryId)
-    request?.catch(() => {})
+    if (!isOpen || !currentStoryId || !mediaUrl) return
+    if (!ghostMode) {
+      const request = window.guidegram?.readStories?.(accountId, peerId, currentStoryId)
+      request?.catch(() => {})
+    }
   }, [isOpen, ghostMode, accountId, peerId, currentStoryId, mediaUrl])
 
   useEffect(() => {

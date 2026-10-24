@@ -992,6 +992,10 @@ function setupIpcHandlers() {
     })
   })
 
+  ipcMain.handle('telegram:get-mtproto-status', async () => {
+    return accountManager.getMtprotoStatus()
+  })
+
   // Telegram Accounts
   ipcMain.handle('telegram:get-accounts', async () => {
     Logger.info('[IPC] telegram:get-accounts')
