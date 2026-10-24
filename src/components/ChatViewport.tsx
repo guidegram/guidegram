@@ -4213,12 +4213,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               onClick={() => setIsGroupCallModalOpen(true)}
               title={chatDetails?.isBroadcast ? t('group_call.live_stream') : t('group_call.title')}
               className={`p-2 rounded-xl border text-xs transition-all cursor-pointer ${
-                chatDetails?.hasGroupCall || isCallJoined
+                (chatDetails?.hasGroupCall && (chatDetails.groupCallParticipantsCount ?? 0) > 0) || isCallJoined
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-glow'
                   : 'bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-emerald-400 border border-white/10'
               }`}
             >
-              <Radio className={`w-4 h-4 ${chatDetails?.hasGroupCall || isCallJoined ? 'text-emerald-400 animate-pulse' : ''}`} />
+              <Radio className={`w-4 h-4 ${(chatDetails?.hasGroupCall && (chatDetails.groupCallParticipantsCount ?? 0) > 0) || isCallJoined ? 'text-emerald-400 animate-pulse' : ''}`} />
             </button>
           )}
 
@@ -4582,11 +4582,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )}
 
       {/* Telegram Group Voice & Video Call Active Banner */}
-      {(chatDetails?.hasGroupCall || isCallJoined) && (
+      {(Boolean(chatDetails?.hasGroupCall && (chatDetails.groupCallParticipantsCount ?? 0) > 0) || isCallJoined) && (
         <GroupCallBar
           chatTitle={chat.title}
           isBroadcast={chatDetails?.isBroadcast}
-          participantsCount={chatDetails?.groupCallParticipantsCount || 1}
+          participantsCount={chatDetails?.groupCallParticipantsCount || 0}
           isJoined={isCallJoined}
           isMuted={isCallMuted}
           onJoin={() => {

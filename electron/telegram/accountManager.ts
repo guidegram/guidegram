@@ -3529,15 +3529,18 @@ export class AccountManager {
       const ext = isLottie ? '.tgs' : (isVideo ? '.webm' : '.webp')
       const filePath = path.join(this.mediaDir, `emoji_${documentId}${ext}`)
 
-      if (!fs.existsSync(filePath)) {
-        const targetLoc: tl.TypeInputFileLocation = {
-          _: 'inputDocumentFileLocation',
-          id: doc.id,
-          accessHash: doc.accessHash,
-          fileReference: doc.fileReference || Buffer.alloc(0),
-          thumbSize: '',
-        }
-        await holder.client.downloadToFile(filePath, targetLoc as any).catch(async () => {
+      if (!fs.existsSync(filePath) || fs.statSync(filePath).size === 0) {
+        try {
+          if (fs.existsSync(filePath) && fs.statSync(filePath).size === 0) {
+            fs.unlinkSync(filePath)
+          }
+        } catch (_) {}
+
+        try {
+          // Direct download using document object in mtcute
+          await holder.client.downloadToFile(filePath, doc as any)
+        } catch (downloadErr) {
+          // Fallback to thumbnail if direct full document fails
           if (doc.thumbs && doc.thumbs.length > 0) {
             const thumb = doc.thumbs[doc.thumbs.length - 1]
             if (thumb && (thumb as any).type) {
@@ -3553,7 +3556,14 @@ export class AccountManager {
               }
             }
           }
-        })
+        }
+      }
+
+      // Clean up if download resulted in a 0-byte file
+      if (fs.existsSync(filePath) && fs.statSync(filePath).size === 0) {
+        try {
+          fs.unlinkSync(filePath)
+        } catch (_) {}
       }
 
       // Check if file exists and has content
@@ -4303,10 +4313,32 @@ export class AccountManager {
         }
 
         const rawCall = res.fullChat?.call
-        const hasGroupCall = Boolean(rawCall && (rawCall._ === 'inputGroupCall' || rawCall.id))
-        const groupCallId = hasGroupCall ? rawCall.id?.toString() : undefined
-        const groupCallAccessHash = hasGroupCall ? rawCall.accessHash?.toString() : undefined
-        const groupCallParticipantsCount = hasGroupCall ? Number(rawCall.participantsCount || 0) : undefined
+        let hasGroupCall = false
+        let groupCallId: string | undefined
+        let groupCallAccessHash: string | undefined
+        let groupCallParticipantsCount: number | undefined
+
+        if (rawCall && (rawCall._ === 'inputGroupCall' || rawCall.id)) {
+          groupCallId = rawCall.id?.toString()
+          groupCallAccessHash = rawCall.accessHash?.toString()
+          try {
+            const callRes: any = await holder.client.call({
+              _: 'phone.getGroupCall',
+              call: { _: 'inputGroupCall', id: toLong(rawCall.id), accessHash: toLong(rawCall.accessHash) },
+              limit: 1,
+            })
+            if (callRes?.call?._ === 'groupCall') {
+              const c = callRes.call
+              const isScheduled = Boolean(c.scheduleDate && !c.recordStartDate && Number(c.participantsCount || 0) === 0)
+              if (!isScheduled && Number(c.participantsCount || 0) > 0) {
+                hasGroupCall = true
+                groupCallParticipantsCount = Number(c.participantsCount || 0)
+              }
+            }
+          } catch (_) {
+            hasGroupCall = false
+          }
+        }
 
         const isCreator = Boolean(c?.creator)
         const adminRights = c?.adminRights
@@ -4415,10 +4447,32 @@ export class AccountManager {
         }
 
         const rawGroupCall = res.fullChat?.call
-        const hasGroupCall = Boolean(rawGroupCall && (rawGroupCall._ === 'inputGroupCall' || rawGroupCall.id))
-        const groupCallId = hasGroupCall ? rawGroupCall.id?.toString() : undefined
-        const groupCallAccessHash = hasGroupCall ? rawGroupCall.accessHash?.toString() : undefined
-        const groupCallParticipantsCount = hasGroupCall ? Number(rawGroupCall.participantsCount || 0) : undefined
+        let hasGroupCall = false
+        let groupCallId: string | undefined
+        let groupCallAccessHash: string | undefined
+        let groupCallParticipantsCount: number | undefined
+
+        if (rawGroupCall && (rawGroupCall._ === 'inputGroupCall' || rawGroupCall.id)) {
+          groupCallId = rawGroupCall.id?.toString()
+          groupCallAccessHash = rawGroupCall.accessHash?.toString()
+          try {
+            const callRes: any = await holder.client.call({
+              _: 'phone.getGroupCall',
+              call: { _: 'inputGroupCall', id: toLong(rawGroupCall.id), accessHash: toLong(rawGroupCall.accessHash) },
+              limit: 1,
+            })
+            if (callRes?.call?._ === 'groupCall') {
+              const c = callRes.call
+              const isScheduled = Boolean(c.scheduleDate && !c.recordStartDate && Number(c.participantsCount || 0) === 0)
+              if (!isScheduled && Number(c.participantsCount || 0) > 0) {
+                hasGroupCall = true
+                groupCallParticipantsCount = Number(c.participantsCount || 0)
+              }
+            }
+          } catch (_) {
+            hasGroupCall = false
+          }
+        }
 
         const isCreator = Boolean(c?.creator)
         const adminRights = c?.adminRights
