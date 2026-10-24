@@ -651,7 +651,12 @@ export const ChatList: React.FC<ChatListProps> = ({
             )}
           </div>
         ) : filteredDialogs.length === 0 ? (
-          <div className="p-8 text-center text-xs text-gray-400">{t('app.no_chats')}</div>
+          <div className="flex flex-col items-center justify-center p-8 text-center text-xs text-gray-400 gap-2 select-none my-auto">
+            <div className="w-12 h-12 rounded-2xl bg-dark-800/80 border border-white/5 flex items-center justify-center text-gray-500 mb-1">
+              <MessageSquare className="w-6 h-6 text-gray-400" />
+            </div>
+            <span className="font-medium text-gray-300">{t('app.no_chats')}</span>
+          </div>
         ) : (
           filteredDialogs.map((dialog) => (
             <DialogListItem

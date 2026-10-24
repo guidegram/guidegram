@@ -4637,8 +4637,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 onOpenUrl={handleSafeOpenUrl}
               />
             ) : (
-              <div>
-                {searchQuery ? `No messages found matching "${searchQuery}"` : 'No messages in this chat yet.'}
+              <div className="flex flex-col items-center justify-center p-8 text-center max-w-sm select-none">
+                <div className="w-12 h-12 rounded-2xl bg-dark-800/90 border border-white/5 flex items-center justify-center text-gray-500 mb-3 shadow-inner">
+                  <MessageSquare className="w-6 h-6 text-gray-400" />
+                </div>
+                <div className="text-sm font-semibold text-gray-300 mb-1">
+                  {searchQuery ? t('search.no_results', { query: searchQuery }) : t('app.no_messages')}
+                </div>
               </div>
             )}
           </div>
