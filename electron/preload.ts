@@ -3,6 +3,7 @@ import {
   ProxyConfig,
   ForwardOptions,
   AppConfig,
+  McpServerConfig,
   QrTokenPayload,
   AccountInfo,
   PhoneAuthResult,
@@ -1248,6 +1249,16 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:get-portable-locator'),
   syncFromPortable: (sourceDataPath: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('system:sync-from-portable', { sourceDataPath }),
+
+  // MCP (Model Context Protocol) Server for AI Agents
+  mcpGetStatus: (): Promise<{ isRunning: boolean; port: number; enabled: boolean; activeToolsCount: number }> =>
+    ipcRenderer.invoke('mcp:get-status'),
+  mcpGetConfig: (): Promise<McpServerConfig> =>
+    ipcRenderer.invoke('mcp:get-config'),
+  mcpUpdateConfig: (config: Partial<McpServerConfig>): Promise<McpServerConfig> =>
+    ipcRenderer.invoke('mcp:update-config', { config }),
+  mcpGetConfigSnippets: (): Promise<{ claudeDesktop: string; cursor: string; sse: string; bridgePath: string; port: number }> =>
+    ipcRenderer.invoke('mcp:get-config-snippets'),
 
   // Storage & Cache Management
   getCacheStats: (): Promise<CacheStats> =>

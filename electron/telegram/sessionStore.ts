@@ -107,6 +107,13 @@ export class SessionStore {
       chatFontSize: 14,
       bubbleRadius: 16,
       bubblePadding: 10,
+      mcp: {
+        enabled: true,
+        port: 39527,
+        allowedChatIds: [],
+        defaultDownloadDir: path.join(this.dataDir, 'downloads'),
+        autoStartWithApp: true,
+      },
     }
 
     try {
@@ -119,6 +126,10 @@ export class SessionStore {
           autoDownload: {
             ...defaultConfig.autoDownload!,
             ...(parsed.autoDownload || {}),
+          },
+          mcp: {
+            ...defaultConfig.mcp!,
+            ...(parsed.mcp || {}),
           },
         }
 
@@ -791,6 +802,35 @@ export class SessionStore {
       console.error('[SessionStore] pruneExpiredCache error:', err)
     }
     return { removedFiles, freedBytes }
+  }
+
+  /**
+   * Load persistent peer access hashes across restarts
+   */
+  public loadPeerHashes(): Record<string, string> {
+    try {
+      const filePath = path.join(this.dataDir, 'peer_hashes.json')
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === 'object') {
+          return parsed
+        }
+      }
+    } catch {}
+    return {}
+  }
+
+  /**
+   * Persist peer access hashes to disk
+   */
+  public savePeerHashes(hashes: Record<string, string>): void {
+    try {
+      const filePath = path.join(this.dataDir, 'peer_hashes.json')
+      fs.writeFileSync(filePath, JSON.stringify(hashes, null, 2), 'utf-8')
+    } catch (err) {
+      console.error('[SessionStore] savePeerHashes error:', err)
+    }
   }
 }
 

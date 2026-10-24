@@ -892,6 +892,8 @@ export class AccountManager {
   private peerPhotos = new Map<string, any>()
   private peerBigPhotos = new Map<string, any>()
   private peerAccessHashes = new Map<string, Long>()
+  private rawMessagesCache = new Map<string, any>()
+  private savePeerHashesTimer?: NodeJS.Timeout
   private topMessageIds = new Map<string, number>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
@@ -920,6 +922,13 @@ export class AccountManager {
       Logger.warn('[AccountManager] Cache directories creation warning:', e)
     }
 
+    try {
+      const savedHashes = this.store.loadPeerHashes()
+      for (const [k, v] of Object.entries(savedHashes)) {
+        if (v) this.peerAccessHashes.set(k, Long.fromString(v))
+      }
+    } catch (_) {}
+
     const config = this.store.getConfig()
     for (const savedAcc of config.accounts) {
       this.clients.set(savedAcc.id, {
@@ -929,6 +938,30 @@ export class AccountManager {
         },
       })
     }
+  }
+
+  public setPeerAccessHash(accountId: string, key: string, hash: Long | string): void {
+    if (!key || !hash) return
+    const longVal = typeof hash === 'string' ? Long.fromString(hash) : hash
+    const clean = String(key).trim()
+    const bareId = clean.replace(/^-100/, '').replace(/^-/, '')
+    this.peerAccessHashes.set(`${accountId}_${clean}`, longVal)
+    this.peerAccessHashes.set(`${accountId}_${bareId}`, longVal)
+    this.peerAccessHashes.set(`${accountId}_-${bareId}`, longVal)
+    this.peerAccessHashes.set(`${accountId}_-100${bareId}`, longVal)
+    this.scheduleSavePeerHashes()
+  }
+
+  private scheduleSavePeerHashes(): void {
+    if (this.savePeerHashesTimer) return
+    this.savePeerHashesTimer = setTimeout(() => {
+      this.savePeerHashesTimer = undefined
+      const out: Record<string, string> = {}
+      for (const [k, v] of this.peerAccessHashes.entries()) {
+        out[k] = v.toString()
+      }
+      this.store.savePeerHashes(out)
+    }, 1500)
   }
 
   public async connectSavedAccount(savedAcc: AccountInfo): Promise<AccountInfo> {
@@ -1844,12 +1877,9 @@ export class AccountManager {
         if (seenIds.has(peerId)) continue
         seenIds.add(peerId)
 
-        if (peer.accessHash) {
-          this.peerAccessHashes.set(`${accountId}_${peerId}`, peer.accessHash)
-          const bareId = peerId.replace(/^-100/, '').replace(/^-/, '')
-          this.peerAccessHashes.set(`${accountId}_${bareId}`, peer.accessHash)
-          this.peerAccessHashes.set(`${accountId}_-${bareId}`, peer.accessHash)
-          this.peerAccessHashes.set(`${accountId}_-100${bareId}`, peer.accessHash)
+        const rawAccessHash = (peer.raw as any)?.accessHash || (peer.inputPeer as any)?.accessHash || (peer as any).accessHash
+        if (rawAccessHash) {
+          this.setPeerAccessHash(accountId, peerId, rawAccessHash)
         }
 
         // Cache small and big photo locations for instant avatar download
@@ -2046,7 +2076,7 @@ export class AccountManager {
           isForum: (peer as any).isForum,
           isSponsored: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
           isSponsorChannel: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
-          accessHash: peer.accessHash ? peer.accessHash.toString() : undefined,
+          accessHash: rawAccessHash ? rawAccessHash.toString() : undefined,
           draft,
         }
         dialogs.push(item)
@@ -2267,7 +2297,7 @@ export class AccountManager {
       if (res?.users) {
         res.users.forEach((u: any) => {
           users.set(u.id, u)
-          if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+          if (u.accessHash) this.setPeerAccessHash(accountId, u.id.toString(), u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
           if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
           if (u.photo?._ === 'userProfilePhoto' && u.photo.photoId) {
@@ -2288,10 +2318,7 @@ export class AccountManager {
           const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
           const peerId = isChan ? `-100${c.id}` : `-${c.id}`
           if (c.accessHash) {
-            this.peerAccessHashes.set(`${accountId}_${peerId}`, c.accessHash)
-            this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
-            this.peerAccessHashes.set(`${accountId}_-100${c.id}`, c.accessHash)
-            this.peerAccessHashes.set(`${accountId}_${c.id}`, c.accessHash)
+            this.setPeerAccessHash(accountId, peerId, c.accessHash)
           }
           const thumb = extractStrippedThumb(c.photo)
           if (thumb) {
@@ -2304,9 +2331,14 @@ export class AccountManager {
       for (const m of rawMessages) {
         if (m.id) {
           rawMsgMap.set(m.id, m)
+          this.rawMessagesCache.set(`${accountId}_${chatId}_${m.id}`, m)
           const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
           if (m.id > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, m.id)
         }
+      }
+      if (this.rawMessagesCache.size > 3000) {
+        const keys = Array.from(this.rawMessagesCache.keys()).slice(0, 500)
+        for (const k of keys) this.rawMessagesCache.delete(k)
       }
 
       // Pre-fetch any missing replied messages so snippets and sender names can be resolved accurately

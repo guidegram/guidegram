@@ -841,6 +841,17 @@ export interface AppConfig {
   chatFontSize?: number
   bubbleRadius?: number
   bubblePadding?: number
+  // Model Context Protocol (MCP) Server for AI Agents
+  mcp?: McpServerConfig
+}
+
+export interface McpServerConfig {
+  enabled: boolean
+  port: number
+  token?: string
+  allowedChatIds?: string[]
+  defaultDownloadDir?: string
+  autoStartWithApp?: boolean
 }
 
 export interface CacheStats {

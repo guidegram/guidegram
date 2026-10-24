@@ -7,7 +7,8 @@ import { AccountManager } from './telegram/accountManager'
 import { ProxyManager } from './telegram/proxyManager'
 import { Logger } from './telegram/logger'
 import { UpdateManager } from './telegram/updateManager'
-import type { WebPagePreview } from './telegram/types'
+import type { WebPagePreview, McpServerConfig } from './telegram/types'
+import { GuidegramMcpServer } from './mcp/mcpServer'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -129,10 +130,11 @@ let tray: Tray | null = null
 let sessionStore: SessionStore
 let accountManager: AccountManager
 let updateManager: UpdateManager
+let mcpServer: GuidegramMcpServer | null = null
 let isQuitting = false
 
 // Focus primary window when user clicks pinned taskbar icon or second instance launches
-app.on('second-instance', () => {
+app.on('second-instance', (_event, commandLine) => {
   Logger.info('[App] Second instance launch detected. Focusing primary window.')
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
@@ -143,7 +145,10 @@ app.on('second-instance', () => {
     mainWindow.focus()
     mainWindow.setAlwaysOnTop(false)
   } else {
-    createWindow()
+    const isHeadless = commandLine?.includes('--headless')
+    if (!isHeadless) {
+      createWindow()
+    }
   }
 })
 
@@ -617,8 +622,23 @@ app.whenReady().then(async () => {
   } catch (err: any) {
     Logger.error('[Main] setupIpcHandlers failed:', err)
   }
+  const isHeadless = process.argv.includes('--headless')
   createTray()
-  createWindow()
+  if (!isHeadless) {
+    createWindow()
+  } else {
+    Logger.info('[Main] Guidegram started in HEADLESS mode (MCP Agent Server)')
+  }
+
+  // Initialize and start Guidegram MCP Server for AI Agents
+  try {
+    mcpServer = new GuidegramMcpServer(accountManager, sessionStore)
+    mcpServer.start().catch((err) => {
+      Logger.warn('[Main] MCP Server startup warning:', err)
+    })
+  } catch (err) {
+    Logger.error('[Main] Failed to initialize GuidegramMcpServer:', err)
+  }
 
   // Start background hourly check for updates
   updateManager.startHourlyCheck(
@@ -648,6 +668,12 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   Logger.info('[App] All windows closed.')
+  const mcpConfig = sessionStore?.getConfig()?.mcp
+  const isHeadless = process.argv.includes('--headless')
+  if (isHeadless || (mcpConfig?.enabled && !isQuitting)) {
+    Logger.info('[App] Keeping background process active for MCP AI agents and system tray.')
+    return
+  }
   if (process.platform !== 'darwin') {
     app.quit()
   }
@@ -655,6 +681,9 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isQuitting = true
+  try {
+    mcpServer?.stop()
+  } catch {}
   Logger.info('[App] Application quitting. Flushing pending audit logs...')
   sessionStore?.flushAllAuditsSync()
 })
@@ -3465,5 +3494,66 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
     Logger.error(`[Renderer Crash/Error] ${message}`, stack)
+  })
+
+  // MCP (Model Context Protocol) Server IPC Handlers
+  ipcMain.handle('mcp:get-status', async () => {
+    return mcpServer
+      ? mcpServer.getStatus()
+      : { isRunning: false, port: 39527, enabled: false, activeToolsCount: 0 }
+  })
+
+  ipcMain.handle('mcp:get-config', async () => {
+    return mcpServer ? mcpServer.getConfig() : sessionStore.getConfig()?.mcp
+  })
+
+  ipcMain.handle('mcp:update-config', async (_event, { config }: { config: Partial<McpServerConfig> }) => {
+    if (mcpServer) {
+      mcpServer.updateConfig(config)
+      return mcpServer.getConfig()
+    }
+    const current = sessionStore.getConfig()?.mcp || { enabled: true, port: 39527 }
+    const updated = { ...current, ...config }
+    sessionStore.updateConfig({ mcp: updated })
+    return updated
+  })
+
+  ipcMain.handle('mcp:get-config-snippets', async () => {
+    const bridgeScriptPath = path.resolve(__dirname, '../scripts/mcp-bridge.mjs').replace(/\\/g, '/')
+    const port = mcpServer?.getConfig().port || 39527
+
+    const claudeDesktop = {
+      mcpServers: {
+        guidegram: {
+          command: 'node',
+          args: [bridgeScriptPath, '--port', String(port)],
+        },
+      },
+    }
+
+    const cursor = {
+      mcpServers: {
+        guidegram: {
+          command: 'node',
+          args: [bridgeScriptPath, '--port', String(port)],
+        },
+      },
+    }
+
+    const sseConfig = {
+      mcpServers: {
+        guidegram: {
+          url: `http://127.0.0.1:${port}/sse`,
+        },
+      },
+    }
+
+    return {
+      claudeDesktop: JSON.stringify(claudeDesktop, null, 2),
+      cursor: JSON.stringify(cursor, null, 2),
+      sse: JSON.stringify(sseConfig, null, 2),
+      bridgePath: bridgeScriptPath,
+      port,
+    }
   })
 }

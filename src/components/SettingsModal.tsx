@@ -141,7 +141,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </div>
 )
 
-type SettingsTab = 'profile' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'advanced'
+type SettingsTab = 'profile' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -210,6 +210,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [chatFontSize, setChatFontSize] = useState(14)
   const [bubbleRadius, setBubbleRadius] = useState(16)
   const [bubblePadding, setBubblePadding] = useState(10)
+
+  // MCP (Model Context Protocol) Server State
+  const [mcpEnabled, setMcpEnabled] = useState(true)
+  const [mcpPort, setMcpPort] = useState(39527)
+  const [mcpAllowedChats, setMcpAllowedChats] = useState('')
+  const [mcpDownloadDir, setMcpDownloadDir] = useState('')
+  const [mcpStatus, setMcpStatus] = useState<{ isRunning: boolean; port: number; enabled: boolean; activeToolsCount: number } | null>(null)
+  const [mcpSnippets, setMcpSnippets] = useState<{ claudeDesktop: string; cursor: string; sse: string; bridgePath: string; port: number } | null>(null)
+  const [mcpCopiedTarget, setMcpCopiedTarget] = useState<string | null>(null)
 
   // Cache & Storage Usage
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null)
@@ -576,11 +585,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (cfg.autoDownload) {
           setAutoDownload(cfg.autoDownload)
         }
+        if (cfg.mcp) {
+          setMcpEnabled(cfg.mcp.enabled ?? true)
+          setMcpPort(cfg.mcp.port || 39527)
+          setMcpAllowedChats((cfg.mcp.allowedChatIds || []).join(', '))
+          setMcpDownloadDir(cfg.mcp.defaultDownloadDir || '')
+        }
       })
       window.guidegram?.getPortableDataPath?.().then(setDownloadsPath)
       window.guidegram?.getPortableDataPath?.().then(setPortablePath)
       window.guidegram?.getPortableLocator?.().then((info) => {
         if (info) setPortableLocator(info)
+      })
+      window.guidegram?.mcpGetStatus?.().then((st: any) => {
+        if (st) setMcpStatus(st)
+      })
+      window.guidegram?.mcpGetConfigSnippets?.().then((sn: any) => {
+        if (sn) setMcpSnippets(sn)
       })
       loadCacheStats()
       loadLogs()
@@ -864,6 +885,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               <MessageSquare className="w-4 h-4" />
               <span className="truncate">{t('settings.chat_settings')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('mcp')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'mcp'
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span className="truncate">AI & MCP Agents</span>
             </button>
 
             <button
@@ -2268,6 +2302,230 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       View Shortcuts
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: AI & MCP AGENTS (Model Context Protocol) */}
+            {activeTab === 'mcp' && (
+              <div className="space-y-5 animate-in fade-in duration-100">
+                {/* Header Banner */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-primary-500/10 to-transparent border border-amber-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-100">Model Context Protocol (MCP) Server</h3>
+                        <p className="text-[11px] text-gray-400">Autonomous AI Agent control for Claude Desktop, Cursor & Antigravity</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                        mcpStatus?.isRunning
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full ${mcpStatus?.isRunning ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                        {mcpStatus?.isRunning ? `Online (Port ${mcpStatus.port || mcpPort})` : 'Offline'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-gray-400 leading-relaxed pt-1">
+                    Enables AI agents to query dialogs, respond to customer messages, resolve channels, and download files at turbo speeds using Guidegrams 24-worker parallel engine.
+                  </div>
+                </div>
+
+                {/* Section 1: Server Configuration */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="text-xs font-bold text-accent-cyan">Server Configuration</div>
+
+                  {/* Enable Switch */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-medium text-gray-200">Enable Local MCP Server</div>
+                      <div className="text-[11px] text-gray-400">Allow AI tools to communicate with Guidegram locally</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMcpEnabled(!mcpEnabled)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                        mcpEnabled ? 'bg-primary-500' : 'bg-dark-900 border border-white/10'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          mcpEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Port Configuration */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <label className="text-[11px] font-medium text-gray-300 block mb-1">Local Port</label>
+                      <input
+                        type="number"
+                        value={mcpPort}
+                        onChange={(e) => setMcpPort(Number(e.target.value) || 39527)}
+                        className="w-full px-3 py-2 text-xs bg-dark-900 border border-white/10 rounded-xl text-gray-200 focus:outline-none focus:border-primary-500 font-mono"
+                        placeholder="39527"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-gray-300 block mb-1">Allowed Chat IDs (Security Whitelist)</label>
+                      <input
+                        type="text"
+                        value={mcpAllowedChats}
+                        onChange={(e) => setMcpAllowedChats(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-dark-900 border border-white/10 rounded-xl text-gray-200 focus:outline-none focus:border-primary-500 font-mono"
+                        placeholder="Leave empty for all chats, or e.g. 123456, -10098765"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Default Download Directory */}
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-300 block mb-1">Default AI Downloads Directory</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={mcpDownloadDir}
+                        onChange={(e) => setMcpDownloadDir(e.target.value)}
+                        className="flex-1 px-3 py-2 text-xs bg-dark-900 border border-white/10 rounded-xl text-gray-200 focus:outline-none focus:border-primary-500 font-mono text-[11px]"
+                        placeholder="Default system downloads / Guidegram"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const dir = await window.guidegram?.selectDownloadDirectory?.()
+                          if (dir) setMcpDownloadDir(dir)
+                        }}
+                        className="px-3 py-2 text-xs font-semibold bg-dark-750 hover:bg-dark-700 text-gray-200 rounded-xl border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Folder className="w-3.5 h-3.5" />
+                        <span>Browse...</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const allowedList = mcpAllowedChats
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                        const payload = {
+                          enabled: mcpEnabled,
+                          port: mcpPort,
+                          allowedChatIds: allowedList,
+                          defaultDownloadDir: mcpDownloadDir,
+                        }
+                        await window.guidegram?.mcpUpdateConfig?.(payload)
+                        const updatedStatus = await window.guidegram?.mcpGetStatus?.()
+                        if (updatedStatus) setMcpStatus(updatedStatus)
+                        const updatedSnippets = await window.guidegram?.mcpGetConfigSnippets?.()
+                        if (updatedSnippets) setMcpSnippets(updatedSnippets)
+                        setSaved(true)
+                        setTimeout(() => setSaved(false), 2000)
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white shadow-sm flex items-center gap-2 cursor-pointer transition-all"
+                    >
+                      {saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                      <span>{saved ? 'Saved Successfully' : 'Apply & Restart MCP'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Section 2: AI Host Configuration Snippets */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-accent-cyan">AI Host Connection Snippets</div>
+                    <span className="text-[10px] text-gray-400">Copy to your AI tool configuration</span>
+                  </div>
+
+                  {/* Claude Desktop Snippet */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-300">Claude Desktop (claude_desktop_config.json)</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (mcpSnippets?.claudeDesktop) {
+                            await copyTextToClipboard(mcpSnippets.claudeDesktop)
+                            setMcpCopiedTarget('claude')
+                            setTimeout(() => setMcpCopiedTarget(null), 2000)
+                          }
+                        }}
+                        className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-dark-900 hover:bg-dark-750 text-gray-200 border border-white/10 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        {mcpCopiedTarget === 'claude' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{mcpCopiedTarget === 'claude' ? 'Copied!' : 'Copy JSON'}</span>
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-dark-950 rounded-xl text-[10px] text-amber-200/90 font-mono overflow-x-auto border border-white/5 max-h-36">
+                      {mcpSnippets?.claudeDesktop || 'Loading snippet...'}
+                    </pre>
+                  </div>
+
+                  {/* Cursor Snippet */}
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-300">Cursor (.cursor/mcp.json or Settings &gt; MCP)</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (mcpSnippets?.cursor) {
+                            await copyTextToClipboard(mcpSnippets.cursor)
+                            setMcpCopiedTarget('cursor')
+                            setTimeout(() => setMcpCopiedTarget(null), 2000)
+                          }
+                        }}
+                        className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-dark-900 hover:bg-dark-750 text-gray-200 border border-white/10 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        {mcpCopiedTarget === 'cursor' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        <span>{mcpCopiedTarget === 'cursor' ? 'Copied!' : 'Copy JSON'}</span>
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-dark-950 rounded-xl text-[10px] text-primary-200/90 font-mono overflow-x-auto border border-white/5 max-h-36">
+                      {mcpSnippets?.cursor || 'Loading snippet...'}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Section 3: Registered Tools Overview */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="text-xs font-bold text-accent-cyan">Active MCP Tools in Guidegram (10 Built-in Tools)</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px]">
+                    <div className="p-3 rounded-xl bg-dark-900 border border-white/5 space-y-1">
+                      <div className="font-bold text-gray-200 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-primary-400" />
+                        <span>Accounts & Context</span>
+                      </div>
+                      <p className="text-gray-400 text-[10px]">telegram_list_accounts, telegram_switch_active_account</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-dark-900 border border-white/5 space-y-1">
+                      <div className="font-bold text-gray-200 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Customer Messaging</span>
+                      </div>
+                      <p className="text-gray-400 text-[10px]">telegram_get_dialogs, telegram_get_chat_history, telegram_send_message, telegram_send_typing, telegram_mark_as_read</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-dark-900 border border-white/5 space-y-1">
+                      <div className="font-bold text-gray-200 flex items-center gap-1.5">
+                        <Download className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Media & Channels</span>
+                      </div>
+                      <p className="text-gray-400 text-[10px]">telegram_resolve_peer, telegram_list_channel_media, telegram_download_file (24-worker parallel turbo)</p>
+                    </div>
                   </div>
                 </div>
               </div>
