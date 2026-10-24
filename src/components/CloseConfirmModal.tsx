@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { motion } from 'motion/react'
 import { Minimize2, Power, X, CheckSquare, Square } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -20,9 +21,16 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-150" dir={isRTL ? 'rtl' : 'ltr'}>
-      <div
-        className="w-full max-w-md bg-dark-900 border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-5 select-none animate-in zoom-in-95 duration-150"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm select-none"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 360 }}
+        className="w-full max-w-md bg-dark-900 border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-5 select-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -36,19 +44,23 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
               <p className="text-[11px] text-gray-400">{t('close.subtitle')}</p>
             </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             type="button"
             onClick={onClose}
             className="p-1.5 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Action Options */}
         <div className="flex flex-col gap-2.5">
           {/* Option 1: Minimize (Recommended) */}
-          <div
+          <motion.div
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.985 }}
             onClick={() => setSelectedAction('minimize')}
             className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer ${
               selectedAction === 'minimize'
@@ -79,10 +91,12 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
               </p>
             </div>
             <Minimize2 className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-          </div>
+          </motion.div>
 
           {/* Option 2: Quit completely */}
-          <div
+          <motion.div
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.985 }}
             onClick={() => setSelectedAction('quit')}
             className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer ${
               selectedAction === 'quit'
@@ -108,7 +122,7 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
               </p>
             </div>
             <Power className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-          </div>
+          </motion.div>
         </div>
 
         {/* Remember choice checkbox */}
@@ -128,22 +142,26 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/5">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
             {t('app.cancel')}
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             onClick={() => onConfirm(selectedAction, remember)}
             className="px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
           >
             {t('close.confirm')}
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

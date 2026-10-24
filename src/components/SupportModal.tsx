@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   Heart,
   Copy,
@@ -115,7 +116,13 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
       />
 
       {/* Dialog Window */}
-      <div className="relative w-full max-w-xl bg-[#0e1621] border border-white/10 shadow-2xl rounded-3xl overflow-hidden z-10 flex flex-col animate-in fade-in zoom-in-95 duration-200 text-gray-200">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 360 }}
+        className="relative w-full max-w-xl bg-[#0e1621] border border-white/10 shadow-2xl rounded-3xl overflow-hidden z-10 flex flex-col text-gray-200"
+      >
         {/* Header Ribbon / Glow */}
         <div className="relative p-6 sm:p-7 bg-[#17212b] border-b border-white/5 flex items-start justify-between gap-4 overflow-hidden">
           {/* Subtle decorative glow */}
@@ -298,7 +305,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
             {t('app.close')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
