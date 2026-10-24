@@ -157,7 +157,7 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
 
             {/* Liquid Floating Gift Orbit with Center Avatar */}
             <LiquidGiftOrbit>
-              <div className="relative group cursor-pointer">
+                <div className="relative group cursor-pointer">
                 <Avatar
                   accountId={account.id}
                   peerId={account.id}
@@ -168,7 +168,8 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
                   className="w-24 h-24 text-3xl shadow-2xl ring-4 ring-white/10 group-hover:ring-white/25 transition-all duration-300"
                 />
                 <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg border-2 border-[#17212b] group-hover:scale-110 transition-transform">
-                  <Camera className="w-4 h-4" />
+                  <span className="absolute inset-0 rounded-full bg-primary-400 opacity-0 group-hover:opacity-75 group-hover:animate-ping" />
+                  <Camera className="w-4 h-4 relative z-10" />
                 </div>
               </div>
             </LiquidGiftOrbit>
@@ -353,7 +354,13 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
       {/* QR Code Modal */}
       {showQrModal && (
         <div className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-[#17212b] border border-white/10 rounded-3xl p-6 max-w-xs w-full shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-150">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className="bg-[#17212b] border border-white/10 rounded-3xl p-6 max-w-xs w-full shadow-2xl flex flex-col items-center text-center"
+          >
             <div className="text-base font-bold text-white mb-1">Telegram QR Code</div>
             <div className="text-xs text-gray-400 mb-4">Scan this code to start a chat</div>
 
@@ -388,7 +395,7 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
                 Close
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
