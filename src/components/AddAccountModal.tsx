@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   Phone,
@@ -356,9 +357,17 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
     }
   }
 
+  if (!isOpen) return null
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="glass-modal w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150 border border-white/10 bg-dark-900/95">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="glass-modal w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-white/10 bg-dark-900/95"
+      >
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -383,45 +392,35 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
 
         {/* Tab Switcher: QR Code vs Phone vs Bot Token */}
         <div className="flex p-1 bg-dark-850/80 rounded-2xl border border-white/5 mx-6 mt-4 gap-1">
-          <button
-            type="button"
-            onClick={() => handleSwitchTab('qr')}
-            className={clsx(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
-              loginMethod === 'qr'
-                ? 'bg-primary-600 text-white shadow-glow'
-                : 'text-gray-400 hover:text-gray-200'
-            )}
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>QR Code</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSwitchTab('phone')}
-            className={clsx(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
-              loginMethod === 'phone'
-                ? 'bg-primary-600 text-white shadow-glow'
-                : 'text-gray-400 hover:text-gray-200'
-            )}
-          >
-            <Phone className="w-3.5 h-3.5" />
-            <span>Phone</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSwitchTab('bot')}
-            className={clsx(
-              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200',
-              loginMethod === 'bot'
-                ? 'bg-primary-600 text-white shadow-glow'
-                : 'text-gray-400 hover:text-gray-200'
-            )}
-          >
-            <Bot className="w-3.5 h-3.5" />
-            <span>Bot Token</span>
-          </button>
+          {[
+            { id: 'qr' as const, label: 'QR Code', icon: <QrCode className="w-3.5 h-3.5" /> },
+            { id: 'phone' as const, label: 'Phone', icon: <Phone className="w-3.5 h-3.5" /> },
+            { id: 'bot' as const, label: 'Bot Token', icon: <Bot className="w-3.5 h-3.5" /> },
+          ].map((item) => {
+            const isActive = loginMethod === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSwitchTab(item.id)}
+                className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                  isActive ? 'text-white' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeAuthTabIndicator"
+                    transition={{ type: 'spring', damping: 24, stiffness: 350 }}
+                    className="absolute inset-0 bg-primary-600 rounded-xl shadow-glow"
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  {item.icon}
+                  <span>{item.label}</span>
+                </span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Modal Content */}
@@ -1071,7 +1070,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
