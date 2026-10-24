@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   Check,
   CheckCheck,
@@ -133,201 +134,237 @@ export const JoinRequestsModal: React.FC<JoinRequestsModalProps> = ({
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              <UserCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-neutral-100">{t('join_requests.title')}</h3>
-                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25">
-                  {total}
-                </span>
-              </div>
-              <p className="text-xs text-neutral-400 truncate max-w-md">{chatTitle}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Action / Search Bar */}
-        <div className="px-6 py-3 border-b border-neutral-800/80 bg-neutral-950/40 flex flex-wrap items-center justify-between gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                void fetchRequests(e.target.value)
-              }}
-              placeholder={t('join_requests.search_placeholder')}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-neutral-900/80 border border-neutral-800 text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-blue-500/50"
-            />
-          </div>
-
-          {requests.length > 0 && (
-            <div className="flex items-center gap-2">
-              <button
-                disabled={Boolean(bulkResolving)}
-                onClick={() => setConfirmBulk('approve')}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                <span>{t('join_requests.approve_all')}</span>
-              </button>
-              <button
-                disabled={Boolean(bulkResolving)}
-                onClick={() => setConfirmBulk('decline')}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-colors disabled:opacity-50"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>{t('join_requests.decline_all')}</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Confirmation Banner for Bulk Action */}
-        {confirmBulk && (
-          <div className="px-6 py-3 bg-neutral-800/70 border-b border-neutral-700/60 flex items-center justify-between gap-4">
-            <span className="text-xs text-neutral-200">
-              {confirmBulk === 'approve'
-                ? t('join_requests.confirm_approve_all')
-                : t('join_requests.confirm_decline_all')}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => void handleBulkResolve(confirmBulk)}
-                className={`px-3 py-1 text-xs font-medium rounded-lg text-white ${
-                  confirmBulk === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
-                }`}
-              >
-                {confirmBulk === 'approve' ? t('join_requests.approve') : t('join_requests.decline')}
-              </button>
-              <button
-                onClick={() => setConfirmBulk(null)}
-                className="px-2.5 py-1 text-xs rounded-lg bg-neutral-700 text-neutral-300 hover:bg-neutral-600"
-              >
-                {t('common.cancel') || 'Cancel'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Feedback Alert */}
-        {feedback && (
-          <div
-            className={`px-6 py-2.5 text-xs border-b ${
-              feedback.type === 'success'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'bg-red-500/10 text-red-400 border-red-500/20'
-            }`}
-          >
-            {feedback.text}
-          </div>
-        )}
-
-        {/* Body List */}
-        <div className="flex-1 overflow-y-auto divide-y divide-neutral-800/60 p-2">
-          {loading && requests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-neutral-400 gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-              <span className="text-xs">{t('join_requests.loading')}</span>
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center text-xs text-red-400">{error}</div>
-          ) : requests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-neutral-400 gap-3">
-              <div className="p-4 rounded-2xl bg-neutral-800/40 text-neutral-500">
-                <Users className="w-8 h-8" />
-              </div>
-              <p className="text-xs text-neutral-400">{t('join_requests.empty')}</p>
-            </div>
-          ) : (
-            requests.map((req) => (
-              <div
-                key={req.userId}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-neutral-800/40 transition-colors gap-3"
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <Avatar
-                    avatarUrl={req.avatarUrl}
-                    title={req.name}
-                    peerId={req.userId}
-                    accountId={accountId}
-                    size="md"
-                    className="flex-shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-medium text-neutral-200 truncate">{req.name}</span>
-                      {req.isPremium && (
-                        <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded bg-amber-500/20 text-amber-300">
-                          ⭐️
-                        </span>
-                      )}
-                      {req.isBot && (
-                        <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded bg-neutral-700 text-neutral-300">
-                          bot
-                        </span>
-                      )}
-                      {req.username && (
-                        <span className="text-xs text-neutral-400 truncate">@{req.username}</span>
-                      )}
-                    </div>
-                    {req.bio && (
-                      <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1 italic">
-                        &quot;{req.bio}&quot;
-                      </p>
-                    )}
-                    <div className="flex items-center gap-1 text-[11px] text-neutral-400 mt-1">
-                      <Clock className="w-3 h-3 text-neutral-400" />
-                      <span>{formatDate(req.date)}</span>
-                    </div>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <UserCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-neutral-100">{t('join_requests.title')}</h3>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/25">
+                      {total}
+                    </span>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    disabled={resolvingId === req.userId || Boolean(bulkResolving)}
-                    onClick={() => void handleResolve(req.userId, 'approve')}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                  >
-                    {resolvingId === req.userId ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Check className="w-3.5 h-3.5" />
-                    )}
-                    <span>{t('join_requests.approve')}</span>
-                  </button>
-                  <button
-                    disabled={resolvingId === req.userId || Boolean(bulkResolving)}
-                    onClick={() => void handleResolve(req.userId, 'decline')}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl bg-neutral-800 text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                  >
-                    <UserX className="w-3.5 h-3.5" />
-                    <span>{t('join_requests.decline')}</span>
-                  </button>
+                  <p className="text-xs text-neutral-400 truncate max-w-md">{chatTitle}</p>
                 </div>
               </div>
-            ))
-          )}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2 rounded-lg text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            {/* Action / Search Bar */}
+            <div className="px-6 py-3 border-b border-neutral-800/80 bg-neutral-950/40 flex flex-wrap items-center justify-between gap-3">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    void fetchRequests(e.target.value)
+                  }}
+                  placeholder={t('join_requests.search_placeholder')}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-neutral-900/80 border border-neutral-800 text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+                />
+              </div>
+
+              {requests.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.96 }}
+                    disabled={Boolean(bulkResolving)}
+                    onClick={() => setConfirmBulk('approve')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    <span>{t('join_requests.approve_all')}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.96 }}
+                    disabled={Boolean(bulkResolving)}
+                    onClick={() => setConfirmBulk('decline')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-colors disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>{t('join_requests.decline_all')}</span>
+                  </motion.button>
+                </div>
+              )}
+            </div>
+
+            {/* Confirmation Banner for Bulk Action */}
+            <AnimatePresence>
+              {confirmBulk && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-6 py-3 bg-neutral-800/70 border-b border-neutral-700/60 flex items-center justify-between gap-4 overflow-hidden"
+                >
+                  <span className="text-xs text-neutral-200">
+                    {confirmBulk === 'approve'
+                      ? t('join_requests.confirm_approve_all')
+                      : t('join_requests.confirm_decline_all')}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => void handleBulkResolve(confirmBulk)}
+                      className={`px-3 py-1 text-xs font-medium rounded-lg text-white shadow-sm ${
+                        confirmBulk === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
+                      }`}
+                    >
+                      {confirmBulk === 'approve' ? t('join_requests.approve') : t('join_requests.decline')}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setConfirmBulk(null)}
+                      className="px-2.5 py-1 text-xs rounded-lg bg-neutral-700 text-neutral-300 hover:bg-neutral-600"
+                    >
+                      {t('common.cancel') || 'Cancel'}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Feedback Alert */}
+            <AnimatePresence>
+              {feedback && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={`px-6 py-2.5 text-xs border-b overflow-hidden ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}
+                >
+                  {feedback.text}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Body List */}
+            <div className="flex-1 overflow-y-auto divide-y divide-neutral-800/60 p-2">
+              {loading && requests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-neutral-400 gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                  <span className="text-xs">{t('join_requests.loading')}</span>
+                </div>
+              ) : error ? (
+                <div className="p-8 text-center text-xs text-red-400">{error}</div>
+              ) : requests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-neutral-400 gap-3">
+                  <div className="p-4 rounded-2xl bg-neutral-800/40 text-neutral-500">
+                    <Users className="w-8 h-8" />
+                  </div>
+                  <p className="text-xs text-neutral-400">{t('join_requests.empty')}</p>
+                </div>
+              ) : (
+                requests.map((req) => (
+                  <motion.div
+                    key={req.userId}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-neutral-800/40 transition-colors gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Avatar
+                        avatarUrl={req.avatarUrl}
+                        title={req.name}
+                        peerId={req.userId}
+                        accountId={accountId}
+                        size="md"
+                        className="flex-shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-medium text-neutral-200 truncate">{req.name}</span>
+                          {req.isPremium && (
+                            <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded bg-amber-500/20 text-amber-300">
+                              ⭐️
+                            </span>
+                          )}
+                          {req.isBot && (
+                            <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded bg-neutral-700 text-neutral-300">
+                              bot
+                            </span>
+                          )}
+                          {req.username && (
+                            <span className="text-xs text-neutral-400 truncate">@{req.username}</span>
+                          )}
+                        </div>
+                        {req.bio && (
+                          <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1 italic">
+                            &quot;{req.bio}&quot;
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1 text-[11px] text-neutral-400 mt-1">
+                          <Clock className="w-3 h-3 text-neutral-400" />
+                          <span>{formatDate(req.date)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <motion.button
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.94 }}
+                        disabled={resolvingId === req.userId || Boolean(bulkResolving)}
+                        onClick={() => void handleResolve(req.userId, 'approve')}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                      >
+                        {resolvingId === req.userId ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>{t('join_requests.approve')}</span>
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.94 }}
+                        disabled={resolvingId === req.userId || Boolean(bulkResolving)}
+                        onClick={() => void handleResolve(req.userId, 'decline')}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl bg-neutral-800 text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                        <span>{t('join_requests.decline')}</span>
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   )
 }
 export default JoinRequestsModal
