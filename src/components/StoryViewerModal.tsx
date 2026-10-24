@@ -18,6 +18,7 @@ import {
   Check,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
+import { motion, AnimatePresence } from 'motion/react'
 import { Avatar } from './Avatar'
 
 interface StoryViewerModalProps {
@@ -331,11 +332,20 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 p-0 sm:p-6 animate-in fade-in duration-150"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 p-0 sm:p-6"
       dir="ltr"
     >
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-dark-950 shadow-2xl sm:h-[88vh] sm:max-w-[440px] sm:rounded-2xl sm:border sm:border-white/10">
+      <motion.div
+        initial={{ scale: 0.94, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.96, opacity: 0, y: 10 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 360 }}
+        className="relative flex h-full w-full flex-col overflow-hidden bg-dark-950 shadow-2xl sm:h-[88vh] sm:max-w-[440px] sm:rounded-2xl sm:border sm:border-white/10"
+      >
         {/* Progress bars */}
         <div className="absolute left-0 right-0 top-0 z-40 px-3 pt-3">
           <div className="flex gap-1">
@@ -628,7 +638,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             <span>Space to pause</span>
           </span>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
