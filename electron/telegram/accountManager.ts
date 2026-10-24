@@ -999,7 +999,8 @@ export class AccountManager {
       apiId: config.apiId,
       apiHash: config.apiHash,
       storage: new MemoryStorage(),
-      connectionCount: (kind: any) => (kind === 'download' ? 8 : (kind === 'upload' ? 8 : 4)),
+      // MM-003: Connection Pooling - prevent socket exhaustion by capping pooled TCP sockets per account
+      connectionCount: (kind: any) => (kind === 'download' ? 4 : (kind === 'upload' ? 4 : 2)),
       initConnectionOptions: {
         deviceModel: profile.deviceModel,
         systemVersion: profile.systemVersion,
