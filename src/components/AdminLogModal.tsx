@@ -43,6 +43,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
   const { t } = useI18n()
   const [events, setEvents] = useState<AdminLogItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
   const [hasMore, setHasMore] = useState(false)
@@ -51,6 +52,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
     async (query = '') => {
       if (!accountId || !chatId) return
       setIsLoading(true)
+      setErrorMessage(null)
       try {
         if (window.guidegram?.getAdminLog) {
           const res = await window.guidegram.getAdminLog(accountId, chatId, query, 50)
@@ -59,13 +61,18 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
             setHasMore(res.hasMore)
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[AdminLog] Failed to fetch:', err)
+        setErrorMessage(
+          err?.message?.includes('ADMIN') || err?.message?.includes('CHAT_ADMIN_REQUIRED')
+            ? t('admin_log.admin_required') || 'Administrator privileges required to view recent actions.'
+            : (err?.message || 'Failed to load administrative actions.')
+        )
       } finally {
         setIsLoading(false)
       }
     },
-    [accountId, chatId]
+    [accountId, chatId, t]
   )
 
   useEffect(() => {
@@ -73,6 +80,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
       fetchLog('')
     } else {
       setEvents([])
+      setErrorMessage(null)
       setSearchQuery('')
       setActiveTab('all')
     }
@@ -297,7 +305,24 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
 
         {/* Events Timeline List */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
-          {isLoading && events.length === 0 ? (
+          {errorMessage ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400 text-center px-4 select-none">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-semibold text-red-300 max-w-sm">
+                {errorMessage}
+              </span>
+              <button
+                type="button"
+                onClick={() => fetchLog(searchQuery)}
+                className="mt-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-white font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{t('chat.retry') || 'Retry'}</span>
+              </button>
+            </div>
+          ) : isLoading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400">
               <div className="w-8 h-8 border-2 border-accent-amber border-t-transparent rounded-full animate-spin" />
               <span className="text-xs font-medium">Loading recent administrative actions...</span>
