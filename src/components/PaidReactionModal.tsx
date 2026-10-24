@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Star, X, Shield, Sparkles, Check, Flame } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useI18n } from '../i18n'
 import { formatNumber } from '../utils/textUtils'
 
@@ -81,10 +82,20 @@ export const PaidReactionModal: React.FC<PaidReactionModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 select-none"
+    >
+      <motion.div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-dark-850 border border-amber-500/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+        initial={{ scale: 0.9, opacity: 0, y: 18 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.93, opacity: 0, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 380 }}
+        className="w-full max-w-sm bg-dark-850/95 backdrop-blur-xl border border-amber-500/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="p-4 bg-gradient-to-r from-amber-500/20 via-dark-800 to-amber-600/15 border-b border-white/10 flex items-center justify-between">
@@ -127,7 +138,7 @@ export const PaidReactionModal: React.FC<PaidReactionModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Preset Grid */}
+              {/* Preset Grid with spring bouncy buttons */}
               <div>
                 <label className="block text-[11px] font-semibold text-gray-400 mb-2">
                   {t('stars.select_amount')}
@@ -136,9 +147,12 @@ export const PaidReactionModal: React.FC<PaidReactionModalProps> = ({
                   {PRESET_AMOUNTS.map((amt) => {
                     const isSelected = !customCount && selectedCount === amt
                     return (
-                      <button
+                      <motion.button
                         key={amt}
                         type="button"
+                        whileHover={{ scale: 1.08 }}
+                        whileTap={{ scale: 0.92 }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 20 }}
                         onClick={() => {
                           setSelectedCount(amt)
                           setCustomCount('')
@@ -158,7 +172,7 @@ export const PaidReactionModal: React.FC<PaidReactionModalProps> = ({
                             <Flame className="w-2.5 h-2.5 inline" />
                           </span>
                         )}
-                      </button>
+                      </motion.button>
                     )
                   })}
                 </div>
@@ -225,7 +239,7 @@ export const PaidReactionModal: React.FC<PaidReactionModalProps> = ({
             </>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
