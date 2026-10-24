@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Sparkles, ShieldCheck, Zap, Shield, Smartphone, ArrowRight, ArrowLeft, X, Minimize2, ExternalLink } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -146,22 +147,30 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   return (
     <div
       dir={isRTL ? 'rtl' : 'ltr'}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none"
     >
-      <div className="relative w-full max-w-lg bg-[#0f141c]/95 border border-white/10 rounded-3xl p-6 md:p-7 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+        className="relative w-full max-w-lg bg-[#0f141c]/95 border border-white/10 rounded-3xl p-6 md:p-7 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl overflow-hidden"
+      >
         {/* Background glow accents */}
         <div className="absolute -top-20 -right-20 w-44 h-44 bg-accent-cyan/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-44 h-44 bg-primary-600/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close button */}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           type="button"
           onClick={onClose}
           className={`absolute top-5 ${isRTL ? 'left-5' : 'right-5'} p-1.5 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer`}
           title={t('app.close')}
         >
           <X className="w-5 h-5" />
-        </button>
+        </motion.button>
 
         {/* Header Badge & Title */}
         <div className="flex items-center gap-3.5 mb-5">
@@ -207,9 +216,11 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
           {features.map((feat, idx) => {
             const Icon = feat.icon
             return (
-              <div
+              <motion.div
+                whileHover={{ scale: 1.02, x: 2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 key={idx}
-                className="p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-white/10 transition-all flex items-start gap-3"
+                className="p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-white/10 transition-colors flex items-start gap-3"
               >
                 <div
                   className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${feat.bgColor}`}
@@ -226,14 +237,16 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
                     {feat.desc}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             )
           })}
         </div>
 
         {/* Action Button & Release Notes Link */}
         <div className="space-y-2.5">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             type="button"
             onClick={onClose}
             className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-primary-600 via-primary-500 to-accent-cyan hover:from-primary-500 hover:to-accent-cyan text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(59,130,246,0.35)] hover:shadow-[0_0_35px_rgba(14,165,233,0.5)] transition-all cursor-pointer group"
@@ -244,7 +257,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
             ) : (
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             )}
-          </button>
+          </motion.button>
 
           <a
             href={`https://github.com/guidegram/guidegram/releases`}
@@ -256,7 +269,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
