@@ -1991,44 +1991,63 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       const cacheKey = thumb ? `${msg.id}_thumb` : `${msg.id}`
       if (force) {
         failedMediaKeysRef.current.delete(cacheKey)
+        failedMediaKeysRef.current.delete(`${msg.id}`)
       }
       if (
         downloadedMedia[cacheKey] ||
         loadingMediaIds[cacheKey] ||
+        loadingMediaIds[msg.id] ||
         failedMediaKeysRef.current.has(cacheKey) ||
         !window.guidegram?.downloadMedia
       ) {
-        return downloadedMedia[cacheKey] || null
+        return downloadedMedia[cacheKey] || downloadedMedia[msg.id] || null
       }
 
-      setLoadingMediaIds((prev) => ({ ...prev, [cacheKey]: true }))
+      setLoadingMediaIds((prev) => ({ ...prev, [cacheKey]: true, [msg.id]: true }))
       try {
+        const targetAccountId = msg.accountId || chat?.accountId
+        const targetChatId = msg.chatId || chat?.id
+        if (!targetAccountId || !targetChatId) {
+          throw new Error('Missing accountId or chatId')
+        }
         const dataUrl = await window.guidegram.downloadMedia(
-          msg.accountId,
-          msg.chatId,
+          targetAccountId,
+          targetChatId,
           msg.id,
           thumb
         )
         if (dataUrl) {
-          setDownloadedMedia((prev) => ({ ...prev, [cacheKey]: dataUrl }))
+          setDownloadedMedia((prev) => ({
+            ...prev,
+            [cacheKey]: dataUrl,
+            [msg.id]: dataUrl,
+          }))
           failedMediaKeysRef.current.delete(cacheKey)
+          failedMediaKeysRef.current.delete(`${msg.id}`)
           return dataUrl
         } else {
           failedMediaKeysRef.current.add(cacheKey)
+          if (!thumb) {
+            showToast('Failed to load image. Click to retry.')
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         failedMediaKeysRef.current.add(cacheKey)
         console.warn(`Failed to download media for ${msg.id}:`, err)
+        if (!thumb) {
+          showToast(`Failed to load image: ${err?.message || 'Error'}`)
+        }
       } finally {
         setLoadingMediaIds((prev) => {
           const next = { ...prev }
           delete next[cacheKey]
+          delete next[msg.id]
           return next
         })
       }
       return null
     },
-    [downloadedMedia, loadingMediaIds]
+    [chat, downloadedMedia, loadingMediaIds, showToast]
   )
 
   // Cancel in-flight download of media
@@ -3529,11 +3548,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 )}
                 {msg.mediaFileSize ? (
                   <span className="text-[10px] font-medium text-white/90 bg-black/50 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
-                    {formatFileSize(msg.mediaFileSize)}
+                    {loadingMediaIds[msg.id] ? 'Loading...' : formatFileSize(msg.mediaFileSize)}
                   </span>
                 ) : (
                   <span className="text-[11px] font-medium text-white/90">
-                    {loadingMediaIds[msg.id] ? 'Loading image...' : 'Click to load image'}
+                    {loadingMediaIds[msg.id]
+                      ? 'Loading image...'
+                      : failedMediaKeysRef.current.has(String(msg.id))
+                      ? 'Click to retry'
+                      : 'Click to load image'}
                   </span>
                 )}
               </div>

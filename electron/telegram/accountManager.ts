@@ -1654,8 +1654,8 @@ export class AccountManager {
       if (found && found.accessHash) {
         try {
           cachedHash = Long.fromString(found.accessHash)
-          this.peerAccessHashes.set(`${accountId}_${normalized}`, cachedHash)
-          this.peerAccessHashes.set(`${accountId}_${s}`, cachedHash)
+          this.setPeerAccessHash(accountId, normalized, cachedHash)
+          this.setPeerAccessHash(accountId, s, cachedHash)
         } catch (_) {}
       }
     }
@@ -1665,6 +1665,36 @@ export class AccountManager {
       const chatId = Math.abs(Number(normalized))
       if (chatId <= 2000000000) {
         return { _: 'inputPeerChat', chatId }
+      }
+    }
+
+    // If still missing accessHash, attempt username resolution if known
+    if (!cachedHash && holder?.client) {
+      const cachedDialogs = this.store.loadDialogsCache(accountId)
+      const found = cachedDialogs.find((d) => d.id === s || d.id === normalized || d.id.endsWith(bareId))
+      if (found && found.username) {
+        try {
+          const cleanUser = found.username.replace(/^@/, '').trim()
+          if (cleanUser) {
+            const resolved: any = await holder.client.call({
+              _: 'contacts.resolveUsername',
+              username: cleanUser,
+            }).catch(() => null)
+            const ch = resolved?.chats?.[0]
+            if (ch?.accessHash) {
+              cachedHash = ch.accessHash
+              this.setPeerAccessHash(accountId, normalized, ch.accessHash)
+              this.setPeerAccessHash(accountId, s, ch.accessHash)
+            } else {
+              const u = resolved?.users?.[0]
+              if (u?.accessHash) {
+                cachedHash = u.accessHash
+                this.setPeerAccessHash(accountId, normalized, u.accessHash)
+                this.setPeerAccessHash(accountId, s, u.accessHash)
+              }
+            }
+          }
+        } catch (_) {}
       }
     }
 
@@ -2976,34 +3006,73 @@ export class AccountManager {
           }
         } catch {}
 
-        const inputPeer = await this.resolveInputPeer(accountId, chatId)
-        let res: any
-        if (inputPeer._ === 'inputPeerChannel') {
-          let accessHash = (inputPeer as any).accessHash || Long.ZERO
-          if (accessHash.isZero()) {
-            const cachedHash =
-              this.peerAccessHashes.get(`${accountId}_${inputPeer.channelId}`) ||
-              this.peerAccessHashes.get(`${accountId}_${chatId}`) ||
-              this.peerAccessHashes.get(`${accountId}_${chatId.replace(/^-100/, '')}`)
-            if (cachedHash) accessHash = cachedHash
+        const cleanChatId = String(chatId).trim()
+        const bareId = cleanChatId.replace(/^-100/, '').replace(/^-/, '')
+        const cachedRawMsg =
+          this.rawMessagesCache.get(`${accountId}_${cleanChatId}_${messageId}`) ||
+          this.rawMessagesCache.get(`${accountId}_${bareId}_${messageId}`) ||
+          this.rawMessagesCache.get(`${accountId}_-100${bareId}_${messageId}`) ||
+          this.rawMessagesCache.get(`${accountId}_-${bareId}_${messageId}`)
+
+        let msg = cachedRawMsg
+        if (!msg) {
+          const inputPeer = await this.resolveInputPeer(accountId, chatId)
+          let res: any
+          if (inputPeer._ === 'inputPeerChannel') {
+            let accessHash = (inputPeer as any).accessHash || Long.ZERO
+            if (accessHash.isZero()) {
+              const cachedHash =
+                this.peerAccessHashes.get(`${accountId}_${inputPeer.channelId}`) ||
+                this.peerAccessHashes.get(`${accountId}_${chatId}`) ||
+                this.peerAccessHashes.get(`${accountId}_${bareId}`)
+              if (cachedHash) accessHash = cachedHash
+            }
+            try {
+              res = await client.call({
+                _: 'channels.getMessages',
+                channel: {
+                  _: 'inputChannel',
+                  channelId: inputPeer.channelId,
+                  accessHash,
+                },
+                id: [{ _: 'inputMessageID', id: messageId }],
+              })
+            } catch (err: any) {
+              if (String(err?.message || '').includes('CHANNEL_INVALID')) {
+                const cachedDialogs = this.store.loadDialogsCache(accountId)
+                const found = cachedDialogs.find((d) => d.id === chatId || d.id.endsWith(bareId))
+                if (found?.username) {
+                  const resolved: any = await client.call({
+                    _: 'contacts.resolveUsername',
+                    username: found.username.replace(/^@/, '').trim(),
+                  }).catch(() => null)
+                  const ch = resolved?.chats?.[0]
+                  if (ch?.accessHash) {
+                    this.setPeerAccessHash(accountId, chatId, ch.accessHash)
+                    res = await client.call({
+                      _: 'channels.getMessages',
+                      channel: {
+                        _: 'inputChannel',
+                        channelId: ch.id,
+                        accessHash: ch.accessHash,
+                      },
+                      id: [{ _: 'inputMessageID', id: messageId }],
+                    })
+                  }
+                }
+              }
+              if (!res) throw err
+            }
+          } else {
+            res = await client.call({
+              _: 'messages.getMessages',
+              id: [{ _: 'inputMessageID', id: messageId }],
+            })
           }
-          res = await client.call({
-            _: 'channels.getMessages',
-            channel: {
-              _: 'inputChannel',
-              channelId: inputPeer.channelId,
-              accessHash,
-            },
-            id: [{ _: 'inputMessageID', id: messageId }],
-          })
-        } else {
-          res = await client.call({
-            _: 'messages.getMessages',
-            id: [{ _: 'inputMessageID', id: messageId }],
-          })
+
+          msg = res?.messages?.[0]
         }
 
-        const msg = res?.messages?.[0]
         if (!msg || !msg.media) return null
 
         let ext = '.bin'
@@ -3124,8 +3193,10 @@ export class AccountManager {
               },
             })
           } else {
+            const dcId = (fileLocation as any).dcId || (msg.media?.photo as any)?.dcId || docObj?.dcId
             await client.downloadToFile(cachedPath, fileLocation as any, {
               partSize: 512,
+              dcId,
               abortSignal: abortController.signal,
               progressCallback: (received, total) => {
                 const progress = total > 0 ? Math.min(100, Math.round((received / total) * 100)) : 0
