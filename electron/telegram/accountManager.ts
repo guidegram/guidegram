@@ -1871,14 +1871,61 @@ export class AccountManager {
       const audit = this.store.loadAccountAudit(accountId)
       const dialogs: DialogItem[] = []
       const chatIds = Object.keys(audit || {})
+      const botSelfName = holder.info?.firstName || ''
+
       for (const chatId of chatIds) {
         const chatMsgs = audit[chatId] || {}
         const msgIds = Object.keys(chatMsgs).map(Number).sort((a, b) => b - a)
         const lastMsg = msgIds.length > 0 ? chatMsgs[msgIds[0]] : undefined
+
+        let contactName = ''
+        let contactAvatarUrl: string | undefined = undefined
+        let contactUsername: string | undefined = undefined
+
+        // Find incoming user message to extract the true sender's name and photo
+        for (const mid of msgIds) {
+          const m = chatMsgs[mid]
+          if (m && !m.isOutgoing) {
+            if (!contactName && m.senderName && m.senderName !== botSelfName) {
+              contactName = m.senderName
+            }
+            if (!contactAvatarUrl && m.senderAvatarUrl) {
+              contactAvatarUrl = m.senderAvatarUrl
+            }
+            if (!contactUsername && m.senderUsername) {
+              contactUsername = m.senderUsername
+            }
+          }
+        }
+
+        // If no incoming message found, check if message text contains user metadata like "کاربر: نام (ID) @user"
+        if (!contactName) {
+          for (const mid of msgIds) {
+            const m = chatMsgs[mid]
+            if (m?.text) {
+              const userMatch = m.text.match(/کاربر:\s*([^\n\r(@]+)/i) || m.text.match(/User:\s*([^\n\r(@]+)/i)
+              if (userMatch && userMatch[1]?.trim()) {
+                contactName = userMatch[1].trim()
+                break
+              }
+            }
+          }
+        }
+
+        const avatarCacheKey = `${accountId}_${chatId}`
+        if (!contactAvatarUrl) {
+          contactAvatarUrl = this.avatarCache.get(avatarCacheKey) || this.thumbCache.get(avatarCacheKey)
+        }
+
+        const fallbackTitle = contactUsername
+          ? `@${contactUsername}`
+          : (chatId.startsWith('-') ? `Group ${chatId}` : `کاربر ${chatId}`)
+
         dialogs.push({
           id: chatId,
           accountId,
-          title: lastMsg?.senderName || `Chat ${chatId}`,
+          title: contactName || fallbackTitle,
+          avatarUrl: contactAvatarUrl,
           unreadCount: 0,
           lastMessageText: lastMsg?.text || (lastMsg?.mediaType ? `[${lastMsg.mediaType}]` : ''),
           lastMessageDate: lastMsg?.date || 0,

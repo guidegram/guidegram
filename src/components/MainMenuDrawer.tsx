@@ -240,7 +240,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
 
         {/* Account Switcher List (Only when accounts exist and switcher is expanded) */}
         {activeAccount && isAccountsExpanded && accounts.length > 0 && (
-          <div className="bg-[#17212b] border-b border-white/5 p-2 space-y-1 animate-in fade-in duration-150">
+          <div className="bg-[#17212b] border-b border-white/5 p-2 space-y-1 animate-in fade-in duration-150 max-h-52 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 shrink-0">
             {accounts.map((acc) => {
               const isActive = acc.id === activeAccount?.id
               const accName = [acc.firstName, acc.lastName].filter(Boolean).join(' ') || 'Account'
