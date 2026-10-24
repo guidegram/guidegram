@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   Forward,
@@ -133,7 +134,13 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="glass-modal w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 border border-white/10">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="glass-modal w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-white/10"
+      >
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-dark-900/80">
           <div className="flex items-center gap-2.5">
@@ -454,7 +461,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
