@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   Search,
@@ -222,8 +223,6 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
     }
   }
 
-  if (!isOpen) return null
-
   const currentItems = itemsByTab[activeTab] || []
   const filteredItems = searchQuery.trim()
     ? currentItems.filter((i) => {
@@ -240,89 +239,108 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
     : currentItems
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-        onClick={onClose}
-      />
-
-      {/* Drawer Panel */}
-      <div className="relative w-96 max-w-full h-full bg-dark-900/95 border-l border-white/10 shadow-2xl flex flex-col z-10 backdrop-blur-xl animate-in slide-in-from-right duration-250">
-        {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3 bg-dark-850/50">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="p-2 rounded-xl bg-primary-500/10 text-primary-400">
-              <ImageIcon className="w-5 h-5" />
-            </div>
-            <div className="truncate">
-              <h2 className="text-sm font-bold text-gray-100">{t('shared_media.title')}</h2>
-              <p className="text-xs text-gray-400 truncate">{chat.title}</p>
-            </div>
-          </div>
-          <button
-            type="button"
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-y-0 right-0 z-50 flex">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors cursor-pointer"
+          />
+
+          {/* Drawer Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="relative w-96 max-w-full h-full bg-dark-900/95 border-l border-white/10 shadow-2xl flex flex-col z-10 backdrop-blur-xl"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Search Box */}
-        <div className="px-4 py-2.5 border-b border-white/5 bg-dark-800/30">
-          <div className="relative flex items-center">
-            <Search className="w-4 h-4 text-gray-500 absolute left-3 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('shared_media.search_placeholder')}
-              className="w-full pl-9 pr-8 py-1.5 text-xs bg-dark-950/60 border border-white/10 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/30 transition-all"
-            />
-            {searchQuery && (
-              <button
+            {/* Header */}
+            <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3 bg-dark-850/50">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="p-2 rounded-xl bg-primary-500/10 text-primary-400">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+                <div className="truncate">
+                  <h2 className="text-sm font-bold text-gray-100">{t('shared_media.title')}</h2>
+                  <p className="text-xs text-gray-400 truncate">{chat.title}</p>
+                </div>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 text-gray-500 hover:text-gray-300"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center px-2 border-b border-white/10 bg-dark-850/40 overflow-x-auto no-scrollbar select-none">
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            const count = totalCountByTab[tab.id]
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(tab.id)
-                  setSearchQuery('')
-                }}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-all cursor-pointer ${
-                  isActive
-                    ? 'border-primary-500 text-primary-400 bg-primary-500/10'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{t(tab.labelKey)}</span>
-                {count > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/10 text-gray-300">
-                    {count}
-                  </span>
+            {/* Search Box */}
+            <div className="px-4 py-2.5 border-b border-white/5 bg-dark-800/30">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-gray-500 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('shared_media.search_placeholder')}
+                  className="w-full pl-9 pr-8 py-1.5 text-xs bg-dark-950/60 border border-white/10 rounded-xl text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/30 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 text-gray-500 hover:text-gray-300"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
-              </button>
-            )
-          })}
-        </div>
+              </div>
+            </div>
+
+            {/* Navigation Tabs with layoutId */}
+            <div className="flex items-center px-2 border-b border-white/10 bg-dark-850/40 overflow-x-auto no-scrollbar select-none">
+              {TABS.map((tab) => {
+                const Icon = tab.icon
+                const isActive = activeTab === tab.id
+                const count = totalCountByTab[tab.id]
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.id)
+                      setSearchQuery('')
+                    }}
+                    className={`relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                      isActive ? 'text-primary-400' : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeSharedMediaTabIndicator"
+                        transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+                        className="absolute inset-x-0 bottom-0 h-0.5 bg-primary-500 shadow-glow"
+                      />
+                    )}
+                    <Icon className="w-3.5 h-3.5 relative z-10" />
+                    <span className="relative z-10">{t(tab.labelKey)}</span>
+                    {count > 0 && (
+                      <span className="relative z-10 text-[10px] px-1.5 py-0.2 rounded-full bg-white/10 text-gray-300">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
 
         {/* Content Area */}
         <div
@@ -597,8 +615,10 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
             </>
           )}
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   )
 }
 export default SharedMediaDrawer
