@@ -26,6 +26,28 @@ export class Logger {
     }
   }
 
+  // MM-016: Structured Logging & Correlation IDs
+  public static generateTraceId(): string {
+    return `trc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
+  }
+
+  public static structured(level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG', event: string, data: Record<string, any> = {}) {
+    const traceId = data.traceId || this.generateTraceId()
+    const logObj = {
+      timestamp: new Date().toISOString(),
+      level,
+      event,
+      traceId,
+      ...data,
+    }
+    const jsonLine = JSON.stringify(logObj) + '\n'
+    this.append(this.logFile, jsonLine)
+    if (level === 'ERROR') {
+      this.append(this.errorFile, jsonLine)
+    }
+    this.safeConsole(() => console.log(`[${level}] [${traceId}] ${event}`, data))
+  }
+
   private static formatMessage(level: string, message: string, meta?: any): string {
     const timestamp = new Date().toISOString()
     let metaStr = ''

@@ -1050,7 +1050,7 @@ function setupIpcHandlers() {
 
   // Telegram Accounts
   ipcMain.handle('telegram:get-accounts', async () => {
-    Logger.info('[IPC] telegram:get-accounts')
+    Logger.structured('INFO', 'ipc:telegram:get-accounts')
     return accountManager.getAccounts()
   })
 
