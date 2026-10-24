@@ -152,8 +152,8 @@ app.on('second-instance', (_event, commandLine) => {
   }
 })
 
-const FALLBACK_ICON_DATA_URL =
-  'data:image/png;base64,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'
+let cachedAppIcon: InstanceType<typeof nativeImage> | null = null
+let cachedTrayIcon: InstanceType<typeof nativeImage> | null = null
 
 function getResourcesPath(): string {
   const candidates = [
@@ -184,12 +184,16 @@ function getAppIconPath(): string {
 }
 
 function getAppIcon(): InstanceType<typeof nativeImage> {
+  if (cachedAppIcon && !cachedAppIcon.isEmpty()) return cachedAppIcon
   const iconPath = getAppIconPath()
   if (iconPath && fs.existsSync(iconPath)) {
     const img = nativeImage.createFromPath(iconPath)
-    if (!img.isEmpty()) return img
+    if (!img.isEmpty()) {
+      cachedAppIcon = img
+      return img
+    }
   }
-  return nativeImage.createFromDataURL(FALLBACK_ICON_DATA_URL)
+  return nativeImage.createEmpty()
 }
 
 function getTrayIconPath(): string {
@@ -204,6 +208,7 @@ function getTrayIconPath(): string {
 }
 
 function getTrayIcon(): InstanceType<typeof nativeImage> {
+  if (cachedTrayIcon && !cachedTrayIcon.isEmpty()) return cachedTrayIcon
   const iconPath = getTrayIconPath()
   if (iconPath && fs.existsSync(iconPath)) {
     let img = nativeImage.createFromPath(iconPath)
@@ -211,12 +216,11 @@ function getTrayIcon(): InstanceType<typeof nativeImage> {
       if (process.platform === 'win32') {
         img = img.resize({ width: 16, height: 16 })
       }
+      cachedTrayIcon = img
       return img
     }
   }
-  // Safe infallible embedded fallback
-  const fallback = nativeImage.createFromDataURL(FALLBACK_ICON_DATA_URL)
-  return fallback.resize({ width: 16, height: 16 })
+  return nativeImage.createEmpty()
 }
 
 function createTray() {
