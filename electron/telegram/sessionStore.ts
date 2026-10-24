@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision, DialogItem } from './types'
+import { SecureStorage } from './secureStorage'
 
 export class SessionStore {
   private dataDir: string
@@ -214,42 +215,61 @@ export class SessionStore {
   }
 
   public saveSessionString(accountId: string, sessionString: string): void {
-    const filePath = path.join(this.sessionsDir, `session_${accountId}.txt`)
-    fs.writeFileSync(filePath, sessionString, 'utf-8')
+    const safeId = SecureStorage.sanitizeAccountId(accountId)
+    const encrypted = SecureStorage.encrypt(sessionString)
+    const filePath = path.join(this.sessionsDir, `session_${safeId}.txt`)
+    fs.writeFileSync(filePath, encrypted, 'utf-8')
     try {
-      const backupFilePath = path.join(this.backupSessionsDir, `session_${accountId}.txt`)
-      fs.writeFileSync(backupFilePath, sessionString, 'utf-8')
+      const backupFilePath = path.join(this.backupSessionsDir, `session_${safeId}.txt`)
+      fs.writeFileSync(backupFilePath, encrypted, 'utf-8')
     } catch (err) {
       console.error('[SessionStore] Failed to mirror session to safe backup:', err)
     }
   }
 
   public getSessionString(accountId: string): string | null {
-    const filePath = path.join(this.sessionsDir, `session_${accountId}.txt`)
+    const safeId = SecureStorage.sanitizeAccountId(accountId)
+    const filePath = path.join(this.sessionsDir, `session_${safeId}.txt`)
+    let raw: string | null = null
+
     if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath, 'utf-8').trim()
-    }
-    // Fallback: recover from mirrored safe backup if local file was deleted!
-    try {
-      const backupFilePath = path.join(this.backupSessionsDir, `session_${accountId}.txt`)
-      if (fs.existsSync(backupFilePath)) {
-        const str = fs.readFileSync(backupFilePath, 'utf-8').trim()
-        fs.writeFileSync(filePath, str, 'utf-8')
-        return str
+      raw = fs.readFileSync(filePath, 'utf-8').trim()
+    } else {
+      // Fallback: recover from mirrored safe backup if local file was deleted!
+      try {
+        const backupFilePath = path.join(this.backupSessionsDir, `session_${safeId}.txt`)
+        if (fs.existsSync(backupFilePath)) {
+          raw = fs.readFileSync(backupFilePath, 'utf-8').trim()
+          fs.writeFileSync(filePath, raw, 'utf-8')
+        }
+      } catch {
+        // Safe fallback
       }
-    } catch {
-      // Safe fallback
     }
-    return null
+
+    if (!raw) return null
+
+    try {
+      const decrypted = SecureStorage.decrypt(raw)
+      // Transparent in-place migration if file was unencrypted legacy plaintext
+      if (!raw.startsWith('ENC:')) {
+        this.saveSessionString(safeId, decrypted)
+      }
+      return decrypted
+    } catch (err) {
+      console.error(`[SessionStore] Failed to decrypt session for ${safeId}:`, err)
+      return null
+    }
   }
 
   public removeSession(accountId: string): void {
-    const filePath = path.join(this.sessionsDir, `session_${accountId}.txt`)
+    const safeId = SecureStorage.sanitizeAccountId(accountId)
+    const filePath = path.join(this.sessionsDir, `session_${safeId}.txt`)
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath)
     }
     try {
-      const backupFilePath = path.join(this.backupSessionsDir, `session_${accountId}.txt`)
+      const backupFilePath = path.join(this.backupSessionsDir, `session_${safeId}.txt`)
       if (fs.existsSync(backupFilePath)) {
         fs.unlinkSync(backupFilePath)
       }
