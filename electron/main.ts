@@ -13,6 +13,7 @@ import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSc
 import { globalIpcRateLimiter } from './rateLimiter'
 import { idempotencyManager } from './idempotency'
 import { offlineQueue } from './offlineQueue'
+import { SecurityGuardrails } from './securityGuardrails'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -303,6 +304,9 @@ function createTray() {
 function createWindow() {
   Logger.info('[Window] Creating main application window...')
 
+  // Configure Clickjacking and Frame-denial security headers (MM-015)
+  SecurityGuardrails.configureSecurityHeaders()
+
   const appIcon = getAppIcon()
   mainWindow = new BrowserWindow({
     width: 1260,
@@ -322,6 +326,9 @@ function createWindow() {
       nodeIntegration: false,
     },
   })
+
+  // Enforce secure window opening and prevent open-redirect hijacking (MM-015)
+  SecurityGuardrails.attachSecureWindowHandlers(mainWindow, true)
 
   // Window lifecycle events
   mainWindow.once('ready-to-show', () => {
@@ -442,6 +449,9 @@ function openMiniAppWindow(url: string, title = 'Telegram Mini App') {
 
   activeMiniApps.add(win)
   win.setMenu(null)
+
+  // Enforce Clickjacking and open-redirect defense on Mini Apps (MM-015)
+  SecurityGuardrails.attachSecureWindowHandlers(win, false)
 
   win.webContents.on('dom-ready', () => {
     win.webContents.executeJavaScript(`
