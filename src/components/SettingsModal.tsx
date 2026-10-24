@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   Settings,
@@ -113,13 +114,15 @@ interface ToggleItemProps {
 }
 
 const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onChange }) => (
-  <div
+  <motion.div
+    whileHover={{ scale: 1.01 }}
+    whileTap={{ scale: 0.985 }}
     onClick={() => onChange(!checked)}
     className="p-3 rounded-2xl bg-dark-800 hover:bg-dark-750 border border-white/5 flex items-center justify-between gap-3 cursor-pointer transition-colors select-none"
   >
     <div className="flex items-start gap-2.5 min-w-0">
       <div
-        className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+        className={`p-2 rounded-xl shrink-0 mt-0.5 transition-colors ${
           checked
             ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30'
             : 'bg-dark-900 text-gray-500 border border-white/5'
@@ -137,9 +140,13 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
         checked ? 'bg-primary-600 justify-end' : 'bg-dark-950 justify-start border border-white/10'
       }`}
     >
-      <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
+      <motion.div
+        layout
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="w-4 h-4 rounded-full bg-white shadow-sm"
+      />
     </div>
-  </div>
+  </motion.div>
 )
 
 type SettingsTab = 'profile' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
@@ -792,7 +799,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="glass-modal w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[85vh] max-h-[750px] border border-white/10 animate-in fade-in zoom-in-95 duration-150">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+        className="glass-modal w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[85vh] max-h-[750px] border border-white/10"
+      >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-dark-900/60">
           <div className="flex items-center gap-2.5">
@@ -817,109 +829,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Left Tab Navigation Sidebar */}
           <div className="w-48 sm:w-56 bg-dark-900/50 border-r border-white/5 p-3 flex flex-col gap-1 overflow-y-auto shrink-0 select-none">
-            <button
-              type="button"
-              onClick={() => setActiveTab('profile')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'profile'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <User className="w-4 h-4" />
-              <span className="truncate">{t('app.my_profile')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('business')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'business'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Briefcase className="w-4 h-4" />
-              <span className="truncate">{t('settings.telegram_business')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('general')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'general'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Globe className="w-4 h-4" />
-              <span className="truncate">{t('settings.general')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('notifications')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'notifications'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Bell className="w-4 h-4" />
-              <span className="truncate">{t('settings.notifications')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('privacy')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'privacy'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span className="truncate">{t('settings.privacy')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('chat')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'chat'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="truncate">{t('settings.chat_settings')}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('mcp')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'mcp'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span className="truncate">AI & MCP Agents</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('advanced')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'advanced'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <HardDrive className="w-4 h-4" />
-              <span className="truncate">{t('settings.advanced')}</span>
-            </button>
+            {[
+              { id: 'profile' as SettingsTab, label: t('app.my_profile'), icon: <User className="w-4 h-4" /> },
+              { id: 'business' as SettingsTab, label: t('settings.telegram_business'), icon: <Briefcase className="w-4 h-4" /> },
+              { id: 'general' as SettingsTab, label: t('settings.general'), icon: <Globe className="w-4 h-4" /> },
+              { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
+              { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
+              { id: 'chat' as SettingsTab, label: t('settings.chat_settings'), icon: <MessageSquare className="w-4 h-4" /> },
+              { id: 'mcp' as SettingsTab, label: 'AI & MCP Agents', icon: <Zap className="w-4 h-4 text-amber-400" /> },
+              { id: 'advanced' as SettingsTab, label: t('settings.advanced'), icon: <HardDrive className="w-4 h-4" /> },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                    isActive ? 'text-white' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeSettingsTabPill"
+                      className="absolute inset-0 bg-primary-600 rounded-xl shadow-sm"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-3 truncate">
+                    {tab.icon}
+                    <span className="truncate">{tab.label}</span>
+                  </span>
+                </button>
+              )
+            })}
 
             <div
               onClick={handleManualCheckUpdates}
@@ -2927,7 +2870,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <span>{saved ? t('app.copied') : t('app.save')}</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* ACTIVE SESSIONS MODAL */}
       {activeSubModal === 'activeSessions' && (
