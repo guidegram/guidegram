@@ -8,6 +8,7 @@ interface TitleBarProps {
   ghostMode: boolean
   onRequestClose?: () => void
   onToggleMainMenu?: () => void
+  onOpenMcpHub?: () => void
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -15,6 +16,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   ghostMode,
   onRequestClose,
   onToggleMainMenu,
+  onOpenMcpHub,
 }) => {
   const [isMax, setIsMax] = useState(false)
 
@@ -88,6 +90,18 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
       {/* Right Window Controls */}
       <div className="flex items-center gap-1 titlebar-no-drag">
+        {/* AI & Telegram MCP Hub Trigger */}
+        <button
+          type="button"
+          onClick={onOpenMcpHub}
+          title="Open AI & Telegram MCP Assistant Hub (Claude / Cursor)"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-primary-500/15 via-accent-cyan/15 to-purple-500/15 border border-primary-500/30 hover:border-primary-400 text-xs font-semibold text-primary-200 hover:text-white transition-all shadow-sm hover:shadow-primary-500/20 cursor-pointer mr-2 titlebar-no-drag group"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-accent-cyan group-hover:rotate-12 transition-transform" />
+          <span className="hidden sm:inline">AI / MCP Hub</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-pulse" />
+        </button>
+
         <button
           onClick={handleMinimize}
           className="w-8 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"

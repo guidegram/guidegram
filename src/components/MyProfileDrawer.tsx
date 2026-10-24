@@ -17,10 +17,14 @@ import {
   ExternalLink,
   Sparkles,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 import { AccountInfo, MyFullProfile } from '../types/telegram'
 import { Avatar } from './Avatar'
 import { copyTextToClipboard } from '../utils/clipboard'
 import QRCode from 'qrcode'
+import { AmbientAuraMesh } from './effects/AmbientAuraMesh'
+import { LiquidGiftOrbit } from './effects/LiquidGiftOrbit'
+import { AudioWavePill } from './effects/AudioWavePill'
 
 interface MyProfileDrawerProps {
   isOpen: boolean
@@ -146,44 +150,60 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
-          {/* Avatar & Main Identity Card */}
-          <div className="p-6 flex flex-col items-center justify-center bg-[#17212b]">
-            <div className="relative group cursor-pointer mb-3">
-              <Avatar
-                accountId={account.id}
-                peerId={account.id}
-                title={fullName}
-                initials={fullName.charAt(0)}
-                avatarUrl={profile?.avatarUrl || account.avatarUrl}
-                size="xl"
-                className="w-24 h-24 text-3xl shadow-xl"
-              />
-              <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg border-2 border-[#17212b] group-hover:scale-110 transition-transform">
-                <Camera className="w-4 h-4" />
-              </div>
-            </div>
+          {/* Avatar & Main Identity Card with Dynamic Ambient Aura & Liquid Orbit */}
+          <div className="relative p-6 pt-8 pb-7 flex flex-col items-center justify-center bg-gradient-to-b from-[#18222d] to-[#131c26] overflow-hidden border-b border-white/5">
+            {/* Ambient Aura Lighting Behind Profile */}
+            <AmbientAuraMesh intensity="vibrant" />
 
-            <div className="text-lg font-bold text-white flex items-center gap-1.5 text-center">
+            {/* Liquid Floating Gift Orbit with Center Avatar */}
+            <LiquidGiftOrbit>
+              <div className="relative group cursor-pointer">
+                <Avatar
+                  accountId={account.id}
+                  peerId={account.id}
+                  title={fullName}
+                  initials={fullName.charAt(0)}
+                  avatarUrl={profile?.avatarUrl || account.avatarUrl}
+                  size="xl"
+                  className="w-24 h-24 text-3xl shadow-2xl ring-4 ring-white/10 group-hover:ring-white/25 transition-all duration-300"
+                />
+                <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg border-2 border-[#17212b] group-hover:scale-110 transition-transform">
+                  <Camera className="w-4 h-4" />
+                </div>
+              </div>
+            </LiquidGiftOrbit>
+
+            {/* User Full Name & Premium Star Badge */}
+            <div className="relative z-10 text-lg font-bold text-white flex items-center gap-1.5 text-center mt-2">
               <span>{fullName}</span>
               {account.isPremium && (
                 <Sparkles className="w-4 h-4 text-accent-cyan fill-accent-cyan" />
               )}
             </div>
 
-            <div className="text-xs text-accent-cyan font-medium mt-0.5">online</div>
+            {/* Online Status */}
+            <div className="relative z-10 text-xs text-emerald-400 font-medium mt-0.5 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>online</span>
+            </div>
+
+            {/* Audio Waveform Pill (Matching Reference Video) */}
+            <div className="relative z-10 mt-3.5">
+              <AudioWavePill title="Stayin' Alive" artist="Bee Gees" />
+            </div>
 
             {/* Bio Card with Gifts Counter */}
-            <div className="w-full mt-4 p-3 rounded-xl bg-dark-900/60 border border-white/5 flex items-center justify-between">
+            <div className="relative z-10 w-full mt-4 p-3 rounded-xl bg-dark-900/60 backdrop-blur-md border border-white/10 flex items-center justify-between shadow-lg">
               <div className="text-xs text-gray-200 leading-relaxed truncate pr-2">
                 {bioText}
               </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold shrink-0">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold shrink-0 shadow-sm">
                 <Gift className="w-3.5 h-3.5" />
                 <span>{giftsCount}</span>
               </div>
             </div>
 
-            <div className="text-[11px] text-gray-400 text-left w-full mt-2 leading-tight">
+            <div className="relative z-10 text-[11px] text-gray-400 text-left w-full mt-2 leading-tight">
               Any details such as age, occupation or city. Example: 23 y.o. designer from San Francisco
             </div>
           </div>

@@ -22,6 +22,7 @@ const CreateChatModal = React.lazy(() => import('./components/CreateChatModal').
 const CloseConfirmModal = React.lazy(() => import('./components/CloseConfirmModal').then((m) => ({ default: m.CloseConfirmModal })))
 const WhatsNewModal = React.lazy(() => import('./components/WhatsNewModal').then((m) => ({ default: m.WhatsNewModal })))
 const SupportModal = React.lazy(() => import('./components/SupportModal').then((m) => ({ default: m.SupportModal })))
+const McpHubModal = React.lazy(() => import('./components/McpHubModal').then((m) => ({ default: m.McpHubModal })))
 import {
   AccountInfo,
   DialogItem,
@@ -59,6 +60,8 @@ export const App: React.FC = () => {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [isProxyModalOpen, setIsProxyModalOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'mcp' | 'business' | 'profile' | 'notifications' | 'privacy' | 'chat' | 'advanced'>('general')
+  const [isMcpHubOpen, setIsMcpHubOpen] = useState(false)
   const [isUnifiedInboxOpen, setIsUnifiedInboxOpen] = useState(false)
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false)
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false)
@@ -1309,6 +1312,7 @@ export const App: React.FC = () => {
         ghostMode={ghostMode}
         onRequestClose={handleRequestClose}
         onToggleMainMenu={() => setIsMainMenuOpen(true)}
+        onOpenMcpHub={() => setIsMcpHubOpen(true)}
       />
 
       {/* 2. Main Content: Welcome Screen OR Active Multi-Account Workspace */}

@@ -96,6 +96,7 @@ import { ActiveSessionsModal } from './ActiveSessionsModal'
 interface SettingsModalProps {
   isOpen: boolean
   accounts: AccountInfo[]
+  initialTab?: SettingsTab
   onClose: () => void
   onLogoutAccount: (accountId: string) => Promise<void>
   onConfigUpdated?: (config: AppConfig) => void
@@ -146,6 +147,7 @@ type SettingsTab = 'profile' | 'business' | 'general' | 'notifications' | 'priva
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   accounts,
+  initialTab,
   onClose,
   onLogoutAccount,
   onConfigUpdated,
@@ -155,7 +157,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const { t, language, setLanguage } = useI18n()
   const isPersian = language === 'fa'
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general')
+
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [isOpen, initialTab])
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [portablePath, setPortablePath] = useState('')
   const [apiId, setApiId] = useState<number>(2040)

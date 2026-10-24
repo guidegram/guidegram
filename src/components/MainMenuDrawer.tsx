@@ -21,6 +21,7 @@ import {
   Heart,
   Link2,
   Loader2,
+  Bot,
 } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -41,6 +42,7 @@ interface MainMenuDrawerProps {
   onOpenProxyModal: () => void
   onOpenSavedMessages: () => void
   onOpenProfile: () => void
+  onOpenMcpHub?: () => void
   onOpenSupport?: () => void
   onOpenArchivedChats?: () => void
   onOpenNewGroup?: () => void
@@ -67,6 +69,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   onOpenProxyModal,
   onOpenSavedMessages,
   onOpenProfile,
+  onOpenMcpHub,
   onOpenSupport,
   onOpenArchivedChats,
   onOpenNewGroup,
@@ -415,6 +418,24 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <Gift className="w-4 h-4 text-purple-400" />
                 <span>{t('menu.star_gifts')}</span>
+              </button>
+
+              {/* AI & Telegram MCP Hub */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenMcpHub?.()
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <Bot className="w-4 h-4 text-accent-cyan group-hover:scale-110 transition-transform" />
+                  <span>AI & MCP Hub (دستیار هوش مصنوعی)</span>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-300 border border-primary-500/30">
+                  MCP
+                </span>
               </button>
 
               {/* Settings */}

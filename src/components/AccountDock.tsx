@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Shield, Inbox, Settings } from 'lucide-react'
+import { Plus, Shield, Inbox, Settings, Bot } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
 
@@ -12,6 +12,7 @@ interface AccountDockProps {
   onToggleUnifiedInbox: () => void
   onOpenProxyModal: () => void
   onOpenSettings: () => void
+  onOpenMcpHub?: () => void
 }
 
 export const AccountDock: React.FC<AccountDockProps> = ({
@@ -23,6 +24,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
   onToggleUnifiedInbox,
   onOpenProxyModal,
   onOpenSettings,
+  onOpenMcpHub,
 }) => {
   return (
     <aside className="w-[72px] shrink-0 h-full bg-dark-900 border-r border-white/5 flex flex-col items-center py-3 select-none z-20 titlebar-no-drag">
@@ -134,6 +136,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
 
       {/* Bottom Actions */}
       <div className="flex flex-col gap-2 pt-2">
+        <button
+          onClick={onOpenMcpHub}
+          title="AI & Telegram MCP Assistant Hub (Claude / Cursor)"
+          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600/20 via-accent-cyan/15 to-purple-600/20 border border-primary-500/40 hover:border-accent-cyan text-accent-cyan hover:text-white flex items-center justify-center transition-all cursor-pointer group shadow-glow"
+        >
+          <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
+        </button>
+
         <button
           onClick={onOpenProxyModal}
           title="Proxy Settings & Latency"
