@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   CheckCircle2,
   XCircle,
@@ -117,12 +118,14 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
           const pct = totalVoters > 0 ? Math.round(((ans.voters || 0) / totalVoters) * 100) : 0
 
           return (
-            <div
+            <motion.div
               key={ans.option || idx}
+              whileHover={canVote ? { scale: 1.01 } : undefined}
+              whileTap={canVote ? { scale: 0.99 } : undefined}
               onClick={() => canVote && handleSelectOption(ans)}
-              className={`relative overflow-hidden rounded-xl border p-3 transition-all ${
+              className={`relative overflow-hidden rounded-xl border p-3 transition-colors ${
                 canVote
-                  ? 'cursor-pointer hover:border-primary-500/50 hover:bg-white/5 active:scale-[0.99]'
+                  ? 'cursor-pointer hover:border-primary-500/50 hover:bg-white/5'
                   : 'cursor-default'
               } ${
                 poll.quiz && hasUserVoted
@@ -138,10 +141,13 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
                   : 'border-white/5 bg-dark-900/50'
               }`}
             >
-              {/* Animated Progress Bar (Visible when voted or closed) */}
+              {/* Animated Spring Progress Bar (Visible when voted or closed) */}
               {(hasUserVoted || isClosed) && (
-                <div
-                  className={`absolute inset-y-0 left-0 transition-all duration-500 rounded-xl ${
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 110 }}
+                  className={`absolute inset-y-0 left-0 rounded-xl ${
                     poll.quiz
                       ? ans.correct
                         ? 'bg-emerald-500/20'
@@ -152,7 +158,6 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
                       ? 'bg-primary-500/25'
                       : 'bg-white/5'
                   }`}
-                  style={{ width: `${pct}%` }}
                 />
               )}
 
@@ -211,18 +216,20 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           )
         })}
       </div>
 
       {/* Vote Action Button (When not voted and option selected) */}
       {canVote && selectedOptions.length > 0 && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
           type="button"
           onClick={handleVoteSubmit}
           disabled={isSubmitting}
-          className="w-full mt-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 active:scale-98 text-white font-bold text-xs transition-all shadow-glow flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full mt-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs transition-colors shadow-glow flex items-center justify-center gap-2 cursor-pointer"
         >
           {isSubmitting ? (
             <>
@@ -232,16 +239,18 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
           ) : (
             <span>{t('poll.vote')}</span>
           )}
-        </button>
+        </motion.button>
       )}
 
       {/* Quiz Solution / Explanation Drawer */}
       {poll.quiz && poll.solution && hasUserVoted && (
         <div className="mt-3 pt-2.5 border-t border-white/5">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="button"
             onClick={() => setShowSolution(!showSolution)}
-            className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer w-full"
           >
             <HelpCircle className="w-3.5 h-3.5" />
             <span>{t('poll.view_explanation')}</span>
@@ -250,12 +259,20 @@ export const PollWidget: React.FC<PollWidgetProps> = ({
             ) : (
               <ChevronDown className="w-3.5 h-3.5 ml-auto" />
             )}
-          </button>
-          {showSolution && (
-            <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 leading-relaxed animate-in fade-in duration-200">
-              {poll.solution}
-            </div>
-          )}
+          </motion.button>
+          <AnimatePresence>
+            {showSolution && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 leading-relaxed overflow-hidden"
+              >
+                {poll.solution}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
