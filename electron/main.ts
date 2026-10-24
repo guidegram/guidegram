@@ -978,7 +978,11 @@ function setupIpcHandlers() {
   ipcMain.handle('system:check-for-updates', async () => {
     const cfg = sessionStore.getConfig()
     const activeProxy = cfg.proxies.find((p) => p.enabled)
-    return updateManager.checkForUpdates(activeProxy)
+    const info = await updateManager.checkForUpdates(activeProxy)
+    if (info && info.hasUpdate && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('app:update-available', info)
+    }
+    return info
   })
 
   ipcMain.handle('system:install-update', async (_event, { downloadUrl, version }: { downloadUrl: string; version?: string }) => {

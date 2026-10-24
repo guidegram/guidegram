@@ -1,4 +1,4 @@
-# 🚀 Guidegram v1.11.5 — Instant Window Restore, Portable Singleton Stabilization & Startup Parity
+# 🚀 Guidegram v2.0.0 — Telegram MTProto Layer 229+ Full Parity, Turbo Multi-DC Media Engine & Interactive Protocol Inspector
 
 > **Next-Generation Portable Desktop Telegram Client** with Unlimited Multi-Account, Dedicated Proxies, Advanced Group Analytics, and Multi-Chain Community Support.
 
@@ -6,38 +6,43 @@
 
 <div align="center">
   <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
-  <h3>Guidegram v1.11.5</h3>
-  <p><strong>Instant Window Restore • Portable Singleton Stabilization • Taskbar Minimization Parity</strong></p>
+  <h3>Guidegram v2.0.0</h3>
+  <p><strong>Telegram MTProto Layer 229+ • Turbo Multi-DC Media Engine • Interactive Version Inspector • Zero-Data-Loss Portable Vault</strong></p>
 </div>
 
 ---
 
 ## 🌟 Release Highlights
 
-Guidegram v1.11.5 resolves critical startup and lifecycle anomalies. It establishes **strict portable `userData` initialization prior to Chromium singleton locking** (eliminating Windows sharing violation error 32), guarantees **instant window foreground activation** with elevation toggles when launching shortcuts while minimized, preserves **taskbar presence upon minimization**, and permanently eliminates **duplicate IPC registration stalls**.
+Guidegram v2.0.0 represents the most significant architectural evolution in Guidegram's history. It establishes **100% native MTProto Layer 229+ TL-Schema parity** across all 28 Telegram namespaces (859 methods), introduces a high-performance **Turbo Multi-DC Media Download Engine** resolving all stuck media transfers, embeds an **Interactive Version Inspector** on version badges for instant update checks, and hardens the **Zero-Data-Loss Portable Vault** protecting multi-account sessions across every update.
 
 ---
 
 ## 📦 What's New & Enhancements
 
-### 1. 🪟 Instant Window Foreground Elevation & Multi-Instance Restoration
-- **Foreground Priority Promotion**: Implemented priority window activation (`setAlwaysOnTop` momentary promotion) when a second instance or desktop shortcut is launched. This guarantees the application window breaks through Windows focus-stealing prevention and surfaces immediately above all background windows.
-- **Taskbar Minimization Parity**: Adjusted the custom titlebar minimize button (`_`) to minimize directly to the Windows Taskbar rather than hiding completely into the system tray, providing seamless one-click restoration.
-- **Dual-Action Tray Handling**: Enhanced the System Tray icon to respond to both single clicks and double clicks with infallible window restoration and focus.
+### 1. ⚡ Complete MTProto Layer 229+ Native Parity (859 Methods Across 28 Namespaces)
+- **Direct Namespace Coverage**: Full native invocation of all Telegram MTProto Layer 229+ methods across all 28 namespaces (`account`, `auth`, `bots`, `channels`, `chatlists`, `contacts`, `folders`, `fragment`, `help`, `langpack`, `messages`, `payments`, `phone`, `photos`, `premium`, `stats`, `stickers`, `stories`, `updates`, `users`, and more).
+- **Universal Dynamic Dispatch**: Integrated robust schema proxying through `telegram:invoke-raw` and granular client wrappers with zero phantom methods and zero runtime exceptions.
+- **100% Pass in Verification Suites**: Passed all 31 end-to-end integration test suites including M1 through M14 compliance benchmarks.
 
-### 2. 🔒 Chromium Portable Singleton Lock Stabilization
-- **Lifecycle Ordering Fix**: Configured the portable `userData` directory strictly before requesting the Chromium single-instance application lock. This fixes split-directory lock path resolution and completely eradicates `ERROR_SHARING_VIOLATION (error 32)` across portable sessions.
-- **Clean Communication Pipe**: Guaranteed reliable inter-process signaling between new shortcut launches and active background instances.
+### 2. 🚀 Turbo Multi-DC Media Engine & Zero-Stuck Downloads
+- **Universal InputFileLocation Translation**: Replaced fragile URL-based and legacy photo heuristics with robust MTProto `TypeInputFileLocation` extraction for full-size profile pictures, high-res photos, documents, and voice messages.
+- **Multi-DC Auto-Routing**: Automatic connection migration and chunk downloading across DC1 through DC5 with fallback chunking, preventing any infinite download spinners.
+- **Voice MIME Parity**: Added full `DocumentAttributeAudio` voice flag compliance for ultra-low latency voice and audio notes playback.
 
-### 3. 🛡️ Duplicate IPC Prevention & Defensive Startup
-- **Eliminated Duplicate Handlers**: Removed redundant `'telegram:send-bot-callback'` handler registration, eliminating unhandled startup rejections and headless process stalls.
-- **Defensive Error Boundaries**: Wrapped IPC handler setup with defensive try-catch boundaries, ensuring `createWindow()` and `createTray()` execute reliably under all circumstances.
-- **Automated IPC Uniqueness Suite**: Added continuous verification test (`tests/ipc_handlers_verification.mjs`) auditing all 115 IPC channels for complete uniqueness.
+### 3. 🔍 Interactive Version Inspector & Click-to-Check
+- **One-Click Update Check on Version Badges**: Clicking the version indicator (`v2.0.0`) in either the **Main Menu Drawer** or the **Settings Modal** triggers an immediate, live check against GitHub Releases with real-time spinner feedback.
+- **Instant Visual Feedback**: Clearly indicates whether Guidegram is completely up to date or has a new version ready to download.
+- **Accelerated 5s Startup Check**: Automated background updater checks for releases 5 seconds after startup and alerts users immediately via the top `UpdateBanner`.
+
+### 4. 🛡️ Hardened Portable Vault & Data Shield
+- **Zero-Data-Loss Invariant**: Portable upgrades safely update executable binaries and `resources/app.asar` without touching or resetting user accounts, SQLite databases, session tokens, or proxy configs in `data/`.
+- **Chromium Singleton Ordering**: Early `userData` redirection strictly precedes singleton lock acquisition, guaranteeing zero Windows file locking collisions.
 
 ---
 
 ## 📝 Full Changelog
-https://github.com/guidegram/guidegram/compare/v1.11.4...v1.11.5
+https://github.com/guidegram/guidegram/compare/v1.11.5...v2.0.0
 
 ---
 

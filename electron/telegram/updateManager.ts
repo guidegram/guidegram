@@ -97,13 +97,13 @@ export class UpdateManager {
   ): void {
     if (this.timer) clearInterval(this.timer)
 
-    // Initial check after 15 seconds
+    // Initial check after 5 seconds
     setTimeout(async () => {
       const info = await this.checkForUpdates(getProxy?.())
       if (info && info.hasUpdate) {
         callback(info)
       }
-    }, 15000)
+    }, 5000)
 
     // Check every 1 hour (3600000 ms)
     this.timer = setInterval(async () => {

@@ -879,16 +879,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <span className="truncate">{t('settings.advanced')}</span>
             </button>
 
-            <div className="mt-auto pt-3 border-t border-white/5 space-y-1">
-              <div className="px-3 py-0.5 text-[11px] text-gray-400 font-mono flex items-center justify-between">
-                <span className="font-bold text-gray-200">v{appVersion}</span>
+            <div
+              onClick={handleManualCheckUpdates}
+              title="Click to check for software updates"
+              className="mt-auto pt-3 border-t border-white/5 space-y-1 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group"
+            >
+              <div className="px-1 py-0.5 text-[11px] text-gray-400 font-mono flex items-center justify-between">
+                <span className="font-bold text-gray-200 group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
+                  <span>v{appVersion}</span>
+                  {checkingUpdate && (
+                    <RefreshCw className="w-3 h-3 text-primary-400 animate-spin" />
+                  )}
+                </span>
                 <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                   Layer 229+
                 </span>
               </div>
-              <div className="px-3 text-[10px] text-gray-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>859 Methods Connected</span>
+              <div className="px-1 text-[10px] text-gray-400 flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${checkingUpdate ? 'bg-primary-400 animate-ping' : 'bg-emerald-400 animate-pulse'}`} />
+                <span className="truncate">
+                  {checkingUpdate
+                    ? 'Checking updates...'
+                    : updateCheckResult
+                    ? updateCheckResult
+                    : 'Click to check updates'}
+                </span>
               </div>
             </div>
           </div>

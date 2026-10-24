@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Archive,
   User,
@@ -90,6 +90,15 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   const [joinLink, setJoinLink] = useState('')
   const [joinStatus, setJoinStatus] = useState<string | null>(null)
   const [isJoining, setIsJoining] = useState(false)
+  const [appVersion, setAppVersion] = useState<string>('2.0.0')
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    window.guidegram?.getAppVersion?.().then((v) => {
+      if (v) setAppVersion(v)
+    })
+  }, [])
 
   if (!isOpen) return null
 
@@ -556,10 +565,38 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
           </div>
         </div>
 
-        {/* Drawer Footer */}
-        <div className="p-3 bg-[#17212b] border-t border-white/5 flex items-center justify-between text-[11px] text-gray-500">
-          <div>Guidegram Desktop</div>
-          <div className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400">Portable</div>
+        {/* Drawer Footer with Version Click-to-Check */}
+        <div
+          onClick={async () => {
+            if (checkingUpdate) return
+            setCheckingUpdate(true)
+            try {
+              const res = await window.guidegram?.checkForUpdates?.()
+              if (res && res.hasUpdate) {
+                setUpdateStatus(`v${res.latestVersion} available!`)
+              } else {
+                setUpdateStatus('Up to date')
+              }
+            } catch (_) {
+              setUpdateStatus('Check failed')
+            } finally {
+              setCheckingUpdate(false)
+              setTimeout(() => setUpdateStatus(null), 4000)
+            }
+          }}
+          title="Click to check for software updates"
+          className="p-3 bg-[#17212b] border-t border-white/5 flex items-center justify-between text-[11px] text-gray-500 hover:bg-white/5 transition-colors cursor-pointer group"
+        >
+          <div className="flex items-center gap-2">
+            <span className="group-hover:text-gray-300 transition-colors">Guidegram Desktop</span>
+            {checkingUpdate && <Loader2 className="w-3 h-3 text-primary-400 animate-spin" />}
+            {updateStatus && (
+              <span className="text-[10px] text-emerald-400 font-semibold">{updateStatus}</span>
+            )}
+          </div>
+          <div className="font-mono text-[10px] px-2 py-0.5 rounded bg-white/5 text-gray-400 group-hover:text-primary-300 group-hover:bg-primary-500/15 border border-transparent group-hover:border-primary-500/30 transition-all">
+            v{appVersion}
+          </div>
         </div>
       </div>
 
