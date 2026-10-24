@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -73,12 +74,14 @@ const Toggle: React.FC<{
   disabled?: boolean
   label: string
 }> = ({ checked, onChange, disabled, label }) => (
-  <button
+  <motion.button
     type="button"
     role="switch"
     aria-checked={checked}
     aria-label={label}
     disabled={disabled}
+    whileHover={disabled ? undefined : { scale: 1.05 }}
+    whileTap={disabled ? undefined : { scale: 0.95 }}
     onClick={() => onChange(!checked)}
     dir="ltr"
     className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
@@ -87,15 +90,17 @@ const Toggle: React.FC<{
         : 'bg-white/10 border-white/15'
     } ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
   >
-    <span
-      className="inline-block rounded-full bg-white shadow transition-transform"
+    <motion.span
+      layout
+      transition={{ type: 'spring', damping: 25, stiffness: 450 }}
+      className="inline-block rounded-full bg-white shadow-md"
       style={{
         width: 18,
         height: 18,
-        transform: checked ? 'translateX(22px)' : 'translateX(3px)',
+        marginLeft: checked ? 22 : 3,
       }}
     />
-  </button>
+  </motion.button>
 )
 
 export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
@@ -303,11 +308,15 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md"
       onClick={onClose}
     >
-      <div
-        className="relative flex flex-col w-full max-w-lg max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="relative flex flex-col w-full max-w-lg max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="px-5 py-4 bg-dark-850/90 border-b border-white/10 flex items-center justify-between shrink-0 select-none">
@@ -690,7 +699,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
             {isSaving ? t('chat_settings.saving') : t('chat_settings.save')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
