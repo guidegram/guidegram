@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { motion } from 'motion/react'
 import {
   Search,
   X,
@@ -175,67 +176,38 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
           )}
         </div>
 
-        {/* Media Type Filter Chips */}
+        {/* Media Type Filter Chips with layoutId */}
         <div className="flex items-center gap-1 bg-dark-900/60 p-1 rounded-xl border border-white/5 overflow-x-auto scrollbar-none">
-          <button
-            type="button"
-            onClick={() => onMediaFilterChange('all')}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-              mediaFilter === 'all'
-                ? 'bg-primary-500 text-white shadow-xs'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {t('saved_messages.filter_all')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onMediaFilterChange('media')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-              mediaFilter === 'media'
-                ? 'bg-primary-500 text-white shadow-xs'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <ImageIcon className="w-3 h-3" />
-            <span>{t('saved_messages.filter_media')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onMediaFilterChange('files')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-              mediaFilter === 'files'
-                ? 'bg-primary-500 text-white shadow-xs'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <FileText className="w-3 h-3" />
-            <span>{t('saved_messages.filter_files')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onMediaFilterChange('links')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-              mediaFilter === 'links'
-                ? 'bg-primary-500 text-white shadow-xs'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Link2 className="w-3 h-3" />
-            <span>{t('saved_messages.filter_links')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onMediaFilterChange('voice')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-              mediaFilter === 'voice'
-                ? 'bg-primary-500 text-white shadow-xs'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Mic className="w-3 h-3" />
-            <span>{t('saved_messages.filter_voice')}</span>
-          </button>
+          {[
+            { id: 'all', label: t('saved_messages.filter_all'), icon: null },
+            { id: 'media', label: t('saved_messages.filter_media'), icon: ImageIcon },
+            { id: 'files', label: t('saved_messages.filter_files'), icon: FileText },
+            { id: 'links', label: t('saved_messages.filter_links'), icon: Link2 },
+            { id: 'voice', label: t('saved_messages.filter_voice'), icon: Mic },
+          ].map((flt) => {
+            const isActive = mediaFilter === flt.id
+            const Icon = flt.icon
+            return (
+              <button
+                key={flt.id}
+                type="button"
+                onClick={() => onMediaFilterChange(flt.id as any)}
+                className={`relative flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer text-xs ${
+                  isActive ? 'text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="activeSavedMediaFilter"
+                    transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+                    className="absolute inset-0 rounded-lg bg-primary-500 shadow-xs"
+                  />
+                )}
+                {Icon && <Icon className="w-3 h-3 relative z-10" />}
+                <span className="relative z-10">{flt.label}</span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Count & Reset */}
@@ -247,7 +219,9 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
             })}
           </span>
           {hasActiveFilters && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={clearAllFilters}
               className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-[11px] font-medium transition-all cursor-pointer"
@@ -255,27 +229,32 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
             >
               <X className="w-3 h-3" />
               <span>{t('saved_messages.clear_filters')}</span>
-            </button>
+            </motion.button>
           )}
         </div>
       </div>
 
-      {/* Tabs: Sources vs Tags */}
+      {/* Tabs: Sources vs Tags with layoutId */}
       <div className="flex items-center gap-3 border-t border-white/5 pt-2">
         <div className="flex items-center gap-1 bg-dark-900/40 p-0.5 rounded-lg border border-white/5">
           <button
             type="button"
             onClick={() => setActiveTab('sources')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-              activeTab === 'sources'
-                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                : 'text-gray-400 hover:text-gray-200'
+            className={`relative flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+              activeTab === 'sources' ? 'text-primary-400' : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Users className="w-3 h-3" />
-            <span>{t('saved_messages.sources')}</span>
+            {activeTab === 'sources' && (
+              <motion.span
+                layoutId="activeSavedCategoryTab"
+                transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+                className="absolute inset-0 rounded-md bg-primary-500/20 border border-primary-500/30"
+              />
+            )}
+            <Users className="w-3 h-3 relative z-10" />
+            <span className="relative z-10">{t('saved_messages.sources')}</span>
             {aggregatedSources.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-primary-500/30 text-primary-300">
+              <span className="relative z-10 ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-primary-500/30 text-primary-300">
                 {aggregatedSources.length}
               </span>
             )}
@@ -283,16 +262,21 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('tags')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-              activeTab === 'tags'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'text-gray-400 hover:text-gray-200'
+            className={`relative flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+              activeTab === 'tags' ? 'text-amber-400' : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            <Tag className="w-3 h-3" />
-            <span>{t('saved_messages.tags')}</span>
+            {activeTab === 'tags' && (
+              <motion.span
+                layoutId="activeSavedCategoryTab"
+                transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+                className="absolute inset-0 rounded-md bg-amber-500/20 border border-amber-500/30"
+              />
+            )}
+            <Tag className="w-3 h-3 relative z-10" />
+            <span className="relative z-10">{t('saved_messages.tags')}</span>
             {aggregatedTags.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-amber-500/30 text-amber-300">
+              <span className="relative z-10 ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-amber-500/30 text-amber-300">
                 {aggregatedTags.length}
               </span>
             )}
