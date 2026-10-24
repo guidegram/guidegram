@@ -446,6 +446,7 @@ export const CustomEmojiView: React.FC<{
   className?: string
 }> = ({ accountId, documentId, fallback, className = "inline-block w-[1.25em] h-[1.25em] align-[-0.2em] object-contain mx-0.5 select-none" }) => {
   const [payload, setPayload] = useState<CustomEmojiPayload | null>(null)
+  const [hasError, setHasError] = useState(false)
   const animContainerRef = useRef<HTMLSpanElement | null>(null)
 
   useEffect(() => {
@@ -522,7 +523,6 @@ export const CustomEmojiView: React.FC<{
     )
   }
 
-  const [hasError, setHasError] = useState(false)
 
   if (payload?.url && !hasError) {
     return (

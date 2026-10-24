@@ -378,8 +378,8 @@ function createWindow() {
 
     if (action === 'minimize') {
       event.preventDefault()
-      mainWindow?.hide()
-      Logger.info('[Window] Close event intercepted: window hidden to tray.')
+      mainWindow?.minimize()
+      Logger.info('[Window] Close event intercepted: window minimized to taskbar.')
       return
     }
 
@@ -956,7 +956,7 @@ function setupIpcHandlers() {
   ipcMain.handle('window:request-close', () => {
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
-      mainWindow?.hide()
+      mainWindow?.minimize()
       return { action: 'minimize' }
     } else if (cfg.closeAction === 'quit') {
       isQuitting = true
@@ -976,7 +976,7 @@ function setupIpcHandlers() {
       })
     }
     if (action === 'minimize') {
-      mainWindow?.hide()
+      mainWindow?.minimize()
     } else {
       isQuitting = true
       mainWindow?.close()
@@ -986,7 +986,7 @@ function setupIpcHandlers() {
   ipcMain.handle('window:close', () => {
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
-      mainWindow?.hide()
+      mainWindow?.minimize()
     } else if (cfg.closeAction === 'quit') {
       isQuitting = true
       mainWindow?.close()

@@ -344,9 +344,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     // Close Confirm Modal
     'close.title': 'Exit Guidegram',
     'close.subtitle': 'Choose how Guidegram handles closing',
-    'close.minimize_title': 'Minimize to Background',
+    'close.minimize_title': 'Minimize to Taskbar',
     'close.minimize_badge': 'Recommended',
-    'close.minimize_desc': 'Keeps your Telegram accounts connected in the background so you continue receiving incoming notifications.',
+    'close.minimize_desc': 'Keeps Guidegram minimized on your taskbar with Telegram accounts connected to receive incoming notifications.',
     'close.quit_title': 'Quit Application Completely',
     'close.quit_desc': 'Closes all Telegram sessions and exits the application process.',
     'close.remember': 'Remember my choice (You can change this anytime in Settings)',
@@ -1212,9 +1212,9 @@ export const translations: Record<Language, TranslationDictionary> = {
     // Close Confirm Modal
     'close.title': 'خروج از گایدگرام',
     'close.subtitle': 'نحوه بسته شدن گایدگرام را انتخاب کنید',
-    'close.minimize_title': 'کوچک‌سازی در پس‌زمینه',
+    'close.minimize_title': 'کوچک‌سازی در نوار وظیفه (تسک‌بار)',
     'close.minimize_badge': 'پیشنهادی',
-    'close.minimize_desc': 'اکانت‌های شما در پس‌زمینه متصل می‌مانند تا اعلان پیام‌ها را دریافت کنید.',
+    'close.minimize_desc': 'پنجره روی نوار وظیفه ویندوز می‌ماند و اکانت‌های تلگرام فعال می‌مانند تا اعلان‌ها را از دست ندهید.',
     'close.quit_title': 'خروج کامل از برنامه',
     'close.quit_desc': 'تمام نشست‌های تلگرام بسته شده و پروسه برنامه کاملاً متوقف می‌شود.',
     'close.remember': 'انتخاب من را به خاطر بسپار (قابل تغییر در تنظیمات)',
