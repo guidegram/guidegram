@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'motion/react'
 import { Radio, Users, PhoneCall, Volume2, Mic, MicOff, LogOut } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -28,14 +29,34 @@ export const GroupCallBar: React.FC<GroupCallBarProps> = ({
   const { t } = useI18n()
 
   return (
-    <div className="shrink-0 px-4 py-2 bg-gradient-to-r from-emerald-950/80 via-dark-850 to-emerald-900/60 backdrop-blur-md border-b border-emerald-500/30 flex items-center justify-between gap-3 select-none z-10 shadow-lg">
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+      className="shrink-0 px-4 py-2 bg-gradient-to-r from-emerald-950/80 via-dark-850 to-emerald-900/60 backdrop-blur-md border-b border-emerald-500/30 flex items-center justify-between gap-3 select-none z-10 shadow-lg"
+    >
       <div
         onClick={onOpen}
         className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group"
       >
         {/* Animated Equalizer Waveform */}
         <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center relative shrink-0 shadow-glow border border-emerald-500/40">
-          <Radio className="w-4 h-4 animate-pulse" />
+          <div className="flex items-end gap-0.5 h-3.5">
+            {[0.4, 0.9, 0.5, 1.0].map((h, i) => (
+              <motion.span
+                key={i}
+                animate={{ scaleY: [h, 0.2, h] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 0.75,
+                  delay: i * 0.15,
+                  ease: 'easeInOut',
+                }}
+                className="w-0.5 bg-emerald-400 rounded-full h-full origin-bottom"
+              />
+            ))}
+          </div>
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         </div>
 
@@ -65,7 +86,9 @@ export const GroupCallBar: React.FC<GroupCallBarProps> = ({
         {isJoined ? (
           <>
             {onToggleMute && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
                 type="button"
                 onClick={onToggleMute}
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
@@ -76,39 +99,45 @@ export const GroupCallBar: React.FC<GroupCallBarProps> = ({
                 title={isMuted ? t('group_call.unmute') : t('group_call.mute')}
               >
                 {isMuted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-              </button>
+              </motion.button>
             )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={onOpen}
               className="px-3 py-1.5 rounded-xl bg-dark-750 hover:bg-dark-700 text-white font-semibold text-xs border border-white/10 transition-all cursor-pointer"
             >
               Open
-            </button>
+            </motion.button>
 
             {onLeave && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
                 type="button"
                 onClick={onLeave}
                 className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-all cursor-pointer"
                 title={t('group_call.leave')}
               >
                 <LogOut className="w-3.5 h-3.5" />
-              </button>
+              </motion.button>
             )}
           </>
         ) : (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.94 }}
             type="button"
             onClick={onJoin}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-dark-950 font-bold text-xs shadow-glow transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-dark-950 font-bold text-xs shadow-glow transition-all cursor-pointer"
           >
             <PhoneCall className="w-3.5 h-3.5 fill-current" />
             <span>{t('group_call.join')}</span>
-          </button>
+          </motion.button>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

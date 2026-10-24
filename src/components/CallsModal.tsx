@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   Phone,
@@ -137,7 +138,13 @@ export const CallsModal: React.FC<CallsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#17212b] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[72vh] max-h-[640px] animate-in zoom-in-95 duration-150 select-none">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+        className="bg-[#17212b] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[72vh] max-h-[640px] select-none"
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -238,7 +245,10 @@ export const CallsModal: React.FC<CallsModalProps> = ({
                     const subtitle = getCallSubtitle(call)
 
                     return (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.01, x: 2 }}
+                        whileTap={{ scale: 0.985 }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 28 }}
                         key={`${call.peerId}_${call.id}`}
                         type="button"
                         onClick={() => {
@@ -284,7 +294,7 @@ export const CallsModal: React.FC<CallsModalProps> = ({
                             )}
                           </div>
                         </div>
-                      </button>
+                      </motion.button>
                     )
                   })}
                 </div>
@@ -296,7 +306,7 @@ export const CallsModal: React.FC<CallsModalProps> = ({
         <div className="px-4 py-2.5 border-t border-white/5 text-[10px] text-gray-500 text-center">
           Synced from your Telegram call history
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
