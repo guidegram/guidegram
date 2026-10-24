@@ -12,6 +12,7 @@ import { GuidegramMcpServer } from './mcp/mcpServer'
 import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSchema, AccountIdSchema } from './ipcValidation'
 import { globalIpcRateLimiter } from './rateLimiter'
 import { idempotencyManager } from './idempotency'
+import { offlineQueue } from './offlineQueue'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1801,6 +1802,33 @@ function setupIpcHandlers() {
       Logger.error(`[IPC] createPoll error:`, err)
       throw err
     }
+  })
+
+  // OfflineQueue and Dead-Letter Queue (DLQ) handlers (MM-019)
+  offlineQueue.registerHandler('send-message', async (task) => {
+    const { accountId, chatId, text, replyToMsgId, options } = task.payload
+    return await accountManager.sendMessage(accountId, chatId, text, replyToMsgId, options)
+  })
+
+  offlineQueue.registerHandler('send-reaction', async (task) => {
+    const { accountId, chatId, messageId, reactionEmoji } = task.payload
+    return await accountManager.sendReaction(accountId, chatId, messageId, reactionEmoji)
+  })
+
+  ipcMain.handle('telegram:get-offline-stats', () => {
+    return offlineQueue.getStats()
+  })
+
+  ipcMain.handle('telegram:get-dead-letters', () => {
+    return offlineQueue.getDeadLetters()
+  })
+
+  ipcMain.handle('telegram:retry-dead-letter', (_event, { id }) => {
+    return offlineQueue.retryDeadLetter(id)
+  })
+
+  ipcMain.handle('telegram:purge-dead-letters', () => {
+    return offlineQueue.purgeDeadLetters()
   })
 
   ipcMain.handle('telegram:save-draft', async (_event, { accountId, chatId, message, replyToMsgId }) => {
