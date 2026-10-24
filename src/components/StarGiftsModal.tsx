@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Gift, Sparkles, X, Star, Calendar, User, EyeOff, ShoppingBag, ShieldCheck } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 import { isRTL, formatNumber } from '../utils/textUtils'
@@ -91,10 +92,20 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   const totalSavedStars = savedGifts.reduce((acc, g) => acc + (g.stars || 0), 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 select-none"
+      onClick={onClose}
+    >
+      <motion.div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-dark-850 border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150"
+        initial={{ scale: 0.92, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.94, opacity: 0, y: 12 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+        className="w-full max-w-lg bg-dark-850/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
       >
         {/* Modal Header */}
         <div className="p-5 bg-gradient-to-r from-amber-500/15 via-dark-800 to-amber-600/10 border-b border-white/10 flex items-center justify-between">
@@ -341,7 +352,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
