@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   Smartphone,
   Laptop,
@@ -132,8 +133,12 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div
-        className="bg-gray-900 border border-gray-800 text-white rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+        className="bg-gray-900 border border-gray-800 text-white rounded-2xl w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
         dir={isRTL(t('active_sessions_title') || '') ? 'rtl' : 'ltr'}
       >
         {/* Modal Header */}
@@ -243,8 +248,12 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({
                         <span className="font-medium text-white truncate">
                           {currentSession.deviceModel}
                         </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium">
-                          {t('online') || 'Online'}
+                        <span className="flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                          <span>{t('online') || 'Online'}</span>
                         </span>
                       </div>
                       <p className="text-xs text-blue-300/80 mt-0.5">
@@ -286,7 +295,9 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({
               {otherSessions.length > 0 ? (
                 <div className="space-y-2">
                   {otherSessions.map((session) => (
-                    <div
+                    <motion.div
+                      whileHover={{ scale: 1.012, x: 2 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                       key={session.hash}
                       className="p-3.5 rounded-xl bg-gray-800/40 border border-gray-800 hover:border-gray-700/80 flex items-center gap-3.5 transition-all"
                     >
@@ -319,7 +330,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
@@ -332,7 +343,7 @@ export const ActiveSessionsModal: React.FC<ActiveSessionsModalProps> = ({
             </>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
