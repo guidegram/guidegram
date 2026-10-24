@@ -2,8 +2,9 @@ import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
 import type { AccountManager } from '../../telegram/accountManager'
+import type { SharedMediaFilterType } from '../../telegram/types'
 import type { McpPeerDetails, McpSharedMediaSummary, McpDownloadResult } from '../types'
-import { getActiveAccountId } from './accountTools.js'
+import { getActiveAccountId, resolveAccountId } from './accountTools.js'
 import { Logger } from '../../telegram/logger'
 
 export interface FileToolsConfig {
@@ -11,11 +12,7 @@ export interface FileToolsConfig {
 }
 
 function resolveAccount(accountManager: AccountManager, accountId?: string): string {
-  const targetId = accountId || getActiveAccountId(accountManager)
-  if (!targetId) {
-    throw new Error('No Telegram account connected or selected. Use telegram_list_accounts to view available accounts.')
-  }
-  return targetId
+  return resolveAccountId(accountManager, accountId)
 }
 
 export async function resolvePeerHandler(
@@ -26,7 +23,7 @@ export async function resolvePeerHandler(
   }
 ): Promise<{ peer: McpPeerDetails; accountId: string }> {
   const targetAccountId = resolveAccount(accountManager, args.accountId)
-  const cleanTarget = args.target.trim()
+  const cleanTarget = String(args.target || '').trim()
 
   try {
     const rawPeer: any = await accountManager.resolvePeer(targetAccountId, cleanTarget)
@@ -43,7 +40,7 @@ export async function resolvePeerHandler(
       id: String(rawPeer.id || rawPeer.chatId || ''),
       title: rawPeer.title || rawPeer.firstName || cleanTarget,
       type: peerType,
-      username: rawPeer.username,
+      username: rawPeer.username || (cleanTarget.startsWith('@') ? cleanTarget.slice(1) : undefined),
       accessHash: rawPeer.accessHash ? String(rawPeer.accessHash) : undefined,
       membersCount: rawPeer.membersCount,
       about: rawPeer.about,
@@ -73,13 +70,29 @@ export async function listChannelMediaHandler(
 ): Promise<{ items: McpSharedMediaSummary[]; totalCount: number; nextOffsetId: number; hasMore: boolean }> {
   const targetAccountId = resolveAccount(accountManager, args.accountId)
   const limit = Math.min(Math.max(args.limit || 30, 1), 100)
-  const reqFilter = args.filterType && args.filterType !== 'all' ? args.filterType : 'document'
+
+  // Map user-friendly MCP filterType to MTProto SharedMediaFilterType:
+  // 'document' | 'files' -> 'files' (documents/PDFs/archives)
+  // 'photo' | 'video' | 'media' -> 'media' (photos & videos)
+  // 'audio' -> 'audio' (music)
+  // 'voice' | 'round_video' -> 'voice' (voice messages)
+  let reqFilter: SharedMediaFilterType = 'files'
+  const rawFilter = (args.filterType || '').toLowerCase()
+  if (rawFilter === 'photo' || rawFilter === 'video' || rawFilter === 'media') {
+    reqFilter = 'media'
+  } else if (rawFilter === 'audio') {
+    reqFilter = 'audio'
+  } else if (rawFilter === 'voice' || rawFilter === 'round_video') {
+    reqFilter = 'voice'
+  } else {
+    reqFilter = 'files'
+  }
 
   try {
     const result = await accountManager.getSharedMedia(
       targetAccountId,
-      args.chatId,
-      reqFilter as any,
+      String(args.chatId).trim(),
+      reqFilter,
       limit,
       args.offsetId
     )
@@ -137,6 +150,7 @@ export async function downloadFileHandler(
   config?: FileToolsConfig
 ): Promise<McpDownloadResult> {
   const targetAccountId = resolveAccount(accountManager, args.accountId)
+  const cleanChatId = String(args.chatId).trim()
 
   try {
     // Determine target directory
@@ -153,10 +167,10 @@ export async function downloadFileHandler(
       fs.mkdirSync(destDir, { recursive: true })
     }
 
-    Logger.info(`[MCP] Starting turbo download for account=${targetAccountId}, chat=${args.chatId}, msg=${args.messageId}`)
+    Logger.info(`[MCP] Starting turbo download for account=${targetAccountId}, chat=${cleanChatId}, msg=${args.messageId}`)
 
     // Download media using accountManager engine
-    const mediaUrl = await accountManager.downloadMedia(targetAccountId, args.chatId, args.messageId, false)
+    const mediaUrl = await accountManager.downloadMedia(targetAccountId, cleanChatId, args.messageId, false)
     if (!mediaUrl) {
       throw new Error(`Failed to download media for message ${args.messageId}. Message may not contain media or permission is denied.`)
     }
@@ -164,7 +178,10 @@ export async function downloadFileHandler(
     // Resolve local path from cache or guidegram-media protocol
     let sourcePath = ''
     if (mediaUrl.startsWith('guidegram-media://')) {
-      const candidate = decodeURIComponent(mediaUrl.replace(/^guidegram-media:\/\//, ''))
+      let candidate = decodeURIComponent(mediaUrl.replace(/^guidegram-media:\/\/+/, ''))
+      if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(candidate)) {
+        candidate = candidate.slice(1)
+      }
       if (fs.existsSync(candidate) && fs.statSync(candidate).size > 0) {
         sourcePath = candidate
       }
@@ -174,7 +191,7 @@ export async function downloadFileHandler(
       // Search in accountManager's media directory
       const mediaDir = (accountManager as any).mediaDir
       if (mediaDir && fs.existsSync(mediaDir)) {
-        const cacheKey = `${targetAccountId}_${args.chatId}_${args.messageId}`
+        const cacheKey = `${targetAccountId}_${cleanChatId}_${args.messageId}`
         const exts = ['.mp4', '.jpg', '.png', '.webp', '.ogg', '.pdf', '.zip', '.bin', '']
         for (const ext of exts) {
           const p1 = path.join(mediaDir, `media_${cacheKey}${ext}`)
@@ -195,8 +212,21 @@ export async function downloadFileHandler(
       throw new Error(`Cached media file not found on disk after download. Result: ${mediaUrl}`)
     }
 
-    // Determine target file name
-    const finalFileName = args.targetFileName?.trim() || path.basename(sourcePath)
+    // Determine target file name (preserving original Telegram document name if not explicitly overridden)
+    let finalFileName = args.targetFileName?.trim()
+    if (!finalFileName) {
+      try {
+        const rawMsg = (accountManager as any).rawMessagesCache?.get(`${targetAccountId}_${cleanChatId}_${args.messageId}`)
+        const fnAttr = (rawMsg?.media?.document as any)?.attributes?.find((a: any) => a._ === 'documentAttributeFilename')
+        if (fnAttr?.fileName) {
+          finalFileName = fnAttr.fileName
+        }
+      } catch (_) {}
+    }
+    if (!finalFileName) {
+      finalFileName = path.basename(sourcePath)
+    }
+
     const destinationPath = path.join(destDir, finalFileName)
 
     // Copy to final location
@@ -208,7 +238,7 @@ export async function downloadFileHandler(
     return {
       success: true,
       messageId: args.messageId,
-      chatId: args.chatId,
+      chatId: cleanChatId,
       filePath: destinationPath,
       fileSize: fileStat.size,
       fileName: finalFileName,
@@ -218,7 +248,7 @@ export async function downloadFileHandler(
     return {
       success: false,
       messageId: args.messageId,
-      chatId: args.chatId,
+      chatId: cleanChatId,
       filePath: '',
       fileSize: 0,
       fileName: args.targetFileName || '',

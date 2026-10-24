@@ -10,7 +10,12 @@ import http from 'node:http'
 import readline from 'node:readline'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const repoRoot = path.resolve(__dirname, '..')
 
 const args = process.argv.slice(2)
 
@@ -92,11 +97,13 @@ async function findAndLaunchGuidegramHeadless() {
     })
     child.unref()
   } else {
-    // 3. Fallback to local dev electron launcher if running in source repo
-    const packageJsonPath = path.resolve(process.cwd(), 'package.json')
+    // 3. Fallback to local dev electron launcher using absolute repoRoot
+    const packageJsonPath = path.join(repoRoot, 'package.json')
     if (fs.existsSync(packageJsonPath)) {
-      logDebug('Starting Guidegram via npm dev in headless mode...')
-      const child = spawn('npm.cmd', ['run', 'dev', '--', '--headless'], {
+      logDebug(`Starting Guidegram via npm dev in headless mode from ${repoRoot}...`)
+      const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+      const child = spawn(npmCmd, ['run', 'dev', '--', '--headless'], {
+        cwd: repoRoot,
         detached: true,
         stdio: 'ignore',
         windowsHide: true,
@@ -150,6 +157,9 @@ function sendJsonRpcToMcp(payload) {
           responseBody += chunk
         })
         res.on('end', () => {
+          if (res.statusCode === 204 || !responseBody.trim()) {
+            return resolve(null)
+          }
           try {
             const parsed = JSON.parse(responseBody)
             resolve(parsed)
@@ -190,13 +200,12 @@ async function main() {
 
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout,
     terminal: false,
   })
 
   rl.on('line', async (line) => {
     const trimmed = line.trim()
-    if (!trimmed) return
+    if (!trimmed || trimmed.toLowerCase().startsWith('content-length:')) return
 
     let rpcMessage
     try {
@@ -218,15 +227,18 @@ async function main() {
       }
     } catch (err) {
       logDebug(`Error forwarding RPC message: ${err.message}`)
-      const errResponse = {
-        jsonrpc: '2.0',
-        id: rpcMessage?.id ?? null,
-        error: {
-          code: -32603,
-          message: `Guidegram MCP bridge error: ${err.message}`,
-        },
+      // Per JSON-RPC 2.0: Never send an error response to a notification (message without id)
+      if (rpcMessage?.id !== undefined && rpcMessage?.id !== null) {
+        const errResponse = {
+          jsonrpc: '2.0',
+          id: rpcMessage.id,
+          error: {
+            code: -32603,
+            message: `Guidegram MCP bridge error: ${err.message}`,
+          },
+        }
+        process.stdout.write(JSON.stringify(errResponse) + '\n')
       }
-      process.stdout.write(JSON.stringify(errResponse) + '\n')
     }
   })
 

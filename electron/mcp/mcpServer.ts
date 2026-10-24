@@ -227,12 +227,23 @@ export class GuidegramMcpServer {
           if (Array.isArray(payload)) {
             // Batch JSON-RPC
             const responses = await Promise.all(payload.map((msg) => this.handleJsonRpcMessage(msg)))
-            res.writeHead(200, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify(responses.filter(Boolean)))
+            const filtered = responses.filter(Boolean)
+            if (filtered.length === 0) {
+              res.writeHead(204)
+              res.end()
+            } else {
+              res.writeHead(200, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify(filtered))
+            }
           } else {
             const response = await this.handleJsonRpcMessage(payload)
-            res.writeHead(200, { 'Content-Type': 'application/json' })
-            res.end(JSON.stringify(response))
+            if (response === null || response === undefined) {
+              res.writeHead(204)
+              res.end()
+            } else {
+              res.writeHead(200, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify(response))
+            }
           }
         } catch (err: any) {
           res.writeHead(400, { 'Content-Type': 'application/json' })
@@ -308,6 +319,11 @@ export class GuidegramMcpServer {
 
         try {
           const callResult = await this.dispatchToolCall(toolName, toolArgs)
+          const isError = Boolean(
+            callResult &&
+            typeof callResult === 'object' &&
+            (callResult.success === false || Boolean(callResult.error))
+          )
           return {
             jsonrpc: '2.0',
             id,
@@ -318,7 +334,7 @@ export class GuidegramMcpServer {
                   text: typeof callResult === 'string' ? callResult : JSON.stringify(callResult, null, 2),
                 },
               ],
-              isError: false,
+              isError,
             },
           }
         } catch (err: any) {

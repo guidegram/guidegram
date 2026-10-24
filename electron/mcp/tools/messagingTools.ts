@@ -1,7 +1,7 @@
 import type { AccountManager } from '../../telegram/accountManager'
 import type { SendableTypingStatus } from '../../telegram/types'
 import type { McpDialogSummary, McpMessageSummary } from '../types'
-import { getActiveAccountId } from './accountTools.js'
+import { getActiveAccountId, resolveAccountId } from './accountTools.js'
 import { Logger } from '../../telegram/logger'
 
 export interface MessagingToolsSecurityConfig {
@@ -9,18 +9,18 @@ export interface MessagingToolsSecurityConfig {
 }
 
 function resolveAccount(accountManager: AccountManager, accountId?: string): string {
-  const targetId = accountId || getActiveAccountId(accountManager)
-  if (!targetId) {
-    throw new Error('No Telegram account connected or selected. Use telegram_list_accounts to view available accounts.')
-  }
-  return targetId
+  return resolveAccountId(accountManager, accountId)
 }
 
-function checkChatWhitelist(chatId: string, security?: MessagingToolsSecurityConfig): void {
+function checkChatWhitelist(chatId: string | number, security?: MessagingToolsSecurityConfig): void {
   if (security?.allowedChatIds && security.allowedChatIds.length > 0) {
-    const isAllowed = security.allowedChatIds.some((allowed) => allowed === chatId || allowed.replace(/^-100/, '') === chatId.replace(/^-100/, ''))
+    const rawId = String(chatId).trim()
+    const isAllowed = security.allowedChatIds.some((allowed) => {
+      const trimmed = String(allowed).trim()
+      return trimmed === rawId || trimmed.replace(/^-100/, '') === rawId.replace(/^-100/, '')
+    })
     if (!isAllowed) {
-      throw new Error(`Chat ID '${chatId}' is not in the allowed MCP whitelist. Configured allowed chats: ${security.allowedChatIds.join(', ')}`)
+      throw new Error(`Chat ID '${rawId}' is not in the allowed MCP whitelist. Configured allowed chats: ${security.allowedChatIds.join(', ')}`)
     }
   }
 }

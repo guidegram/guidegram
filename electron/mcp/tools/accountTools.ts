@@ -18,6 +18,40 @@ export function getActiveAccountId(accountManager: AccountManager): string | nul
   return currentActiveAccountId
 }
 
+export function resolveAccountId(accountManager: AccountManager, accountIdOrIdentifier?: string): string {
+  const accounts: AccountInfo[] = accountManager.getAccounts()
+  if (accounts.length === 0) {
+    throw new Error('No Telegram accounts configured or logged in. Please connect an account first in Guidegram.')
+  }
+
+  if (accountIdOrIdentifier !== undefined && accountIdOrIdentifier !== null) {
+    const raw = String(accountIdOrIdentifier).trim()
+    if (raw) {
+      const cleanUsername = raw.replace(/^@/, '').toLowerCase()
+      const matched = accounts.find(
+        (a: AccountInfo) =>
+          a.id === raw ||
+          a.phone === raw ||
+          a.phone?.replace(/^\+/, '') === raw.replace(/^\+/, '') ||
+          a.username?.toLowerCase() === cleanUsername
+      )
+      if (matched) return matched.id
+
+      throw new Error(
+        `Account not found for identifier '${accountIdOrIdentifier}'. Available accounts: ${accounts
+          .map((a: AccountInfo) => `${a.firstName || 'User'} (ID: ${a.id}, Phone: ${a.phone})`)
+          .join('; ')}`
+      )
+    }
+  }
+
+  const active = getActiveAccountId(accountManager)
+  if (!active) {
+    throw new Error('No active or connected Telegram account available.')
+  }
+  return active
+}
+
 export function setActiveAccountId(accountId: string): void {
   currentActiveAccountId = accountId
 }
@@ -51,14 +85,31 @@ export async function switchActiveAccountHandler(
   accountManager: AccountManager,
   args: { accountId: string }
 ): Promise<{ success: boolean; activeAccountId: string; account?: McpAccountSummary; error?: string }> {
+  if (!args || args.accountId === undefined || args.accountId === null) {
+    return {
+      success: false,
+      activeAccountId: currentActiveAccountId || '',
+      error: 'accountId argument is required.',
+    }
+  }
+
   const accounts: AccountInfo[] = accountManager.getAccounts()
-  const target = accounts.find((a: AccountInfo) => a.id === args.accountId || a.phone === args.accountId || a.username?.toLowerCase() === args.accountId.toLowerCase().replace(/^@/, ''))
+  const rawId = String(args.accountId).trim()
+  const cleanUsername = rawId.replace(/^@/, '').toLowerCase()
+
+  const target = accounts.find(
+    (a: AccountInfo) =>
+      a.id === rawId ||
+      a.phone === rawId ||
+      a.phone?.replace(/^\+/, '') === rawId.replace(/^\+/, '') ||
+      a.username?.toLowerCase() === cleanUsername
+  )
 
   if (!target) {
     return {
       success: false,
       activeAccountId: currentActiveAccountId || '',
-      error: `Account not found with identifier '${args.accountId}'. Available account IDs: ${accounts.map((a: AccountInfo) => a.id).join(', ')}`,
+      error: `Account not found with identifier '${rawId}'. Available accounts: ${accounts.map((a: AccountInfo) => `${a.firstName || 'User'} (ID: ${a.id}, Phone: ${a.phone})`).join(', ')}`,
     }
   }
 
