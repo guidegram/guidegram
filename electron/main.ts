@@ -9,6 +9,7 @@ import { Logger } from './telegram/logger'
 import { UpdateManager } from './telegram/updateManager'
 import type { WebPagePreview, McpServerConfig } from './telegram/types'
 import { GuidegramMcpServer } from './mcp/mcpServer'
+import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSchema, AccountIdSchema } from './ipcValidation'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1052,7 +1053,8 @@ function setupIpcHandlers() {
     return accountManager.getAccounts()
   })
 
-  ipcMain.handle('telegram:reconnect-account', async (_event, { accountId }: { accountId: string }) => {
+  ipcMain.handle('telegram:reconnect-account', async (_event, rawPayload: any) => {
+    const { accountId } = validateIpcPayload(AccountIdSchema, rawPayload, 'telegram:reconnect-account')
     Logger.info(`[IPC] telegram:reconnect-account for ${accountId}`)
     try {
       return await accountManager.reconnectAccount(accountId)
@@ -1062,7 +1064,8 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:start-phone-auth', async (_event, { phone, proxy }) => {
+  ipcMain.handle('telegram:start-phone-auth', async (_event, rawPayload: any) => {
+    const { phone, proxy } = validateIpcPayload(PhoneAuthSchema, rawPayload, 'telegram:start-phone-auth')
     Logger.info(`[IPC] telegram:start-phone-auth for ${phone}`)
     try {
       return await accountManager.startPhoneAuth(phone, proxy)
@@ -1072,7 +1075,8 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:complete-phone-auth', async (_event, { phone, code, password }) => {
+  ipcMain.handle('telegram:complete-phone-auth', async (_event, rawPayload: any) => {
+    const { phone, code, password } = validateIpcPayload(CompletePhoneAuthSchema, rawPayload, 'telegram:complete-phone-auth')
     Logger.info(`[IPC] telegram:complete-phone-auth for ${phone}`)
     try {
       return await accountManager.completePhoneAuth(phone, code, password)
@@ -1082,7 +1086,8 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:login-bot', async (_event, { token, proxy }) => {
+  ipcMain.handle('telegram:login-bot', async (_event, rawPayload: any) => {
+    const { token, proxy } = validateIpcPayload(BotAuthSchema, rawPayload, 'telegram:login-bot')
     Logger.info('[IPC] telegram:login-bot')
     try {
       return await accountManager.startBotAuth(token, proxy)
