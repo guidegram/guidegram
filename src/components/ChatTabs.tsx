@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { MessageSquare, Users, Radio, Bot, BellRing, Layers, CheckCheck, Folder, Archive } from 'lucide-react'
 import { CloudFolderItem } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -150,23 +151,32 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
                   tabLabel: tab.label,
                 })
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30 shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                  ? 'text-primary-400'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
-              {tab.icon}
-              <span>{tab.label}</span>
-              {count > 0 && (
-                <span
-                  className={`${isRTL ? 'mr-1' : 'ml-1'} px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                    isActive ? 'bg-primary-500 text-white' : 'bg-dark-750 text-gray-400'
-                  }`}
-                >
-                  {formatNumber(count)}
-                </span>
+              {isActive && (
+                <motion.span
+                  layoutId="activeChatTabIndicator"
+                  transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+                  className="absolute inset-0 rounded-xl bg-primary-600/20 border border-primary-500/30 shadow-sm"
+                />
               )}
+              <span className="relative z-10 flex items-center gap-1.5">
+                {tab.icon}
+                <span>{tab.label}</span>
+                {count > 0 && (
+                  <span
+                    className={`${isRTL ? 'mr-1' : 'ml-1'} px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive ? 'bg-primary-500 text-white' : 'bg-dark-750 text-gray-400'
+                    }`}
+                  >
+                    {formatNumber(count)}
+                  </span>
+                )}
+              </span>
             </button>
           )
         })}
@@ -174,7 +184,9 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
 
       {/* 64Gram Power Feature: Dynamic Mark Read Button */}
       {markAllReadEnabled && onMarkAllAsRead && (totalUnread > 0 || currentTabUnread > 0) && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => handleMarkTab(activeTab !== 'all' ? activeTab : undefined)}
           disabled={isMarking}
           title={
@@ -192,35 +204,41 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
               ? t('tab.mark_read', { label: allTabs.find((t) => t.id === activeTab)?.label || '' })
               : t('tab.mark_all_read')}
           </span>
-        </button>
+        </motion.button>
       )}
 
       {/* Tab Context Menu */}
-      {tabContextMenu && (
-        <div
-          dir={isRTL ? 'rtl' : 'ltr'}
-          style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
-          className="fixed z-50 w-48 bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={() => handleMarkTab(tabContextMenu.tabId)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-accent-cyan hover:bg-accent-cyan/15 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
+      <AnimatePresence>
+        {tabContextMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: -4 }}
+            transition={{ type: 'spring', damping: 24, stiffness: 350 }}
+            dir={isRTL ? 'rtl' : 'ltr'}
+            style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
+            className="fixed z-50 w-48 bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs"
+            onClick={(e) => e.stopPropagation()}
           >
-            <CheckCheck className="w-3.5 h-3.5 shrink-0" />
-            <span>{t('tab.mark_read_title', { label: tabContextMenu.tabLabel })}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleMarkTab('all')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
-          >
-            <CheckCheck className="w-3.5 h-3.5 shrink-0" />
-            <span>{t('tab.mark_all_chats_read')}</span>
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => handleMarkTab(tabContextMenu.tabId)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-accent-cyan hover:bg-accent-cyan/15 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
+            >
+              <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>{t('tab.mark_read_title', { label: tabContextMenu.tabLabel })}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleMarkTab('all')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
+            >
+              <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>{t('tab.mark_all_chats_read')}</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
