@@ -1390,13 +1390,13 @@ export class AccountManager {
           info.avatarUrl = fullPhoto
           const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto } : a))
           this.store.updateConfig({ accounts: accs })
-          this.onEventCallback?.('telegram:account-updated', { account: info })
+          this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(info) })
         }
       }).catch(() => {})
 
       Logger.info(`[AccountManager] Bot account ${accountId} (${botPhone}) registered successfully!`)
-      this.onEventCallback?.('telegram:account-updated', { account: info })
-      return info
+      this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(info) })
+      return this.sanitizeAccountInfo(info)
     } catch (err: any) {
       Logger.error(`[AccountManager] startBotAuth failed:`, err)
       try {
@@ -10589,10 +10589,20 @@ export class AccountManager {
     }
   }
 
+  public sanitizeAccountInfo(info: AccountInfo): AccountInfo {
+    const sanitized: AccountInfo = { ...info }
+    delete sanitized.sessionString
+    if (sanitized.botToken) {
+      // MM-004: Zero-Secret Invariant - mask bot token before sending across IPC boundary
+      sanitized.botToken = sanitized.botToken.replace(/^(\d+):(.+)$/, '$1:***')
+    }
+    return sanitized
+  }
+
   public getAccounts(): AccountInfo[] {
     const accounts: AccountInfo[] = []
     for (const [, holder] of this.clients) {
-      accounts.push(holder.info)
+      accounts.push(this.sanitizeAccountInfo(holder.info))
     }
     return accounts
   }
