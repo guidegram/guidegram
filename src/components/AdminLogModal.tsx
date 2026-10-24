@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   ShieldCheck,
@@ -184,11 +185,15 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md"
       onClick={onClose}
     >
-      <div
-        className="relative flex flex-col w-full max-w-2xl h-[740px] max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="relative flex flex-col w-full max-w-2xl h-[740px] max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -263,20 +268,30 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
               { id: 'bans', label: t('admin_log.filter_bans') || 'Restrictions' },
               { id: 'admins', label: t('admin_log.filter_admins') || 'Admins' },
               { id: 'info', label: t('admin_log.filter_info') || 'Settings' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as FilterTab)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'bg-accent-amber/20 text-accent-amber border border-accent-amber/35 shadow-xs'
-                    : 'bg-dark-750 hover:bg-dark-700 text-gray-400 hover:text-gray-200 border border-white/5'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            ].map((tab) => {
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as FilterTab)}
+                  className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                    isActive
+                      ? 'text-accent-amber font-bold'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeAdminTabIndicator"
+                      transition={{ type: 'spring', damping: 24, stiffness: 350 }}
+                      className="absolute inset-0 bg-accent-amber/20 border border-accent-amber/35 rounded-xl shadow-xs"
+                    />
+                  )}
+                  <span className="relative z-10">{tab.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -305,8 +320,10 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
               const isRtlText = isRTL(ev.actionDescription || ev.actionTitle)
 
               return (
-                <div
+                <motion.div
                   key={ev.id}
+                  whileHover={{ scale: 1.008 }}
+                  transition={{ type: 'spring', damping: 22, stiffness: 350 }}
                   className="p-3.5 rounded-2xl bg-dark-850/80 hover:bg-dark-850 border border-white/5 flex flex-col gap-2.5 transition-all shadow-xs"
                 >
                   {/* Event Top Bar: Admin user info + badge + timestamp */}
@@ -354,7 +371,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               )
             })
           )}
@@ -373,7 +390,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
             {t('common.cancel') || 'Close'}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
