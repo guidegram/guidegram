@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { X, Shield, Plus, RefreshCw, Check, Trash2, Globe, Radio, Zap, Sparkles, AlertCircle, User, Share2, Layers, CheckCircle2 } from 'lucide-react'
 import { ProxyConfig, AccountInfo, AutoHarvestStatus, WarpStatus } from '../types/telegram'
 
@@ -192,7 +193,13 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="glass-modal w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh] animate-in fade-in zoom-in-95 duration-150">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="glass-modal w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]"
+      >
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -391,12 +398,17 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                       const isHealthy = (p.pingMs || -1) > 0
 
                       return (
-                        <div
+                        <motion.div
                           key={p.id}
+                          whileHover={{ scale: 1.01 }}
+                          transition={{ type: 'spring', damping: 20, stiffness: 350 }}
                           className="p-3 bg-dark-800/90 border border-white/5 rounded-2xl flex items-center justify-between hover:border-accent-cyan/30 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-accent-cyan/10 text-accent-cyan flex items-center justify-center font-bold text-[10px] uppercase">
+                            <div className="relative w-8 h-8 rounded-xl bg-accent-cyan/10 text-accent-cyan flex items-center justify-center font-bold text-[10px] uppercase">
+                              {isHealthy && (
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent-emerald animate-ping opacity-75" />
+                              )}
                               MT
                             </div>
                             <div>
@@ -442,7 +454,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                               </button>
                             </div>
                           </div>
-                        </div>
+                        </motion.div>
                       )
                     })}
                   </div>
@@ -650,7 +662,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
             Close
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
