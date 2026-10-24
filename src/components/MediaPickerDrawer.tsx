@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Smile, Layers, Film, Search, X, Sparkles, Clock, RefreshCw, Star, Flame, Check } from 'lucide-react'
 import { StickerSetItem, StickerItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -393,8 +394,12 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
   const currentStickers = activeDetails?.stickers || []
 
   return (
-    <div
-      className="absolute bottom-16 left-4 z-40 w-80 sm:w-[410px] h-[440px] rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 select-none"
+    <motion.div
+      initial={{ opacity: 0, scale: 0.94, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.94, y: 16 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 380 }}
+      className="absolute bottom-16 left-4 z-40 w-80 sm:w-[410px] h-[440px] rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden select-none"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Top Header with Telegram-style Navigation Tabs */}
@@ -720,6 +725,6 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

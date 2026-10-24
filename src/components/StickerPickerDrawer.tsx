@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Smile, X, Layers, RefreshCw } from 'lucide-react'
 import { StickerSetItem, StickerItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -55,10 +56,13 @@ const StickerThumbnail: React.FC<{
   }, [accountId, sticker.id, sticker.accessHash])
 
   return (
-    <button
+    <motion.button
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.92 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 22 }}
       type="button"
       onClick={onClick}
-      className="w-16 h-16 sm:w-18 sm:h-18 p-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center cursor-pointer group relative shrink-0"
+      className="w-16 h-16 sm:w-18 sm:h-18 p-1.5 rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center cursor-pointer group relative shrink-0"
       title={sticker.emoticon ? `${sticker.emoticon} (Click to send)` : 'Click to send'}
     >
       {sticker.isAnimated ? (
@@ -84,7 +88,7 @@ const StickerThumbnail: React.FC<{
           {sticker.emoticon}
         </span>
       )}
-    </button>
+    </motion.button>
   )
 }
 
@@ -147,8 +151,12 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
   const currentStickers = activeDetails?.stickers || []
 
   return (
-    <div
-      className="absolute bottom-16 left-4 z-40 w-80 sm:w-96 max-h-[380px] rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 select-none"
+    <motion.div
+      initial={{ opacity: 0, scale: 0.92, y: 16 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.92, y: 16 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 380 }}
+      className="absolute bottom-16 left-4 z-40 w-80 sm:w-96 max-h-[380px] rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-md flex flex-col overflow-hidden select-none"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
@@ -221,6 +229,6 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
           })}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
