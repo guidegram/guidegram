@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'motion/react'
 import {
   Plus,
   Shield,
@@ -26,20 +27,54 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 }) => {
   return (
     <div className="flex-1 bg-dark-950 flex flex-col items-center justify-center p-8 relative overflow-hidden select-none titlebar-no-drag">
-      {/* Background Ambient Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary-500/15 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-primary-400/10 blur-[100px] rounded-full pointer-events-none" />
+      {/* Dynamic Background Ambient Aura Glows */}
+      <motion.div
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.15, 0.25, 0.15],
+        }}
+        transition={{ repeat: Infinity, duration: 8, ease: 'easeInOut' }}
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary-500/20 blur-[130px] rounded-full pointer-events-none"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.1, 0.2, 0.1],
+        }}
+        transition={{ repeat: Infinity, duration: 10, delay: 2, ease: 'easeInOut' }}
+        className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-accent-cyan/15 blur-[110px] rounded-full pointer-events-none"
+      />
 
       {/* Hero Container */}
-      <div className="max-w-2xl w-full text-center relative z-10 flex flex-col items-center">
-        {/* Glowing Logo Badge */}
-        <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-glow mb-6 border border-primary-400/40 transform hover:scale-105 transition-all duration-300">
-          <img src={logoImg} alt="Guidegram Logo" className="w-full h-full object-cover" />
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="max-w-2xl w-full text-center relative z-10 flex flex-col items-center"
+      >
+        {/* Floating Glowing Logo Badge */}
+        <motion.div
+          animate={{
+            y: [-5, 5, -5],
+            rotate: [-1, 1, -1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 5,
+            ease: 'easeInOut',
+          }}
+          className="w-24 h-24 rounded-3xl overflow-hidden shadow-glow mb-6 border border-primary-400/40 relative cursor-pointer group"
+        >
+          <img
+            src={logoImg}
+            alt="Guidegram Logo"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          />
+        </motion.div>
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-600/15 border border-primary-500/30 text-primary-300 text-xs font-semibold mb-4">
-          <Sparkles className="w-3.5 h-3.5 text-primary-400" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary-600/15 border border-primary-500/30 text-primary-300 text-xs font-semibold mb-4 shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 text-primary-400 animate-pulse" />
           <span>Portable Edition • Unlimited Multi-Account</span>
         </div>
 
@@ -55,36 +90,46 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* Primary CTA */}
         <div className="flex items-center gap-3 mb-10">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={onOpenAddAccount}
-            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 active:scale-95 text-white font-bold text-sm rounded-2xl shadow-glow border border-primary-400/30 transition-all duration-200 flex items-center gap-2 cursor-pointer"
+            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white font-bold text-sm rounded-2xl shadow-glow border border-primary-400/30 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Connect Telegram Account</span>
             <ArrowRight className="w-4 h-4 ml-1" />
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={onOpenProxyModal}
-            className="px-4 py-3 bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5 font-semibold text-sm rounded-2xl transition-all duration-200 flex items-center gap-2 cursor-pointer"
+            className="px-4 py-3 bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5 font-semibold text-sm rounded-2xl transition-all flex items-center gap-2 cursor-pointer"
           >
             <Shield className="w-4 h-4 text-primary-400" />
             <span>Proxy Manager</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
             onClick={onOpenSettings}
-            className="p-3 bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/5 rounded-2xl transition-all duration-200 cursor-pointer"
+            className="p-3 bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/5 rounded-2xl transition-all cursor-pointer"
             title="Preferences & API"
           >
             <Settings className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
 
-        {/* Bento Grid - 4 Killer Feature Cards */}
+        {/* Bento Grid - 4 Killer Feature Cards with Spring Hover Lift */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
           {/* Card 1 */}
-          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-primary-500/30 transition-all duration-200">
+          <motion.div
+            whileHover={{ scale: 1.025, y: -2 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-primary-500/30 transition-colors"
+          >
             <div className="flex items-center gap-2.5 mb-1.5">
               <div className="p-2 rounded-xl bg-primary-600/15 text-primary-400 border border-primary-500/25">
                 <Layers className="w-4 h-4" />
@@ -94,10 +139,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <p className="text-[11px] text-gray-400 leading-normal">
               Run 10, 50, or 100+ accounts concurrently without paying for Telegram Premium.
             </p>
-          </div>
+          </motion.div>
 
           {/* Card 2 */}
-          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-accent-cyan/20 transition-all duration-200">
+          <motion.div
+            whileHover={{ scale: 1.025, y: -2 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-accent-cyan/20 transition-colors"
+          >
             <div className="flex items-center gap-2.5 mb-1.5">
               <div className="p-2 rounded-xl bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
                 <ShieldCheck className="w-4 h-4" />
@@ -107,10 +156,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <p className="text-[11px] text-gray-400 leading-normal">
               Dedicated per-account proxies coupled with cryptographic hardware fingerprint masking.
             </p>
-          </div>
+          </motion.div>
 
           {/* Card 3 */}
-          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-accent-violet/20 transition-all duration-200">
+          <motion.div
+            whileHover={{ scale: 1.025, y: -2 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-accent-violet/20 transition-colors"
+          >
             <div className="flex items-center gap-2.5 mb-1.5">
               <div className="p-2 rounded-xl bg-accent-violet/10 text-accent-violet border border-accent-violet/20">
                 <BarChart2 className="w-4 h-4" />
@@ -120,10 +173,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <p className="text-[11px] text-gray-400 leading-normal">
               Real-time active member leaderboards, 24-hour heatmaps, and message analytics.
             </p>
-          </div>
+          </motion.div>
 
           {/* Card 4 */}
-          <div className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-primary-500/20 transition-all duration-200">
+          <motion.div
+            whileHover={{ scale: 1.025, y: -2 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className="p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-primary-500/20 transition-colors"
+          >
             <div className="flex items-center gap-2.5 mb-1.5">
               <div className="p-2 rounded-xl bg-primary-600/10 text-primary-400 border border-primary-500/20">
                 <Zap className="w-4 h-4" />
@@ -133,7 +190,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <p className="text-[11px] text-gray-400 leading-normal">
               Up to 3x faster media streaming and large file transfers via 4 concurrent MTProto workers.
             </p>
-          </div>
+          </motion.div>
         </div>
 
         {/* Security Footer Note */}
@@ -141,7 +198,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <Lock className="w-3.5 h-3.5 text-primary-400" />
           <span>Local MTProto 2.0 Encryption • Your sessions never leave your local computer</span>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
