@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   ExternalLink,
@@ -66,11 +67,16 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md"
       onClick={onClose}
     >
-      <div
-        className={`relative flex flex-col bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className={`relative flex flex-col bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden ${
           isExpanded
             ? 'w-full h-full max-w-5xl max-h-[92vh]'
             : 'w-full max-w-md h-[740px] max-h-[90vh]'
@@ -192,7 +198,7 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
         <div className="h-4 bg-dark-850/60 border-t border-white/5 flex items-center justify-center shrink-0">
           <div className="w-16 h-1 rounded-full bg-white/20" />
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
