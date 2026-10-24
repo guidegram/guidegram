@@ -16,6 +16,7 @@ import {
   RefreshCw,
   File,
   Check,
+  AlertTriangle,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import type { SharedMediaItem, SharedMediaFilterType, DialogItem } from '../types/telegram'
@@ -92,6 +93,13 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
     audio: 0,
     voice: 0,
   })
+  const [errorByTab, setErrorByTab] = useState<Record<SharedMediaFilterType, string | null>>({
+    media: null,
+    files: null,
+    links: null,
+    audio: null,
+    voice: null,
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -111,6 +119,7 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
         setIsLoadingMore(true)
       } else {
         setIsLoading(true)
+        setErrorByTab((prev) => ({ ...prev, [tab]: null }))
       }
 
       const offsetId = isLoadMore ? nextOffsetByTab[tab] : 0
@@ -137,8 +146,9 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
             }))
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`[SharedMediaDrawer] Failed to fetch shared media for ${tab}:`, err)
+        setErrorByTab((prev) => ({ ...prev, [tab]: err?.message || 'Failed to fetch shared media' }))
       } finally {
         setIsLoading(false)
         setIsLoadingMore(false)
@@ -348,7 +358,22 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar"
         >
-          {isLoading && filteredItems.length === 0 ? (
+          {errorByTab[activeTab] ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-3 text-center px-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <span className="text-xs text-red-300 font-medium">{errorByTab[activeTab]}</span>
+              <button
+                type="button"
+                onClick={() => fetchTabItems(activeTab, false)}
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-white font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{t('chat.retry') || 'Retry'}</span>
+              </button>
+            </div>
+          ) : isLoading && filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-2">
               <RefreshCw className="w-5 h-5 animate-spin text-primary-400" />
               <span className="text-xs">{t('shared_media.loading')}</span>
