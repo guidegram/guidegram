@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Check, Clock, Loader2, Sparkles, Trash2, X } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { CustomEmojiView } from './ChatViewport'
@@ -155,15 +156,19 @@ export const EmojiStatusModal: React.FC<EmojiStatusModalProps> = ({
   return (
     <div
       dir={isRTL ? 'rtl' : 'ltr'}
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={(event) => {
         event.stopPropagation()
         if (!savingKey) onClose()
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-lg max-h-[86vh] rounded-2xl bg-[#17212b] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col"
+        className="w-full max-w-lg max-h-[86vh] rounded-3xl bg-[#17212b] border border-white/10 shadow-2xl overflow-hidden flex flex-col"
       >
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -366,7 +371,7 @@ export const EmojiStatusModal: React.FC<EmojiStatusModalProps> = ({
             {t('app.close')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
