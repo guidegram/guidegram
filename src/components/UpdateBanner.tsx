@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Sparkles, Download, X, ArrowUpRight, AlertCircle, RefreshCw, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { UpdateInfo, UpdateProgress } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -58,9 +59,13 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
   const formatMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 30, scale: 0.95 }}
+      transition={{ type: 'spring', damping: 24, stiffness: 350 }}
       dir={isRTL ? 'rtl' : 'ltr'}
-      className={`fixed bottom-6 ${isRTL ? 'left-6' : 'right-6'} z-50 max-w-sm w-full bg-dark-900/95 rounded-3xl p-4 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200 select-none border ${
+      className={`fixed bottom-6 ${isRTL ? 'left-6' : 'right-6'} z-50 max-w-sm w-full bg-dark-900/95 rounded-3xl p-4 shadow-2xl backdrop-blur-xl select-none border ${
         isMandatory
           ? 'border-amber-500/50 shadow-[0_0_40px_rgba(245,158,11,0.2)] ring-1 ring-amber-500/30'
           : 'border-primary-500/40'
@@ -111,14 +116,16 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
         </div>
 
         {!isUpdating && !isMandatory && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             type="button"
             onClick={onDismiss}
             title="Dismiss for this session"
             className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
-          </button>
+          </motion.button>
         )}
       </div>
 
@@ -146,13 +153,15 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
           </div>
 
           <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ease-out ${
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress?.percent ?? 5}%` }}
+              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+              className={`h-full ${
                 isMandatory
                   ? 'bg-gradient-to-r from-amber-500 to-rose-500'
                   : 'bg-gradient-to-r from-primary-500 to-accent-cyan'
               }`}
-              style={{ width: `${progress?.percent ?? 5}%` }}
             />
           </div>
 
@@ -162,12 +171,19 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
         </div>
       )}
 
-      {updateError && (
-        <div className="mt-2.5 p-2 rounded-xl bg-accent-rose/10 border border-accent-rose/20 text-[10px] text-accent-rose flex items-center gap-1.5">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span>{updateError}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {updateError && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-2.5 p-2 rounded-xl bg-accent-rose/10 border border-accent-rose/20 text-[10px] text-accent-rose flex items-center gap-1.5 overflow-hidden"
+          >
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{updateError}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Action Bar */}
       <div className="flex items-center justify-between gap-2 mt-3.5 pt-2.5 border-t border-white/5">
@@ -188,19 +204,23 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
 
         <div className="flex items-center gap-2">
           {!isUpdating && !isMandatory && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={onDismiss}
               className="px-3 py-1.5 rounded-xl text-[11px] font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer"
             >
               {t('update.later')}
-            </button>
+            </motion.button>
           )}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             disabled={isUpdating}
             onClick={handleUpdate}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold disabled:opacity-50 text-white flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold disabled:opacity-50 text-white flex items-center gap-1.5 transition-colors cursor-pointer ${
               isMandatory
                 ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.35)]'
                 : 'bg-primary-600 hover:bg-primary-500 shadow-glow'
@@ -225,9 +245,9 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
                 <span>{isMandatory ? t('update.now_required') : t('update.now')}</span>
               </>
             )}
-          </button>
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
