@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   BarChart2,
@@ -833,10 +834,14 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
       onClick={onClose}
       className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-150"
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
         onClick={(e) => e.stopPropagation()}
         dir={isRTL ? 'rtl' : 'ltr'}
-        className="glass-modal w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-white/10 shadow-2xl animate-in zoom-in-95 duration-150"
+        className="glass-modal w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-white/10 shadow-2xl"
       >
         {/* Header */}
         <div className="p-4 md:p-5 border-b border-white/10 flex items-center justify-between bg-dark-900/60">
@@ -1765,7 +1770,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
