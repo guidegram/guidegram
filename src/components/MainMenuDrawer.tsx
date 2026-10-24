@@ -29,6 +29,7 @@ import { StarGiftsModal } from './StarGiftsModal'
 import { ActiveSessionsModal } from './ActiveSessionsModal'
 import { EmojiStatusModal } from './EmojiStatusModal'
 import { useI18n } from '../i18n'
+import { motion, AnimatePresence } from 'motion/react'
 import logoImg from '../assets/logo.png'
 
 interface MainMenuDrawerProps {
@@ -146,13 +147,22 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 z-50 flex select-none">
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs select-none"
         onClick={onClose}
       />
 
-      {/* Drawer Panel - Official Telegram Desktop Styling */}
-      <div className="relative w-72 md:w-80 h-full bg-[#0e1621] border-r border-white/10 shadow-2xl z-10 flex flex-col overflow-hidden animate-in slide-in-from-left duration-200 text-gray-200">
+      {/* Drawer Panel - Spring Slide Physics */}
+      <motion.div
+        initial={{ x: isRTL ? 320 : -320 }}
+        animate={{ x: 0 }}
+        exit={{ x: isRTL ? 320 : -320 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+        className="relative w-72 md:w-80 h-full bg-[#0e1621] border-r border-white/10 shadow-2xl z-10 flex flex-col overflow-hidden text-gray-200"
+      >
         {/* Profile Card Header */}
         <div className="p-4 bg-[#17212b] border-b border-white/5 relative">
           <button
@@ -619,7 +629,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
             v{appVersion}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {activeAccount && (
         <>
