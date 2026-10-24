@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { motion, AnimatePresence } from 'motion/react'
 
 interface CreatePollModalProps {
   isOpen: boolean
@@ -99,8 +100,21 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-dark-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md select-none"
+      onClick={onClose}
+    >
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        initial={{ scale: 0.92, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.94, opacity: 0, y: 10 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+        className="relative w-full max-w-lg bg-dark-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between bg-dark-850/50">
           <div className="flex items-center gap-2">
@@ -304,8 +318,8 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 export default CreatePollModal
