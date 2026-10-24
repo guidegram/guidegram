@@ -301,6 +301,7 @@ function createWindow() {
     height: 840,
     minWidth: 960,
     minHeight: 640,
+    center: true,
     show: false, // Prevents blank/black flash during startup
     backgroundColor: '#08090C',
     title: 'Guidegram',
@@ -317,11 +318,23 @@ function createWindow() {
   // Window lifecycle events
   mainWindow.once('ready-to-show', () => {
     Logger.info('[Window] Window is ready to show. Displaying now.')
-    mainWindow?.show()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+      mainWindow.setAlwaysOnTop(true)
+      mainWindow.show()
+      mainWindow.focus()
+      mainWindow.setAlwaysOnTop(false)
+    }
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
     Logger.info('[Renderer] Main HTML content loaded successfully.')
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
 
     // Check if an update was just applied
     try {
