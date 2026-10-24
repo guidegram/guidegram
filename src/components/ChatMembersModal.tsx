@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -617,13 +618,19 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
     else if (confirmAction === 'unban') void handleUnban()
   }
 
+  if (!isOpen) return null
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md"
       onClick={onClose}
     >
-      <div
-        className="relative flex flex-col w-full max-w-4xl h-[760px] max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+        className="relative flex flex-col w-full max-w-4xl h-[760px] max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="px-5 py-4 bg-dark-850/90 border-b border-white/10 flex items-center justify-between shrink-0 select-none">
@@ -888,11 +895,14 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
                         const name = memberName(member)
                         const isSelected = member.id === selectedId
                         return (
-                          <button
+                          <motion.button
                             type="button"
                             key={member.id}
+                            whileHover={{ scale: 1.006, x: 2 }}
+                            whileTap={{ scale: 0.995 }}
+                            transition={{ type: 'spring', damping: 24, stiffness: 400 }}
                             onClick={() => setSelectedId(member.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
                               isSelected ? 'bg-primary-500/10' : 'hover:bg-white/5'
                             }`}
                           >
@@ -932,7 +942,7 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
                             >
                               {roleLabel(member)}
                             </span>
-                          </button>
+                          </motion.button>
                         )
                       })}
                     </div>
@@ -1383,7 +1393,7 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
             </div>
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }
