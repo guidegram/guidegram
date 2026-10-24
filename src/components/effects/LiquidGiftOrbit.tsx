@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { Sparkles } from 'lucide-react'
 
 export interface GiftItem {
@@ -84,6 +84,7 @@ export const LiquidGiftOrbit: React.FC<LiquidGiftOrbitProps> = ({
   children,
 }) => {
   const [activeGift, setActiveGift] = useState<GiftItem | null>(null)
+  const shouldReduceMotion = useReducedMotion()
 
   return (
     <div className="relative w-64 h-64 mx-auto flex items-center justify-center select-none">
@@ -105,8 +106,8 @@ export const LiquidGiftOrbit: React.FC<LiquidGiftOrbitProps> = ({
           animate={{
             scale: gift.scale || 1,
             opacity: 1,
-            y: [0, -8, 4, -4, 0],
-            x: [0, 5, -3, 2, 0],
+            y: shouldReduceMotion ? 0 : [0, -8, 4, -4, 0],
+            x: shouldReduceMotion ? 0 : [0, 5, -3, 2, 0],
           }}
           transition={{
             y: {
