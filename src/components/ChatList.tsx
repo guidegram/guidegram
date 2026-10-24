@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
 import { Avatar } from './Avatar'
@@ -720,7 +721,7 @@ interface DialogListItemProps {
 export const DialogListItem = React.memo<DialogListItemProps>(
   ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory }) => {
     return (
-      <div
+      <motion.div
         role="option"
         tabIndex={0}
         aria-selected={isSelected}
@@ -732,10 +733,20 @@ export const DialogListItem = React.memo<DialogListItemProps>(
             onSelect(dialog.id)
           }
         }}
+        whileTap={{ scale: 0.985 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
         className={`chat-virtual-item px-3 py-2.5 transition-colors cursor-pointer border-b border-white/5 relative group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/50 ${
           isSelected ? 'bg-primary-600/20' : 'hover:bg-dark-800/60'
         }`}
       >
+        {/* Active Selection Accent Bar */}
+        {isSelected && (
+          <motion.div
+            layoutId="activeChatBar"
+            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary-400 shadow-glow"
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          />
+        )}
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
             {story ? (
@@ -879,7 +890,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     )
   },
   (prev, next) => {
