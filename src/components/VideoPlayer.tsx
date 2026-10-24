@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   Play,
   Pause,
@@ -297,14 +298,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Close button top-right */}
       {onClose && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           type="button"
           onClick={onClose}
-          className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/60 hover:bg-black/85 text-white backdrop-blur-md transition-all z-30 cursor-pointer shadow-md hover:scale-105"
+          className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/60 hover:bg-black/85 text-white backdrop-blur-md transition-colors z-30 cursor-pointer shadow-md"
           title="Close Player (Esc)"
         >
           <X className="w-4 h-4" />
-        </button>
+        </motion.button>
       )}
 
       {/* Video Name Badge top-left */}
@@ -321,36 +324,52 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="text-sm font-semibold text-gray-100">Unable to stream video</div>
           <p className="text-xs text-gray-400 max-w-xs">The video format may require downloading or external playback.</p>
           {onDownload && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               type="button"
               onClick={onDownload}
-              className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-glow transition-all"
+              className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-glow transition-colors"
             >
               <Download className="w-4 h-4" />
               <span>Download Video File</span>
-            </button>
+            </motion.button>
           )}
         </div>
       )}
 
       {/* Center Play/Pause indicator overlay when paused */}
-      {!isPlaying && !hasError && (
-        <div
-          onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-15"
-        >
-          <div className="w-16 h-16 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:scale-110 hover:bg-primary-600 transition-all shadow-2xl">
-            <Play className="w-7 h-7 fill-current ml-1" />
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {!isPlaying && !hasError && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            onClick={togglePlay}
+            className="absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-15"
+          >
+            <motion.div
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.92 }}
+              className="w-16 h-16 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-2xl"
+            >
+              <Play className="w-7 h-7 fill-current ml-1" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Custom Bottom Controls Bar */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col gap-2 transition-opacity duration-200 z-25 ${
-          showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
+      <AnimatePresence>
+        {(showControls || !isPlaying) && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.2 }}
+            className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex flex-col gap-2 z-25"
+          >
         {/* Scrubber Seek Bar with Buffered Track & Hover Timestamp Tooltip */}
         <div
           className="relative flex items-center group/scrub py-1 cursor-pointer"
@@ -515,7 +534,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </button>
           </div>
         </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
