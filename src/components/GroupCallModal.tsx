@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   Mic,
@@ -312,8 +313,13 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-200">
-      <div
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 16 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
         className={`w-full bg-dark-900 border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 select-none ${
           isFullscreen ? 'w-full h-full rounded-none' : 'max-w-4xl h-[650px]'
         }`}
@@ -580,7 +586,7 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
             <PhoneOff className="w-5 h-5" />
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
