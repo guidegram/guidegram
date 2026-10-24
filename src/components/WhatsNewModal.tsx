@@ -23,8 +23,32 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
+    // v2.1.0: Apple & Telegram iOS-Grade 50-Phase Visual & Fluid Motion Architecture
+    if (cleanVer.startsWith('2.1') || cleanVer >= '2.1.0') {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: 'Apple & Telegram Fluid Kinematics',
+          desc: '50-phase comprehensive visual evolution with high-fidelity spring physics, shared layout tabs, and ultra-fluid micro-interactions.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: 'Haptic Tactile Micro-Interactions',
+          desc: 'Tactile responsive feedback on all action buttons, dialogs, drawers, audio/video players, and unified inbox rows.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: 'MTProto Layer 229+ & Zero-Loss Vault',
+          desc: 'Complete Telegram protocol coverage with bulletproof session security and instant multi-DC media pipeline.',
+        },
+      ]
+    }
+
     // v2.0.0: MTProto Layer 229+ Full Parity (859 Methods), Turbo Multi-DC Media Engine, Session Vault
-    if (cleanVer.startsWith('2.') || cleanVer >= '2.0.0') {
+    if (cleanVer.startsWith('2.0') || cleanVer >= '2.0.0') {
       return [
         {
           icon: Zap,

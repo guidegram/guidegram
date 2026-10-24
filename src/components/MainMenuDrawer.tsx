@@ -94,7 +94,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   const [joinLink, setJoinLink] = useState('')
   const [joinStatus, setJoinStatus] = useState<string | null>(null)
   const [isJoining, setIsJoining] = useState(false)
-  const [appVersion, setAppVersion] = useState<string>('2.0.0')
+  const [appVersion, setAppVersion] = useState<string>('2.1.0')
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<string | null>(null)
 
