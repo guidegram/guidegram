@@ -829,7 +829,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                       />
                     )}
 
-                    <span className="truncate">
+                    <span className="truncate font-persian" dir="auto">
                       {dialog.lastMessageText || '...'}
                     </span>
                   </>

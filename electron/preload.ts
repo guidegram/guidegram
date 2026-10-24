@@ -288,8 +288,8 @@ const guidegramAPI = {
     revoke?: boolean
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-messages', { accountId, chatId, messageIds, revoke }),
-  getProfilePhoto: (accountId: string, peerId: string, isBig?: boolean): Promise<string | null> =>
-    ipcRenderer.invoke('telegram:get-profile-photo', { accountId, peerId, isBig }),
+  getProfilePhoto: (accountId: string, peerId: string, isBig?: boolean, forceRefresh?: boolean): Promise<string | null> =>
+    ipcRenderer.invoke('telegram:get-profile-photo', { accountId, peerId, isBig, forceRefresh }),
   downloadMedia: (
     accountId: string,
     chatId: string,

@@ -39,7 +39,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Segoe UI', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Vazirmatn', 'Open Sans', 'Segoe UI', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        persian: ['Vazirmatn', 'Vazir', 'Tahoma', 'sans-serif'],
       },
       boxShadow: {
         'glow': '0 0 25px -4px rgba(57, 198, 164, 0.38)',

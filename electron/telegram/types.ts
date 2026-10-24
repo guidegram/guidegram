@@ -59,6 +59,7 @@ export interface AccountInfo {
   isPremium?: boolean
   isBot?: boolean
   botToken?: string
+  photoId?: string
   sessionString?: string
   deviceProfile?: {
     deviceModel: string
@@ -118,7 +119,7 @@ export interface DialogItem {
   lastMessageId?: number
   lastMessageIsOutgoing?: boolean
   lastMessageRead?: boolean
-  lastMessageMediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'round_video'
+  lastMessageMediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'round_video' | 'audio'
   lastMessageThumb?: string
   avatarInitials?: string
   avatarUrl?: string
@@ -245,7 +246,7 @@ export interface ReplyInfo {
   senderName?: string
   senderId?: string
   text?: string
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'audio'
   mediaThumbnailUrl?: string
   isVoice?: boolean
   isSticker?: boolean
@@ -265,7 +266,7 @@ export interface MessageEditRevision {
   text: string
   date: number
   entities?: MessageEntityItem[]
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media' | 'audio'
   mediaThumbnailUrl?: string
   strippedThumb?: string
 }
@@ -316,7 +317,9 @@ export interface MessageItem {
   isRoundVideo?: boolean
   voiceWaveform?: number[]
   reactions?: MessageReactionItem[]
-  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media'
+  mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media' | 'audio'
+  mediaTitle?: string
+  mediaPerformer?: string
   paidMediaStars?: number
   paidMediaCount?: number
   poll?: PollItem

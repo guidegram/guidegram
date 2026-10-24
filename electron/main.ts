@@ -1385,9 +1385,9 @@ function setupIpcHandlers() {
     }
   )
 
-  ipcMain.handle('telegram:get-profile-photo', async (_event, { accountId, peerId, isBig }) => {
+  ipcMain.handle('telegram:get-profile-photo', async (_event, { accountId, peerId, isBig, forceRefresh }: { accountId: string; peerId: string; isBig?: boolean; forceRefresh?: boolean }) => {
     try {
-      return await accountManager.getProfilePhoto(accountId, peerId, isBig)
+      return await accountManager.getProfilePhoto(accountId, peerId, isBig, forceRefresh)
     } catch (err: any) {
       Logger.warn(`[IPC] getProfilePhoto error:`, err)
       return null

@@ -521,7 +521,9 @@ export const CustomEmojiView: React.FC<{
     )
   }
 
-  if (payload?.url) {
+  const [hasError, setHasError] = useState(false)
+
+  if (payload?.url && !hasError) {
     return (
       <img
         src={payload.url}
@@ -529,6 +531,7 @@ export const CustomEmojiView: React.FC<{
         className={className}
         loading="lazy"
         draggable={false}
+        onError={() => setHasError(true)}
       />
     )
   }
@@ -546,14 +549,12 @@ export const TelegramBlockquote: React.FC<{
   return (
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
-      className={`my-2 p-3 rounded-xl bg-accent-cyan/10 border-l-[3.5px] border-accent-cyan rounded-l-xs rounded-r-xl pl-3.5 pr-3 text-gray-200 relative group/quote transition-all ${
-        isRtl ? 'text-right font-persian' : 'text-left font-latin'
+      className={`my-1.5 p-2.5 rounded-lg bg-accent-cyan/[0.08] text-gray-200 relative group/quote transition-all ${
+        isRtl
+          ? 'border-r-[3px] border-accent-cyan rounded-r-xs rounded-l-lg pr-3 pl-2.5 text-right font-persian'
+          : 'border-l-[3px] border-accent-cyan rounded-l-xs rounded-r-lg pl-3 pr-2.5 text-left font-latin'
       } ${collapsed ? 'max-h-24 overflow-hidden' : ''}`}
     >
-      <div className={`flex items-center gap-1.5 mb-1 text-accent-cyan select-none ${isRtl ? 'justify-start' : 'justify-start'}`}>
-        <span className="text-base font-serif font-black leading-none opacity-90">”</span>
-      </div>
-
       <div className="text-xs leading-relaxed break-words whitespace-pre-wrap select-text">
         {children}
       </div>
@@ -2966,7 +2967,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     if (entities && entities.length > 0) {
       const textIsRtl = isRTL(text)
 
-      const blockEntities = entities
+      const rawBlockEntities = entities
         .filter(
           (e) =>
             typeof e.offset === 'number' &&
@@ -2974,6 +2975,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             (e.type === 'blockquote' || e.type === 'expandable_blockquote' || e.type === 'pre')
         )
         .sort((a, b) => a.offset - b.offset)
+
+      // Merge adjacent or contiguous blockquotes into a single unified block
+      const blockEntities: typeof rawBlockEntities = []
+      for (const ent of rawBlockEntities) {
+        if (blockEntities.length > 0) {
+          const prev = blockEntities[blockEntities.length - 1]
+          const isBothQuotes =
+            (prev.type === 'blockquote' || prev.type === 'expandable_blockquote') &&
+            (ent.type === 'blockquote' || ent.type === 'expandable_blockquote')
+          const gap = text.slice(prev.offset + prev.length, ent.offset)
+          if (isBothQuotes && (!gap || gap.trim() === '')) {
+            const newEnd = ent.offset + ent.length
+            prev.length = newEnd - prev.offset
+            if (ent.type === 'expandable_blockquote') {
+              prev.type = 'expandable_blockquote'
+            }
+            continue
+          }
+        }
+        blockEntities.push({ ...ent })
+      }
 
       const inlineEntities = entities.filter(
         (e) => e.type !== 'blockquote' && e.type !== 'expandable_blockquote' && e.type !== 'pre'
@@ -3691,7 +3713,128 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
-    // 3. Document / File Card
+    // 3. Audio / Music Track Card (Telegram Parity)
+    const isAudioFile = msg.mediaType === 'audio' || (msg.mediaType === 'document' && /\.(mp3|m4a|wav|flac|ogg|aac|opus)$/i.test(msg.mediaFileName || ''))
+    if (isAudioFile) {
+      const isPlaying = playingVoiceId === msg.id
+      const isLoading = Boolean(loadingMediaIds[msg.id])
+      const isDownloaded = Boolean(mediaUrl)
+      const duration = msg.mediaDuration || 0
+      const currentPos = isPlaying ? voiceCurrentTime : 0
+      const trackTitle = msg.mediaTitle || msg.mediaFileName?.replace(/\.[^/.]+$/, '') || 'Audio Track'
+      const trackPerformer = msg.mediaPerformer || msg.senderName || 'Music'
+      const thumbSrc = msg.mediaThumbnailUrl || msg.strippedThumb || null
+
+      return (
+        <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-850/90 p-3 shadow-md">
+          <div className="flex items-center gap-3">
+            {/* Circular Album Thumbnail with Play/Pause button */}
+            <div className="relative w-12 h-12 rounded-full shrink-0 overflow-hidden bg-primary-600/30 border border-white/15 flex items-center justify-center group/album shadow-inner">
+              {thumbSrc ? (
+                <img
+                  src={thumbSrc}
+                  alt=""
+                  className="w-full h-full object-cover select-none"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-primary-700 to-accent-cyan/40 flex items-center justify-center">
+                  <Music className="w-5 h-5 text-accent-cyan" />
+                </div>
+              )}
+
+              {/* Play / Pause overlay */}
+              <button
+                type="button"
+                onClick={() => handlePlayVoice(msg)}
+                title={isPlaying ? 'Pause' : 'Play Music'}
+                className="absolute inset-0 bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-all cursor-pointer backdrop-blur-[1px]"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : isPlaying ? (
+                  <Pause className="w-5 h-5 fill-current" />
+                ) : (
+                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                )}
+              </button>
+            </div>
+
+            {/* Title, Performer & Scrubber */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-1 mb-0.5">
+                <span className="text-xs font-bold text-gray-100 truncate select-text" title={trackTitle}>
+                  {trackTitle}
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono shrink-0 ml-1">
+                  {isPlaying ? formatDuration(Math.round(currentPos)) : (duration > 0 ? formatDuration(duration) : formatFileSize(msg.mediaFileSize))}
+                </span>
+              </div>
+
+              <div className="text-[11px] text-gray-400 truncate mb-1.5 select-text" title={trackPerformer}>
+                {trackPerformer}
+              </div>
+
+              {/* Interactive Scrubber */}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
+                  const ratio = rect.width > 0 ? clickX / rect.width : 0
+                  const newTime = ratio * duration
+                  if (isPlaying && audioPlayerRef.current) {
+                    audioPlayerRef.current.currentTime = newTime
+                    setVoiceCurrentTime(newTime)
+                  } else {
+                    handlePlayVoice(msg).then(() => {
+                      if (audioPlayerRef.current) {
+                        audioPlayerRef.current.currentTime = newTime
+                        setVoiceCurrentTime(newTime)
+                      }
+                    })
+                  }
+                }}
+                className="relative w-full h-1.5 bg-white/10 hover:h-2 rounded-full cursor-pointer overflow-hidden transition-all group/scrubber"
+              >
+                <div
+                  style={{
+                    width: `${duration > 0 ? Math.min(100, (currentPos / duration) * 100) : 0}%`,
+                  }}
+                  className="h-full bg-gradient-to-r from-primary-400 to-accent-cyan rounded-full transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Download / Save Button */}
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation()
+                if (isDownloaded) {
+                  if (window.guidegram?.saveMediaToFile) {
+                    await window.guidegram.saveMediaToFile(msg.accountId, msg.chatId, msg.id, msg.mediaFileName || `${trackTitle}.mp3`)
+                  }
+                } else {
+                  await requestMediaDownload(msg, false, true)
+                }
+              }}
+              title={isDownloaded ? 'Save File to Computer' : 'Download Audio'}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer shrink-0"
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+              ) : isDownloaded ? (
+                <Check className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // 4. Document / File Card
     if (msg.mediaType === 'document') {
       const isDownloaded = Boolean(mediaUrl)
       const isLoading = Boolean(loadingMediaIds[msg.id])
@@ -4215,7 +4358,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <button
               type="button"
               onClick={() => handlePlayVoice(playingVoiceMsg)}
-              className="w-8 h-8 rounded-full bg-accent-emerald text-white flex items-center justify-center shrink-0 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className={`w-8 h-8 rounded-full ${
+                playingVoiceMsg.mediaType === 'audio' || /\.(mp3|m4a|wav|flac|ogg|aac|opus)$/i.test(playingVoiceMsg.mediaFileName || '')
+                  ? 'bg-primary-500 hover:bg-primary-400'
+                  : 'bg-accent-emerald hover:bg-accent-emerald/80'
+              } text-white flex items-center justify-center shrink-0 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer`}
               title={audioPlayerRef.current && !audioPlayerRef.current.paused ? 'Pause' : 'Play'}
             >
               {audioPlayerRef.current && !audioPlayerRef.current.paused ? (
@@ -4229,9 +4376,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between text-[11px] mb-1">
                 <div className="flex items-center gap-1.5 truncate">
-                  <Mic className="w-3 h-3 text-accent-emerald shrink-0" />
+                  {playingVoiceMsg.mediaType === 'audio' || /\.(mp3|m4a|wav|flac|ogg|aac|opus)$/i.test(playingVoiceMsg.mediaFileName || '') ? (
+                    <Music className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
+                  ) : (
+                    <Mic className="w-3 h-3 text-accent-emerald shrink-0" />
+                  )}
                   <span className="font-semibold text-white truncate">
-                    {playingVoiceMsg.senderName || t('voice.voice_message') || 'Voice Message'}
+                    {playingVoiceMsg.mediaTitle
+                      ? `${playingVoiceMsg.mediaPerformer ? playingVoiceMsg.mediaPerformer + ' – ' : ''}${playingVoiceMsg.mediaTitle}`
+                      : (playingVoiceMsg.mediaFileName || playingVoiceMsg.senderName || t('voice.voice_message') || 'Voice Message')}
                   </span>
                 </div>
                 <div className="text-[10px] text-gray-400 font-mono shrink-0 ml-2">

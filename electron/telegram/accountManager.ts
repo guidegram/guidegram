@@ -992,18 +992,23 @@ export class AccountManager {
       if (me && me.id) {
         const isBot = Boolean(me.isBot || (me as any).bot || savedAcc.isBot)
         const accountId = me.id.toString()
-        let avatarUrl = savedAcc.avatarUrl
+        const currentPhotoId = (me.raw?.photo as any)?.photoId ? (me.raw.photo as any).photoId.toString() : (me.photo?.id ? me.photo.id.toString() : '')
+        const isPhotoChanged = Boolean(currentPhotoId && savedAcc.photoId && currentPhotoId !== savedAcc.photoId)
+        let avatarUrl = isPhotoChanged ? undefined : savedAcc.avatarUrl
 
         if (me.photo) {
           if (me.photo.small) this.peerPhotos.set(`${accountId}_${accountId}`, me.photo.small)
           if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, me.photo.big)
-          if (!avatarUrl) {
+          if (!avatarUrl || isPhotoChanged) {
             if (me.photo.thumb) {
               avatarUrl = `data:image/jpeg;base64,${Buffer.from(me.photo.thumb).toString('base64')}`
             } else if ((me.raw?.photo as any)?.strippedThumb) {
               avatarUrl = strippedThumbToDataUrl((me.raw.photo as any).strippedThumb) || undefined
             }
           }
+        } else if (!isBot) {
+          // User removed profile photo
+          avatarUrl = undefined
         }
 
         const updatedInfo: AccountInfo = {
@@ -1020,6 +1025,7 @@ export class AccountManager {
           isPremium: me.isPremium || false,
           isBot,
           botToken: savedAcc.botToken,
+          photoId: currentPhotoId || savedAcc.photoId,
           avatarUrl,
           deviceProfile: profile,
         }
@@ -1035,12 +1041,13 @@ export class AccountManager {
         const currentAccounts = this.store.getConfig().accounts.map((a) => (a.id === updatedInfo.id ? updatedInfo : a))
         this.store.updateConfig({ accounts: currentAccounts })
 
-        // Proactively ensure profile photo is downloaded to disk in background
+        // Proactively ensure profile photo is downloaded to disk in background (force if changed)
         if (me.photo || isBot) {
-          this.getProfilePhoto(accountId, accountId).then((fullPhoto) => {
-            if (fullPhoto && fullPhoto !== updatedInfo.avatarUrl) {
+          this.getProfilePhoto(accountId, accountId, false, isPhotoChanged).then((fullPhoto) => {
+            if (fullPhoto && (fullPhoto !== updatedInfo.avatarUrl || isPhotoChanged)) {
               updatedInfo.avatarUrl = fullPhoto
-              const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto } : a))
+              updatedInfo.photoId = currentPhotoId
+              const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto, photoId: currentPhotoId } : a))
               this.store.updateConfig({ accounts: accs })
               this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
             }
@@ -1906,7 +1913,7 @@ export class AccountManager {
         let lastMessageId: number | undefined = undefined
         let lastMessageIsOutgoing = false
         let lastMessageRead = false
-        let lastMessageMediaType: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'round_video' | undefined = undefined
+        let lastMessageMediaType: DialogItem['lastMessageMediaType'] = undefined
         let lastMessageThumb: string | undefined = undefined
 
         if (d.lastMessage) {
@@ -1934,7 +1941,10 @@ export class AccountManager {
                     } else if (attr._ === 'documentAttributeVideo') {
                       lastMessageMediaType = attr.roundMessage ? 'round_video' : 'video'
                     } else if (attr._ === 'documentAttributeAudio') {
-                      lastMessageMediaType = attr.voice ? 'voice' : 'document'
+                      lastMessageMediaType = attr.voice ? 'voice' : 'audio'
+                      if (!attr.voice && attr.title) {
+                        lastMessageText = attr.performer ? `${attr.performer} – ${attr.title}` : attr.title
+                      }
                     }
                   }
                 }
@@ -1946,7 +1956,8 @@ export class AccountManager {
           if (d.lastMessage.text) {
             lastMessageText = d.lastMessage.text
           } else if (!lastMessageText && lastMessageMediaType) {
-            if (lastMessageMediaType === 'photo') lastMessageText = '[Photo]'
+            if (lastMessageMediaType === 'audio') lastMessageText = '[Audio]'
+            else if (lastMessageMediaType === 'photo') lastMessageText = '[Photo]'
             else if (lastMessageMediaType === 'sticker') lastMessageText = '[Sticker]'
             else if (lastMessageMediaType === 'video') lastMessageText = '[Video]'
             else if (lastMessageMediaType === 'voice') lastMessageText = '[Voice message]'
@@ -2433,6 +2444,8 @@ export class AccountManager {
         let mediaFileName: string | undefined = undefined
         let mediaFileSize: number | undefined = undefined
         let mediaDuration: number | undefined = undefined
+        let mediaTitle: string | undefined = undefined
+        let mediaPerformer: string | undefined = undefined
         let strippedThumb: string | undefined = undefined
         let isVoice = false
         let isRoundVideo = false
@@ -2463,6 +2476,10 @@ export class AccountManager {
                     if (attr.voice) {
                       isVoice = true
                       mediaType = 'voice'
+                    } else {
+                      mediaType = 'audio'
+                      mediaTitle = attr.title
+                      mediaPerformer = attr.performer
                     }
                   }
                   if (attr._ === 'documentAttributeVideo') {
@@ -2681,6 +2698,8 @@ export class AccountManager {
           mediaFileName,
           mediaFileSize,
           mediaDuration,
+          mediaTitle,
+          mediaPerformer,
           strippedThumb,
           isVoice,
           voiceWaveform,
@@ -2717,12 +2736,12 @@ export class AccountManager {
   }
 
 
-  public async getProfilePhoto(accountId: string, peerId: string, isBig = false): Promise<string | null> {
+  public async getProfilePhoto(accountId: string, peerId: string, isBig = false, forceRefresh = false): Promise<string | null> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
 
     const cacheKey = `${accountId}_${peerId}${isBig ? '_big' : ''}`
-    if (this.avatarCache.has(cacheKey)) {
+    if (!forceRefresh && this.avatarCache.has(cacheKey)) {
       const cached = this.avatarCache.get(cacheKey)!
       // Real downloaded profile photos are full JPEGs (length > 2000 chars base64)
       // Stripped thumbnails are tiny (< 1500 chars). NEVER treat a low-res thumbnail as a finished profile photo!
@@ -2739,21 +2758,30 @@ export class AccountManager {
         path.join(this.avatarsDir, baseName),
       ]
 
-      for (const p of candidateFiles) {
-        if (fs.existsSync(p)) {
+      if (forceRefresh) {
+        this.avatarCache.delete(cacheKey)
+        for (const p of candidateFiles) {
           try {
-            const stat = fs.statSync(p)
-            if (stat.size === 0) {
-              fs.unlinkSync(p)
-            } else {
-              const data = await fs.promises.readFile(p)
-              if (data.length > 0) {
-                const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
-                this.avatarCache.set(cacheKey, dataUrl)
-                return dataUrl
-              }
-            }
+            if (fs.existsSync(p)) fs.unlinkSync(p)
           } catch {}
+        }
+      } else {
+        for (const p of candidateFiles) {
+          if (fs.existsSync(p)) {
+            try {
+              const stat = fs.statSync(p)
+              if (stat.size === 0) {
+                fs.unlinkSync(p)
+              } else {
+                const data = await fs.promises.readFile(p)
+                if (data.length > 0) {
+                  const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+                  this.avatarCache.set(cacheKey, dataUrl)
+                  return dataUrl
+                }
+              }
+            } catch {}
+          }
         }
       }
 
@@ -3399,13 +3427,38 @@ export class AccountManager {
       const filePath = path.join(this.mediaDir, `emoji_${documentId}${ext}`)
 
       if (!fs.existsSync(filePath)) {
-        await holder.client.downloadToFile(filePath, doc)
+        const targetLoc: tl.TypeInputFileLocation = {
+          _: 'inputDocumentFileLocation',
+          id: doc.id,
+          accessHash: doc.accessHash,
+          fileReference: doc.fileReference || Buffer.alloc(0),
+          thumbSize: '',
+        }
+        await holder.client.downloadToFile(filePath, targetLoc as any).catch(async () => {
+          if (doc.thumbs && doc.thumbs.length > 0) {
+            const thumb = doc.thumbs[doc.thumbs.length - 1]
+            if (thumb && (thumb as any).type) {
+              const thumbLoc: tl.TypeInputFileLocation = {
+                _: 'inputDocumentFileLocation',
+                id: doc.id,
+                accessHash: doc.accessHash,
+                fileReference: doc.fileReference || Buffer.alloc(0),
+                thumbSize: (thumb as any).type,
+              }
+              if (holder?.client) {
+                await holder.client.downloadToFile(filePath, thumbLoc as any).catch(() => {})
+              }
+            }
+          }
+        })
       }
 
-      const streamUrl = `guidegram-media://${filePath.replace(/\\/g, '/')}`
+      // Check if file exists and has content
+      const fileValid = fs.existsSync(filePath) && fs.statSync(filePath).size > 0
+      const streamUrl = fileValid ? `guidegram-media://${filePath.replace(/\\/g, '/')}` : ''
 
       let payload: CustomEmojiPayload
-      if (isLottie) {
+      if (isLottie && fileValid) {
         try {
           const raw = await fs.promises.readFile(filePath)
           const decompressed = zlib.gunzipSync(raw)
@@ -3414,10 +3467,17 @@ export class AccountManager {
         } catch (_) {
           payload = { format: 'image', url: streamUrl }
         }
-      } else if (isVideo) {
+      } else if (isVideo && fileValid) {
         payload = { format: 'video', url: streamUrl }
-      } else {
+      } else if (streamUrl) {
         payload = { format: 'image', url: streamUrl }
+      } else {
+        const stripped = extractStrippedThumb(doc)
+        if (stripped) {
+          payload = { format: 'image', url: stripped }
+        } else {
+          return null
+        }
       }
 
       this.customEmojiCache.set(documentId, payload)
@@ -10358,6 +10418,8 @@ export class AccountManager {
         let mediaFileName: string | undefined = undefined
         let mediaFileSize: number | undefined = undefined
         let mediaDuration: number | undefined = undefined
+        let mediaTitle: string | undefined = undefined
+        let mediaPerformer: string | undefined = undefined
         let strippedThumb: string | undefined = undefined
         let isVoice = false
         let isRoundVideo = false
@@ -10386,6 +10448,10 @@ export class AccountManager {
                     if (attr.voice) {
                       isVoice = true
                       mediaType = 'voice'
+                    } else {
+                      mediaType = 'audio'
+                      mediaTitle = attr.title
+                      mediaPerformer = attr.performer
                     }
                   }
                   if (attr._ === 'documentAttributeVideo') {
@@ -10534,6 +10600,8 @@ export class AccountManager {
           mediaFileName,
           mediaFileSize,
           mediaDuration,
+          mediaTitle,
+          mediaPerformer,
           strippedThumb,
           isVoice,
           voiceWaveform,
