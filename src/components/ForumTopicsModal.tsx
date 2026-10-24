@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -282,8 +283,12 @@ export const ForumTopicsModal: React.FC<ForumTopicsModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <div
-        className="relative flex flex-col w-full max-w-xl max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 12 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+        className="relative flex flex-col w-full max-w-xl max-h-[92vh] bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="px-5 py-4 bg-dark-850/90 border-b border-white/10 flex items-center justify-between shrink-0 select-none">
@@ -641,7 +646,7 @@ export const ForumTopicsModal: React.FC<ForumTopicsModalProps> = ({
             })}
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

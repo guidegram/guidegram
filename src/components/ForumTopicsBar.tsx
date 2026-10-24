@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'motion/react'
 import { Hash, Layers, Lock, Pin, Settings2 } from 'lucide-react'
 import { ForumTopicItem } from '../types/telegram'
 import { isRTL } from '../utils/textUtils'
@@ -24,12 +25,19 @@ export const ForumTopicsBar: React.FC<ForumTopicsBarProps> = ({
   if ((!topics || topics.length === 0) && !canManage) return null
 
   return (
-    <div className="h-10 shrink-0 bg-dark-900/90 border-b border-white/5 px-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none z-10 backdrop-blur-md">
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+      className="h-10 shrink-0 bg-dark-900/90 border-b border-white/5 px-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none z-10 backdrop-blur-md"
+    >
       {topics.length > 0 && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.95 }}
           type="button"
           onClick={() => onSelectTopic(null)}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-colors cursor-pointer ${
             activeTopicId === null
               ? 'bg-primary-600 text-white shadow-glow'
               : 'bg-dark-800/80 text-gray-400 hover:text-gray-200 hover:bg-dark-750 border border-white/5'
@@ -37,7 +45,7 @@ export const ForumTopicsBar: React.FC<ForumTopicsBarProps> = ({
         >
           <Layers className="w-3.5 h-3.5 shrink-0" />
           <span>{t('forum_topics.all')}</span>
-        </button>
+        </motion.button>
       )}
 
       {topics.map((topic) => {
@@ -54,13 +62,15 @@ export const ForumTopicsBar: React.FC<ForumTopicsBarProps> = ({
         ].filter(Boolean)
 
         return (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
             key={topic.id}
             type="button"
             onClick={() => onSelectTopic(topic.id)}
             dir={rtl ? 'rtl' : 'ltr'}
             title={`${title}${badges.length ? ` • ${badges.join(' • ')}` : ''}`}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition-all cursor-pointer max-w-[200px] truncate ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer max-w-[200px] truncate ${
               isActive
                 ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40 shadow-glow'
                 : 'bg-dark-800/80 text-gray-300 hover:text-white hover:bg-dark-750 border border-white/5'
@@ -81,20 +91,22 @@ export const ForumTopicsBar: React.FC<ForumTopicsBarProps> = ({
                 {formatNumber(topic.unreadCount)}
               </span>
             ) : null}
-          </button>
+          </motion.button>
         )
       })}
 
       {canManage && onManage && (
-        <button
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.95 }}
           type="button"
           onClick={onManage}
-          className="ms-auto flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer bg-dark-800/80 text-gray-300 hover:text-white hover:bg-dark-750 border border-white/5"
+          className="ms-auto flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-colors cursor-pointer bg-dark-800/80 text-gray-300 hover:text-white hover:bg-dark-750 border border-white/5"
         >
           <Settings2 className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
           <span>{t('forum_topics.manage')}</span>
-        </button>
+        </motion.button>
       )}
-    </div>
+    </motion.div>
   )
 }
