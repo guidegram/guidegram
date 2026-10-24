@@ -11,6 +11,7 @@ import type { WebPagePreview, McpServerConfig } from './telegram/types'
 import { GuidegramMcpServer } from './mcp/mcpServer'
 import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSchema, AccountIdSchema } from './ipcValidation'
 import { globalIpcRateLimiter } from './rateLimiter'
+import { idempotencyManager } from './idempotency'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1173,9 +1174,12 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:send-message', async (_event, { accountId, chatId, text, replyToMsgId, options }) => {
+  ipcMain.handle('telegram:send-message', async (_event, { accountId, chatId, text, replyToMsgId, options, idempotencyKey }) => {
     try {
-      return await accountManager.sendMessage(accountId, chatId, text, replyToMsgId, options)
+      const key = idempotencyKey || idempotencyManager.generateKey('send-message', { accountId, chatId, text, replyToMsgId })
+      return await idempotencyManager.execute(key, () =>
+        accountManager.sendMessage(accountId, chatId, text, replyToMsgId, options)
+      )
     } catch (err: any) {
       Logger.error(`[IPC] sendMessage failed:`, err)
       throw err
@@ -1769,9 +1773,12 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:send-reaction', async (_event, { accountId, chatId, messageId, reactionEmoji }) => {
+  ipcMain.handle('telegram:send-reaction', async (_event, { accountId, chatId, messageId, reactionEmoji, idempotencyKey }) => {
     try {
-      return await accountManager.sendReaction(accountId, chatId, messageId, reactionEmoji)
+      const key = idempotencyKey || idempotencyManager.generateKey('send-reaction', { accountId, chatId, messageId, reactionEmoji })
+      return await idempotencyManager.execute(key, () =>
+        accountManager.sendReaction(accountId, chatId, messageId, reactionEmoji)
+      )
     } catch (err: any) {
       Logger.warn(`[IPC] sendReaction error:`, err)
       throw err
