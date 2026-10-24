@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion } from 'motion/react'
 import {
   Send,
   Forward,
@@ -5130,9 +5131,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       return (
                         <div className="flex items-center gap-1 flex-wrap mt-2 pt-1">
                           {effectiveRx.map((rx, rIdx) => (
-                            <button
+                            <motion.button
                               key={rIdx}
                               type="button"
+                              whileHover={{ scale: 1.12 }}
+                              whileTap={{ scale: 0.88 }}
+                              transition={{ type: 'spring', stiffness: 500, damping: 22 }}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (rx.isPaid || rx.emoji === '⭐️') {
@@ -5141,7 +5145,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                   handleToggleReaction(msg, rx.emoji)
                                 }
                               }}
-                              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-all hover:scale-105 active:scale-95 select-none cursor-pointer ${
+                              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-colors select-none cursor-pointer ${
                                 rx.isPaid || rx.emoji === '⭐️'
                                   ? 'bg-amber-500/20 border-amber-400/50 text-amber-300 shadow-glow'
                                   : rx.chosen
@@ -5152,7 +5156,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             >
                               <span>{rx.emoji}</span>
                               <span className="text-[10px] opacity-80">{rx.count}</span>
-                            </button>
+                            </motion.button>
                           ))}
                         </div>
                       )
