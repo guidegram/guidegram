@@ -155,13 +155,22 @@ export class GuidegramMcpServer {
   }
 
   private async handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    // Enable CORS for local AI host tools and web extensions
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    // MM-005: Strict CORS Scoping - never use wildcard * on authenticated or local tool endpoints
+    const origin = req.headers.origin
+    const isAllowedOrigin = origin && (
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      /^vscode-webview:\/\/[a-z0-9-]+$/.test(origin)
+    )
+
+    if (isAllowedOrigin && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin)
+      res.setHeader('Vary', 'Origin')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    }
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(204)
+      res.writeHead(isAllowedOrigin ? 204 : 403)
       res.end()
       return
     }
