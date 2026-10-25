@@ -15,6 +15,7 @@ import { idempotencyManager } from './idempotency'
 import { offlineQueue } from './offlineQueue'
 import { SecurityGuardrails } from './securityGuardrails'
 import { memoryMonitor } from './memoryMonitor'
+import { SafeDownloader } from './safeDownloader'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1395,26 +1396,33 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:save-temp-file', async (_event, { buffer, filename }: { buffer: ArrayBuffer | Uint8Array; filename: string }) => {
     const tempDir = app.getPath('temp')
-    const ext = path.extname(filename || '')
-    const base = path.basename(filename || 'temp', ext).replace(/[^a-zA-Z0-9._-]/g, '_')
-    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const safeName = `${base}_${uniqueSuffix}${ext || (filename?.includes('voice') ? '.ogg' : '.bin')}`
-    const targetPath = path.join(tempDir, safeName)
+    const sanitized = SafeDownloader.sanitizeFilename(filename, 'temp_media.bin')
+    const safeTarget = SafeDownloader.resolveSafePath(tempDir, sanitized)
+    const nonColliding = SafeDownloader.getNonCollidingPath(safeTarget)
     const nodeBuf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as any)
-    await fs.promises.writeFile(targetPath, nodeBuf)
-    return targetPath
+    await fs.promises.writeFile(nonColliding, nodeBuf)
+    return nonColliding
   })
 
   ipcMain.handle('temp:save-file', async (_event, params: { buffer: ArrayBuffer | Uint8Array; filename: string }) => {
     const tempDir = app.getPath('temp')
-    const ext = path.extname(params.filename || '')
-    const base = path.basename(params.filename || 'temp', ext).replace(/[^a-zA-Z0-9._-]/g, '_')
-    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const safeName = `${base}_${uniqueSuffix}${ext || '.bin'}`
-    const targetPath = path.join(tempDir, safeName)
+    const sanitized = SafeDownloader.sanitizeFilename(params.filename, 'temp_file.bin')
+    const safeTarget = SafeDownloader.resolveSafePath(tempDir, sanitized)
+    const nonColliding = SafeDownloader.getNonCollidingPath(safeTarget)
     const nodeBuf = Buffer.isBuffer(params.buffer) ? params.buffer : Buffer.from(params.buffer as any)
-    await fs.promises.writeFile(targetPath, nodeBuf)
-    return targetPath
+    await fs.promises.writeFile(nonColliding, nodeBuf)
+    return nonColliding
+  })
+
+  ipcMain.handle('system:show-in-folder', async (_event, { filePath }: { filePath: string }) => {
+    if (!filePath || typeof filePath !== 'string') return false
+    try {
+      shell.showItemInFolder(path.normalize(filePath))
+      return true
+    } catch (err) {
+      Logger.warn('[IPC] showItemInFolder error:', err)
+      return false
+    }
   })
 
   ipcMain.handle(
