@@ -79,6 +79,7 @@ import {
   Settings,
   FolderDown,
   Palette,
+  Briefcase,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -104,6 +105,7 @@ import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
 import { GameScoreModal } from './GameScoreModal'
 import { AutoDeleteModal } from './AutoDeleteModal'
 import { ChatThemeModal, OFFICIAL_CHAT_THEMES } from './chat/ChatThemeModal'
+import { BusinessSettingsModal } from './chat/BusinessSettingsModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
@@ -716,6 +718,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isSecretFingerprintOpen, setIsSecretFingerprintOpen] = useState(false)
   const [isAutoDeleteModalOpen, setIsAutoDeleteModalOpen] = useState(false)
   const [isChatThemeModalOpen, setIsChatThemeModalOpen] = useState(false)
+  const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false)
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -4730,6 +4733,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-violet border border-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center"
           >
             <Palette className="w-4 h-4 text-accent-violet" />
+          </button>
+
+          {/* Telegram Business Suite Modal Trigger */}
+          <button
+            onClick={() => setIsBusinessModalOpen(true)}
+            title="Business Hours & Auto-Replies"
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-cyan border border-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center"
+          >
+            <Briefcase className="w-4 h-4 text-accent-cyan" />
           </button>
 
           {/* Chat Info Drawer Button */}
@@ -8904,6 +8916,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           currentWallpaper={chatDetails?.chatWallpaper || chat.chatWallpaper}
           onSelectTheme={handleSetChatTheme}
           onClose={() => setIsChatThemeModalOpen(false)}
+        />
+      )}
+
+      {/* 20. Telegram Business Hours & Auto-Replies Modal */}
+      {isBusinessModalOpen && chat && (
+        <BusinessSettingsModal
+          isOpen={isBusinessModalOpen}
+          accountId={chat.accountId}
+          onClose={() => setIsBusinessModalOpen(false)}
         />
       )}
     </div>

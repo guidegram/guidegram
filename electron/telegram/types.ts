@@ -1612,5 +1612,27 @@ export interface QuickReplyShortcutItem {
   }>
 }
 
+export interface BusinessGreetingConfig {
+  shortcutId: number
+  recipients?: {
+    existingChats?: boolean
+    newChats?: boolean
+    contacts?: boolean
+    nonContacts?: boolean
+    excludeSelected?: boolean
+  }
+  noActivityDays?: number
+}
 
-
+export interface BusinessAwayConfig {
+  shortcutId: number
+  recipients?: {
+    existingChats?: boolean
+    newChats?: boolean
+    contacts?: boolean
+    nonContacts?: boolean
+    excludeSelected?: boolean
+  }
+  schedule?: 'always' | 'outsideHours' | 'custom'
+  offlineOnly?: boolean
+}

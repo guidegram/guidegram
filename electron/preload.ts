@@ -657,6 +657,16 @@ const guidegramAPI = {
     location: { address: string; lat?: number; long?: number } | null
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:update-business-location', { accountId, location }),
+  updateBusinessGreetingMessage: (
+    accountId: string,
+    greeting: { shortcutId: number; noActivityDays?: number } | null
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-business-greeting-message', { accountId, greeting }),
+  updateBusinessAwayMessage: (
+    accountId: string,
+    away: { shortcutId: number; offlineOnly?: boolean; schedule?: string } | null
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-business-away-message', { accountId, away }),
   createBusinessChatLink: (
     accountId: string,
     link: { message: string; title?: string }

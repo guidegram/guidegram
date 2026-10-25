@@ -9750,6 +9750,73 @@ export class AccountManager {
     }
   }
 
+  public async updateBusinessGreetingMessage(
+    accountId: string,
+    greeting: { shortcutId: number; noActivityDays?: number } | null
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.updateBusinessGreetingMessage',
+        message: greeting
+          ? {
+              _: 'inputBusinessGreetingMessage',
+              shortcutId: Number(greeting.shortcutId),
+              noActivityDays: greeting.noActivityDays || 7,
+              recipients: {
+                _: 'inputBusinessRecipients',
+                existingChats: false,
+                newChats: true,
+                contacts: false,
+                nonContacts: true,
+              },
+            }
+          : undefined,
+      } as any)
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] updateBusinessGreetingMessage error:', err)
+      return false
+    }
+  }
+
+  public async updateBusinessAwayMessage(
+    accountId: string,
+    away: { shortcutId: number; offlineOnly?: boolean; schedule?: string } | null
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.updateBusinessAwayMessage',
+        message: away
+          ? {
+              _: 'inputBusinessAwayMessage',
+              shortcutId: Number(away.shortcutId),
+              offlineOnly: Boolean(away.offlineOnly),
+              schedule: {
+                _: away.schedule === 'outsideHours' ? 'businessAwayMessageScheduleOutsideWorkHours' : 'businessAwayMessageScheduleAlways',
+              },
+              recipients: {
+                _: 'inputBusinessRecipients',
+                existingChats: true,
+                newChats: true,
+                contacts: true,
+                nonContacts: true,
+              },
+            }
+          : undefined,
+      } as any)
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] updateBusinessAwayMessage error:', err)
+      return false
+    }
+  }
+
   public async createBusinessChatLink(
     accountId: string,
     link: { message: string; title?: string }

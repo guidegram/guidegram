@@ -2196,6 +2196,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:update-business-greeting-message', async (_event, { accountId, greeting }) => {
+    try {
+      return await accountManager.updateBusinessGreetingMessage(accountId, greeting)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateBusinessGreetingMessage error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-business-away-message', async (_event, { accountId, away }) => {
+    try {
+      return await accountManager.updateBusinessAwayMessage(accountId, away)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateBusinessAwayMessage error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:create-business-chat-link', async (_event, { accountId, link }) => {
     try {
       return await accountManager.createBusinessChatLink(accountId, link)
