@@ -993,3 +993,22 @@ textarea:focus-visible {
   background: linear-gradient(135deg, rgba(14, 116, 144, 0.12) 0%, rgba(56, 189, 248, 0.04) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* ==========================================================================
+   Phase 125: Dynamic Cosmic Nebula & Deep Space Stardust Shaders
+   Swirling interstellar gas clouds and twinkling celestial starfield
+   ========================================================================== */
+.cosmic-nebula-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  will-change: transform;
+}
+
+.celestial-ambient-backdrop {
+  background: radial-gradient(circle at 50% 30%, rgba(217, 70, 239, 0.12) 0%, rgba(99, 102, 241, 0.08) 50%, #0b0f19 100%);
+  pointer-events: none;
+}
