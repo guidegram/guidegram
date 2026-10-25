@@ -1,0 +1,5 @@
+Phase 24: Strict Type Safety & No any in IPC Preload Bridge (Layer 02)
+- Replaced 30+ loose `Promise<any>` and `any` parameters in `electron/preload.ts` with strongly-typed `Record<string, unknown>`, `DialogItem | null`, `Array<Record<string, unknown>>`, and typed arrays across contacts, channels, bots, payments, wallet, ton, and messaging APIs.
+- Preserved event listener compatibility for renderer components while tightening internal IPC boundaries.
+- Created `tests/preload_types_verification.mjs` verifying zero `Promise<any>` or loose any parameters in preload bridge and ensuring bundle integrity.
+- Built full project with `npm run build` (tsc + vite) passing cleanly with zero type errors.

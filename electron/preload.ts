@@ -394,7 +394,7 @@ const guidegramAPI = {
     settings: ChatSettingsInput
   ): Promise<ChatSettingsUpdateResult> =>
     ipcRenderer.invoke('telegram:update-chat-settings', { accountId, chatId, settings }),
-  resolvePeer: (accountId: string, target: string): Promise<any> =>
+  resolvePeer: (accountId: string, target: string): Promise<DialogItem | null> =>
     ipcRenderer.invoke('telegram:resolve-peer', { accountId, target }),
   toggleChatNotifications: (accountId: string, chatId: string, mute: boolean): Promise<boolean> =>
     ipcRenderer.invoke('telegram:toggle-chat-notifications', { accountId, chatId, mute }),
@@ -491,9 +491,9 @@ const guidegramAPI = {
     startParam?: string
   ): Promise<{ success: boolean; messageId?: number; error?: string }> =>
     ipcRenderer.invoke('telegram:start-bot', { accountId, botPeerId, startParam }),
-  getBotInfo: (accountId: string, botPeerId: string): Promise<any> =>
+  getBotInfo: (accountId: string, botPeerId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-bot-info', { accountId, botPeerId }),
-  getBotMenuButton: (accountId: string, botPeerId: string): Promise<any> =>
+  getBotMenuButton: (accountId: string, botPeerId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-bot-menu-button', { accountId, botPeerId }),
   getAdminLog: (
     accountId: string,
@@ -600,11 +600,11 @@ const guidegramAPI = {
     volume?: number
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:edit-group-call-participant', { accountId, callId, accessHash, participantId, muted, raiseHand, volume }),
-  getCallConfig: (accountId: string): Promise<any> =>
+  getCallConfig: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-call-config', { accountId }),
-  requestCall: (accountId: string, userId: string, isVideo = false): Promise<any> =>
+  requestCall: (accountId: string, userId: string, isVideo = false): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:request-call', { accountId, userId, isVideo }),
-  acceptCall: (accountId: string, callId: string, accessHash: string, gBHex?: string): Promise<any> =>
+  acceptCall: (accountId: string, callId: string, accessHash: string, gBHex?: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:accept-call', { accountId, callId, accessHash, gBHex }),
   confirmCall: (
     accountId: string,
@@ -612,7 +612,7 @@ const guidegramAPI = {
     accessHash: string,
     gAHex?: string,
     keyFingerprint?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:confirm-call', {
       accountId,
       callId,
@@ -665,9 +665,9 @@ const guidegramAPI = {
     }),
 
   // End-to-End Secret Chats (MTProto messages.*)
-  getDhConfig: (accountId: string, version = 0, randomLength = 256): Promise<any> =>
+  getDhConfig: (accountId: string, version = 0, randomLength = 256): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-dh-config', { accountId, version, randomLength }),
-  requestEncryption: (accountId: string, userId: string, gAHex?: string): Promise<any> =>
+  requestEncryption: (accountId: string, userId: string, gAHex?: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:request-encryption', { accountId, userId, gAHex }),
   acceptEncryption: (
     accountId: string,
@@ -675,7 +675,7 @@ const guidegramAPI = {
     accessHash: string,
     gBHex?: string,
     keyFingerprint?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:accept-encryption', {
       accountId,
       chatId,
@@ -710,7 +710,7 @@ const guidegramAPI = {
     accessHash: string,
     dataHex: string,
     silent = false
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:send-encrypted', {
       accountId,
       chatId,
@@ -723,7 +723,7 @@ const guidegramAPI = {
     chatId: number,
     accessHash: string,
     dataHex: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:send-encrypted-service', {
       accountId,
       chatId,
@@ -732,7 +732,7 @@ const guidegramAPI = {
     }),
 
   // Telegram Ad Platform & Sponsored Messages
-  getSponsoredMessages: (accountId: string, peerId: string, msgId?: number): Promise<any> =>
+  getSponsoredMessages: (accountId: string, peerId: string, msgId?: number): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-sponsored-messages', { accountId, peerId, msgId }),
   viewSponsoredMessage: (accountId: string, randomIdHex: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:view-sponsored-message', { accountId, randomIdHex }),
@@ -752,7 +752,7 @@ const guidegramAPI = {
     accountId: string,
     randomIdHex: string,
     optionHex: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:report-sponsored-message', {
       accountId,
       randomIdHex,
@@ -776,7 +776,7 @@ const guidegramAPI = {
     accountId: string,
     query: string,
     type: 'username' | 'phone' = 'username'
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-collectible-info', { accountId, query, type }),
 
   // TON Center & Blockchain API
@@ -786,7 +786,7 @@ const guidegramAPI = {
     isPost = false,
     query?: string,
     payload?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:perform-ton-api-request', {
       accountId,
       endpoint,
@@ -794,11 +794,11 @@ const guidegramAPI = {
       query,
       payload,
     }),
-  getTonStreamingUrl: (accountId: string): Promise<any> =>
+  getTonStreamingUrl: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-ton-streaming-url', { accountId }),
 
   // Onramp Payments API
-  getOnrampProviders: (accountId: string, cryptoCurrency?: string): Promise<any> =>
+  getOnrampProviders: (accountId: string, cryptoCurrency?: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-onramp-providers', { accountId, cryptoCurrency }),
   getOnrampBaseCurrencies: (
     accountId: string,
@@ -811,7 +811,7 @@ const guidegramAPI = {
     provider: string,
     cryptoCurrency: string,
     baseCurrency?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-onramp-availability', { accountId, provider, cryptoCurrency, baseCurrency }),
   getOnrampLimits: (
     accountId: string,
@@ -819,7 +819,7 @@ const guidegramAPI = {
     cryptoCurrency: string,
     baseCurrency: string,
     paymentMethod?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-onramp-limits', { accountId, provider, cryptoCurrency, baseCurrency, paymentMethod }),
   getOnrampQuote: (
     accountId: string,
@@ -829,26 +829,26 @@ const guidegramAPI = {
     baseAmount?: string,
     cryptoAmount?: string,
     paymentMethod?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-onramp-quote', { accountId, provider, cryptoCurrency, baseCurrency, baseAmount, cryptoAmount, paymentMethod }),
   createOnrampSession: (
     accountId: string,
     provider: string,
     cryptoCurrency: string,
     address: string,
-    options?: any
-  ): Promise<any> =>
+    options?: Record<string, unknown>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:create-onramp-session', { accountId, provider, cryptoCurrency, address, options }),
 
   // Telegram Wallet & TonConnect API
-  getWalletState: (accountId: string): Promise<any> =>
+  getWalletState: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-wallet-state', { accountId }),
   getWalletUserAddresses: (
     accountId: string,
     userIds: string[],
     addresses: string[],
     force = false
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-wallet-user-addresses', { accountId, userIds, addresses, force }),
   getWalletTransactions: (
     accountId: string,
@@ -856,27 +856,27 @@ const guidegramAPI = {
     limit = 50,
     inbound = true,
     outbound = true
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-wallet-transactions', { accountId, offset, limit, inbound, outbound }),
-  getWalletNfts: (accountId: string, offset = '', limit = 50): Promise<any> =>
+  getWalletNfts: (accountId: string, offset = '', limit = 50): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-wallet-nfts', { accountId, offset, limit }),
-  getTonConnectSessions: (accountId: string): Promise<any> =>
+  getTonConnectSessions: (accountId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-ton-connect-sessions', { accountId }),
-  createTonConnectSession: (accountId: string, dappClientId: string, manifestUrl: string): Promise<any> =>
+  createTonConnectSession: (accountId: string, dappClientId: string, manifestUrl: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:create-ton-connect-session', { accountId, dappClientId, manifestUrl }),
   closeTonConnectSession: (accountId: string, sessionId: string | number, bodyHex?: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:close-ton-connect-session', { accountId, sessionId, bodyHex }),
 
   // Telegram Passport & Secure Documents API
-  getPassportConfig: (accountId: string, hash = 0): Promise<any> =>
+  getPassportConfig: (accountId: string, hash = 0): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-passport-config', { accountId, hash }),
-  getAllSecureValues: (accountId: string): Promise<any[]> =>
+  getAllSecureValues: (accountId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-all-secure-values', { accountId }),
-  getSecureValue: (accountId: string, types: any[]): Promise<any[]> =>
+  getSecureValue: (accountId: string, types: string[]): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-secure-value', { accountId, types }),
-  saveSecureValue: (accountId: string, value: any, secureSecretId: string | number): Promise<any> =>
+  saveSecureValue: (accountId: string, value: Record<string, unknown>, secureSecretId: string | number): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:save-secure-value', { accountId, value, secureSecretId }),
-  deleteSecureValue: (accountId: string, types: any[]): Promise<boolean> =>
+  deleteSecureValue: (accountId: string, types: string[]): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-secure-value', { accountId, types }),
 
   // Sticker Creation API
@@ -884,23 +884,23 @@ const guidegramAPI = {
     accountId: string,
     title: string,
     shortName: string,
-    stickers: any[],
-    options?: any
-  ): Promise<any> =>
+    stickers: Array<Record<string, unknown>>,
+    options?: Record<string, unknown>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:create-sticker-set', { accountId, title, shortName, stickers, options }),
-  addStickerToSet: (accountId: string, stickerset: any, sticker: any): Promise<any> =>
+  addStickerToSet: (accountId: string, stickerset: string | Record<string, unknown>, sticker: Record<string, unknown>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:add-sticker-to-set', { accountId, stickerset, sticker }),
 
   // Universal MTProto Layer 229+ RPC Dispatcher (100% Coverage Engine)
-  invokeMtprotoRpc: (accountId: string, method: string, params: any = {}): Promise<any> =>
+  invokeMtprotoRpc: (accountId: string, method: string, params: Record<string, unknown> = {}): Promise<unknown> =>
     ipcRenderer.invoke('telegram:invoke-mtproto-rpc', { accountId, method, params }),
   getAllMtprotoMethods: (): Promise<readonly string[]> =>
     ipcRenderer.invoke('telegram:get-all-mtproto-methods'),
 
   // Contacts & Users Domain API (Phase 1)
-  getFullUser: (accountId: string, userId: string): Promise<any> =>
+  getFullUser: (accountId: string, userId: string): Promise<Record<string, unknown> | null> =>
     ipcRenderer.invoke('telegram:get-full-user', { accountId, userId }),
-  importContacts: (accountId: string, contacts: any[]): Promise<any> =>
+  importContacts: (accountId: string, contacts: Array<Record<string, unknown>>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:import-contacts', { accountId, contacts }),
   addContact: (
     accountId: string,
@@ -910,47 +910,47 @@ const guidegramAPI = {
     phone = '',
     addPhonePrivacyException = false,
     note?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:add-contact', { accountId, userId, firstName, lastName, phone, addPhonePrivacyException, note }),
   blockPeer: (accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> =>
     ipcRenderer.invoke('telegram:block-peer', { accountId, peerId, myStoriesFrom }),
   unblockPeer: (accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> =>
     ipcRenderer.invoke('telegram:unblock-peer', { accountId, peerId, myStoriesFrom }),
-  getBlockedPeers: (accountId: string, offset = 0, limit = 50, myStoriesFrom = false): Promise<any> =>
+  getBlockedPeers: (accountId: string, offset = 0, limit = 50, myStoriesFrom = false): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-blocked-peers', { accountId, offset, limit, myStoriesFrom }),
-  getTopPeers: (accountId: string, options?: any): Promise<any> =>
+  getTopPeers: (accountId: string, options?: Record<string, unknown>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-top-peers', { accountId, options }),
-  getBirthdays: (accountId: string): Promise<any[]> =>
+  getBirthdays: (accountId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-birthdays', { accountId }),
   updateContactNote: (accountId: string, userId: string, note: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:update-contact-note', { accountId, userId, note }),
-  getRequirementsToContact: (accountId: string, userIds: string[]): Promise<any[]> =>
+  getRequirementsToContact: (accountId: string, userIds: string[]): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-requirements-to-contact', { accountId, userIds }),
 
   // Channels & Supergroups Administration Domain API (Phase 2)
-  channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<any> =>
+  channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-get-participants', { accountId, channelId, filterName, offset, limit }),
-  channelGetAdminLog: (accountId: string, channelId: string, options?: any): Promise<any> =>
+  channelGetAdminLog: (accountId: string, channelId: string, options?: Record<string, unknown>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-get-admin-log', { accountId, channelId, options }),
-  channelToggleSlowMode: (accountId: string, channelId: string, seconds: number): Promise<any> =>
+  channelToggleSlowMode: (accountId: string, channelId: string, seconds: number): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-toggle-slow-mode', { accountId, channelId, seconds }),
-  channelToggleJoinRequest: (accountId: string, channelId: string, enabled: boolean): Promise<any> =>
+  channelToggleJoinRequest: (accountId: string, channelId: string, enabled: boolean): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-toggle-join-request', { accountId, channelId, enabled }),
-  channelToggleAntiSpam: (accountId: string, channelId: string, enabled: boolean): Promise<any> =>
+  channelToggleAntiSpam: (accountId: string, channelId: string, enabled: boolean): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-toggle-anti-spam', { accountId, channelId, enabled }),
-  channelToggleForum: (accountId: string, channelId: string, enabled: boolean): Promise<any> =>
+  channelToggleForum: (accountId: string, channelId: string, enabled: boolean): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-toggle-forum', { accountId, channelId, enabled }),
-  channelGetRecommendations: (accountId: string, channelId?: string): Promise<any[]> =>
+  channelGetRecommendations: (accountId: string, channelId?: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:channel-get-recommendations', { accountId, channelId }),
-  channelUpdatePaidMessagesPrice: (accountId: string, channelId: string, stars: bigint): Promise<any> =>
+  channelUpdatePaidMessagesPrice: (accountId: string, channelId: string, stars: bigint): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:channel-update-paid-messages-price', { accountId, channelId, stars }),
 
   // Bots, Games & WebApps Domain API (Phase 3)
-  botGetCommands: (accountId: string, scope?: any, langCode = ''): Promise<any[]> =>
+  botGetCommands: (accountId: string, scope?: Record<string, unknown>, langCode = ''): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:bot-get-commands', { accountId, scope, langCode }),
-  botSetCommands: (accountId: string, commands: any[], scope?: any, langCode = ''): Promise<boolean> =>
+  botSetCommands: (accountId: string, commands: Array<Record<string, unknown>>, scope?: Record<string, unknown>, langCode = ''): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bot-set-commands', { accountId, commands, scope, langCode }),
-  botGetInfo: (accountId: string, botId?: string, langCode = ''): Promise<any> =>
+  botGetInfo: (accountId: string, botId?: string, langCode = ''): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:bot-get-info', { accountId, botId, langCode }),
   botSetInfo: (
     accountId: string,
@@ -961,64 +961,64 @@ const guidegramAPI = {
     description?: string
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bot-set-info', { accountId, botId, langCode, name, about, description }),
-  botGetMenuButton: (accountId: string, botId: string): Promise<any> =>
+  botGetMenuButton: (accountId: string, botId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:bot-get-menu-button', { accountId, botId }),
-  botSetMenuButton: (accountId: string, botId: string, button: any): Promise<boolean> =>
+  botSetMenuButton: (accountId: string, botId: string, button: Record<string, unknown>): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bot-set-menu-button', { accountId, botId, button }),
-  botGetAdminedBots: (accountId: string): Promise<any[]> =>
+  botGetAdminedBots: (accountId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:bot-get-admined-bots', { accountId }),
-  botGetPopularApps: (accountId: string, offset = '', limit = 50): Promise<any> =>
+  botGetPopularApps: (accountId: string, offset = '', limit = 50): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:bot-get-popular-apps', { accountId, offset, limit }),
-  botGetRecommendations: (accountId: string, botId: string): Promise<any[]> =>
+  botGetRecommendations: (accountId: string, botId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:bot-get-recommendations', { accountId, botId }),
   botInvokeWebViewCustomMethod: (
     accountId: string,
     botId: string,
     customMethod: string,
-    params: any
-  ): Promise<any> =>
+    params: Record<string, unknown>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:bot-invoke-webview-custom-method', { accountId, botId, customMethod, params }),
 
   // Payments, Invoices & Telegram Stars Domain API (Phase 4)
-  paymentGetPaymentForm: (accountId: string, invoice: any, themeParams?: any): Promise<any> =>
+  paymentGetPaymentForm: (accountId: string, invoice: Record<string, unknown>, themeParams?: Record<string, unknown>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-payment-form', { accountId, invoice, themeParams }),
-  paymentGetStarsStatus: (accountId: string, peerId?: string, ton = false): Promise<any> =>
+  paymentGetStarsStatus: (accountId: string, peerId?: string, ton = false): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-stars-status', { accountId, peerId, ton }),
-  paymentGetStarsTransactions: (accountId: string, peerId?: string, offset = '', limit = 50, options: any = {}): Promise<any> =>
+  paymentGetStarsTransactions: (accountId: string, peerId?: string, offset = '', limit = 50, options: Record<string, unknown> = {}): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-stars-transactions', { accountId, peerId, offset, limit, options }),
-  paymentGetStarsTopupOptions: (accountId: string): Promise<any[]> =>
+  paymentGetStarsTopupOptions: (accountId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:payment-get-stars-topup-options', { accountId }),
-  paymentGetStarGifts: (accountId: string, hash = 0): Promise<any> =>
+  paymentGetStarGifts: (accountId: string, hash = 0): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-star-gifts', { accountId, hash }),
-  paymentGetSavedStarGifts: (accountId: string, peerId: string, options: any = {}): Promise<any> =>
+  paymentGetSavedStarGifts: (accountId: string, peerId: string, options: Record<string, unknown> = {}): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-saved-star-gifts', { accountId, peerId, options }),
-  paymentGetStarsRevenueStats: (accountId: string, peerId: string, dark = false, ton = false): Promise<any> =>
+  paymentGetStarsRevenueStats: (accountId: string, peerId: string, dark = false, ton = false): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-stars-revenue-stats', { accountId, peerId, dark, ton }),
-  paymentGetConnectedStarRefBots: (accountId: string, peerId: string, offsetDate = 0, offsetLink = '', limit = 50): Promise<any> =>
+  paymentGetConnectedStarRefBots: (accountId: string, peerId: string, offsetDate = 0, offsetLink = '', limit = 50): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-get-connected-star-ref-bots', { accountId, peerId, offsetDate, offsetLink, limit }),
-  paymentConnectStarRefBot: (accountId: string, peerId: string, botId: string): Promise<any> =>
+  paymentConnectStarRefBot: (accountId: string, peerId: string, botId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-connect-star-ref-bot', { accountId, peerId, botId }),
-  paymentSendStarsForm: (accountId: string, formId: bigint, invoice: any): Promise<any> =>
+  paymentSendStarsForm: (accountId: string, formId: bigint, invoice: Record<string, unknown>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:payment-send-stars-form', { accountId, formId, invoice }),
 
   // Security, Authentication & Account Suite Domain API (Phase 5)
-  securityGetNotifySettings: (accountId: string, peerId?: string): Promise<any> =>
+  securityGetNotifySettings: (accountId: string, peerId?: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:security-get-notify-settings', { accountId, peerId }),
-  securityUpdateNotifySettings: (accountId: string, peerId: string, settings: any): Promise<boolean> =>
+  securityUpdateNotifySettings: (accountId: string, peerId: string, settings: Record<string, unknown>): Promise<boolean> =>
     ipcRenderer.invoke('telegram:security-update-notify-settings', { accountId, peerId, settings }),
   securityResetNotifySettings: (accountId: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:security-reset-notify-settings', { accountId }),
-  securityGetAuthorizations: (accountId: string): Promise<any[]> =>
+  securityGetAuthorizations: (accountId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:security-get-authorizations', { accountId }),
   securityResetAuthorizations: (accountId: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:security-reset-authorizations', { accountId }),
-  securityGetPassword: (accountId: string): Promise<any> =>
+  securityGetPassword: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:security-get-password', { accountId }),
-  securityGetPrivacy: (accountId: string, key: any): Promise<any> =>
+  securityGetPrivacy: (accountId: string, key: Record<string, unknown> | string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:security-get-privacy', { accountId, key }),
-  securitySetPrivacy: (accountId: string, key: any, rules: any[]): Promise<any> =>
+  securitySetPrivacy: (accountId: string, key: Record<string, unknown> | string, rules: Array<Record<string, unknown>>): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:security-set-privacy', { accountId, key, rules }),
-  securityGetWallpapers: (accountId: string, hash = 0n): Promise<any> =>
+  securityGetWallpapers: (accountId: string, hash = 0n): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:security-get-wallpapers', { accountId, hash }),
   securityUpdatePersonalChannel: (accountId: string, channelId: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:security-update-personal-channel', { accountId, channelId }),
@@ -1026,29 +1026,29 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:security-update-color', { accountId, color, backgroundEmojiId, forProfile }),
 
   // Core Messaging Engine, Stories & Media Domain API (Phase 6)
-  messagingGetHistory: (accountId: string, peerId: string, offsetId = 0, offsetDate = 0, addOffset = 0, limit = 50, maxId = 0, minId = 0, hash = 0n): Promise<any> =>
+  messagingGetHistory: (accountId: string, peerId: string, offsetId = 0, offsetDate = 0, addOffset = 0, limit = 50, maxId = 0, minId = 0, hash = 0n): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:messaging-get-history', { accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash }),
-  messagingSearchGlobal: (accountId: string, q = '', filter: any = { _: 'inputMessagesFilterEmpty' }, minDate = 0, maxDate = 0, offsetRate = 0, offsetId = 0, limit = 50): Promise<any> =>
+  messagingSearchGlobal: (accountId: string, q = '', filter: Record<string, unknown> = { _: 'inputMessagesFilterEmpty' }, minDate = 0, maxDate = 0, offsetRate = 0, offsetId = 0, limit = 50): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:messaging-search-global', { accountId, q, filter, minDate, maxDate, offsetRate, offsetId, limit }),
-  messagingSendReaction: (accountId: string, peerId: string, msgId: number, reaction?: any, big = false, addToRecent = true): Promise<any> =>
+  messagingSendReaction: (accountId: string, peerId: string, msgId: number, reaction?: Record<string, unknown> | string, big = false, addToRecent = true): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:messaging-send-reaction', { accountId, peerId, msgId, reaction, big, addToRecent }),
-  messagingStoriesGetPeerStories: (accountId: string, peerId: string): Promise<any> =>
+  messagingStoriesGetPeerStories: (accountId: string, peerId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:messaging-stories-get-peer-stories', { accountId, peerId }),
-  messagingStoriesSendStory: (accountId: string, peerId: string, media: any, privacyRules: any[] = [{ _: 'inputPrivacyValueAllowAll' }], caption = ''): Promise<any> =>
+  messagingStoriesSendStory: (accountId: string, peerId: string, media: Record<string, unknown>, privacyRules: Array<Record<string, unknown>> = [{ _: 'inputPrivacyValueAllowAll' }], caption = ''): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:messaging-stories-send-story', { accountId, peerId, media, privacyRules, caption }),
 
   // System & Specialized Namespaces Domain API (Phase 7)
-  systemGetConfig: (accountId: string): Promise<any> =>
+  systemGetConfig: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:system-get-config', { accountId }),
-  systemGetAppConfig: (accountId: string, hash = 0): Promise<any> =>
+  systemGetAppConfig: (accountId: string, hash = 0): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:system-get-app-config', { accountId, hash }),
-  systemGetNearestDc: (accountId: string): Promise<any> =>
+  systemGetNearestDc: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:system-get-nearest-dc', { accountId }),
-  systemPhoneGetCallConfig: (accountId: string): Promise<any> =>
+  systemPhoneGetCallConfig: (accountId: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:system-phone-get-call-config', { accountId }),
-  systemStatsGetBroadcastStats: (accountId: string, channelId: string, dark = false): Promise<any> =>
+  systemStatsGetBroadcastStats: (accountId: string, channelId: string, dark = false): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:system-stats-get-broadcast-stats', { accountId, channelId, dark }),
-  systemChatlistsGetExportedInvites: (accountId: string, chatlistId: string): Promise<any[]> =>
+  systemChatlistsGetExportedInvites: (accountId: string, chatlistId: string): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:system-chatlists-get-exported-invites', { accountId, chatlistId }),
 
   // MTProto Sessions, Cloud Folders & Translation
@@ -1128,7 +1128,7 @@ const guidegramAPI = {
     documentId: string,
     accessHash: string,
     fileRef?: string
-  ): Promise<{ format: 'lottie' | 'image' | 'video'; url?: string; data?: any } | null> =>
+  ): Promise<{ format: 'lottie' | 'image' | 'video'; url?: string; data?: Record<string, unknown> | ArrayBuffer | string } | null> =>
     ipcRenderer.invoke('telegram:get-sticker-data', { accountId, documentId, accessHash, fileRef }),
   getAllStories: (accountId: string): Promise<ActiveStoriesResult> =>
     ipcRenderer.invoke('telegram:get-all-stories', { accountId }),
@@ -1169,9 +1169,9 @@ const guidegramAPI = {
     accountId: string,
     storyId: number,
     options?: { offset?: string; limit?: number; peerId?: string }
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-story-views-list', { accountId, storyId, options }),
-  checkChatlistInvite: (accountId: string, slug: string): Promise<any> =>
+  checkChatlistInvite: (accountId: string, slug: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:check-chatlist-invite', { accountId, slug }),
   joinChatlistInvite: (accountId: string, slug: string, peerIds: string[]): Promise<boolean> =>
     ipcRenderer.invoke('telegram:join-chatlist-invite', { accountId, slug, peerIds }),
@@ -1188,7 +1188,7 @@ const guidegramAPI = {
     query: string,
     offset?: string,
     peerId?: string
-  ): Promise<any> =>
+  ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-inline-bot-results', {
       accountId,
       botUsername,
@@ -1284,7 +1284,7 @@ const guidegramAPI = {
 
   // Events
   on: (channel: string, callback: (...args: any[]) => void) => {
-    const subscription = (_event: any, ...args: any[]) => callback(...args)
+    const subscription = (_event: Electron.IpcRendererEvent, ...args: any[]) => callback(...args)
     ipcRenderer.on(channel, subscription)
     return () => {
       ipcRenderer.removeListener(channel, subscription)
