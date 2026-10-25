@@ -29,6 +29,9 @@ import {
   ChevronRight,
   Search,
   Pin,
+  MapPin,
+  CheckSquare,
+  BookOpen,
   Pencil,
   Camera,
   Sparkles,
@@ -5226,10 +5229,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   setTimeout(() => textareaRef.current?.focus(), 50)
                 }}
                 className={`flex flex-col group transition-all select-text ${
-                  msg.isOutgoing ? 'items-end' : 'items-start'
+                  chat.isChannel && !chat.isGroup
+                    ? 'items-center'
+                    : msg.isOutgoing
+                    ? 'items-end'
+                    : 'items-start'
                 }`}
               >
-                <div className="relative max-w-[80%] md:max-w-[70%] flex items-end gap-1.5">
+                <div
+                  className={`relative flex items-end gap-1.5 ${
+                    chat.isChannel && !chat.isGroup
+                      ? 'w-full max-w-2xl lg:max-w-3xl'
+                      : (chat.isBot || chatDetails?.isBot)
+                      ? 'w-full max-w-[92%] sm:max-w-[85%] md:max-w-[80%]'
+                      : 'max-w-[85%] md:max-w-[75%]'
+                  }`}
+                >
                   {/* Outgoing Message Action Bar */}
                   {msg.isOutgoing && (
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-center bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative">
@@ -5434,7 +5449,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     />
                   )}
 
-                  <div className="flex flex-col min-w-0 max-w-full">
+                  <div className="flex flex-col min-w-0 max-w-full flex-1">
                     {/* Message Bubble (Stickers render transparently without bubble frame) */}
                     <div
                       className={`transition-all bubble-haptic-spring ${
@@ -7646,26 +7661,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               )}
 
-              {/* Live Location Action Card */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsInfoOpen(false)
-                  setIsLiveLocationModalOpen(true)
-                }}
-                className="w-full p-3.5 rounded-2xl bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/30 text-accent-cyan font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-accent-cyan/20 flex items-center justify-center">
-                    <Radio className="w-4 h-4 text-accent-cyan animate-pulse" />
-                  </div>
-                  <div className="flex flex-col text-left">
-                    <span className="font-bold text-white">Live Location & Geofencing</span>
-                    <span className="text-[10px] text-gray-400">Share real-time GPS & radar alerts</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-accent-cyan" />
-              </button>
+
 
               {/* Star Subscriptions & Bot Monetization Action Card */}
               <button
