@@ -1,28 +1,39 @@
-# 🚀 Guidegram v2.1.0 — Golden Master Enterprise Edition
+# 🚀 Guidegram v2.3.0 — Multiplatform Desktop & Android Edition
 
-> **Next-Generation Portable Desktop Telegram Client** with Unlimited Multi-Account, Dedicated Proxies, Advanced Group Analytics, Google Jules Swarm Automation, WebGL Shader Visual Architecture, and 160-Phase Enterprise Hardening.
+> **Next-Generation Telegram Client & AI Workspace** with Native Android Pipeline, Circle/Squircle/Droplet Dynamic Avatars, Instant Saved Messages Brand Trigger, Real-Time Read Sync, and Zero-Ghost Anti-Delete Architecture.
 
 ---
 
 <div align="center">
   <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
-  <h3>Guidegram v2.1.0 Golden Master</h3>
-  <p><strong>160-Phase Hardened Architecture • Google Jules Swarm Automation • 60fps Spring Physics • WebGL Shader Pipelines • Multi-Account Cryptographic Isolation</strong></p>
+  <h3>Guidegram v2.3.0 Multiplatform</h3>
+  <p><strong>Official Android APK Pipeline • Dynamic Vector Avatars • Real-Time MTProto Read Sync • Zero Ghost Messages • 100% Cross-Platform Core</strong></p>
 </div>
 
 ---
 
-## 🌟 Release Highlights
+## 🌟 Release v2.3.0 Highlights
 
-Guidegram v2.1.0 is the **Golden Master Enterprise Edition**, culminating an exhaustive 160-phase perpetual engineering marathon across four major architectural clusters:
+1. **Official Android APK CI/CD Pipeline:**
+   - Integrated Capacitor cross-platform runtime with native Android project generation (`io.guidegram.app`).
+   - GitHub Actions automated multiplatform pipeline building and attaching `Guidegram-Android.apk` alongside desktop installers.
 
-1. **Cluster 1 (Phases 1–50): Platform Hardening via 13 Production Layers**
-   - Resilient database connection pooling with healthchecks, failovers, and zero leak guarantees.
-   - Sliding-window rate limiters, circuit breakers, and exponential backoff retry engines.
-   - Cryptographic session tamper guards with HMAC integrity seals and zero-trust session validation.
-   - Atomic state transitions, consensus quorum controllers, and strict offline vacuum hygiene.
+2. **Adaptive Vector Avatar Morphology:**
+   - Standard Users, Bots, & Private Chats: Smooth circular frame (`rounded-full`).
+   - Topic-Enabled Supergroups (`isForum`): Ergonomic Squircle (`rounded-2xl`).
+   - Telegram Channels (`isChannel`): Mathematical SVG Teardrop/Droplet curve with top-center peak contour.
 
-2. **Cluster 2 (Phases 51–100): Telegram MTProto Layer 229+ & TL-Schema 100% Coverage**
+3. **Instant Saved Messages Brand Trigger:**
+   - Separated hamburger drawer trigger from the top-left Guidegram "G" brand logo.
+   - Clicking the "G" logo opens the active account's Saved Messages cloud storage instantaneously.
+
+4. **Bi-Directional MTProto Read Synchronization:**
+   - Fixed unread badge counter for Saved Messages (forced 0).
+   - Loose peer identifier matching (`isPeerMatch`) ensuring real-time read history synchronization when reading dialogs on official Telegram clients.
+
+5. **Anti-Delete Ghost Bubble Elimination:**
+   - Eliminated dummy placeholder fabrication for uncaptured messages.
+   - Live viewport filters ensuring phantom `[Message deleted]` bubbles without original text are never displayed.
    - Full native invocation and type-safe proxying across all Telegram namespaces (859 methods).
    - GramJS and mtcute zero-diff serialization, differential vector parsers, and RPC error synthesizers.
    - Multi-DC intelligent roaming, turbo chunked media streamers, and background cloud draft sync.

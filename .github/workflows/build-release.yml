@@ -158,7 +158,63 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # -------------------------------------------------------------
-  # Job 5: Security Audit & Automated Integrity Verification
+  # Job 5: Android Build (APK)
+  # -------------------------------------------------------------
+  build-android:
+    name: 🤖 Android Build (APK)
+    needs: init-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Compile and Bundle Frontend
+        run: pnpm run build
+
+      - name: Sync Capacitor Android
+        run: pnpm exec cap sync android
+
+      - name: Build Android Debug & Release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Prepare Android APK Output
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/debug/app-debug.apk release/Guidegram-Android.apk || find android/app/build/outputs/apk -type f -name "*.apk" -exec cp {} release/Guidegram-Android.apk \;
+
+      - name: Attach Android APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          files: release/Guidegram-Android.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # -------------------------------------------------------------
+  # Job 6: Security Audit & Automated Integrity Verification
   # -------------------------------------------------------------
   security-audit:
     name: 🛡️ Security Audit & Checksums
