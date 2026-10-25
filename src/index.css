@@ -1223,3 +1223,24 @@ textarea:focus-visible {
   border: 1px solid rgba(239, 68, 68, 0.35);
   color: #ef4444;
 }
+
+/* ==========================================================================
+   Phase 135: Google Jules 150-Session Swarm Fleet Saturation & Orchestration
+   High-concurrency fleet meters, progress saturation bars, and worker counter
+   ========================================================================== */
+.fleet-saturation-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.fleet-progress-bar {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #10b981 100%);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
