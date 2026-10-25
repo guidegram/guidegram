@@ -110,6 +110,7 @@ import { BusinessSettingsModal } from './chat/BusinessSettingsModal'
 import { ChannelBoostModal } from './chat/ChannelBoostModal'
 import { LiveLocationModal } from './chat/LiveLocationModal'
 import { StarSubscriptionsModal } from './chat/StarSubscriptionsModal'
+import { BotMenuButtonConfigModal } from './chat/BotMenuButtonConfigModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
@@ -726,6 +727,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isChannelBoostModalOpen, setIsChannelBoostModalOpen] = useState(false)
   const [isLiveLocationModalOpen, setIsLiveLocationModalOpen] = useState(false)
   const [isStarSubscriptionsModalOpen, setIsStarSubscriptionsModalOpen] = useState(false)
+  const [isBotMenuConfigModalOpen, setIsBotMenuConfigModalOpen] = useState(false)
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -7620,6 +7622,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 <ChevronRight className="w-4 h-4 text-amber-400" />
               </button>
 
+              {/* Bot Menu Button & WebApp Launcher Config Card */}
+              {chat.isBot && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsInfoOpen(false)
+                    setIsBotMenuConfigModalOpen(true)
+                  }}
+                  className="w-full p-3.5 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="font-bold text-white">Bot Menu Button</span>
+                      <span className="text-[10px] text-gray-400">Configure WebApp launcher & commands</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-cyan-400" />
+                </button>
+              )}
+
               {/* 64Gram Power Feature: Chat Permissions Matrix (Groups only) */}
               {chat.isGroup && !chat.isChannel && !chatDetails?.isBroadcast && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
@@ -9033,6 +9058,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chatTitle={chatDetails?.title || chat.title}
           isCreatorOrAdmin={Boolean(chatDetails?.isCreator || chatDetails?.isAdmin)}
           onClose={() => setIsStarSubscriptionsModalOpen(false)}
+        />
+      )}
+
+      {/* 24. Telegram Bot Menu Button & WebApp Launcher Config Modal */}
+      {isBotMenuConfigModalOpen && chat && (
+        <BotMenuButtonConfigModal
+          isOpen={isBotMenuConfigModalOpen}
+          accountId={chat.accountId}
+          botId={chat.id}
+          botTitle={chatDetails?.title || chat.title}
+          onSaved={() => {
+            if (window.guidegram?.getBotMenuButton) {
+              window.guidegram.getBotMenuButton(chat.accountId, chat.id).then((btn) => {
+                if (btn) setBotMenuButtonState(btn as any)
+              })
+            }
+          }}
+          onClose={() => setIsBotMenuConfigModalOpen(false)}
         />
       )}
     </div>

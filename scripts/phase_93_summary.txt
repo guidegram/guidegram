@@ -1,0 +1,11 @@
+Phase 93: Telegram Bot Menu Button & WebApp Persistent Launcher Protocol
+
+- Verified MTProto `bots.getBotMenuButton` and `bots.setBotMenuButton` pipeline across AccountManager, main.ts, and preload.ts.
+- Verified `BotMenuDrawer.tsx` handling `web_app`, `commands`, and default menu button modes with direct Mini App launching.
+- Created `src/components/chat/BotMenuButtonConfigModal.tsx`:
+  - 3-mode selection grid: Commands (command palette), Mini App (persistent WebApp launcher button), and Default.
+  - Interactive Button Label and WebApp URL input fields.
+  - Integration with `window.guidegram.botSetMenuButton` and live state update.
+- Integrated `BotMenuButtonConfigModal` and Info Drawer action card in `src/components/ChatViewport.tsx`.
+- Created and passed test suite `tests/bot_menu_button_webapp_launcher_verification.mjs` (11/11 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.
