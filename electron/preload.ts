@@ -286,6 +286,15 @@ const guidegramAPI = {
     activeBuckets: number
     violationsByMethod: Record<string, number>
   }> => ipcRenderer.invoke('system:get-rate-limit-metrics'),
+  getSqliteStatus: (): Promise<{
+    journalMode: string
+    synchronous: number | string
+    busyTimeout: number
+    cacheSize: number
+    tempStore: number | string
+    mmapSize: number
+    foreignKeys: boolean
+  }> => ipcRenderer.invoke('system:get-sqlite-status'),
   forwardMessages: (
     accountId: string,
     toChatId: string | string[],

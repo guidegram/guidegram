@@ -24,6 +24,7 @@ import { WebrtcSecurityGuard } from './webrtcSecurityGuard'
 import { ClipboardGuard } from './clipboardGuard'
 import { DohResolver } from './telegram/dohResolver'
 import { IntegrityGuard } from './integrityGuard'
+import { SqliteTuner } from './telegram/sqliteTuner'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3675,6 +3676,10 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-rate-limit-metrics', async () => {
     return globalIpcRateLimiter.getMetrics()
+  })
+
+  ipcMain.handle('system:get-sqlite-status', async () => {
+    return SqliteTuner.getPragmaStatus(null)
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
