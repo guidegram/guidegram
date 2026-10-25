@@ -1419,6 +1419,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:delete-story', { accountId, storyId, peerId }),
   canSendStory: (accountId: string, peerId?: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:can-send-story', { accountId, peerId }),
+  setStoriesPrivacy: (
+    accountId: string,
+    privacy: 'everyone' | 'contacts' | 'close_friends' | 'selected_contacts' | 'nobody',
+    allowedUserIds?: string[]
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-stories-privacy', { accountId, privacy, allowedUserIds }),
   exportStoryLink: (accountId: string, peerId: string, storyId: number): Promise<string | null> =>
     ipcRenderer.invoke('telegram:export-story-link', { accountId, peerId, storyId }),
   toggleStoryPinned: (

@@ -3781,6 +3781,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:set-stories-privacy', async (_event, { accountId, privacy, allowedUserIds }) => {
+    try {
+      return await accountManager.setStoriesPrivacy(accountId, privacy, allowedUserIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setStoriesPrivacy error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:export-story-link', async (_event, { accountId, peerId, storyId }) => {
     try {
       return await accountManager.exportStoryLink(accountId, peerId, storyId)

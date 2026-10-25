@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Star,
   Users,
+  UserCheck,
   Video,
   X,
 } from 'lucide-react'
@@ -372,16 +373,18 @@ export const StoryComposerModal: React.FC<StoryComposerModalProps> = ({
             <div className="text-[11px] font-semibold text-gray-300 mb-2">
               {t('stories.privacy')}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(
                 [
-                  { value: 'everyone', icon: Globe, key: 'stories.privacy_everyone' },
-                  { value: 'contacts', icon: Users, key: 'stories.privacy_contacts' },
-                  { value: 'close_friends', icon: Star, key: 'stories.privacy_close_friends' },
+                  { value: 'everyone', icon: Globe, key: 'stories.privacy_everyone', label: 'Everyone' },
+                  { value: 'contacts', icon: Users, key: 'stories.privacy_contacts', label: 'My Contacts' },
+                  { value: 'close_friends', icon: Star, key: 'stories.privacy_close_friends', label: 'Close Friends' },
+                  { value: 'selected_contacts', icon: UserCheck, key: 'stories.privacy_selected', label: 'Selected' },
                 ] as Array<{
                   value: StoryPrivacy
                   icon: React.ElementType
                   key: string
+                  label: string
                 }>
               ).map((option) => {
                 const Icon = option.icon
@@ -399,7 +402,7 @@ export const StoryComposerModal: React.FC<StoryComposerModalProps> = ({
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${active ? 'text-primary-400' : ''}`} />
-                    <span className="leading-4 text-center">{t(option.key)}</span>
+                    <span className="leading-4 text-center">{t(option.key) || option.label}</span>
                   </button>
                 )
               })}

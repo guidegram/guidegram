@@ -1233,11 +1233,12 @@ export interface StoryMediaResult {
   error?: string
 }
 
-export type StoryPrivacy = 'everyone' | 'contacts' | 'close_friends'
+export type StoryPrivacy = 'everyone' | 'contacts' | 'close_friends' | 'selected_contacts' | 'nobody'
 
 export interface SendStoryOptions {
   caption?: string
   privacy?: StoryPrivacy
+  allowedUserIds?: string[]
   pinned?: boolean
   forbidForwards?: boolean
   /** Story lifetime in seconds. Telegram defaults to 86400 (24 hours). */

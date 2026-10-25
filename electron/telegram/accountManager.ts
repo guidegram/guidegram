@@ -11057,7 +11057,18 @@ export class AccountManager {
         ? [{ _: 'inputPrivacyValueAllowContacts' }]
         : options?.privacy === 'close_friends'
           ? [{ _: 'inputPrivacyValueAllowCloseFriends' }]
-          : [{ _: 'inputPrivacyValueAllowAll' }]
+          : options?.privacy === 'nobody'
+            ? [{ _: 'inputPrivacyValueDisallowAll' }]
+            : options?.privacy === 'selected_contacts' && options?.allowedUserIds?.length
+              ? [{
+                  _: 'inputPrivacyValueAllowUsers',
+                  users: options.allowedUserIds.map((uid) => ({
+                    _: 'inputUser',
+                    userId: Number(uid),
+                    accessHash: Long.ZERO,
+                  })),
+                }]
+              : [{ _: 'inputPrivacyValueAllowAll' }]
 
     const period = Math.round(Number(options?.period) || 86400)
 
@@ -11174,6 +11185,43 @@ export class AccountManager {
       return Boolean(res)
     } catch (err: any) {
       Logger.warn(`[AccountManager] canSendStory error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async setStoriesPrivacy(
+    accountId: string,
+    privacy: 'everyone' | 'contacts' | 'close_friends' | 'selected_contacts' | 'nobody',
+    allowedUserIds?: string[]
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      let rules: any[] = [{ _: 'inputPrivacyValueAllowAll' }]
+      if (privacy === 'contacts') {
+        rules = [{ _: 'inputPrivacyValueAllowContacts' }]
+      } else if (privacy === 'close_friends') {
+        rules = [{ _: 'inputPrivacyValueAllowCloseFriends' }]
+      } else if (privacy === 'nobody') {
+        rules = [{ _: 'inputPrivacyValueDisallowAll' }]
+      } else if (privacy === 'selected_contacts' && allowedUserIds && allowedUserIds.length > 0) {
+        const users = allowedUserIds.map((uid) => ({
+          _: 'inputUser',
+          userId: Number(uid),
+          accessHash: Long.ZERO,
+        }))
+        rules = [{ _: 'inputPrivacyValueAllowUsers', users }]
+      }
+
+      await holder.client.call({
+        _: 'account.setPrivacy',
+        key: { _: 'inputPrivacyKeyStories' },
+        rules,
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn('[AccountManager] setStoriesPrivacy error:', err?.message || err)
       return false
     }
   }
