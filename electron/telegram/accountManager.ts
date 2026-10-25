@@ -3922,20 +3922,50 @@ export class AccountManager {
     limit = 40
   ): Promise<MessageItem[]> {
     const holder = this.clients.get(accountId)
-    if (!holder?.client) throw new Error(`Account  is not connected.`)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
+      // Map filterType to MTProto TL InputMessagesFilter
+      let mtFilter: any = { _: 'inputMessagesFilterEmpty' }
+      const fType = filterType?.toLowerCase()
+      if (fType === 'media' || fType === 'photos' || fType === 'videos') {
+        mtFilter = { _: 'inputMessagesFilterPhotoVideo' }
+      } else if (fType === 'links' || fType === 'url') {
+        mtFilter = { _: 'inputMessagesFilterUrl' }
+      } else if (fType === 'files' || fType === 'documents') {
+        mtFilter = { _: 'inputMessagesFilterDocument' }
+      } else if (fType === 'audio' || fType === 'music') {
+        mtFilter = { _: 'inputMessagesFilterMusic' }
+      } else if (fType === 'voice' || fType === 'round') {
+        mtFilter = { _: 'inputMessagesFilterRoundVoice' }
+      } else if (fType === 'pinned') {
+        mtFilter = { _: 'inputMessagesFilterPinned' }
+      }
+
       const res: any = await holder.client.call({
         _: 'messages.searchGlobal',
         q: query,
-        filter: { _: 'inputMessagesFilterEmpty' },
+        filter: mtFilter,
         minDate: 0,
         maxDate: 0,
         offsetRate: 0,
         offsetPeer: { _: 'inputPeerEmpty' },
         offsetId: 0,
         limit,
-      })
+      } as any)
+
+      // Index users and chats for rich resolution
+      const userMap = new Map<string, any>()
+      const chatMap = new Map<string, any>()
+      for (const u of res.users || []) {
+        userMap.set(String(u.id), u)
+      }
+      for (const c of res.chats || []) {
+        const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
+        const peerId = isChan ? `-100${c.id}` : `-${c.id}`
+        chatMap.set(peerId, c)
+        chatMap.set(String(c.id), c)
+      }
 
       const items: MessageItem[] = []
       for (const m of res.messages || []) {
@@ -3950,13 +3980,92 @@ export class AccountManager {
             ? `-${m.peerId.chatId}`
             : ''
 
+        // Resolve chat/sender names
+        const chatObj = chatMap.get(peerId)
+        const chatTitle = chatObj ? (chatObj.title || chatObj.username) : undefined
+
+        let senderName = chatTitle
+        let senderId: string | undefined
+        if (m.fromId?._ === 'peerUser') {
+          senderId = String(m.fromId.userId)
+          const userObj = userMap.get(senderId)
+          if (userObj) {
+            senderName = [userObj.firstName, userObj.lastName].filter(Boolean).join(' ') || userObj.username || senderName
+          }
+        }
+
+        // Parse media
+        let mediaType: MessageItem['mediaType']
+        let mediaFileName: string | undefined
+        let mediaFileSize: number | undefined
+        let mediaDuration: number | undefined
+        let mediaTitle: string | undefined
+        let mediaPerformer: string | undefined
+        let isVoice = false
+        let isRoundVideo = false
+
+        if (m.media) {
+          const mType = m.media._
+          if (mType === 'messageMediaPhoto') {
+            mediaType = 'photo'
+          } else if (mType === 'messageMediaDocument' && m.media.document) {
+            const doc = m.media.document
+            mediaFileSize = Number(doc.size) || 0
+            const mime = doc.mimeType || ''
+
+            for (const attr of doc.attributes || []) {
+              if (attr._ === 'documentAttributeFilename') {
+                mediaFileName = attr.fileName
+              } else if (attr._ === 'documentAttributeAudio') {
+                mediaDuration = attr.duration
+                mediaTitle = attr.title
+                mediaPerformer = attr.performer
+                if (attr.voice) {
+                  mediaType = 'voice'
+                  isVoice = true
+                } else {
+                  mediaType = 'audio'
+                }
+              } else if (attr._ === 'documentAttributeVideo') {
+                mediaDuration = attr.duration
+                if (attr.roundMessage) {
+                  mediaType = 'video'
+                  isRoundVideo = true
+                } else {
+                  mediaType = 'video'
+                }
+              }
+            }
+
+            if (!mediaType) {
+              if (mime.startsWith('image/')) mediaType = 'photo'
+              else if (mime.startsWith('video/')) mediaType = 'video'
+              else if (mime.startsWith('audio/')) mediaType = 'audio'
+              else mediaType = 'document'
+            }
+          } else if (mType === 'messageMediaWebPage') {
+            mediaType = 'webpage'
+          }
+        }
+
         items.push({
           id: m.id,
           chatId: peerId,
+          chatTitle,
+          senderId,
+          senderName: senderName || chatTitle || 'Telegram User',
           accountId,
           text: m.message || '',
           date: m.date || 0,
           isOutgoing: m.out || false,
+          mediaType,
+          mediaFileName,
+          mediaFileSize,
+          mediaDuration,
+          mediaTitle,
+          mediaPerformer,
+          isVoice,
+          isRoundVideo,
         })
       }
       return items

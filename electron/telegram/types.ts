@@ -358,6 +358,7 @@ export interface PollItem {
 export interface MessageItem {
   id: number
   chatId: string
+  chatTitle?: string
   accountId: string
   senderId?: string
   senderName?: string

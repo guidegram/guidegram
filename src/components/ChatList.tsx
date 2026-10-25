@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus } from 'lucide-react'
+import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
 import { Avatar } from './Avatar'
-import { isRTL } from '../utils/textUtils'
+import { isRTL, formatFileSize, formatDuration } from '../utils/textUtils'
 import { CustomEmojiView } from './ChatViewport'
 import { useI18n } from '../i18n'
 
@@ -27,7 +27,17 @@ interface ChatListProps {
   onLoadMoreDialogs?: () => void
 }
 
-type SearchFilterCategory = 'all' | 'channels' | 'groups' | 'private' | 'archive'
+type SearchFilterCategory =
+  | 'all'
+  | 'media'
+  | 'links'
+  | 'files'
+  | 'audio'
+  | 'voice'
+  | 'channels'
+  | 'groups'
+  | 'private'
+  | 'archive'
 
 export const ChatList: React.FC<ChatListProps> = ({
   account,
@@ -390,29 +400,38 @@ export const ChatList: React.FC<ChatListProps> = ({
 
         {/* Global Search Filter Pills (Telegram Desktop style) */}
         {searchQuery.trim().length > 0 && (
-          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 text-[11px] font-medium text-gray-400">
+          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 text-[11px] font-medium text-gray-400 no-scrollbar">
             {(
               [
-                { key: 'all', label: t('search.all_chats') },
+                { key: 'all', label: t('search.all_chats') || 'Chats' },
+                { key: 'media', label: 'Media', icon: Image },
+                { key: 'links', label: 'Links', icon: Link2 },
+                { key: 'files', label: 'Files', icon: FileText },
+                { key: 'audio', label: 'Music', icon: Music },
+                { key: 'voice', label: 'Voice', icon: Mic },
                 { key: 'channels', label: t('search.channels') },
                 { key: 'groups', label: t('search.group_chats') },
                 { key: 'private', label: t('search.private_chats') },
                 { key: 'archive', label: t('search.archive') },
               ] as const
-            ).map((filter) => (
-              <button
-                key={filter.key}
-                type="button"
-                onClick={() => setSearchFilter(filter.key)}
-                className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
-                  searchFilter === filter.key
-                    ? 'bg-primary-600/90 text-white font-semibold'
-                    : 'bg-white/5 hover:bg-white/10 text-gray-300'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+            ).map((filter) => {
+              const IconComp = (filter as any).icon
+              return (
+                <button
+                  key={filter.key}
+                  type="button"
+                  onClick={() => setSearchFilter(filter.key)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                    searchFilter === filter.key
+                      ? 'bg-primary-600/90 text-white font-semibold shadow-sm'
+                      : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                  }`}
+                >
+                  {IconComp && <IconComp className="w-3 h-3 opacity-80" />}
+                  <span>{filter.label}</span>
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -616,24 +635,56 @@ export const ChatList: React.FC<ChatListProps> = ({
                     {t('search.messages_found', { count: formatNumber(globalMessages.length) })}
                   </span>
                 </div>
-                {globalMessages.map((msg) => (
-                  <div
-                    key={`gmsg-${msg.chatId}-${msg.id}`}
-                    onClick={() => {
-                      saveRecentSearch(searchQuery.trim())
-                      onSelectChat(msg.chatId)
-                    }}
-                    className="p-2.5 rounded-xl hover:bg-dark-800/80 cursor-pointer transition-colors border-b border-white/5 last:border-0"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-accent-cyan truncate">{msg.senderName}</span>
-                      <span className="text-[10px] text-gray-400 font-mono">{formatTime(msg.date)}</span>
+                {globalMessages.map((msg) => {
+                  const hasMedia = Boolean(msg.mediaType)
+                  return (
+                    <div
+                      key={`gmsg-${msg.chatId}-${msg.id}`}
+                      onClick={() => {
+                        saveRecentSearch(searchQuery.trim())
+                        onSelectChat(msg.chatId)
+                      }}
+                      className="p-2.5 rounded-xl hover:bg-dark-800/80 cursor-pointer transition-colors border-b border-white/5 last:border-0"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-accent-cyan truncate">
+                          {msg.chatTitle ? `${msg.chatTitle} • ${msg.senderName}` : msg.senderName}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-mono">{formatTime(msg.date)}</span>
+                      </div>
+
+                      {/* Media Badge and Details */}
+                      {hasMedia && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-primary-300 font-medium mb-1">
+                          {msg.mediaType === 'photo' && <Image className="w-3.5 h-3.5 shrink-0 text-cyan-400" />}
+                          {msg.mediaType === 'video' && <Image className="w-3.5 h-3.5 shrink-0 text-purple-400" />}
+                          {msg.mediaType === 'document' && <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />}
+                          {msg.mediaType === 'audio' && <Music className="w-3.5 h-3.5 shrink-0 text-amber-400" />}
+                          {msg.mediaType === 'voice' && <Mic className="w-3.5 h-3.5 shrink-0 text-emerald-400" />}
+                          {msg.mediaType === 'webpage' && <Link2 className="w-3.5 h-3.5 shrink-0 text-cyan-400" />}
+
+                          <span className="truncate">
+                            {msg.mediaType === 'voice'
+                              ? `Voice (${formatDuration(msg.mediaDuration)})`
+                              : msg.mediaType === 'audio'
+                              ? `${msg.mediaTitle || msg.mediaFileName || 'Music'} • ${msg.mediaPerformer || formatDuration(msg.mediaDuration)}`
+                              : msg.mediaType === 'document'
+                              ? `${msg.mediaFileName || 'File'} (${formatFileSize(msg.mediaFileSize)})`
+                              : msg.mediaType === 'photo'
+                              ? 'Photo'
+                              : msg.mediaType === 'video'
+                              ? `Video ${msg.mediaDuration ? `(${formatDuration(msg.mediaDuration)})` : ''}`
+                              : 'Link'}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="text-[11px] text-gray-300 line-clamp-2 leading-relaxed">
+                        {highlightSnippet(msg.text, searchQuery.trim())}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-gray-300 line-clamp-2 leading-relaxed">
-                      {highlightSnippet(msg.text, searchQuery.trim())}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
