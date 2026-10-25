@@ -4519,7 +4519,7 @@ function setupIpcHandlers() {
   })
 
   ipcMain.handle('mcp:get-config-snippets', async () => {
-    const bridgeScriptPath = path.resolve(__dirname, '../scripts/mcp-bridge.mjs').replace(/\\/g, '/')
+    const bridgeScriptPath = (app.isPackaged ? path.join(process.resourcesPath, 'scripts', 'mcp-bridge.mjs') : path.resolve(__dirname, '../scripts/mcp-bridge.mjs')).replace(/\\/g, '/')
     const port = mcpServer?.getConfig().port || 39527
 
     const claudeDesktop = {

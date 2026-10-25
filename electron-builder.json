@@ -16,6 +16,10 @@
     {
       "from": "resources",
       "to": "resources"
+    },
+    {
+      "from": "scripts/mcp-bridge.mjs",
+      "to": "scripts/mcp-bridge.mjs"
     }
   ],
   "win": {
