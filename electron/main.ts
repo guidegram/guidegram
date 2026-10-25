@@ -3307,6 +3307,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:update-dialog-filter', async (_event, { accountId, id, filterData }) => {
+    try {
+      return await accountManager.updateDialogFilter(accountId, id, filterData)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateDialogFilter error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-dialog-filters-order', async (_event, { accountId, order }) => {
+    try {
+      return await accountManager.updateDialogFiltersOrder(accountId, order)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateDialogFiltersOrder error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-suggested-dialog-filters', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getSuggestedDialogFilters(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSuggestedDialogFilters error:`, err)
+      return []
+    }
+  })
+
   // Stickers IPC
   ipcMain.handle('telegram:get-installed-stickers', async (_event, { accountId }) => {
     try {

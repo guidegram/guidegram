@@ -1165,6 +1165,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:translate-message', { accountId, chatId, messageId, toLang }),
   getCloudFolders: (accountId: string): Promise<CloudFolderItem[]> =>
     ipcRenderer.invoke('telegram:get-cloud-folders', { accountId }),
+  updateDialogFilter: (
+    accountId: string,
+    id: number,
+    filterData?: any
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-dialog-filter', { accountId, id, filterData }),
+  updateDialogFiltersOrder: (
+    accountId: string,
+    order: number[]
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:update-dialog-filters-order', { accountId, order }),
+  getSuggestedDialogFilters: (
+    accountId: string
+  ): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-suggested-dialog-filters', { accountId }),
 
   // MTProto Stickers, Stories, Boosts & 2FA
   getInstalledStickerSets: (accountId: string): Promise<StickerSetItem[]> =>

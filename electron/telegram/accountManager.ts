@@ -9562,6 +9562,124 @@ export class AccountManager {
     }
   }
 
+  public async updateDialogFilter(
+    accountId: string,
+    id: number,
+    filterData?: {
+      title?: string
+      emoticon?: string
+      includePeerIds?: string[]
+      excludePeerIds?: string[]
+      pinnedPeerIds?: string[]
+      contacts?: boolean
+      nonContacts?: boolean
+      groups?: boolean
+      broadcasts?: boolean
+      bots?: boolean
+      excludeMuted?: boolean
+      excludeRead?: boolean
+      excludeArchived?: boolean
+    } | null
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      if (!filterData) {
+        await holder.client.call({
+          _: 'messages.updateDialogFilter',
+          id: Number(id),
+          filter: null as any,
+        } as any)
+        return true
+      }
+
+      const resolvePeers = async (peerIds?: string[]) => {
+        if (!peerIds || !Array.isArray(peerIds)) return []
+        const inputPeers: any[] = []
+        for (const pid of peerIds) {
+          try {
+            const p = await this.resolveInputPeer(accountId, pid)
+            if (p) inputPeers.push(p)
+          } catch (_) {}
+        }
+        return inputPeers
+      }
+
+      const [includePeers, excludePeers, pinnedPeers] = await Promise.all([
+        resolvePeers(filterData.includePeerIds),
+        resolvePeers(filterData.excludePeerIds),
+        resolvePeers(filterData.pinnedPeerIds),
+      ])
+
+      const tlFilter: any = {
+        _: 'dialogFilter',
+        id: Number(id),
+        title: {
+          _: 'textWithEntities',
+          text: filterData.title || 'Folder',
+          entities: [],
+        },
+        emoticon: filterData.emoticon || '',
+        contacts: Boolean(filterData.contacts),
+        nonContacts: Boolean(filterData.nonContacts),
+        groups: Boolean(filterData.groups),
+        broadcasts: Boolean(filterData.broadcasts),
+        bots: Boolean(filterData.bots),
+        excludeMuted: Boolean(filterData.excludeMuted),
+        excludeRead: Boolean(filterData.excludeRead),
+        excludeArchived: Boolean(filterData.excludeArchived),
+        pinnedPeers,
+        includePeers,
+        excludePeers,
+      }
+
+      await holder.client.call({
+        _: 'messages.updateDialogFilter',
+        id: Number(id),
+        filter: tlFilter,
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] updateDialogFilter error for filter ${id}:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async updateDialogFiltersOrder(
+    accountId: string,
+    order: number[]
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      await holder.client.call({
+        _: 'messages.updateDialogFiltersOrder',
+        order: (order || []).map((o) => Number(o)),
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] updateDialogFiltersOrder error:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async getSuggestedDialogFilters(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getSuggestedDialogFilters',
+      } as any)
+      return res?.filters || []
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getSuggestedDialogFilters error:`, err?.message || err)
+      return []
+    }
+  }
+
 
   public async getInstalledStickerSets(accountId: string): Promise<StickerSetItem[]> {
     const holder = this.clients.get(accountId)
