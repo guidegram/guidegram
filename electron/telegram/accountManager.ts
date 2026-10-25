@@ -43,6 +43,7 @@ import { AccountSecurityService } from './services/accountSecurityService'
 import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
+import { swrCache } from '../swrCache'
 import {
   AccountInfo,
   DialogItem,
@@ -1629,6 +1630,7 @@ export class AccountManager {
     this.pendingAuthClients.delete(safeId)
     this.clients.delete(safeId)
     this.store.removeSession(safeId)
+    swrCache.invalidatePrefix(`${safeId}_`)
 
     this.onEventCallback?.('account:logged-out', { accountId: safeId })
     Logger.info(`[AccountManager] Account ${safeId} logged out and tenant state completely purged.`)
@@ -2243,9 +2245,14 @@ export class AccountManager {
   }
 
   /**
-   * Get cached dialogs from disk (< 10ms read)
+   * Get cached dialogs with Stale-While-Revalidate in-memory acceleration (< 1ms read)
    */
   public getCachedDialogs(accountId: string): DialogItem[] {
+    const swrHit = swrCache.get<DialogItem[]>(`${accountId}_dialogs`)
+    if (swrHit?.data && Array.isArray(swrHit.data)) {
+      return swrHit.data
+    }
+
     const cached = this.store.loadDialogsCache(accountId)
     for (const d of cached) {
       if (d.accessHash) {
@@ -2259,6 +2266,8 @@ export class AccountManager {
         } catch (_) {}
       }
     }
+
+    swrCache.set(`${accountId}_dialogs`, cached, 30_000, 300_000)
     return cached
   }
 
