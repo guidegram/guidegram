@@ -129,6 +129,7 @@ import type {
   InlineBotResultItem,
   InlineBotResultsPayload,
   GameHighScoreItem,
+  QuickReplyShortcutItem,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -273,6 +274,7 @@ export type {
   InlineBotResultItem,
   InlineBotResultsPayload,
   GameHighScoreItem,
+  QuickReplyShortcutItem,
 }
 
 

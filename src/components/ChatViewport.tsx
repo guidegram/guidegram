@@ -79,7 +79,7 @@ import {
   Settings,
   FolderDown,
 } from 'lucide-react'
-import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem } from '../types/telegram'
+import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem } from '../types/telegram'
 import lottie from 'lottie-web'
 import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
@@ -103,6 +103,7 @@ import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
 import { GameScoreModal } from './GameScoreModal'
 import { AutoDeleteModal } from './AutoDeleteModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
+import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
 import { GroupCallModal } from './GroupCallModal'
@@ -763,6 +764,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       }
     } catch (err) {
       console.warn('Failed to send inline bot result:', err)
+    }
+  }
+
+  // Quick Replies State (Telegram Business & Shortcuts Layer 178+)
+  const [quickReplyQuery, setQuickReplyQuery] = useState<string | null>(null)
+
+  const handleSelectQuickReply = async (shortcut: QuickReplyShortcutItem, sendImmediately: boolean) => {
+    if (!chat) return
+    setQuickReplyQuery(null)
+    if (sendImmediately) {
+      try {
+        if (window.guidegram?.sendQuickReplyMessages) {
+          await window.guidegram.sendQuickReplyMessages(chat.accountId, chat.id, shortcut.shortcutId)
+          showToast(`Sent shortcut /${shortcut.shortcut}`)
+          setInputText('')
+        }
+      } catch (err: any) {
+        console.warn('Failed to send quick reply:', err)
+        showToast(err?.message || 'Failed to send quick reply')
+      }
+    } else {
+      const msgText = shortcut.messages?.[0]?.text || `/${shortcut.shortcut}`
+      setInputText(msgText)
     }
   }
 
@@ -6670,6 +6694,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     />
                   )}
 
+                  {/* Telegram Quick Replies & Shortcuts Panel */}
+                  {quickReplyQuery !== null && chat && (
+                    <QuickRepliesPanel
+                      accountId={chat.accountId}
+                      peerId={chat.id}
+                      filterQuery={quickReplyQuery}
+                      onSelectShortcut={handleSelectQuickReply}
+                      onClose={() => setQuickReplyQuery(null)}
+                    />
+                  )}
+
                   <textarea
                     ref={textareaRef}
                     aria-label="Write a message"
@@ -6684,6 +6719,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       if (val.trim() && chat && Date.now() - lastTypingSentRef.current > 3000) {
                         lastTypingSentRef.current = Date.now()
                         window.guidegram.sendTyping(chat.accountId, chat.id, 'typing').catch(() => {})
+                      }
+
+                      // Check for quick reply shortcuts: e.g. "/hello" or "/"
+                      if (val.startsWith('/') && !val.includes(' ') && val.length <= 32) {
+                        setQuickReplyQuery(val)
+                      } else {
+                        setQuickReplyQuery(null)
                       }
 
                       // Check for inline bot query: e.g. "@gif funny cat" or "@pic mountains"

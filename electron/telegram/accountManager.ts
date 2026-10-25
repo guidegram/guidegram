@@ -157,6 +157,7 @@ import {
   SendableTypingStatus,
   ExportChatHistoryOptions,
   ExportChatHistoryResult,
+  QuickReplyShortcutItem,
 } from './types'
 
 export interface ClientHolder {
@@ -11514,6 +11515,94 @@ export class AccountManager {
       }
     } catch (err: any) {
       Logger.warn('[AccountManager] transcribeAudio error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async getQuickReplies(accountId: string): Promise<QuickReplyShortcutItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getQuickReplies',
+        hash: Long.ZERO,
+      } as any)
+
+      return (res?.quickReplies || []).map((q: any) => ({
+        shortcutId: Number(q.shortcutId || q.shortcut_id || 0),
+        shortcut: String(q.shortcut || ''),
+        topMessageId: q.topMessageId || q.top_message_id,
+        count: q.count || 0,
+        messages: (res.messages || [])
+          .filter((m: any) => m.quickReplyShortcutId === q.shortcutId)
+          .map((m: any) => ({
+            id: m.id,
+            text: m.message || '',
+            date: m.date || 0,
+            mediaType: m.media ? 'media' : 'text',
+          })),
+      }))
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getQuickReplies error:', err?.message || err)
+      return []
+    }
+  }
+
+  public async sendQuickReplyMessages(
+    accountId: string,
+    peerId: string,
+    shortcutId: number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'messages.sendQuickReplyMessages',
+        peer: inputPeer,
+        shortcutId: Number(shortcutId),
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendQuickReplyMessages error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async editQuickReplyShortcut(
+    accountId: string,
+    shortcutId: number,
+    shortcut: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.editQuickReplyShortcut',
+        shortcutId: Number(shortcutId),
+        shortcut: String(shortcut),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] editQuickReplyShortcut error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async deleteQuickReplyShortcut(
+    accountId: string,
+    shortcutId: number
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.deleteQuickReplyShortcut',
+        shortcutId: Number(shortcutId),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] deleteQuickReplyShortcut error:', err?.message || err)
       throw err
     }
   }

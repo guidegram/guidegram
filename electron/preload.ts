@@ -86,6 +86,7 @@ import {
   SendableTypingStatus,
   ExportChatHistoryOptions,
   ExportChatHistoryResult,
+  QuickReplyShortcutItem,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -1522,6 +1523,14 @@ const guidegramAPI = {
     messageId: number
   ): Promise<{ text: string; transcriptionId?: string; isPending?: boolean; trialRemainsNum?: number } | null> =>
     ipcRenderer.invoke('telegram:transcribe-audio', { accountId, chatId, messageId }),
+  getQuickReplies: (accountId: string): Promise<QuickReplyShortcutItem[]> =>
+    ipcRenderer.invoke('telegram:get-quick-replies', { accountId }),
+  sendQuickReplyMessages: (accountId: string, peerId: string, shortcutId: number): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('telegram:send-quick-reply-messages', { accountId, peerId, shortcutId }),
+  editQuickReplyShortcut: (accountId: string, shortcutId: number, shortcut: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:edit-quick-reply-shortcut', { accountId, shortcutId, shortcut }),
+  deleteQuickReplyShortcut: (accountId: string, shortcutId: number): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-quick-reply-shortcut', { accountId, shortcutId }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>

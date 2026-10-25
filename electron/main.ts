@@ -3899,6 +3899,43 @@ function setupIpcHandlers() {
     }
   })
 
+  // Quick Replies & Shortcuts IPC (Telegram Business / Premium Layer 178+)
+  ipcMain.handle('telegram:get-quick-replies', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getQuickReplies(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getQuickReplies error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:send-quick-reply-messages', async (_event, { accountId, peerId, shortcutId }) => {
+    try {
+      return await accountManager.sendQuickReplyMessages(accountId, peerId, shortcutId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendQuickReplyMessages error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:edit-quick-reply-shortcut', async (_event, { accountId, shortcutId, shortcut }) => {
+    try {
+      return await accountManager.editQuickReplyShortcut(accountId, shortcutId, shortcut)
+    } catch (err: any) {
+      Logger.warn(`[IPC] editQuickReplyShortcut error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:delete-quick-reply-shortcut', async (_event, { accountId, shortcutId }) => {
+    try {
+      return await accountManager.deleteQuickReplyShortcut(accountId, shortcutId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteQuickReplyShortcut error:`, err)
+      throw err
+    }
+  })
+
   // Channel Boosts IPC
   ipcMain.handle('telegram:get-channel-boosts', async (_event, { accountId, channelId }) => {
     try {

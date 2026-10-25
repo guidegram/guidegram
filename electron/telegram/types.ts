@@ -1595,4 +1595,18 @@ export interface GameHighScoreItem {
   userName?: string
 }
 
+export interface QuickReplyShortcutItem {
+  shortcutId: number
+  shortcut: string
+  topMessageId?: number
+  count?: number
+  messages?: Array<{
+    id: number
+    text: string
+    date: number
+    mediaType?: string
+  }>
+}
+
+
 
