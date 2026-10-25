@@ -1266,3 +1266,42 @@ textarea:focus-visible {
   color: #38bdf8;
   font-weight: 600;
 }
+
+/* ==========================================================================
+   Phase 137: Google Jules Live Git Diff Streaming & Virtual Patch Engine
+   Streaming unified diff viewer, additions/deletions highlighting, and hunk headers
+   ========================================================================== */
+.git-diff-stream-container {
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff-hunk-header {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  padding: 4px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.diff-line-addition {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  padding: 1px 12px;
+  border-left: 3px solid #22c55e;
+}
+
+.diff-line-deletion {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  padding: 1px 12px;
+  border-left: 3px solid #ef4444;
+}
+
