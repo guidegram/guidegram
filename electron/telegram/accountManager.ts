@@ -10182,6 +10182,7 @@ export class AccountManager {
             excludeMuted: f.excludeMuted,
             excludeRead: f.excludeRead,
             excludeArchived: f.excludeArchived,
+            color: f.color,
           }
         })
     } catch (_) {

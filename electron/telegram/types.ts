@@ -1171,6 +1171,7 @@ export interface CloudFolderItem {
   excludeMuted?: boolean
   excludeRead?: boolean
   excludeArchived?: boolean
+  color?: number
 }
 
 export interface StickerItem {

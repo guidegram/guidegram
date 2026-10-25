@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { MessageSquare, Users, Radio, Bot, BellRing, Layers, CheckCheck, Folder, Archive } from 'lucide-react'
+import { MessageSquare, Users, Radio, Bot, BellRing, Layers, CheckCheck, Folder, Archive, ArrowLeft, ArrowRight, Palette } from 'lucide-react'
 import { CloudFolderItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 
@@ -15,6 +15,16 @@ interface ChatTabsProps {
   onMarkAllAsRead?: (category?: TabCategory) => Promise<boolean> | void
   onCloudFoldersLoaded?: (folders: CloudFolderItem[]) => void
   cloudFolders?: CloudFolderItem[]
+}
+
+export const TELEGRAM_FOLDER_TAG_COLORS: Record<number, string> = {
+  0: '#2481cc',
+  1: '#e5a91b',
+  2: '#8544e3',
+  3: '#4bb34b',
+  4: '#e53935',
+  5: '#e91e63',
+  6: '#00acc1',
 }
 
 export const ChatTabs: React.FC<ChatTabsProps> = ({
@@ -97,21 +107,27 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
     ? cloudFoldersProp
     : cloudFolders
 
-  const folderTabs: { id: TabCategory; label: string; icon: React.ReactNode }[] = effectiveFolders.map((f) => {
+  const folderTabs: { id: TabCategory; label: string; icon: React.ReactNode; color?: number; folderId?: number }[] = effectiveFolders.map((f) => {
     let titleStr = 'Folder'
     if (typeof f.title === 'string') {
       titleStr = f.title
     } else if (f.title && typeof f.title === 'object') {
       titleStr = (f.title as any).text || 'Folder'
     }
+    const tagColor = f.color !== undefined ? TELEGRAM_FOLDER_TAG_COLORS[f.color] : undefined
     return {
       id: `folder:${f.id}`,
       label: titleStr,
       icon: f.emoticon ? (
         <span className="text-xs leading-none">{f.emoticon}</span>
       ) : (
-        <Folder className="w-3.5 h-3.5 text-accent-cyan" />
+        <Folder
+          className="w-3.5 h-3.5"
+          style={{ color: tagColor || '#00acc1' }}
+        />
       ),
+      color: f.color,
+      folderId: f.id,
     }
   })
 
@@ -128,6 +144,68 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
     } finally {
       setIsMarking(false)
       setTabContextMenu(null)
+    }
+  }
+
+  const handleMoveFolder = async (folderId: number, direction: 'left' | 'right') => {
+    if (!accountId) return
+    const idx = effectiveFolders.findIndex((f) => f.id === folderId)
+    if (idx === -1) return
+    const targetIdx = direction === 'left' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= effectiveFolders.length) return
+
+    const newFolders = [...effectiveFolders]
+    const temp = newFolders[idx]
+    newFolders[idx] = newFolders[targetIdx]
+    newFolders[targetIdx] = temp
+
+    setCloudFolders(newFolders)
+    onCloudFoldersLoaded?.(newFolders)
+    setTabContextMenu(null)
+
+    try {
+      if (window.guidegram?.updateDialogFiltersOrder) {
+        await window.guidegram.updateDialogFiltersOrder(
+          accountId,
+          newFolders.map((f) => f.id)
+        )
+      }
+    } catch (err) {
+      console.warn('Failed to reorder folders:', err)
+    }
+  }
+
+  const handleSetFolderColor = async (folderId: number, colorIndex: number) => {
+    if (!accountId) return
+    const target = effectiveFolders.find((f) => f.id === folderId)
+    if (!target) return
+
+    const updated = effectiveFolders.map((f) => (f.id === folderId ? { ...f, color: colorIndex } : f))
+    setCloudFolders(updated)
+    onCloudFoldersLoaded?.(updated)
+    setTabContextMenu(null)
+
+    try {
+      if (window.guidegram?.updateDialogFilter) {
+        await window.guidegram.updateDialogFilter(accountId, folderId, {
+          title: target.title,
+          emoticon: target.emoticon,
+          color: colorIndex,
+          pinnedPeers: target.pinnedPeerIds || [],
+          includePeers: target.includePeerIds || [],
+          excludePeers: target.excludePeerIds || [],
+          contacts: target.contacts,
+          nonContacts: target.nonContacts,
+          groups: target.groups,
+          broadcasts: target.broadcasts,
+          bots: target.bots,
+          excludeMuted: target.excludeMuted,
+          excludeRead: target.excludeRead,
+          excludeArchived: target.excludeArchived,
+        })
+      }
+    } catch (err) {
+      console.warn('Failed to update folder color:', err)
     }
   }
 
@@ -217,9 +295,60 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
             transition={{ type: 'spring', damping: 24, stiffness: 350 }}
             dir={isRTL ? 'rtl' : 'ltr'}
             style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
-            className="fixed z-50 w-48 bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs"
+            className="fixed z-50 w-52 bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs"
             onClick={(e) => e.stopPropagation()}
           >
+            {tabContextMenu.tabId.startsWith('folder:') && (
+              <>
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Folder Order & Tags
+                </div>
+                {(() => {
+                  const fId = Number(tabContextMenu.tabId.replace('folder:', ''))
+                  const fIdx = effectiveFolders.findIndex((f) => f.id === fId)
+                  return (
+                    <>
+                      {fIdx > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleMoveFolder(fId, 'left')}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                          <span>Move Folder Left</span>
+                        </button>
+                      )}
+                      {fIdx < effectiveFolders.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleMoveFolder(fId, 'right')}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                          <span>Move Folder Right</span>
+                        </button>
+                      )}
+                      <div className="px-3 py-1.5 flex items-center gap-1.5 border-t border-white/5 my-0.5">
+                        <Palette className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                          {Object.entries(TELEGRAM_FOLDER_TAG_COLORS).map(([cIdx, hex]) => (
+                            <button
+                              key={cIdx}
+                              type="button"
+                              onClick={() => handleSetFolderColor(fId, Number(cIdx))}
+                              className="w-3.5 h-3.5 rounded-full hover:scale-125 transition-transform cursor-pointer border border-white/20"
+                              style={{ backgroundColor: hex }}
+                              title={`Tag Color ${cIdx}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+                <div className="h-px bg-white/5 my-1" />
+              </>
+            )}
             <button
               type="button"
               onClick={() => handleMarkTab(tabContextMenu.tabId)}
