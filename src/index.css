@@ -1643,6 +1643,29 @@ textarea:focus-visible {
   100% { background-position: -200% 0; }
 }
 
+/* ==========================================================================
+   Phase 150: Cluster 4 Capstone & Unified Visual Shader Orchestration
+   Grand capstone banner and multi-engine telemetry grid tokens
+   ========================================================================== */
+.cluster4-grand-capstone-banner {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(168, 85, 247, 0.25) 50%, rgba(56, 189, 248, 0.25) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
+}
+
+.engine-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+
 
 
 
