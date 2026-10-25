@@ -33,6 +33,7 @@ import { privacyProtectionGuard } from './privacyProtectionGuard'
 import { accountVaultManager } from './telegram/accountVaultManager'
 import { MediaStreamValidator } from './mediaStreamValidator'
 import { networkReconnectManager } from './telegram/reconnectManager'
+import { sqliteDeadlockGuard } from './telegram/sqliteDeadlockGuard'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3786,6 +3787,10 @@ function setupIpcHandlers() {
       return res ? res.status === 'connected' : false
     })
     return { ok: true }
+  })
+
+  ipcMain.handle('system:get-sqlite-deadlock-telemetry', async () => {
+    return sqliteDeadlockGuard.getTelemetry()
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {

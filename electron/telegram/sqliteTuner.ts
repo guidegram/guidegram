@@ -1,3 +1,5 @@
+import { sqliteDeadlockGuard } from './sqliteDeadlockGuard'
+
 let Logger: any = {
   info: (...args: any[]) => console.log('[INFO]', ...args),
   warn: (...args: any[]) => console.warn('[WARN]', ...args),
@@ -120,4 +122,27 @@ export class SqliteTuner {
       foreignKeys: Boolean(query('foreign_keys') ?? true),
     }
   }
+
+  /**
+   * Executes a transactional database operation with BEGIN IMMEDIATE and deadlock retry.
+   */
+  public static async executeTransaction<T>(
+    db: any,
+    fn: () => Promise<T> | T,
+    options?: any
+  ): Promise<T> {
+    return sqliteDeadlockGuard.executeTransaction(db, fn, options)
+  }
+
+  /**
+   * Executes a database query with deadlock retry.
+   */
+  public static async execute<T>(
+    fn: () => Promise<T> | T,
+    options?: any
+  ): Promise<T> {
+    return sqliteDeadlockGuard.execute(fn, options)
+  }
 }
+
+export { sqliteDeadlockGuard } from './sqliteDeadlockGuard'

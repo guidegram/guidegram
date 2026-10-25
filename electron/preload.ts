@@ -1366,6 +1366,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:get-network-reconnect-telemetry'),
   reconnectAllAccounts: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('telegram:reconnect-all-accounts'),
+  getSqliteDeadlockTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-sqlite-deadlock-telemetry'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {
