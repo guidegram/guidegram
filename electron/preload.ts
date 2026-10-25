@@ -266,6 +266,11 @@ const guidegramAPI = {
     options?: { isSensitive?: boolean; ttlMs?: number }
   ): Promise<boolean> =>
     ipcRenderer.invoke('system:copy-to-clipboard', { text, ...options }),
+  resolveDoh: (
+    hostname: string,
+    recordType?: 'A' | 'AAAA'
+  ): Promise<string[]> =>
+    ipcRenderer.invoke('telegram:resolve-doh', { hostname, recordType }),
   forwardMessages: (
     accountId: string,
     toChatId: string | string[],

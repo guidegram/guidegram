@@ -3,19 +3,32 @@ import { SocksProxyTcpTransport, HttpProxyTcpTransport, MtProxyTcpTransport } fr
 import { ProxyConfig, AutoHarvestStatus, WarpStatus } from './types'
 import { ProxyHarvester } from './proxyHarvester'
 import { WarpManager } from './warpManager'
+import { DohResolver } from './dohResolver'
 
 export class ProxyManager {
   /**
    * Measure latency of a proxy in milliseconds
    */
   public static async testProxyPing(proxy: ProxyConfig): Promise<number> {
+    let connectHost = proxy.host
+    if (!DohResolver.isIpAddress(proxy.host)) {
+      try {
+        const resolvedIps = await DohResolver.resolve(proxy.host, 'A', 2000)
+        if (resolvedIps && resolvedIps.length > 0) {
+          connectHost = resolvedIps[0]
+        }
+      } catch {
+        // Fallback to raw hostname
+      }
+    }
+
     return new Promise((resolve) => {
       const startTime = Date.now()
       const socket = new net.Socket()
 
       socket.setTimeout(4000)
 
-      socket.connect(proxy.port, proxy.host, () => {
+      socket.connect(proxy.port, connectHost, () => {
         const latency = Date.now() - startTime
         socket.destroy()
         resolve(latency)

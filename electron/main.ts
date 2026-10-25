@@ -22,6 +22,7 @@ import { StorageGuardrails } from './storageGuardrails'
 import { DeepLinkHandler } from './deepLinkHandler'
 import { WebrtcSecurityGuard } from './webrtcSecurityGuard'
 import { ClipboardGuard } from './clipboardGuard'
+import { DohResolver } from './telegram/dohResolver'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -3645,6 +3646,18 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.warn('[IPC] copy-to-clipboard error:', err)
       return false
+    }
+  })
+
+  ipcMain.handle('telegram:resolve-doh', async (_event, payload: { hostname: string; recordType?: 'A' | 'AAAA' }) => {
+    try {
+      if (typeof payload?.hostname === 'string') {
+        return await DohResolver.resolve(payload.hostname, payload.recordType || 'A')
+      }
+      return []
+    } catch (err: any) {
+      Logger.warn('[IPC] resolve-doh error:', err)
+      return []
     }
   })
 
