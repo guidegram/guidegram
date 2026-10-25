@@ -1400,6 +1400,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:simulate-power-suspend'),
   simulatePowerResume: (sleepDurationMs?: number): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('system:simulate-power-resume', { sleepDurationMs }),
+  getMtprotoAuditReport: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('telegram:get-mtproto-audit'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {

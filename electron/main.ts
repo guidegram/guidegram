@@ -39,6 +39,7 @@ import { memoryPressureManager } from './memoryPressureManager'
 import { swrCache } from './swrCache'
 import { IpcPayloadRedactor } from './ipcPayloadRedactor'
 import { powerLifecycleManager } from './powerLifecycleManager'
+import { MtprotoAuditInspector } from './telegram/mtprotoAuditInspector'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3868,6 +3869,14 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:simulate-power-resume', async (_event, payload) => {
     return await powerLifecycleManager.simulateResume(payload?.sleepDurationMs)
+  })
+
+  ipcMain.handle('telegram:get-mtproto-audit', async () => {
+    const activeAccount = accountManager?.getAccounts?.()?.find?.((a) => a.status === 'connected')
+    return MtprotoAuditInspector.generateAuditReport({
+      status: activeAccount ? 'connected' : 'disconnected',
+      primaryDcId: 2,
+    })
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
