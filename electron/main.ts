@@ -1988,6 +1988,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:stop-live-location', async (_event, { accountId, chatId, messageId }) => {
+    try {
+      return await accountManager.stopLiveLocation(accountId, chatId, messageId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] stopLiveLocation error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-recent-locations', async (_event, { accountId, chatId, limit }) => {
     try {
       return await accountManager.getRecentLocations(accountId, chatId, limit)

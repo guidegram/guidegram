@@ -581,6 +581,12 @@ const guidegramAPI = {
     }
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:edit-live-location', { accountId, chatId, messageId, params }),
+  stopLiveLocation: (
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:stop-live-location', { accountId, chatId, messageId }),
   getRecentLocations: (
     accountId: string,
     chatId: string,

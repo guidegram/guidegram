@@ -1,0 +1,15 @@
+Phase 91: Telegram Live Location Streaming & Geofencing Protocol
+
+- Added `stopLiveLocation` to `AccountManager` invoking `editLiveLocation` with `{ stopped: true }` and `inputMediaGeoLive`.
+- Registered `telegram:stop-live-location` IPC handler in `electron/main.ts`.
+- Exposed `stopLiveLocation` method in `electron/preload.ts`.
+- Created `src/components/chat/LiveLocationModal.tsx`:
+  - Canvas-based dark radar map viewport displaying live coordinates, heading angle direction arrow, and circular geofencing proximity rings.
+  - Multi-user participant markers on radar showing other peers streaming in the chat.
+  - Duration picker (15 min, 1 hour, 8 hours) mapped to `livePeriod`.
+  - Proximity Geofence Alert threshold selector (Off, 50m, 100m, 500m, 1km) mapped to `proximityNotificationRadius`.
+  - Real-time periodic polling of `getRecentLocations` every 8 seconds.
+  - Active streaming management card with "Stop Sharing" action.
+- Integrated `LiveLocationModal` and Live Location Action Card in Info Drawer of `src/components/ChatViewport.tsx`.
+- Created and passed test suite `tests/live_location_geofencing_verification.mjs` (17/17 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.

@@ -9251,6 +9251,14 @@ export class AccountManager {
     }
   }
 
+  public async stopLiveLocation(
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<boolean> {
+    return await this.editLiveLocation(accountId, chatId, messageId, { stopped: true })
+  }
+
   public async getRecentLocations(
     accountId: string,
     chatId: string,

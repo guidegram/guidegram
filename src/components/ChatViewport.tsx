@@ -108,6 +108,7 @@ import { AutoDeleteModal } from './AutoDeleteModal'
 import { ChatThemeModal, OFFICIAL_CHAT_THEMES } from './chat/ChatThemeModal'
 import { BusinessSettingsModal } from './chat/BusinessSettingsModal'
 import { ChannelBoostModal } from './chat/ChannelBoostModal'
+import { LiveLocationModal } from './chat/LiveLocationModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
@@ -722,6 +723,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isChatThemeModalOpen, setIsChatThemeModalOpen] = useState(false)
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false)
   const [isChannelBoostModalOpen, setIsChannelBoostModalOpen] = useState(false)
+  const [isLiveLocationModalOpen, setIsLiveLocationModalOpen] = useState(false)
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -7574,6 +7576,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               )}
 
+              {/* Live Location Action Card */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsInfoOpen(false)
+                  setIsLiveLocationModalOpen(true)
+                }}
+                className="w-full p-3.5 rounded-2xl bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/30 text-accent-cyan font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-accent-cyan/20 flex items-center justify-center">
+                    <Radio className="w-4 h-4 text-accent-cyan animate-pulse" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="font-bold text-white">Live Location & Geofencing</span>
+                    <span className="text-[10px] text-gray-400">Share real-time GPS & radar alerts</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-accent-cyan" />
+              </button>
+
               {/* 64Gram Power Feature: Chat Permissions Matrix (Groups only) */}
               {chat.isGroup && !chat.isChannel && !chatDetails?.isBroadcast && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
@@ -8964,6 +8987,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           channelId={chat.id}
           channelTitle={chatDetails?.title || chat.title}
           onClose={() => setIsChannelBoostModalOpen(false)}
+        />
+      )}
+
+      {/* 22. Telegram Live Location & Geofencing Modal */}
+      {isLiveLocationModalOpen && chat && (
+        <LiveLocationModal
+          isOpen={isLiveLocationModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chatDetails?.title || chat.title}
+          onClose={() => setIsLiveLocationModalOpen(false)}
         />
       )}
     </div>
