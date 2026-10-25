@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Search, UserPlus, Phone, AtSign, Users, Star, Cake, ShieldAlert, Check, Plus } from 'lucide-react'
+import {
+  X,
+  Search,
+  UserPlus,
+  Phone,
+  AtSign,
+  Users,
+  Star,
+  Cake,
+  ShieldAlert,
+  Check,
+  Plus,
+  QrCode,
+  Download,
+  Copy,
+  Upload,
+  Sparkles,
+  Share2,
+} from 'lucide-react'
+import QRCode from 'qrcode'
 import { ContactItem } from '../types/telegram'
 import { Avatar } from './Avatar'
+import { generateVCard, parseVCard, downloadVCardFile } from '../utils/vcard'
+import { copyTextToClipboard } from '../utils/clipboard'
 
 interface ContactsModalProps {
   isOpen: boolean
@@ -26,6 +47,12 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // QR Code & vCard Sharing State
+  const [selectedQrContact, setSelectedQrContact] = useState<ContactItem | null>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [qrCopied, setQrCopied] = useState(false)
+  const [qrFormat, setQrFormat] = useState<'vcard' | 'telegram'>('vcard')
+
   // New Contact Form State
   const [newFirstName, setNewFirstName] = useState('')
   const [newLastName, setNewLastName] = useState('')
@@ -33,6 +60,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [newNote, setNewNote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [addSuccess, setAddSuccess] = useState(false)
+  const [importNotification, setImportNotification] = useState<string | null>(null)
 
   const loadAll = () => {
     if (!isOpen || !accountId) return
@@ -56,6 +84,92 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   useEffect(() => {
     loadAll()
   }, [isOpen, accountId])
+
+  // Generate QR code whenever selectedQrContact or qrFormat changes
+  useEffect(() => {
+    if (!selectedQrContact) {
+      setQrDataUrl(null)
+      return
+    }
+
+    let payload = ''
+    if (qrFormat === 'telegram' && selectedQrContact.username) {
+      payload = `https://t.me/${selectedQrContact.username.replace(/^@/, '')}`
+    } else if (qrFormat === 'telegram' && selectedQrContact.phone) {
+      payload = `tg://contact?phone=${encodeURIComponent(selectedQrContact.phone)}`
+    } else {
+      payload = generateVCard({
+        firstName: selectedQrContact.firstName,
+        lastName: selectedQrContact.lastName,
+        phone: selectedQrContact.phone,
+        username: selectedQrContact.username,
+        note: (selectedQrContact as any).note,
+      })
+    }
+
+    QRCode.toDataURL(payload, {
+      width: 220,
+      margin: 1,
+      color: {
+        dark: '#00F0FF',
+        light: '#0c131a',
+      },
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => {
+        console.error('Failed to generate contact QR code:', err)
+        setQrDataUrl(null)
+      })
+  }, [selectedQrContact, qrFormat])
+
+  const handleCopyVCard = async () => {
+    if (!selectedQrContact) return
+    const vcard = generateVCard({
+      firstName: selectedQrContact.firstName,
+      lastName: selectedQrContact.lastName,
+      phone: selectedQrContact.phone,
+      username: selectedQrContact.username,
+      note: (selectedQrContact as any).note,
+    })
+    await copyTextToClipboard(vcard)
+    setQrCopied(true)
+    setTimeout(() => setQrCopied(false), 2000)
+  }
+
+  const handleDownloadVCard = () => {
+    if (!selectedQrContact) return
+    downloadVCardFile({
+      firstName: selectedQrContact.firstName,
+      lastName: selectedQrContact.lastName,
+      phone: selectedQrContact.phone,
+      username: selectedQrContact.username,
+      note: (selectedQrContact as any).note,
+    })
+  }
+
+  const handleImportVcf = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      if (text) {
+        const parsed = parseVCard(text)
+        if (parsed.firstName || parsed.fullName) {
+          setNewFirstName(parsed.firstName || parsed.fullName)
+          if (parsed.lastName) setNewLastName(parsed.lastName)
+          if (parsed.phone) setNewPhone(parsed.phone)
+          if (parsed.note) setNewNote(parsed.note)
+          setActiveTab('add')
+          setImportNotification(`Loaded vCard: ${parsed.fullName || parsed.firstName}`)
+          setTimeout(() => setImportNotification(null), 3500)
+        }
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,7 +225,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94, y: 16 }}
         transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-        className="bg-[#17212b] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[75vh] max-h-[640px] select-none"
+        className="bg-[#17212b] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[75vh] max-h-[640px] select-none relative"
       >
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
@@ -175,7 +289,27 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
         {/* Content Area */}
         {activeTab === 'add' ? (
           <form onSubmit={handleAddContact} className="p-5 space-y-4 flex-1 overflow-y-auto">
-            <div className="text-xs font-semibold text-gray-200 uppercase tracking-wider">New Telegram Contact</div>
+            <div className="flex items-center justify-between pb-1 border-b border-white/5">
+              <div className="text-xs font-semibold text-gray-200 uppercase tracking-wider">New Telegram Contact</div>
+              <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-accent-cyan/10 hover:bg-accent-cyan/20 text-[11px] text-accent-cyan font-semibold cursor-pointer transition-colors border border-accent-cyan/20">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Import .vcf</span>
+                <input
+                  type="file"
+                  accept=".vcf,text/vcard"
+                  className="hidden"
+                  onChange={handleImportVcf}
+                />
+              </label>
+            </div>
+
+            {importNotification && (
+              <div className="px-3 py-2 rounded-xl bg-accent-cyan/15 border border-accent-cyan/30 text-accent-cyan text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span className="truncate">{importNotification}</span>
+              </div>
+            )}
+
             <div>
               <label className="text-[11px] text-gray-400 mb-1 block">First Name (Required)</label>
               <input
@@ -339,6 +473,21 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Action buttons: QR code & vCard */}
+                      <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          title="Share Contact QR & vCard"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedQrContact(c)
+                          }}
+                          className="p-2 rounded-xl text-gray-400 hover:text-accent-cyan hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <QrCode className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )
                 })
@@ -346,6 +495,102 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
             </div>
           </>
         )}
+
+        {/* QR Code & vCard Modal Overlay */}
+        <AnimatePresence>
+          {selectedQrContact && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 12 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 12 }}
+                className="bg-[#121b22] border border-accent-cyan/30 w-full max-w-xs rounded-3xl p-5 shadow-2xl flex flex-col items-center text-center relative"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedQrContact(null)}
+                  className="absolute right-3.5 top-3.5 p-1 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="mb-3">
+                  <Avatar
+                    accountId={accountId}
+                    peerId={selectedQrContact.id}
+                    title={`${selectedQrContact.firstName} ${selectedQrContact.lastName || ''}`}
+                    size="lg"
+                  />
+                </div>
+
+                <h3 className="font-bold text-sm text-white truncate max-w-[200px]">
+                  {selectedQrContact.firstName} {selectedQrContact.lastName || ''}
+                </h3>
+                <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+                  {selectedQrContact.phone || (selectedQrContact.username ? `@${selectedQrContact.username}` : 'Contact Card')}
+                </p>
+
+                {/* QR Display */}
+                <div className="my-4 p-2.5 bg-[#0c131a] rounded-2xl border border-white/10 shadow-inner">
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} alt="Contact QR Code" className="w-44 h-44 rounded-xl" />
+                  ) : (
+                    <div className="w-44 h-44 flex items-center justify-center text-xs text-gray-500">
+                      Generating QR...
+                    </div>
+                  )}
+                </div>
+
+                {/* Format Toggle */}
+                <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl text-[11px] mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setQrFormat('vcard')}
+                    className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                      qrFormat === 'vcard' ? 'bg-accent-cyan text-dark-950 font-bold' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    vCard 4.0
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQrFormat('telegram')}
+                    className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                      qrFormat === 'telegram' ? 'bg-accent-cyan text-dark-950 font-bold' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Telegram Link
+                  </button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={handleCopyVCard}
+                    className="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    {qrCopied ? <Check className="w-3.5 h-3.5 text-accent-cyan" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{qrCopied ? 'Copied!' : 'Copy vCard'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadVCard}
+                    className="flex-1 py-2 px-3 rounded-xl bg-accent-cyan text-dark-950 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-accent-cyan/90 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Save .vcf</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )

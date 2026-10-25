@@ -454,6 +454,18 @@ export class ContactsService {
     }
   }
 
+  public async exportCard(holder: RpcClientHolder): Promise<number[]> {
+    try {
+      const res = await holder.client.call({
+        _: 'contacts.exportCard',
+      })
+      return Array.isArray(res) ? res : []
+    } catch (err) {
+      Logger.warn('[ContactsService] exportCard error:', err)
+      return []
+    }
+  }
+
   public async exportContactToken(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({

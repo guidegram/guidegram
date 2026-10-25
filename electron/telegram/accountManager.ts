@@ -8652,6 +8652,12 @@ export class AccountManager {
     return this.contactsService.getRequirementsToContact(holder as any, accountId, userIds)
   }
 
+  public async exportContactCard(accountId: string): Promise<number[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.exportCard(holder as any)
+  }
+
   // --- Channels & Supergroups Administration Domain Engine (Phase 2) ---
   public getChannelsService(): ChannelsService {
     return this.channelsService

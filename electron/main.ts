@@ -2952,6 +2952,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:export-contact-card', async (_event, { accountId }) => {
+    try {
+      return await accountManager.exportContactCard(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] exportContactCard error:`, err)
+      return []
+    }
+  })
+
   // --- Channels & Supergroups Administration IPC (Phase 2) ---
   ipcMain.handle('telegram:channel-get-participants', async (_event, { accountId, channelId, filterName, offset, limit }) => {
     try {

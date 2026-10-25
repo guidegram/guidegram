@@ -1111,6 +1111,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:update-contact-note', { accountId, userId, note }),
   getRequirementsToContact: (accountId: string, userIds: string[]): Promise<Array<Record<string, unknown>>> =>
     ipcRenderer.invoke('telegram:get-requirements-to-contact', { accountId, userIds }),
+  exportContactCard: (accountId: string): Promise<number[]> =>
+    ipcRenderer.invoke('telegram:export-contact-card', { accountId }),
 
   // Channels & Supergroups Administration Domain API (Phase 2)
   channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<Record<string, unknown>> =>
