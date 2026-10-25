@@ -1305,3 +1305,40 @@ textarea:focus-visible {
   border-left: 3px solid #ef4444;
 }
 
+/* ==========================================================================
+   Phase 138: Google Jules Automated Pull Request & Branch Synthesizer
+   GitHub-Telegram styled PR status badges and branch pill tags
+   ========================================================================== */
+.jules-pr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.jules-pr-badge.draft {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.branch-pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #38bdf8;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+
