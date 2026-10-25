@@ -448,8 +448,13 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-forum-topics', { accountId, chatId }),
   setChatForumEnabled: (accountId: string, chatId: string, enabled: boolean): Promise<ChatDetails> =>
     ipcRenderer.invoke('telegram:set-chat-forum-enabled', { accountId, chatId, enabled }),
-  createForumTopic: (accountId: string, chatId: string, title: string): Promise<ForumTopicCreateResult> =>
-    ipcRenderer.invoke('telegram:create-forum-topic', { accountId, chatId, title }),
+  createForumTopic: (
+    accountId: string,
+    chatId: string,
+    title: string,
+    options?: { iconColor?: number; iconEmojiId?: string }
+  ): Promise<ForumTopicCreateResult> =>
+    ipcRenderer.invoke('telegram:create-forum-topic', { accountId, chatId, title, ...options }),
   editForumTopic: (
     accountId: string,
     chatId: string,

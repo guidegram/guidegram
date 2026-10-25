@@ -6086,20 +6086,27 @@ export class AccountManager {
   public async createForumTopic(
     accountId: string,
     chatId: string,
-    title: string
+    title: string,
+    options?: { iconColor?: number; iconEmojiId?: string }
   ): Promise<ForumTopicCreateResult> {
     const { holder, inputPeer } = await this.resolveForumPeer(accountId, chatId)
     const normalizedTitle = this.normalizeForumTopicTitle(title)
 
-    const res: any = await holder.client!.call({
+    const request: any = {
       _: 'messages.createForumTopic',
       peer: inputPeer,
       title: normalizedTitle,
-      iconColor: 0x6fb9f0,
+      iconColor: typeof options?.iconColor === 'number' ? options.iconColor : 0x6fb9f0,
       randomId: Long.fromString(
         `${Date.now()}${String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')}`
       ),
-    })
+    }
+
+    if (options?.iconEmojiId) {
+      request.iconEmojiId = Long.fromString(options.iconEmojiId)
+    }
+
+    const res: any = await holder.client!.call(request)
 
     let topicId: number | undefined
     for (const update of res.updates || []) {

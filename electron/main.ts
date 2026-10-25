@@ -1791,8 +1791,8 @@ function setupIpcHandlers() {
     return await accountManager.setChatForumEnabled(accountId, chatId, !!enabled)
   })
 
-  ipcMain.handle('telegram:create-forum-topic', async (_event, { accountId, chatId, title }) => {
-    return await accountManager.createForumTopic(accountId, chatId, title)
+  ipcMain.handle('telegram:create-forum-topic', async (_event, { accountId, chatId, title, iconColor, iconEmojiId }) => {
+    return await accountManager.createForumTopic(accountId, chatId, title, { iconColor, iconEmojiId })
   })
 
   ipcMain.handle('telegram:edit-forum-topic', async (_event, { accountId, chatId, topicId, input }) => {
