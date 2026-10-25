@@ -1402,6 +1402,23 @@ textarea:focus-visible {
   overflow-y: auto;
 }
 
+/* ==========================================================================
+   Phase 141: WebGL Hardware Acceleration & Multi-Engine Viewport Offscreen
+   GPU composited layer and offscreen occlusion render pausing styles
+   ========================================================================== */
+.webgl-accelerated-layer {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  contain: strict;
+}
+
+.webgl-offscreen-paused {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+
 
 
 
