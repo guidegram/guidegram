@@ -504,3 +504,36 @@ textarea:focus-visible {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease;
   will-change: transform;
 }
+
+/* ==========================================================================
+   Phase 102: Message Bubble Haptic Scale & Context Menu Spring Dismissal
+   Apple/Telegram-grade spring popups, tactile feedback, and smooth dismissal
+   ========================================================================== */
+.bubble-haptic-spring {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.bubble-haptic-spring:hover {
+  transform: scale(1.004);
+}
+
+.bubble-haptic-spring:active {
+  transform: scale(0.988);
+}
+
+.context-menu-spring {
+  transform-origin: top left;
+  animation: contextMenuPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes contextMenuPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

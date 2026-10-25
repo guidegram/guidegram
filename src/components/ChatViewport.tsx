@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import {
   Send,
   Forward,
@@ -5398,7 +5398,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <div className="flex flex-col min-w-0 max-w-full">
                     {/* Message Bubble (Stickers render transparently without bubble frame) */}
                     <div
-                      className={`transition-all ${
+                      className={`transition-all bubble-haptic-spring ${
                       msg.isSticker || msg.mediaType === 'sticker'
                         ? 'bg-transparent p-0'
                         : `text-xs shadow-sm ${
@@ -8212,15 +8212,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )}
 
       {/* 6. Telegram Desktop Right-Click Context Menu */}
-      {contextMenu && (
-        <div
-          style={{
-            top: Math.min(contextMenu.y, window.innerHeight - (contextMenu.linkUrl ? 420 : 340)),
-            left: Math.min(contextMenu.x, window.innerWidth - 240),
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="fixed z-50 min-w-[210px] max-w-[280px] bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
-        >
+      <AnimatePresence>
+        {contextMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[0.5px]"
+              onClick={() => setContextMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setContextMenu(null)
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: -2 }}
+              transition={{ type: 'spring', stiffness: 450, damping: 28, mass: 0.7 }}
+              style={{
+                top: Math.min(contextMenu.y, window.innerHeight - (contextMenu.linkUrl ? 420 : 340)),
+                left: Math.min(contextMenu.x, window.innerWidth - 240),
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed z-50 min-w-[210px] max-w-[280px] bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs context-menu-spring"
+            >
           {/* Specific Link Actions (when right-clicking directly on a link) */}
           {contextMenu.linkUrl && (
             <>
@@ -8504,8 +8518,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <span>{alwaysDeleteBoth ? 'Delete for Everyone' : 'Delete Message'}</span>
             </button>
           )}
-        </div>
-      )}
+        </motion.div>
+      </>
+    )}
+  </AnimatePresence>
 
       {/* 64Gram External Link Security Modal */}
       {pendingExternalUrl && (
