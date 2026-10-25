@@ -144,6 +144,7 @@ export class SessionStore {
       },
       notificationsEnabled: true,
       soundEnabled: true,
+      notificationTone: 'classic',
       downloadsPath: path.join(this.dataDir, 'downloads'),
       alwaysAskDownloadPath: false,
       chatFontSize: 14,

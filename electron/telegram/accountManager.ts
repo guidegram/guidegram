@@ -11768,6 +11768,24 @@ export class AccountManager {
     return await this.securityService.saveAutoDownloadSettings(holder as any, low, high, settings)
   }
 
+  public async getSavedRingtones(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder || !holder.client) throw new Error(`Account ${accountId} not connected`)
+    return await this.securityService.getSavedRingtones(holder as any, hash)
+  }
+
+  public async saveRingtone(accountId: string, id: any, unsave?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder || !holder.client) throw new Error(`Account ${accountId} not connected`)
+    return await this.securityService.saveRingtone(holder as any, id, unsave)
+  }
+
+  public async uploadRingtone(accountId: string, file: any, fileName?: string, mimeType?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder || !holder.client) throw new Error(`Account ${accountId} not connected`)
+    return await this.securityService.uploadRingtone(holder as any, file, fileName, mimeType)
+  }
+
   public sanitizeAccountInfo(info: AccountInfo): AccountInfo {
     const sanitized: AccountInfo = { ...info }
     delete sanitized.sessionString

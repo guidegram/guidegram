@@ -63,6 +63,7 @@ import type {
   NetworkProfileType,
   AutoDownloadNetworkRule,
   NetworkProfilesConfig,
+  SavedRingtoneItem,
   CacheStats,
   MyFullProfile,
   EmojiStatusItem,
@@ -265,6 +266,7 @@ export type {
   NetworkProfileType,
   AutoDownloadNetworkRule,
   NetworkProfilesConfig,
+  SavedRingtoneItem,
 }
 
 

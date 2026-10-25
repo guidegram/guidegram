@@ -3012,6 +3012,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-saved-ringtones', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getSavedRingtones(accountId, hash)
+    } catch (err: any) {
+      Logger.error(`[IPC] getSavedRingtones error for ${accountId}:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:save-ringtone', async (_event, { accountId, id, unsave }) => {
+    try {
+      return await accountManager.saveRingtone(accountId, id, unsave)
+    } catch (err: any) {
+      Logger.error(`[IPC] saveRingtone error for ${accountId}:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload-ringtone', async (_event, { accountId, file, fileName, mimeType }) => {
+    try {
+      return await accountManager.uploadRingtone(accountId, file, fileName, mimeType)
+    } catch (err: any) {
+      Logger.error(`[IPC] uploadRingtone error for ${accountId}:`, err)
+      return null
+    }
+  })
+
   // --- Channels & Supergroups Administration IPC (Phase 2) ---
   ipcMain.handle('telegram:channel-get-participants', async (_event, { accountId, channelId, filterName, offset, limit }) => {
     try {

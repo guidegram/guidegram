@@ -221,7 +221,7 @@ export const App: React.FC = () => {
         const targetDialog = dialogsByAccountRef.current[accountId]?.find((d) => d.id === chatId)
         const isChatMuted = targetDialog?.isMuted ?? false
         if (!message?.isOutgoing && !isChatMuted && configRef.current?.soundEnabled !== false) {
-          playNotificationSound()
+          playNotificationSound(configRef.current?.notificationTone || 'classic')
         }
         setDialogsByAccount((prev) => {
           const list = prev[accountId] || []

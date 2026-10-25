@@ -93,8 +93,9 @@ import {
   BusinessWorkHours,
   BusinessLocation,
   BusinessIntro,
+  SavedRingtoneItem,
 } from '../types/telegram'
-import { playNotificationSound } from '../utils/soundEffects'
+import { playNotificationSound, AVAILABLE_NOTIFICATION_TONES } from '../utils/soundEffects'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { ActiveSessionsModal } from './ActiveSessionsModal'
@@ -262,9 +263,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Window Close Action Preference
   const [closeAction, setCloseAction] = useState<CloseAction>('ask')
 
-  // Notifications & Sound
+  // Notifications & Sound (Phase 72 Notification Tones Parity)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [notificationTone, setNotificationTone] = useState<string>('classic')
+  const [savedRingtones, setSavedRingtones] = useState<SavedRingtoneItem[]>([])
+  const [isLoadingRingtones, setIsLoadingRingtones] = useState(false)
+  const [isUploadingRingtone, setIsUploadingRingtone] = useState(false)
 
   // Downloads Directory & Ask where to save
   const [downloadsPath, setDownloadsPath] = useState('')
@@ -641,6 +646,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setCloseAction(cfg.closeAction || 'ask')
         setNotificationsEnabled(cfg.notificationsEnabled ?? true)
         setSoundEnabled(cfg.soundEnabled ?? true)
+        setNotificationTone(cfg.notificationTone || 'classic')
         setDownloadsPath(cfg.downloadsPath || '')
         setAlwaysAskDownloadPath(cfg.alwaysAskDownloadPath ?? false)
         setChatFontSize(cfg.chatFontSize || 14)
@@ -814,6 +820,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       autoDownload,
       notificationsEnabled,
       soundEnabled,
+      notificationTone,
       downloadsPath,
       alwaysAskDownloadPath,
       chatFontSize,
@@ -1512,19 +1519,157 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-between p-3.5 rounded-2xl bg-dark-800 border border-white/5">
-                  <div>
-                    <div className="text-xs font-semibold text-gray-200">Notification Sound</div>
-                    <div className="text-[11px] text-gray-400">High-fidelity Web Audio synthesized chime</div>
+                {/* Notification Tones Picker (Telegram Desktop Parity - Phase 72) */}
+                <div className="pt-2 p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-gray-200">Notification Tone</div>
+                      <div className="text-[11px] text-gray-400">Choose a notification sound or upload custom ringtones</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => playNotificationSound(notificationTone)}
+                      className="px-3 py-1.5 rounded-xl bg-dark-900 hover:bg-dark-750 text-xs font-semibold text-primary-400 border border-primary-500/20 hover:border-primary-500/40 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title="Preview selected tone"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>Preview</span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => playNotificationSound()}
-                    className="px-3.5 py-1.5 rounded-xl bg-dark-900 hover:bg-dark-750 text-xs font-semibold text-primary-400 border border-primary-500/20 hover:border-primary-500/40 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" />
-                    <span>Play Chime</span>
-                  </button>
+
+                  {/* Built-in Tone Presets */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {AVAILABLE_NOTIFICATION_TONES.map((t) => {
+                      const isSelected = notificationTone === t.id
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setNotificationTone(t.id)
+                            playNotificationSound(t.id)
+                          }}
+                          className={`p-2 rounded-xl text-left text-xs font-medium transition-all flex items-center justify-between border ${
+                            isSelected
+                              ? 'bg-primary-600/20 text-primary-300 border-primary-500/40 shadow-sm'
+                              : 'bg-dark-900/60 text-gray-400 hover:text-gray-200 border-white/5 hover:border-white/10'
+                          }`}
+                        >
+                          <span className="truncate">{t.label}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-primary-400 shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Telegram Cloud Saved Ringtones */}
+                  <div className="pt-2 border-t border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                        Telegram Cloud Tones
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={isLoadingRingtones}
+                          onClick={async () => {
+                            if (accounts[0]?.id && window.guidegram?.getSavedRingtones) {
+                              try {
+                                setIsLoadingRingtones(true)
+                                const res = await window.guidegram.getSavedRingtones(accounts[0].id)
+                                if (Array.isArray(res?.ringtones)) {
+                                  setSavedRingtones(res.ringtones)
+                                }
+                              } catch (e) {
+                                console.error('Failed to load saved ringtones', e)
+                              } finally {
+                                setIsLoadingRingtones(false)
+                              }
+                            }
+                          }}
+                          className="text-[11px] text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isLoadingRingtones ? 'animate-spin' : ''}`} />
+                          <span>Sync Cloud</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isUploadingRingtone}
+                          onClick={async () => {
+                            if (accounts[0]?.id && window.guidegram?.openFileDialog && window.guidegram?.uploadRingtone) {
+                              try {
+                                setIsUploadingRingtone(true)
+                                const fileRes = await window.guidegram.openFileDialog({
+                                  type: 'audio',
+                                  title: 'Select Notification Sound Tone',
+                                  filters: [{ name: 'Audio Files', extensions: ['mp3', 'ogg', 'wav', 'm4a'] }],
+                                })
+                                if (!fileRes?.canceled && fileRes?.filePaths?.[0]) {
+                                  await window.guidegram.uploadRingtone(accounts[0].id, fileRes.filePaths[0])
+                                  const refreshed = await window.guidegram.getSavedRingtones(accounts[0].id)
+                                  if (Array.isArray(refreshed?.ringtones)) {
+                                    setSavedRingtones(refreshed.ringtones)
+                                  }
+                                }
+                              } catch (e) {
+                                console.error('Failed to upload ringtone', e)
+                              } finally {
+                                setIsUploadingRingtone(false)
+                              }
+                            }
+                          }}
+                          className="text-[11px] text-accent-cyan hover:underline flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Upload Tone</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {savedRingtones.length > 0 ? (
+                      <div className="space-y-1">
+                        {savedRingtones.map((r) => {
+                          const isSelected = notificationTone === r.id
+                          return (
+                            <div
+                              key={r.id}
+                              onClick={() => setNotificationTone(r.id)}
+                              className={`p-2 rounded-xl text-xs flex items-center justify-between cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-primary-600/20 text-primary-300 border-primary-500/40'
+                                  : 'bg-dark-900/60 text-gray-300 border-white/5 hover:border-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Music className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
+                                <span className="truncate">{r.title || 'Custom Tone'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    if (accounts[0]?.id && window.guidegram?.saveRingtone) {
+                                      await window.guidegram.saveRingtone(accounts[0].id, r.id, true)
+                                      setSavedRingtones(prev => prev.filter(x => x.id !== r.id))
+                                    }
+                                  }}
+                                  className="text-gray-500 hover:text-red-400 p-1 transition-colors"
+                                  title="Remove ringtone from cloud"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-gray-500 italic p-1">
+                        No custom cloud ringtones uploaded yet. Upload MP3/OGG (up to 300KB, 5 seconds) to sync across all your Telegram devices.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

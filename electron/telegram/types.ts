@@ -921,6 +921,15 @@ export interface AutoDownloadConfig {
   networkProfiles?: NetworkProfilesConfig
 }
 
+export interface SavedRingtoneItem {
+  id: string
+  title: string
+  duration?: number
+  mimeType?: string
+  date?: number
+  accessHash?: string
+}
+
 export interface AppConfig {
   apiId: number
   apiHash: string
@@ -950,6 +959,7 @@ export interface AppConfig {
   // Notifications & Sound
   notificationsEnabled?: boolean
   soundEnabled?: boolean
+  notificationTone?: string
   // Downloads Management
   downloadsPath?: string
   alwaysAskDownloadPath?: boolean

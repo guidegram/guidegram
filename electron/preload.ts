@@ -1126,6 +1126,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-autodownload-settings', { accountId }),
   saveAutoDownloadSettings: (accountId: string, low?: boolean, high?: boolean, settings?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:save-autodownload-settings', { accountId, low, high, settings }),
+  getSavedRingtones: (accountId: string, hash?: bigint | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-saved-ringtones', { accountId, hash }),
+  saveRingtone: (accountId: string, id: any, unsave?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-ringtone', { accountId, id, unsave }),
+  uploadRingtone: (accountId: string, file: any, fileName?: string, mimeType?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload-ringtone', { accountId, file, fileName, mimeType }),
 
   // Channels & Supergroups Administration Domain API (Phase 2)
   channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<Record<string, unknown>> =>
