@@ -1,0 +1,6 @@
+Phase 25: Electron WebPreferences Lockdown (Context Isolation & Sandbox)
+- Enforced complete WebPreferences lockdown via `SecurityGuardrails.getHardenedWebPreferences`: forced `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, `nodeIntegrationInWorker: false`, `nodeIntegrationInSubFrames: false`, `webSecurity: true`, `allowRunningInsecureContent: false`, `navigateOnDragDrop: false`, `plugins: false`, and `spellcheck: false`.
+- Applied hardened web preferences to both `mainWindow` and auxiliary `openMiniAppWindow`.
+- Implemented `SecurityGuardrails.configurePermissionLockdown` on Electron session intercepting permission requests and permission checks, blocking high-risk sensors (geolocation, midi, pointerLock) and permitting only notifications/media from internal trusted app origins.
+- Added `will-attach-webview` sanitization stripping preloads and enforcing sandbox & context isolation.
+- Created `tests/webpreferences_lockdown_verification.mjs` verifying all 5 security invariants; full build passed cleanly.

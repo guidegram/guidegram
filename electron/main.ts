@@ -333,8 +333,9 @@ function createTray() {
 function createWindow() {
   Logger.info('[Window] Creating main application window...')
 
-  // Configure Clickjacking and Frame-denial security headers (MM-015)
+  // Configure Clickjacking, Frame-denial headers, and strict Permission Lockdown (MM-015 / Layer 08)
   SecurityGuardrails.configureSecurityHeaders()
+  SecurityGuardrails.configurePermissionLockdown()
 
   const appIcon = getAppIcon()
   mainWindow = new BrowserWindow({
@@ -348,12 +349,10 @@ function createWindow() {
     title: 'Guidegram',
     frame: false, // Frameless window with custom titlebar
     icon: appIcon,
-    webPreferences: {
+    webPreferences: SecurityGuardrails.getHardenedWebPreferences({
       preload: path.join(__dirname, 'preload.cjs'),
-      sandbox: false,
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+      sandbox: true,
+    }) as any,
   })
 
   // Enforce secure window opening and prevent open-redirect hijacking (MM-015)
@@ -484,11 +483,9 @@ function openMiniAppWindow(url: string, title = 'Telegram Mini App') {
     title,
     backgroundColor: '#0F1117',
     icon: getAppIcon(),
-    webPreferences: {
+    webPreferences: SecurityGuardrails.getHardenedWebPreferences({
       sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+    }) as any,
   })
 
   activeMiniApps.add(win)
