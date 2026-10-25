@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { BrowserWindow, RenderProcessGoneDetails } from 'electron'
 import { Logger } from './telegram/logger'
+import { CrashMemoryScrubber } from './crashMemoryScrubber'
 
 let electronApp: any = null
 let electronDialog: any = null
@@ -63,6 +64,8 @@ export class CrashRecoveryManager {
     try {
       if (!fs.existsSync(this.crashDumpsDir)) {
         fs.mkdirSync(this.crashDumpsDir, { recursive: true })
+      } else {
+        CrashMemoryScrubber.cleanseDirectory(this.crashDumpsDir)
       }
     } catch (e) {
       // Fallback
@@ -110,8 +113,9 @@ export class CrashRecoveryManager {
 
     try {
       this.ensureDirectory()
-      fs.writeFileSync(filePath, JSON.stringify(report, null, 2), 'utf-8')
-      Logger.error(`[CrashRecovery] Crash report written to: ${filePath}`)
+      const sanitizedReport = CrashMemoryScrubber.redactObject(report)
+      fs.writeFileSync(filePath, JSON.stringify(sanitizedReport, null, 2), 'utf-8')
+      Logger.error(`[CrashRecovery] Sanitized crash report written to: ${filePath}`)
       this.rotateOldReports(20)
     } catch (writeErr) {
       Logger.error('[CrashRecovery] Failed to write crash dump:', writeErr)
