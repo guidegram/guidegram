@@ -1831,6 +1831,58 @@ textarea:focus-visible {
   outline-offset: 2px !important;
 }
 
+/* Phase 157: WebRTC Audio/Video Call Pipeline Hardening Tokens */
+.call-active-indicator-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+  font-size: 11px;
+  font-weight: 600;
+  animation: callPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes callPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+}
+
+.webrtc-audio-level-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.webrtc-audio-level-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #eab308 70%, #ef4444 100%);
+  transition: width 80ms ease-out;
+}
+
+.webrtc-quality-pill {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.webrtc-quality-pill.excellent { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.webrtc-quality-pill.good { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+.webrtc-quality-pill.fair { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+.webrtc-quality-pill.poor { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+
 
 
 
