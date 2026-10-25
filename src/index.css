@@ -1012,3 +1012,31 @@ textarea:focus-visible {
   background: radial-gradient(circle at 50% 30%, rgba(217, 70, 239, 0.12) 0%, rgba(99, 102, 241, 0.08) 50%, #0b0f19 100%);
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Phase 126: Dynamic Glitch Distortion & Cyberpunk Chromatic Slice Shaders
+   Horizontal slice displacement, scanline rasterization, and glitch burst
+   ========================================================================== */
+.cyberpunk-glitch-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  will-change: transform;
+}
+
+.scanline-flicker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  opacity: 0.7;
+}
