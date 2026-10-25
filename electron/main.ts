@@ -34,6 +34,7 @@ import { accountVaultManager } from './telegram/accountVaultManager'
 import { MediaStreamValidator } from './mediaStreamValidator'
 import { networkReconnectManager } from './telegram/reconnectManager'
 import { sqliteDeadlockGuard } from './telegram/sqliteDeadlockGuard'
+import { dragDropSanitizer } from './dragDropSanitizer'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -381,6 +382,9 @@ function createWindow() {
 
   // Attach OS-level anti-screen capture & window sharing privacy guard (Layer 08)
   privacyProtectionGuard.attachWindow(mainWindow)
+
+  // Attach Drag-and-Drop sanitization & drop navigation guard (Layer 08)
+  dragDropSanitizer.attachToWebContents(mainWindow.webContents)
 
   // Window lifecycle events
   mainWindow.once('ready-to-show', () => {
@@ -3791,6 +3795,18 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-sqlite-deadlock-telemetry', async () => {
     return sqliteDeadlockGuard.getTelemetry()
+  })
+
+  ipcMain.handle('system:sanitize-dropped-file', async (_event, file) => {
+    return dragDropSanitizer.sanitizeDroppedFile(file)
+  })
+
+  ipcMain.handle('system:sanitize-dropped-text', async (_event, text) => {
+    return dragDropSanitizer.sanitizeDroppedText(text)
+  })
+
+  ipcMain.handle('system:get-drag-drop-telemetry', async () => {
+    return dragDropSanitizer.getTelemetry()
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {

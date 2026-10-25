@@ -1364,10 +1364,26 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:get-media-stream-telemetry'),
   getNetworkReconnectTelemetry: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('system:get-network-reconnect-telemetry'),
-  reconnectAllAccounts: (): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke('telegram:reconnect-all-accounts'),
   getSqliteDeadlockTelemetry: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('system:get-sqlite-deadlock-telemetry'),
+  reconnectAllAccounts: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('telegram:reconnect-all-accounts'),
+  sanitizeDroppedFile: (file: { name: string; path?: string; size?: number; type?: string }): Promise<{
+    safe: boolean
+    sanitizedName: string
+    reason?: string
+    extension?: string
+    isDoubleExtension?: boolean
+  }> => ipcRenderer.invoke('system:sanitize-dropped-file', file),
+  sanitizeDroppedText: (text: string): Promise<{
+    safe: boolean
+    sanitizedText: string
+    isUrl: boolean
+    isDangerousUri: boolean
+    warning?: string
+  }> => ipcRenderer.invoke('system:sanitize-dropped-text', text),
+  getDragDropTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-drag-drop-telemetry'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {
