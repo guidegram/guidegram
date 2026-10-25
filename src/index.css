@@ -1882,6 +1882,45 @@ textarea:focus-visible {
 .webrtc-quality-pill.fair { background: rgba(234, 179, 8, 0.2); color: #eab308; }
 .webrtc-quality-pill.poor { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
 
+/* Phase 158: Multi-Account Instant Switching & Isolation Gate Tokens */
+.multi-account-switch-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 120ms ease;
+  position: relative;
+}
+
+.multi-account-switch-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.account-badge-active {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid #0f172a;
+}
+
+.multi-account-unread-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  line-height: 1.4;
+}
+
+
 
 
 
