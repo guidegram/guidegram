@@ -782,3 +782,22 @@ textarea:focus-visible {
 .parallax-tilt-card:hover .parallax-glare-overlay {
   opacity: 1;
 }
+
+/* ==========================================================================
+   Phase 115: Organic Wave Morphing & Audio Reactive Shaders
+   Harmonic multi-layer sine synthesis and dynamic voice response halo
+   ========================================================================== */
+.organic-wave-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  will-change: transform;
+}
+
+.voice-wave-halo {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);
+  transition: box-shadow 0.15s ease-out;
+}
