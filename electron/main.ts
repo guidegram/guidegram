@@ -2172,6 +2172,42 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-stars-subscriptions', async (_event, { accountId, peerId, offset }) => {
+    try {
+      return await accountManager.getStarsSubscriptions(accountId, peerId, offset)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStarsSubscriptions error:`, err)
+      return { count: 0, subscriptions: [], chats: [], users: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:change-stars-subscription', async (_event, { accountId, peerId, subscriptionId, canceled }) => {
+    try {
+      return await accountManager.changeStarsSubscription(accountId, peerId, subscriptionId, canceled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] changeStarsSubscription error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-giveaway-info', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.getGiveawayInfo(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getGiveawayInfo error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:check-can-send-gift', async (_event, { accountId, giftId }) => {
+    try {
+      return await accountManager.checkCanSendGift(accountId, giftId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] checkCanSendGift error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:send-paid-reaction', async (_event, { accountId, chatId, messageId, count, isPrivate }) => {
     try {
       return await accountManager.sendPaidReaction(accountId, chatId, messageId, count, isPrivate)

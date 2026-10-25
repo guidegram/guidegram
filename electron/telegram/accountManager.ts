@@ -9661,6 +9661,106 @@ export class AccountManager {
     }
   }
 
+  public async getStarsSubscriptions(
+    accountId: string,
+    peerId?: string,
+    offset = ''
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = peerId ? await this.resolveInputPeer(accountId, peerId) : undefined
+      const res: any = await holder.client.call({
+        _: 'payments.getStarsSubscriptions',
+        peer: inputPeer,
+        offset: offset || '',
+      } as any)
+
+      return {
+        count: res.count !== undefined ? res.count : (res.subscriptions || []).length,
+        subscriptions: (res.subscriptions || []).map((sub: any) => ({
+          id: sub.id,
+          canceled: Boolean(sub.canceled),
+          canRefulfill: Boolean(sub.canRefulfill),
+          missingBalance: Boolean(sub.missingBalance),
+          chatId: sub.peer ? (sub.peer.channelId ? `-${sub.peer.channelId}` : String(sub.peer.userId || '')) : '',
+          untilDate: sub.untilDate ? sub.untilDate * 1000 : 0,
+          pricing: sub.pricing,
+        })),
+        chats: res.chats || [],
+        users: res.users || [],
+      }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getStarsSubscriptions error:', err?.message || err)
+      return { count: 0, subscriptions: [], chats: [], users: [] }
+    }
+  }
+
+  public async changeStarsSubscription(
+    accountId: string,
+    peerId: string,
+    subscriptionId: string,
+    canceled: boolean
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      await holder.client.call({
+        _: 'payments.changeStarsSubscription',
+        peer: inputPeer,
+        subscriptionId,
+        canceled: Boolean(canceled),
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn('[AccountManager] changeStarsSubscription error:', err?.message || err)
+      return false
+    }
+  }
+
+  public async getGiveawayInfo(
+    accountId: string,
+    peerId: string,
+    msgId: number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      return await holder.client.call({
+        _: 'payments.getGiveawayInfo',
+        peer: inputPeer,
+        msgId: Number(msgId),
+      } as any)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getGiveawayInfo error:', err?.message || err)
+      return null
+    }
+  }
+
+  public async checkCanSendGift(
+    accountId: string,
+    giftId: string | number
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.checkCanSendGift',
+        giftId: toLong(giftId),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] checkCanSendGift error:', err?.message || err)
+      return false
+    }
+  }
+
   public async getActiveSessions(accountId: string): Promise<ActiveSessionItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return []

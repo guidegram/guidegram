@@ -649,6 +649,30 @@ const guidegramAPI = {
     unsave: boolean
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('telegram:toggle-save-star-gift', { accountId, stargiftMsgId, unsave }),
+  getStarsSubscriptions: (
+    accountId: string,
+    peerId?: string,
+    offset?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-stars-subscriptions', { accountId, peerId, offset }),
+  changeStarsSubscription: (
+    accountId: string,
+    peerId: string,
+    subscriptionId: string,
+    canceled: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:change-stars-subscription', { accountId, peerId, subscriptionId, canceled }),
+  getGiveawayInfo: (
+    accountId: string,
+    peerId: string,
+    msgId: number
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-giveaway-info', { accountId, peerId, msgId }),
+  checkCanSendGift: (
+    accountId: string,
+    giftId: string | number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:check-can-send-gift', { accountId, giftId }),
   sendPaidReaction: (
     accountId: string,
     chatId: string,
