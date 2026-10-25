@@ -3,6 +3,8 @@
   "version": "2.1.0",
   "description": "Guidegram",
   "author": "DoctorGuidance",
+  "private": true,
+  "license": "UNLICENSED",
   "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {

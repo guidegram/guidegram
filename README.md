@@ -6,11 +6,10 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/guidegram/guidegram?style=for-the-badge&color=22c55e&logo=github)](https://github.com/guidegram/guidegram/releases/latest)
 [![Windows](https://img.shields.io/badge/Platform-Windows%20x64-0078d4?style=for-the-badge&logo=windows)](https://github.com/guidegram/guidegram/releases/latest)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%2F%20All%20Rights%20Reserved-red.svg?style=for-the-badge)](#-license--intellectual-property)
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Electron](https://img.shields.io/badge/Electron-34.2-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg?style=for-the-badge)](https://github.com/guidegram/guidegram/issues)
 
 > A modern, lightning-fast, ultra-portable desktop client for Telegram engineered to eliminate the 3-account restriction, protect identities with isolated proxies and dedicated environment profiles, preserve deleted messages and edit histories, host Telegram Mini Apps, accelerate downloads with multi-worker MTProto, and deliver comprehensive group activity intelligence.
 
@@ -373,6 +372,8 @@ For the long-term international launch strategy and competitive benchmarks, expl
 
 ---
 
-## 📜 License
-
-Licensed under the [GNU General Public License v3.0](LICENSE).
+## 📜 License & Intellectual Property
+ 
+Copyright © 2026 Dr. Ershad Zolfi (DoctorGuidance). All Rights Reserved.
+ 
+This software and its underlying source code, algorithms, assets, and design architectures are proprietary and confidential. Unauthorized copying, reproduction, decompilation, distribution, public hosting, or commercial exploitation is strictly prohibited under domestic and international copyright laws. See [LICENSE](LICENSE) for full legal terms.

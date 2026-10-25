@@ -116,6 +116,79 @@ export const App: React.FC = () => {
   // Auto-Update & What's New State
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null)
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+  const [appToast, setAppToast] = useState<string | null>(null)
+  const lastUpdateCheckRef = useRef<number>(0)
+
+  // Periodic 60-Minute Background Update Scanner (Zero-Data-Loss Invariant)
+  useEffect(() => {
+    const checkBgUpdate = async () => {
+      try {
+        if (window.guidegram?.checkForUpdates) {
+          const res = await window.guidegram.checkForUpdates()
+          if (res?.hasUpdate) {
+            setUpdateInfo(res)
+          }
+        }
+      } catch (err) {
+        console.warn('[App] Periodic 60m update check error:', err)
+      }
+    }
+
+    const initialTimer = setTimeout(checkBgUpdate, 15000)
+    const intervalTimer = setInterval(checkBgUpdate, 60 * 60 * 1000)
+
+    return () => {
+      clearTimeout(initialTimer)
+      clearInterval(intervalTimer)
+    }
+  }, [])
+
+  const handleManualCheckUpdate = async () => {
+    const now = Date.now()
+    if (now - lastUpdateCheckRef.current < 20000) {
+      setAppToast('Please wait a moment before checking updates again.')
+      setTimeout(() => setAppToast(null), 3000)
+      return
+    }
+    lastUpdateCheckRef.current = now
+    setIsCheckingUpdate(true)
+    setAppToast('Checking for Guidegram updates...')
+    try {
+      if (window.guidegram?.checkForUpdates) {
+        const res = await window.guidegram.checkForUpdates()
+        if (res?.hasUpdate) {
+          setUpdateInfo(res)
+          setAppToast(`New version v${res.latestVersion} found!`)
+        } else {
+          setAppToast(`Guidegram is up to date (v${res?.currentVersion || '2.1.0'}).`)
+        }
+      } else {
+        setAppToast('Update check service is offline.')
+      }
+    } catch {
+      setAppToast('Unable to check for updates. Please verify your network/proxy.')
+    } finally {
+      setIsCheckingUpdate(false)
+      setTimeout(() => setAppToast(null), 4000)
+    }
+  }
+
+  const handleToggleGhostMode = async () => {
+    const nextMode = !ghostMode
+    setGhostMode(nextMode)
+    setAppToast(nextMode ? 'Ghost Mode ON: Invisible typing & reading enabled' : 'Ghost Mode OFF')
+    setTimeout(() => setAppToast(null), 3000)
+    try {
+      if (window.guidegram?.saveConfig && config) {
+        const updatedConfig = { ...config, ghostMode: nextMode }
+        setConfig(updatedConfig)
+        await window.guidegram.saveConfig(updatedConfig)
+      }
+    } catch (err) {
+      console.warn('[App] Failed to save ghostMode to config:', err)
+    }
+  }
 
   // Initial Data Load
   useEffect(() => {
@@ -1387,10 +1460,21 @@ export const App: React.FC = () => {
       <TitleBar
         activeAccount={currentAccount}
         ghostMode={ghostMode}
+        onToggleGhostMode={handleToggleGhostMode}
         onRequestClose={handleRequestClose}
         onToggleMainMenu={() => setIsMainMenuOpen(true)}
         onOpenMcpHub={() => setIsMcpHubOpen(true)}
+        onCheckUpdate={handleManualCheckUpdate}
+        isCheckingUpdate={isCheckingUpdate}
       />
+
+      {/* Floating System Notification Toast */}
+      {appToast && (
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-dark-900/95 border border-primary-500/40 text-gray-100 text-xs font-semibold rounded-2xl shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse" />
+          <span>{appToast}</span>
+        </div>
+      )}
 
       {/* 2. Main Content: Welcome Screen OR Active Multi-Account Workspace */}
       {accounts.length === 0 ? (
