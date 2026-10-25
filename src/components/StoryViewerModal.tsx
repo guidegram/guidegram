@@ -16,6 +16,8 @@ import {
   Share2,
   Pin,
   Check,
+  Heart,
+  Smile,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
@@ -70,6 +72,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [copyingLink, setCopyingLink] = useState(false)
   const [pinning, setPinning] = useState(false)
   const [pinnedState, setPinnedState] = useState<boolean | undefined>(undefined)
+  const [localGhostMode, setLocalGhostMode] = useState(ghostMode)
+  const [activeReaction, setActiveReaction] = useState<string | null>(null)
+  const [reactionFeedback, setReactionFeedback] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const pausedRef = useRef(false)
@@ -78,6 +83,28 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const currentStory = stories[currentIndex]
   const currentStoryId = currentStory?.id
   const isOwnStory = peerId === accountId || Boolean(currentStory?.isOut)
+
+  // MTProto stories.readStories sync (when not in Ghost / Stealth mode)
+  useEffect(() => {
+    if (!currentStoryId || localGhostMode || !accountId || !peerId) return
+    if (window.guidegram?.readStories) {
+      window.guidegram.readStories(accountId, peerId, currentStoryId).catch(() => {})
+    }
+  }, [currentStoryId, localGhostMode, accountId, peerId])
+
+  const handleSendReaction = async (emoticon: string) => {
+    if (!currentStoryId || !accountId || !peerId) return
+    setActiveReaction(emoticon)
+    setReactionFeedback(emoticon)
+    setTimeout(() => setReactionFeedback(null), 1500)
+    try {
+      if (window.guidegram?.sendStoryReaction) {
+        await window.guidegram.sendStoryReaction(accountId, peerId, currentStoryId, emoticon)
+      }
+    } catch (err) {
+      console.warn('Failed to send story reaction:', err)
+    }
+  }
 
   useEffect(() => {
     pausedRef.current = paused
@@ -618,8 +645,63 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             </div>
           )}
 
-          {/* Ghost mode notice */}
-          {ghostMode && !loading && !loadError && currentStory && (
+          {/* Reaction Float Animation */}
+          <AnimatePresence>
+            {reactionFeedback && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5, y: 40 }}
+                animate={{ opacity: 1, scale: 1.5, y: -60 }}
+                exit={{ opacity: 0, scale: 1.8, y: -100 }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                className="pointer-events-none absolute bottom-20 left-1/2 z-40 -translate-x-1/2 text-5xl"
+              >
+                {reactionFeedback}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Story Quick Reactions Bar */}
+          {!isOwnStory && !loading && !loadError && currentStory && (
+            <div className="absolute bottom-4 left-4 right-4 z-30 flex items-center justify-between gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10">
+              <div className="flex items-center gap-2">
+                {['❤️', '🔥', '👍', '👏', '🎉', '😮'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSendReaction(emoji)
+                    }}
+                    className={`p-1 rounded-full hover:scale-125 transition-transform text-lg cursor-pointer leading-none ${
+                      activeReaction === emoji ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,100,100,0.8)]' : ''
+                    }`}
+                    title={`React with ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setLocalGhostMode((prev) => !prev)
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-colors cursor-pointer ${
+                  localGhostMode
+                    ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40'
+                    : 'bg-white/10 text-gray-300 hover:text-white'
+                }`}
+                title={localGhostMode ? 'Ghost mode active' : 'Click to enable ghost mode'}
+              >
+                <EyeOff className="w-3 h-3" />
+                <span>{localGhostMode ? 'Ghost' : 'Normal'}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Ghost mode notice (when own story or bar hidden) */}
+          {localGhostMode && isOwnStory && !loading && !loadError && currentStory && (
             <div className="pointer-events-none absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-[10px] font-medium text-white/75">
               <EyeOff className="h-3 w-3" />
               <span>Ghost mode · view not marked as read</span>
