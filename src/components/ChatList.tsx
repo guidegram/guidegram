@@ -519,7 +519,7 @@ export const ChatList: React.FC<ChatListProps> = ({
               </span>
             )}
           </div>
-          <div className="flex items-start gap-2.5 overflow-x-auto pb-2.5">
+          <div className="flex items-start gap-2.5 overflow-x-auto pb-2.5 smooth-scroll-physics">
             <button
               type="button"
               onClick={() => setIsStoryComposerOpen(true)}
@@ -590,7 +590,7 @@ export const ChatList: React.FC<ChatListProps> = ({
             onLoadMoreDialogs?.()
           }
         }}
-        className="flex-1 overflow-y-auto min-h-0 focus-visible:outline-none"
+        className="flex-1 overflow-y-auto min-h-0 focus-visible:outline-none smooth-scroll-physics"
       >
         {/* If user is searching and has results */}
         {searchQuery.trim().length > 0 ? (
@@ -828,8 +828,9 @@ export const DialogListItem = React.memo<DialogListItemProps>(
             onSelect(dialog.id)
           }
         }}
-        whileTap={{ scale: 0.985 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+        whileHover={{ scale: 1.006, x: 2 }}
+        whileTap={{ scale: 0.982 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.8 }}
         className={`chat-virtual-item px-3 py-2.5 transition-colors cursor-pointer border-b border-white/5 relative group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/50 ${
           isSelected ? 'bg-primary-600/20' : 'hover:bg-dark-800/60'
         }`}
@@ -839,7 +840,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
           <motion.div
             layoutId="activeChatBar"
             className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary-400 shadow-glow"
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 32, mass: 0.7 }}
           />
         )}
         <div className="flex items-center gap-3">

@@ -489,5 +489,18 @@ textarea:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+/* ==========================================================================
+   Phase 101: 60fps Spring Physics & Fluid Overscroll Ergonomics
+   Hardware-accelerated momentum, overscroll containment, and 60fps springs
+   ========================================================================== */
+.smooth-scroll-physics {
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform;
+}
 
-
+.chat-item-spring {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease;
+  will-change: transform;
+}
