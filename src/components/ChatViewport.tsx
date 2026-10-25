@@ -1956,7 +1956,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Filter messages based on search sender filter and search query (64Gram)
   const filteredMessages = React.useMemo(() => {
-    let result = messages
+    // 0. Filter out ghost phantom deleted message placeholders (no real text or media)
+    let result = messages.filter(
+      (m) => !(m.isDeletedLocally && (!m.text || m.text === '[Message deleted]') && !m.mediaType)
+    )
 
     // 1. Filter by specific user if sender filter is active
     if (searchSenderFilter) {
@@ -4629,6 +4632,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               initials={chat.avatarInitials}
               avatarUrl={chat.avatarUrl}
               size="md"
+              isChannel={chat.isChannel}
+              isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
               className="ring-2 ring-transparent group-hover:ring-primary-500/50 transition-all"
             />
           </motion.div>
@@ -7450,6 +7455,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   initials={chat.avatarInitials}
                   avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
                   size="xl"
+                  isChannel={chat.isChannel}
+                  isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
                   className="mb-3 cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={async () => {
                     const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl

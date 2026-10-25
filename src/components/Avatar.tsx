@@ -7,6 +7,9 @@ interface AvatarProps {
   initials?: string
   avatarUrl?: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  isChannel?: boolean
+  isForum?: boolean
+  shape?: 'circle' | 'squircle' | 'droplet'
   className?: string
   onClick?: (e: React.MouseEvent<HTMLDivElement | HTMLImageElement>) => void
 }
@@ -21,6 +24,9 @@ export const Avatar: React.FC<AvatarProps> = ({
   initials,
   avatarUrl,
   size = 'md',
+  isChannel,
+  isForum,
+  shape,
   className = '',
   onClick,
 }) => {
@@ -97,13 +103,30 @@ export const Avatar: React.FC<AvatarProps> = ({
     initials ||
     (title.trim().length > 0 ? title.trim().substring(0, 2).toUpperCase() : 'C')
 
-  const sizeClasses = {
-    xs: 'w-6 h-6 rounded-lg text-[10px]',
-    sm: 'w-8 h-8 rounded-xl text-xs',
-    md: 'w-11 h-11 rounded-2xl text-xs',
-    lg: 'w-12 h-12 rounded-2xl text-sm font-bold',
-    xl: 'w-24 h-24 rounded-3xl text-2xl font-black shadow-glow',
+  const resolvedShape: 'circle' | 'squircle' | 'droplet' =
+    shape || (isChannel ? 'droplet' : isForum ? 'squircle' : 'circle')
+
+  const dimensionClasses = {
+    xs: 'w-6 h-6 text-[10px]',
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-11 h-11 text-xs',
+    lg: 'w-12 h-12 text-sm font-bold',
+    xl: 'w-24 h-24 text-2xl font-black shadow-glow',
   }[size]
+
+  let shapeClasses = 'rounded-full border border-white/10'
+  if (resolvedShape === 'squircle') {
+    const squircleRadius = {
+      xs: 'rounded-md',
+      sm: 'rounded-lg',
+      md: 'rounded-2xl',
+      lg: 'rounded-2xl',
+      xl: 'rounded-3xl',
+    }[size]
+    shapeClasses = `${squircleRadius} border border-white/10`
+  } else if (resolvedShape === 'droplet') {
+    shapeClasses = '[clip-path:url(#guidegram-avatar-droplet)] rounded-none drop-shadow-[0_0_1px_rgba(255,255,255,0.25)]'
+  }
 
   const cursorClass = onClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
 
@@ -114,7 +137,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         alt=""
         onClick={onClick}
         onError={() => setHasError(true)}
-        className={`${sizeClasses} object-cover shrink-0 select-none border border-white/10 ${cursorClass} ${className}`}
+        className={`${dimensionClasses} ${shapeClasses} object-cover shrink-0 select-none ${cursorClass} ${className}`}
       />
     )
   }
@@ -122,7 +145,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`${sizeClasses} bg-gradient-to-tr from-primary-600 via-primary-500 to-accent-cyan text-white font-bold flex items-center justify-center shrink-0 select-none shadow-sm border border-white/10 ${cursorClass} ${className}`}
+      className={`${dimensionClasses} ${shapeClasses} bg-gradient-to-tr from-primary-600 via-primary-500 to-accent-cyan text-white font-bold flex items-center justify-center shrink-0 select-none shadow-sm ${cursorClass} ${className}`}
     >
       <span>{safeInitials}</span>
     </div>

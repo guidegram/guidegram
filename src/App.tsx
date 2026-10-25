@@ -38,6 +38,14 @@ import {
 import { playNotificationSound } from './utils/soundEffects'
 import logoImg from './assets/logo.png'
 
+export const isPeerMatch = (a?: string, b?: string): boolean => {
+  if (!a || !b) return false
+  if (a === b) return true
+  const cleanA = a.replace(/^-100/, '').replace(/^-/, '')
+  const cleanB = b.replace(/^-100/, '').replace(/^-/, '')
+  return cleanA === cleanB
+}
+
 export const App: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false)
   const [accounts, setAccounts] = useState<AccountInfo[]>([])
@@ -307,16 +315,26 @@ export const App: React.FC = () => {
           const msgDate = message?.date ? (message.date < 1e11 ? message.date * 1000 : message.date) : Date.now()
           const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
           const isOutgoing = Boolean(message?.isOutgoing)
-          const exists = list.some((d) => d.id === chatId)
+          const currentAcc = accounts.find((a) => a.id === accountId)
+          const isSavedChatId =
+            chatId === accountId ||
+            (currentAcc?.id && isPeerMatch(chatId, currentAcc.id))
+
+          const exists = list.some((d) => d.id === chatId || isPeerMatch(d.id, chatId))
 
           let updatedList: DialogItem[]
           if (!exists) {
             const chatInfo = (payload as any)?.chatInfo
+            const isSaved =
+              Boolean(isSavedChatId) ||
+              chatInfo?.title?.toLowerCase() === 'saved messages' ||
+              chatInfo?.title === 'پیام‌های ذخیره‌شده'
+
             const newDialog: DialogItem = {
               id: chatId,
               accountId,
-              title: chatInfo?.title || message?.senderName || 'Chat',
-              unreadCount: chatId !== activeChatId && !message?.isOutgoing ? 1 : 0,
+              title: isSaved ? 'Saved Messages' : (chatInfo?.title || message?.senderName || 'Chat'),
+              unreadCount: isSaved ? 0 : (chatId !== activeChatId && !message?.isOutgoing ? 1 : 0),
               unreadMentionsCount: 0,
               isMuted: isChatMuted,
               isUser: chatInfo?.isUser ?? true,
@@ -325,7 +343,7 @@ export const App: React.FC = () => {
               isBroadcast: chatInfo?.isBroadcast ?? false,
               isBot: chatInfo?.isBot ?? false,
               isPinned: false,
-              isSavedMessages: chatId === accountId,
+              isSavedMessages: isSaved,
               lastMessageText: msgText,
               lastMessageDate: msgDate,
               lastMessageId: message?.id,
@@ -337,24 +355,34 @@ export const App: React.FC = () => {
             }
             updatedList = [newDialog, ...list]
           } else {
-            const shouldIncrement = chatId !== activeChatId && !message?.isOutgoing
-            updatedList = list.map((d) =>
-              d.id === chatId
-                ? {
-                    ...d,
-                    unreadCount: shouldIncrement
-                      ? d.unreadCount + 1
-                      : (isOutgoing || chatId === activeChatId ? 0 : d.unreadCount),
-                    lastMessageText: msgText || d.lastMessageText,
-                    lastMessageDate: msgDate,
-                    lastMessageId: message?.id ?? d.lastMessageId,
-                    lastMessageIsOutgoing: isOutgoing,
-                    lastMessageRead: isOutgoing ? false : true,
-                    lastMessageMediaType: message?.mediaType ?? d.lastMessageMediaType,
-                    lastMessageThumb: message?.strippedThumb ?? d.lastMessageThumb,
-                  }
-                : d
-            )
+            updatedList = list.map((d) => {
+              if (d.id === chatId || isPeerMatch(d.id, chatId)) {
+                const isSaved =
+                  Boolean(d.isSavedMessages) ||
+                  Boolean(isSavedChatId) ||
+                  d.title.toLowerCase() === 'saved messages' ||
+                  d.title === 'پیام‌های ذخیره‌شده'
+
+                const shouldIncrement = !isSaved && chatId !== activeChatId && !message?.isOutgoing
+                return {
+                  ...d,
+                  isSavedMessages: d.isSavedMessages || isSaved,
+                  unreadCount: isSaved
+                    ? 0
+                    : shouldIncrement
+                    ? d.unreadCount + 1
+                    : (isOutgoing || chatId === activeChatId ? 0 : d.unreadCount),
+                  lastMessageText: msgText || d.lastMessageText,
+                  lastMessageDate: msgDate,
+                  lastMessageId: message?.id ?? d.lastMessageId,
+                  lastMessageIsOutgoing: isOutgoing,
+                  lastMessageRead: isOutgoing ? false : true,
+                  lastMessageMediaType: message?.mediaType ?? d.lastMessageMediaType,
+                  lastMessageThumb: message?.strippedThumb ?? d.lastMessageThumb,
+                }
+              }
+              return d
+            })
           }
 
           // Sort: pinned first, then unpinned by lastMessageDate descending
@@ -449,15 +477,20 @@ export const App: React.FC = () => {
       // Real-time read-history sync
       unsubscribeReadHistory = window.guidegram.on(
         'telegram:read-history',
-        (payload: { accountId: string; chatId: string; stillUnreadCount?: number }) => {
-          const { accountId, chatId, stillUnreadCount } = payload
+        (payload: { accountId: string; chatId: string; maxId?: number; stillUnreadCount?: number }) => {
+          const { accountId, chatId, maxId, stillUnreadCount } = payload
           setDialogsByAccount((prev) => {
             const list = prev[accountId] || []
+            const nextCount = typeof stillUnreadCount === 'number' ? stillUnreadCount : 0
             return {
               ...prev,
               [accountId]: list.map((d) =>
-                d.id === chatId
-                  ? { ...d, unreadCount: typeof stillUnreadCount === 'number' ? stillUnreadCount : 0 }
+                d.id === chatId || isPeerMatch(d.id, chatId)
+                  ? {
+                      ...d,
+                      unreadCount: d.isSavedMessages ? 0 : nextCount,
+                      readInboxMaxId: maxId ? Math.max(d.readInboxMaxId || 0, maxId) : d.readInboxMaxId,
+                    }
                   : d
               ),
             }
@@ -475,7 +508,7 @@ export const App: React.FC = () => {
             return {
               ...prev,
               [accountId]: list.map((d) =>
-                d.id === chatId
+                d.id === chatId || isPeerMatch(d.id, chatId)
                   ? {
                       ...d,
                       readOutboxMaxId: Math.max(d.readOutboxMaxId || 0, maxId),
@@ -1212,12 +1245,17 @@ export const App: React.FC = () => {
     // Look for Saved Messages dialog or self peer
     const savedChat = dialogs.find(
       (d) =>
+        d.isSavedMessages ||
         d.title.toLowerCase() === 'saved messages' ||
+        d.title === 'پیام‌های ذخیره‌شده' ||
+        (currentAcc?.id && (d.id === currentAcc.id || d.id === currentAcc.id.replace(/^-100/, '').replace(/^-/, ''))) ||
         (currentAcc?.username && d.username?.toLowerCase() === currentAcc.username.toLowerCase()) ||
         (currentAcc?.phone && d.id === currentAcc.phone)
     )
     if (savedChat) {
       handleSelectChat(savedChat.id)
+    } else if (currentAcc?.id) {
+      handleSelectChat(currentAcc.id)
     } else if (currentAcc?.username) {
       handleSelectUserOrChat(currentAcc.username)
     }
@@ -1456,6 +1494,7 @@ export const App: React.FC = () => {
         onToggleGhostMode={handleToggleGhostMode}
         onRequestClose={handleRequestClose}
         onToggleMainMenu={() => setIsMainMenuOpen(true)}
+        onOpenSavedMessages={handleOpenSavedMessages}
         onOpenMcpHub={() => setIsMcpHubOpen(true)}
         onCheckUpdate={handleManualCheckUpdate}
         isCheckingUpdate={isCheckingUpdate}

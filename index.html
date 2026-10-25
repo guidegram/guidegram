@@ -12,6 +12,14 @@
   </head>
   <body class="bg-dark-950 text-gray-100 antialiased select-none overflow-hidden h-screen w-screen">
     <div id="root" class="h-full w-full"></div>
+    <!-- Global SVG defs for Telegram channel droplet avatar clipPath -->
+    <svg class="absolute w-0 h-0 pointer-events-none opacity-0" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id="guidegram-avatar-droplet" clipPathUnits="objectBoundingBox">
+          <path d="M 0.5 0 C 0.68 0.18, 0.95 0.38, 0.95 0.55 A 0.45 0.45 0 1 1 0.05 0.55 C 0.05 0.38, 0.32 0.18, 0.5 0 Z" />
+        </clipPath>
+      </defs>
+    </svg>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

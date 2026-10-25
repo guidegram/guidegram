@@ -2208,12 +2208,21 @@ export class AccountManager {
           }
         }
 
+        const isSelf = Boolean(
+          (peer as any).isSelf ||
+          (peer as any).self ||
+          (holder.info?.id && peerId === holder.info.id.toString()) ||
+          peerId === accountId
+        )
+
         // In Telegram, unread badge is strictly for incoming messages the current user hasn't read.
-        // If the last message was sent by the current user, any server unread_count is peer's unread or desync.
+        // Saved Messages (self cloud storage) NEVER has an unread count.
         const isManuallyUnread = Boolean((d.raw as any)?.unreadMark)
-        const unreadCount = isManuallyUnread
-          ? Math.max(1, d.unreadCount || 1)
-          : (lastMessageIsOutgoing ? 0 : (d.unreadCount || 0))
+        const unreadCount = isSelf
+          ? 0
+          : (isManuallyUnread
+            ? Math.max(1, d.unreadCount || 1)
+            : (lastMessageIsOutgoing ? 0 : (d.unreadCount || 0)))
 
         const initials = title
           .split(' ')
@@ -2235,7 +2244,7 @@ export class AccountManager {
         const item: DialogItem = {
           id: peerId,
           accountId,
-          title,
+          title: isSelf && title === 'Unknown Chat' ? 'Saved Messages' : title,
           unreadCount,
           readInboxMaxId,
           readOutboxMaxId,
@@ -2247,7 +2256,7 @@ export class AccountManager {
           isBroadcast,
           isBot,
           isPinned,
-          isSavedMessages: isUser && peerId === accountId,
+          isSavedMessages: isSelf,
           lastMessageText,
           lastMessageDate,
           lastMessageId,
@@ -12873,37 +12882,51 @@ export class AccountManager {
 
     client.onRawUpdate.add((update: any) => {
       try {
+        const isMatch = (dId: string, pId: string) => {
+          if (dId === pId) return true
+          const cleanD = dId.replace(/^-100/, '').replace(/^-/, '')
+          const cleanP = pId.replace(/^-100/, '').replace(/^-/, '')
+          return cleanD === cleanP
+        }
+
         if (
           update._ === 'updateReadHistoryInbox' ||
           update._ === 'updateReadChannelInbox' ||
-          update._ === 'updateDialogUnreadMark'
+          update._ === 'updateDialogUnreadMark' ||
+          update._ === 'updateChannelReadMarkup'
         ) {
           let peerId = ''
           const peer = update.peer?.peer || update.peer
           if (peer) {
-            if (peer.userId) {
-              peerId = peer.userId.toString()
-            } else if (peer.chatId) {
-              peerId = `-${peer.chatId}`
-            } else if (peer.channelId) {
-              const chStr = peer.channelId.toString()
+            if (peer.userId !== undefined || peer.user_id !== undefined) {
+              peerId = (peer.userId ?? peer.user_id).toString()
+            } else if (peer.chatId !== undefined || peer.chat_id !== undefined) {
+              peerId = `-${peer.chatId ?? peer.chat_id}`
+            } else if (peer.channelId !== undefined || peer.channel_id !== undefined) {
+              const chStr = (peer.channelId ?? peer.channel_id).toString()
               peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+            } else if (peer.id !== undefined) {
+              peerId = peer.id.toString()
             }
-          } else if (update.channelId) {
-            const chStr = update.channelId.toString()
+          } else if (update.channelId !== undefined || update.channel_id !== undefined) {
+            const chStr = (update.channelId ?? update.channel_id).toString()
             peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+          } else if (update.chatId !== undefined || update.chat_id !== undefined) {
+            const cid = (update.chatId ?? update.chat_id).toString()
+            peerId = cid.startsWith('-') ? cid : `-${cid}`
           }
 
           if (peerId) {
+            const maxId = update.maxId ?? update.max_id ?? 0
             const stillUnreadCount =
               update._ === 'updateDialogUnreadMark'
                 ? (update.unread ? 1 : 0)
-                : update.stillUnreadCount
+                : (update.stillUnreadCount ?? update.still_unread_count ?? 0)
 
             this.onEventCallback?.('telegram:read-history', {
               accountId,
               chatId: peerId,
-              maxId: update.maxId,
+              maxId,
               stillUnreadCount,
             })
 
@@ -12913,14 +12936,14 @@ export class AccountManager {
               if (cached && cached.length > 0) {
                 let changed = false
                 const next = cached.map((d) => {
-                  if (d.id === peerId) {
+                  if (isMatch(d.id, peerId)) {
                     const nextCount = typeof stillUnreadCount === 'number' ? stillUnreadCount : 0
                     if (d.unreadCount !== nextCount) {
                       changed = true
                       return {
                         ...d,
                         unreadCount: nextCount,
-                        readInboxMaxId: update.maxId ? Math.max(d.readInboxMaxId || 0, update.maxId) : d.readInboxMaxId,
+                        readInboxMaxId: maxId ? Math.max(d.readInboxMaxId || 0, maxId) : d.readInboxMaxId,
                       }
                     }
                   }
@@ -12939,24 +12962,30 @@ export class AccountManager {
           let peerId = ''
           const peer = update.peer?.peer || update.peer
           if (peer) {
-            if (peer.userId) {
-              peerId = peer.userId.toString()
-            } else if (peer.chatId) {
-              peerId = `-${peer.chatId}`
-            } else if (peer.channelId) {
-              const chStr = peer.channelId.toString()
+            if (peer.userId !== undefined || peer.user_id !== undefined) {
+              peerId = (peer.userId ?? peer.user_id).toString()
+            } else if (peer.chatId !== undefined || peer.chat_id !== undefined) {
+              peerId = `-${peer.chatId ?? peer.chat_id}`
+            } else if (peer.channelId !== undefined || peer.channel_id !== undefined) {
+              const chStr = (peer.channelId ?? peer.channel_id).toString()
               peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+            } else if (peer.id !== undefined) {
+              peerId = peer.id.toString()
             }
-          } else if (update.channelId) {
-            const chStr = update.channelId.toString()
+          } else if (update.channelId !== undefined || update.channel_id !== undefined) {
+            const chStr = (update.channelId ?? update.channel_id).toString()
             peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+          } else if (update.chatId !== undefined || update.chat_id !== undefined) {
+            const cid = (update.chatId ?? update.chat_id).toString()
+            peerId = cid.startsWith('-') ? cid : `-${cid}`
           }
 
           if (peerId) {
+            const maxId = update.maxId ?? update.max_id ?? 0
             this.onEventCallback?.('telegram:read-outbox', {
               accountId,
               chatId: peerId,
-              maxId: update.maxId,
+              maxId,
             })
 
             try {
@@ -12964,12 +12993,12 @@ export class AccountManager {
               if (cached && cached.length > 0) {
                 let changed = false
                 const next = cached.map((d) => {
-                  if (d.id === peerId) {
+                  if (isMatch(d.id, peerId)) {
                     changed = true
                     return {
                       ...d,
-                      readOutboxMaxId: Math.max(d.readOutboxMaxId || 0, update.maxId || 0),
-                      lastMessageRead: d.lastMessageId ? d.lastMessageId <= (update.maxId || 0) : true,
+                      readOutboxMaxId: Math.max(d.readOutboxMaxId || 0, maxId || 0),
+                      lastMessageRead: d.lastMessageId ? d.lastMessageId <= (maxId || 0) : true,
                     }
                   }
                   return d

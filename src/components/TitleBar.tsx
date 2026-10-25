@@ -10,6 +10,7 @@ interface TitleBarProps {
   onToggleGhostMode?: () => void
   onRequestClose?: () => void
   onToggleMainMenu?: () => void
+  onOpenSavedMessages?: () => void
   onOpenMcpHub?: () => void
   onCheckUpdate?: () => void
   isCheckingUpdate?: boolean
@@ -21,6 +22,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onToggleGhostMode,
   onRequestClose,
   onToggleMainMenu,
+  onOpenSavedMessages,
   onOpenMcpHub,
   onCheckUpdate,
   isCheckingUpdate = false,
@@ -48,19 +50,29 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
   return (
     <header className="h-10 bg-dark-950 border-b border-white/5 flex items-center justify-between px-3 select-none titlebar-drag z-50">
-      {/* Left Brand Badge with Hamburger Menu Trigger */}
-      <div className="flex items-center gap-2 titlebar-no-drag">
+      {/* Left Brand Badge with Hamburger Menu Trigger and Saved Messages Logo */}
+      <div className="flex items-center gap-1.5 titlebar-no-drag">
+        {/* Hamburger Menu Trigger */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          type="button"
+          onClick={onToggleMainMenu}
+          title="Open Main Menu"
+          className="p-1.5 -ml-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+        >
+          <Menu className="w-4 h-4" />
+        </motion.button>
+
+        {/* G Logo Brand Button -> Directly opens Saved Messages */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
           type="button"
-          onClick={onToggleMainMenu}
-          title="Open Main Menu"
-          className="flex items-center gap-2 p-1 -ml-1 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group"
+          onClick={onOpenSavedMessages}
+          title="Saved Messages (Cloud Storage)"
+          className="flex items-center gap-2 p-1 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group"
         >
-          <div className="p-1 rounded-lg text-gray-400 group-hover:text-white transition-colors">
-            <Menu className="w-4 h-4" />
-          </div>
           <div className="w-6 h-6 rounded-lg overflow-hidden shadow-glow flex items-center justify-center border border-primary-400/40">
             <img src={logoImg} alt="Guidegram Logo" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200" />
           </div>

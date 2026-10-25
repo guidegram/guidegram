@@ -2,6 +2,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Inbox, CheckCheck, ArrowUpRight } from 'lucide-react'
 import { DialogItem, AccountInfo } from '../types/telegram'
+import { Avatar } from './Avatar'
 
 interface UnifiedInboxProps {
   accounts: AccountInfo[]
@@ -92,9 +93,16 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({
                     className="p-4 bg-dark-800/80 hover:bg-dark-750 border border-white/5 hover:border-primary-500/30 rounded-2xl cursor-pointer transition-colors flex items-center justify-between group shadow-sm"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary-600 to-accent-cyan text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-                        {dialog.avatarInitials}
-                      </div>
+                      <Avatar
+                        accountId={account.id}
+                        peerId={dialog.id}
+                        title={dialog.title}
+                        initials={dialog.avatarInitials}
+                        avatarUrl={dialog.avatarUrl}
+                        size="md"
+                        isChannel={dialog.isChannel}
+                        isForum={dialog.isForum}
+                      />
 
                       <div>
                         <div className="flex items-center gap-2 mb-0.5">

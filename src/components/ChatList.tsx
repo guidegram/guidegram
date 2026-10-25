@@ -645,6 +645,8 @@ export const ChatList: React.FC<ChatListProps> = ({
                       initials={peer.avatarInitials}
                       avatarUrl={peer.avatarUrl}
                       size="md"
+                      isChannel={peer.isChannel}
+                      isForum={peer.isForum}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -871,6 +873,8 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                     initials={dialog.avatarInitials}
                     avatarUrl={dialog.avatarUrl}
                     size="md"
+                    isChannel={dialog.isChannel}
+                    isForum={dialog.isForum}
                   />
                 </span>
               </button>
@@ -882,6 +886,8 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                 initials={dialog.avatarInitials}
                 avatarUrl={dialog.avatarUrl}
                 size="md"
+                isChannel={dialog.isChannel}
+                isForum={dialog.isForum}
               />
             )}
           </div>

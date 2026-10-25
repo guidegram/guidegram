@@ -746,19 +746,6 @@ export class SessionStore {
         existing.isDeletedLocally = true
         existing.deletedAt = existing.deletedAt || now
         deletedItems.push(existing)
-      } else {
-        const placeholder: MessageItem = {
-          id: msgId,
-          chatId: targetChatId,
-          accountId,
-          text: '[Message deleted]',
-          date: now,
-          isOutgoing: false,
-          isDeletedLocally: true,
-          deletedAt: now,
-        }
-        audit[targetChatId][msgId] = placeholder
-        deletedItems.push(placeholder)
       }
     }
 
@@ -812,7 +799,11 @@ export class SessionStore {
           live.deletedAt = auditMsg.deletedAt
         }
       } else if (keepDeleted && auditMsg.isDeletedLocally) {
-        map.set(id, { ...auditMsg })
+        // Prevent injecting ghost placeholders that have no real message content or media
+        const isGhost = (!auditMsg.text || auditMsg.text === '[Message deleted]') && !auditMsg.mediaType
+        if (!isGhost) {
+          map.set(id, { ...auditMsg })
+        }
       }
     }
 
