@@ -1119,3 +1119,45 @@ textarea:focus-visible {
   box-shadow: 0 0 35px rgba(59, 130, 246, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.15);
   transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ==========================================================================
+   Phase 131: Google Jules REST Swarm Session Lifecycle & Fleet Orchestration
+   Multi-worker parallel swarm badge, capacity indicator, and worker pulsing dot
+   ========================================================================== */
+.jules-swarm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.jules-worker-pulsing {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #6366f1;
+  box-shadow: 0 0 8px #6366f1;
+  animation: julesWorkerPulse 1.8s infinite;
+}
+
+@keyframes julesWorkerPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+}
