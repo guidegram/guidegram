@@ -933,3 +933,24 @@ textarea:focus-visible {
   box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
+
+/* ==========================================================================
+   Phase 122: Dynamic Aurora Borealis Wave Shimmer & Ethereal Curtains
+   Harmonic undulating light ribbons with emerald & violet screen blending
+   ========================================================================== */
+.aurora-curtain-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  will-change: transform;
+}
+
+.aurora-ambient-glow {
+  background: radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(139, 92, 246, 0.08) 50%, transparent 80%);
+  pointer-events: none;
+}
