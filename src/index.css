@@ -1762,6 +1762,30 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
+/* ==========================================================================
+   Phase 154: IndexedDB Offline Storage Hygiene & Vacuum Compaction
+   Storage quota usage meter bar and vacuum cleaning animation badge
+   ========================================================================== */
+.storage-compaction-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+}
+
+.vacuum-cleaning-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #a855f7;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+
 
 
 
