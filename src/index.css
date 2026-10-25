@@ -801,3 +801,22 @@ textarea:focus-visible {
   box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);
   transition: box-shadow 0.15s ease-out;
 }
+
+/* ==========================================================================
+   Phase 116: Vector SVG Morphing & Lottie Real-Time Kinetic Engine
+   Dynamic vector coordinate transitions, capped cache, and kinetic scale
+   ========================================================================== */
+.vector-morph-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.kinetic-lottie-wrapper {
+  overflow: hidden;
+  contain: paint;
+  will-change: transform;
+  transform: translateZ(0);
+}
