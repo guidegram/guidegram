@@ -1510,6 +1510,12 @@ const guidegramAPI = {
       force,
       editMessage,
     }),
+  setHistoryTTL: (accountId: string, peerId: string, period: number): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('telegram:set-history-ttl', { accountId, peerId, period }),
+  getDefaultHistoryTTL: (accountId: string): Promise<{ period: number } | null> =>
+    ipcRenderer.invoke('telegram:get-default-history-ttl', { accountId }),
+  setDefaultHistoryTTL: (accountId: string, period: number): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-default-history-ttl', { accountId, period }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>

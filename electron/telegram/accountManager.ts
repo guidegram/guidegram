@@ -11437,6 +11437,56 @@ export class AccountManager {
     }
   }
 
+  public async setHistoryTTL(
+    accountId: string,
+    peerId: string,
+    period: number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'messages.setHistoryTTL',
+        peer: inputPeer,
+        period: Number(period),
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] setHistoryTTL error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async getDefaultHistoryTTL(accountId: string): Promise<{ period: number } | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getDefaultHistoryTTL',
+      } as any)
+      return { period: res?.period || 0 }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getDefaultHistoryTTL error:', err?.message || err)
+      return null
+    }
+  }
+
+  public async setDefaultHistoryTTL(accountId: string, period: number): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.setDefaultHistoryTTL',
+        period: Number(period),
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] setDefaultHistoryTTL error:', err?.message || err)
+      throw err
+    }
+  }
+
   public async getChannelBoostStatus(
     accountId: string,
     channelId: string

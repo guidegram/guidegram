@@ -100,6 +100,7 @@ import { ChatInviteLinksModal } from './ChatInviteLinksModal'
 import { PaidReactionModal } from './PaidReactionModal'
 import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
 import { GameScoreModal } from './GameScoreModal'
+import { AutoDeleteModal } from './AutoDeleteModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
@@ -709,6 +710,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isExportingInvite, setIsExportingInvite] = useState(false)
   const [isExportChatOpen, setIsExportChatOpen] = useState(false)
   const [isSecretFingerprintOpen, setIsSecretFingerprintOpen] = useState(false)
+  const [isAutoDeleteModalOpen, setIsAutoDeleteModalOpen] = useState(false)
 
   const handleSetSecretChatTtl = async (ttlSeconds: number) => {
     if (!chat || !chat.accessHash) return
@@ -4406,6 +4408,30 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <span>{chat.secretChatVisualEmojis ? chat.secretChatVisualEmojis.join(' ') : 'E2EE Key'}</span>
             </button>
           )}
+
+          {/* Auto-Delete History TTL Button */}
+          {chat && (
+            <button
+              onClick={() => setIsAutoDeleteModalOpen(true)}
+              title={
+                chatDetails?.historyTtlPeriod || chat.historyTtlPeriod
+                  ? `Auto-Delete active: ${Math.round((chatDetails?.historyTtlPeriod || chat.historyTtlPeriod!) / 86400)}d`
+                  : 'Configure Auto-Delete Timer (TTL)'
+              }
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                chatDetails?.historyTtlPeriod || chat.historyTtlPeriod
+                  ? 'bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan border border-accent-cyan/30'
+                  : 'bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/5'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>
+                {chatDetails?.historyTtlPeriod || chat.historyTtlPeriod
+                  ? `${Math.round((chatDetails?.historyTtlPeriod || chat.historyTtlPeriod!) / 86400)}d`
+                  : 'TTL'}
+              </span>
+            </button>
+          )}
           {/* Chat ID Badge with 1-Click Copy */}
           {showChatId && (
             <button
@@ -5513,6 +5539,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       ) : msg.editDate ? (
                         <span className="text-[10px] opacity-75 select-none">
                           edited
+                        </span>
+                      ) : null}
+
+                      {msg.ttlSeconds ? (
+                        <span
+                          title={`Auto-deletes in ${msg.ttlSeconds}s`}
+                          className="inline-flex items-center gap-0.5 text-[10px] text-accent-cyan opacity-90 font-mono"
+                        >
+                          <Clock className="w-2.5 h-2.5 inline" />
+                          <span>{msg.ttlSeconds}s</span>
                         </span>
                       ) : null}
 
@@ -8666,6 +8702,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           messageId={gameScoreModalState.messageId}
           gameTitle={gameScoreModalState.gameTitle}
           onClose={() => setGameScoreModalState({ isOpen: false, messageId: 0 })}
+        />
+      )}
+
+      {/* 18. Telegram Auto-Delete Timer & History TTL Modal */}
+      {isAutoDeleteModalOpen && chat && (
+        <AutoDeleteModal
+          isOpen={isAutoDeleteModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chat.title}
+          currentPeriod={chatDetails?.historyTtlPeriod || chat.historyTtlPeriod || 0}
+          onClose={() => setIsAutoDeleteModalOpen(false)}
+          onSuccess={(newPeriod) => {
+            showToast(`Auto-Delete: ${newPeriod === 0 ? 'Off' : `${Math.round(newPeriod / 86400)}d`}`)
+            if (chatDetails) {
+              setChatDetails({ ...chatDetails, historyTtlPeriod: newPeriod })
+            }
+          }}
         />
       )}
     </div>

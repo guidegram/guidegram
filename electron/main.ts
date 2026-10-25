@@ -3861,6 +3861,34 @@ function setupIpcHandlers() {
     }
   })
 
+  // History TTL & Auto-Delete Timer IPC
+  ipcMain.handle('telegram:set-history-ttl', async (_event, { accountId, peerId, period }) => {
+    try {
+      return await accountManager.setHistoryTTL(accountId, peerId, period)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setHistoryTTL error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:get-default-history-ttl', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getDefaultHistoryTTL(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getDefaultHistoryTTL error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:set-default-history-ttl', async (_event, { accountId, period }) => {
+    try {
+      return await accountManager.setDefaultHistoryTTL(accountId, period)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setDefaultHistoryTTL error:`, err)
+      throw err
+    }
+  })
+
   // Channel Boosts IPC
   ipcMain.handle('telegram:get-channel-boosts', async (_event, { accountId, channelId }) => {
     try {
