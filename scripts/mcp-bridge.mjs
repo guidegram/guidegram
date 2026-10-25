@@ -87,6 +87,22 @@ async function findAndLaunchGuidegramHeadless() {
     } catch {}
   }
 
+  // 1.5 Check relative installation directory (e.g. <app>/resources/scripts/mcp-bridge.mjs)
+  if (!exePath) {
+    const candidatePaths = [
+      path.resolve(__dirname, '../../Guidegram.exe'),
+      path.resolve(__dirname, '../Guidegram.exe'),
+      path.resolve(__dirname, '../../Guidegram'),
+      path.resolve(__dirname, '../Guidegram'),
+    ]
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        exePath = p
+        break
+      }
+    }
+  }
+
   // 2. Spawn process if executable found
   if (exePath) {
     logDebug(`Spawning Guidegram executable: ${exePath} --headless`)
@@ -148,7 +164,7 @@ function sendJsonRpcToMcp(payload) {
         path: '/mcp',
         method: 'POST',
         headers,
-        timeout: 60000, // 60s timeout for large file downloads / media lists
+        timeout: 300000, // 300s (5min) timeout for large file downloads / media lists
       },
       (res) => {
         let responseBody = ''
