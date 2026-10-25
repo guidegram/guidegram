@@ -151,7 +151,7 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
                   tabLabel: tab.label,
                 })
               }}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer touch-hit-slop min-h-[36px] ${
                 isActive
                   ? 'text-primary-400'
                   : 'text-gray-400 hover:text-gray-200'

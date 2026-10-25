@@ -391,7 +391,7 @@ export const ChatList: React.FC<ChatListProps> = ({
               type="button"
               onClick={() => onSearchChange('')}
               title={t('app.cancel')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white rounded-md hover:bg-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[32px] min-h-[32px] flex items-center justify-center"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -421,7 +421,7 @@ export const ChatList: React.FC<ChatListProps> = ({
                   key={filter.key}
                   type="button"
                   onClick={() => setSearchFilter(filter.key)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer touch-hit-slop min-h-[32px] ${
                     searchFilter === filter.key
                       ? 'bg-primary-600/90 text-white font-semibold shadow-sm'
                       : 'bg-white/5 hover:bg-white/10 text-gray-300'

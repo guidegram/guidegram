@@ -4422,7 +4422,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           <button
             onClick={() => setIsSharedMediaOpen(true)}
             title={t('shared_media.title')}
-            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-primary-400 border border-white/10 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-primary-400 border border-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center"
           >
             <ImageIcon className="w-4 h-4 text-primary-400" />
           </button>
@@ -4431,7 +4431,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           <button
             onClick={() => setIsExportChatOpen(true)}
             title="Export Chat History (HTML/JSON)"
-            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-cyan border border-white/10 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-cyan border border-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center"
           >
             <FolderDown className="w-4 h-4 text-accent-cyan" />
           </button>
@@ -4440,7 +4440,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           <button
             onClick={handleOpenInfo}
             title="Channel / Chat Info"
-            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center"
           >
             <Info className="w-4 h-4" />
           </button>
@@ -6177,7 +6177,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   type="button"
                   disabled={!canSendMedia}
                   onClick={() => canSendMedia && setIsAttachMenuOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors shrink-0 ${
+                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
                     !canSendMedia
                       ? 'opacity-30 cursor-not-allowed text-gray-600'
                       : isAttachMenuOpen
@@ -6194,7 +6194,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   type="button"
                   disabled={!canSendStickers}
                   onClick={() => canSendStickers && setIsStickerDrawerOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors shrink-0 ${
+                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
                     !canSendStickers
                       ? 'opacity-30 cursor-not-allowed text-gray-600'
                       : isStickerDrawerOpen
@@ -6263,7 +6263,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsAiMenuOpen((prev) => !prev)}
-                    className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 ${
+                    className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
                       isAiMenuOpen
                         ? 'text-primary-400 bg-dark-750'
                         : 'text-gray-400 hover:text-primary-400 hover:bg-dark-800'
@@ -6542,7 +6542,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           setIsSendMenuOpen((prev) => !prev)
                         }
                       }}
-                      className={`p-2.5 text-white rounded-l-2xl transition-all shadow-glow flex items-center justify-center ${
+                      className={`p-2.5 text-white rounded-l-2xl transition-all shadow-glow flex items-center justify-center touch-hit-slop min-w-[40px] min-h-[40px] ${
                         slowModeSecondsLeft > 0
                           ? 'bg-dark-700 text-gray-400 cursor-not-allowed opacity-80 gap-1.5 px-3'
                           : 'bg-primary-600 hover:bg-primary-500 cursor-pointer'
@@ -6571,7 +6571,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           setIsSendMenuOpen((prev) => !prev)
                         }
                       }}
-                      className={`p-2.5 text-primary-200 hover:text-white rounded-r-2xl border-l border-white/10 transition-colors flex items-center justify-center ${
+                      className={`p-2.5 text-primary-200 hover:text-white rounded-r-2xl border-l border-white/10 transition-colors flex items-center justify-center touch-hit-slop min-w-[32px] min-h-[40px] ${
                         slowModeSecondsLeft > 0
                           ? 'bg-dark-750 cursor-not-allowed opacity-50'
                           : 'bg-primary-700 hover:bg-primary-600 cursor-pointer'
@@ -6596,7 +6596,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       }
                       handleStartRecording()
                     }}
-                    className={`p-2.5 rounded-2xl transition-colors shrink-0 ${
+                    className={`p-2.5 rounded-2xl transition-colors shrink-0 touch-hit-slop min-w-[40px] min-h-[40px] flex items-center justify-center ${
                       !canSendMedia || slowModeSecondsLeft > 0
                         ? 'opacity-30 cursor-not-allowed text-gray-600'
                         : 'text-gray-400 hover:text-white hover:bg-dark-800 cursor-pointer'
