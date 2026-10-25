@@ -16,6 +16,7 @@ import { offlineQueue } from './offlineQueue'
 import { SecurityGuardrails } from './securityGuardrails'
 import { memoryMonitor } from './memoryMonitor'
 import { SafeDownloader } from './safeDownloader'
+import { crashRecoveryManager } from './crashRecovery'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -118,6 +119,7 @@ process.on('uncaughtException', (err: any) => {
   isHandlingUncaught = true
   try {
     Logger.error('[Process] Uncaught Exception in Main process:', err)
+    crashRecoveryManager.recordCrash('main', err)
   } catch (_) {
     // Prevent unhandled crashes inside uncaught handler
   } finally {
@@ -374,6 +376,7 @@ function createWindow() {
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     Logger.error('[Renderer] Renderer process gone / crashed:', details)
+    crashRecoveryManager.handleRendererCrash(mainWindow, details)
   })
 
   mainWindow.webContents.on('unresponsive', () => {
@@ -1852,6 +1855,15 @@ function setupIpcHandlers() {
 
   // Memory Monitor IPC Handlers (MM-211)
   memoryMonitor.registerIpc()
+
+  // Crash Recovery IPC Handlers (MM-205)
+  ipcMain.handle('system:get-crash-reports', () => {
+    return crashRecoveryManager.getCrashReports()
+  })
+
+  ipcMain.handle('system:purge-crash-reports', () => {
+    return crashRecoveryManager.purgeCrashReports()
+  })
 
   ipcMain.handle('telegram:save-draft', async (_event, { accountId, chatId, message, replyToMsgId }) => {
     try {
