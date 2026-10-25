@@ -1,0 +1,10 @@
+Phase 92: Telegram Star Subscriptions & Bot Monetization Protocol
+
+- Connected MTProto `payments.getStarsSubscriptions`, `payments.changeStarsSubscription`, and `payments.getStarsRevenueStats` methods.
+- Created `src/components/chat/StarSubscriptionsModal.tsx`:
+  - Active Subscriptions tab: Listing subscribed channels/bots with monthly Star pricing, renewal dates, and status badges.
+  - Interactive Cancel & Resume actions calling `changeStarsSubscription(accountId, peerId, subId, canceled)`.
+  - Creator Monetization tab: Displaying available Stars balance, USD valuation, pending clearance, all-time revenue, and direct Fragment withdrawal + Telegram Ads links.
+- Integrated `StarSubscriptionsModal` and action card in Info Drawer of `src/components/ChatViewport.tsx`.
+- Created and passed test suite `tests/star_subscriptions_monetization_verification.mjs` (13/13 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.
