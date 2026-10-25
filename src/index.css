@@ -1490,6 +1490,35 @@ textarea:focus-visible {
   stroke-width: 1px;
 }
 
+/* ==========================================================================
+   Phase 145: Telegram Story Ring Dynamic Gradient Arc & Liquid Progress
+   Telegram avatar story border canvas and padding container tokens
+   ========================================================================== */
+.telegram-story-ring-canvas {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  pointer-events: none;
+}
+
+.story-avatar-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.story-avatar-container:hover {
+  transform: scale(1.04);
+}
+
+
 
 
 
