@@ -1606,6 +1606,44 @@ textarea:focus-visible {
   z-index: 20;
 }
 
+/* ==========================================================================
+   Phase 149: Telegram Animated Sticker Lottie TGS Vector Cache
+   Square sticker frame and vector decompression shimmer classes
+   ========================================================================== */
+.tgs-sticker-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 128px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tgs-sticker-container:hover {
+  transform: scale(1.08);
+}
+
+.tgs-placeholder-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.4) 0%, rgba(51, 65, 85, 0.6) 50%, rgba(30, 41, 59, 0.4) 100%);
+  background-size: 200% 100%;
+  animation: tgs-shimmer-pass 1.5s infinite;
+}
+
+@keyframes tgs-shimmer-pass {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+
 
 
 
