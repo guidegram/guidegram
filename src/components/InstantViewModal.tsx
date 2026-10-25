@@ -71,14 +71,24 @@ export const InstantViewModal: React.FC<InstantViewModalProps> = ({
     }
   }
 
+  const getSafeHostname = (url?: string, fallback?: string): string => {
+    if (!url) return fallback || 'Article'
+    try {
+      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname
+    } catch {
+      return fallback || url
+    }
+  }
+
   const handleOpenUrl = () => {
     if (article?.url) {
+      const targetUrl = article.url.startsWith('http') ? article.url : `https://${article.url}`
       if (onOpenExternal) {
-        onOpenExternal(article.url)
+        onOpenExternal(targetUrl)
       } else if (window.guidegram?.openExternal) {
-        window.guidegram.openExternal(article.url)
+        window.guidegram.openExternal(targetUrl)
       } else {
-        window.open(article.url, '_blank', 'noopener,noreferrer')
+        window.open(targetUrl, '_blank', 'noopener,noreferrer')
       }
     }
   }
@@ -459,7 +469,7 @@ export const InstantViewModal: React.FC<InstantViewModalProps> = ({
 
               {/* End of article footer banner */}
               <div className="mt-12 pt-6 border-t border-current/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs opacity-75">
-                <span>Published on {article.siteName || new URL(article.url).hostname}</span>
+                <span>Published on {article.siteName || getSafeHostname(article.url)}</span>
                 <button
                   onClick={handleOpenUrl}
                   className="flex items-center gap-1.5 text-cyan-400 hover:underline font-semibold"

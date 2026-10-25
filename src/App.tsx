@@ -180,10 +180,8 @@ export const App: React.FC = () => {
     setAppToast(nextMode ? 'Ghost Mode ON: Invisible typing & reading enabled' : 'Ghost Mode OFF')
     setTimeout(() => setAppToast(null), 3000)
     try {
-      if (window.guidegram?.saveConfig && config) {
-        const updatedConfig = { ...config, ghostMode: nextMode }
-        setConfig(updatedConfig)
-        await window.guidegram.saveConfig(updatedConfig)
+      if (window.guidegram?.updateConfig) {
+        await window.guidegram.updateConfig({ ghostMode: nextMode })
       }
     } catch (err) {
       console.warn('[App] Failed to save ghostMode to config:', err)
@@ -1225,11 +1223,6 @@ export const App: React.FC = () => {
     }
   }
 
-  const handleToggleGhostMode = async () => {
-    const next = !ghostMode
-    setGhostMode(next)
-    await window.guidegram?.updateConfig({ ghostMode: next })
-  }
 
   const handleToggleNightMode = async () => {
     const isNight = config?.theme !== 'light'

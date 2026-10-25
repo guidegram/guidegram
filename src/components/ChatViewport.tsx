@@ -63,6 +63,7 @@ import {
   Wand2,
   BarChart2,
   Gift,
+  List,
   Cake,
   Tv,
   Languages,
@@ -1402,8 +1403,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isPinnedDrawerOpen, setIsPinnedDrawerOpen] = useState(false)
   const [pinnedSearchQuery, setPinnedSearchQuery] = useState('')
 
-  // AI Text Tools dropdown state
-  const [isAiMenuOpen, setIsAiMenuOpen] = useState(false)
+  // Contextual AI Smart Transform Toolbar State (Format Bar)
+  const [isFormatAiOpen, setIsFormatAiOpen] = useState(false)
 
   // Send Options Popover & Scheduled Message Modal (Telegram Desktop v7.0.4 & v6.8.5)
   const [isSendMenuOpen, setIsSendMenuOpen] = useState(false)
@@ -1431,6 +1432,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     const newText = `${before}${formatted}${after}`
     setInputText(newText)
     setFormatBar({ visible: false, start: 0, end: 0, selectedText: '' })
+    setIsFormatAiOpen(false)
     setTimeout(() => {
       textarea.focus()
       const newCursor = before.length + formatted.length
@@ -1454,6 +1456,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     } else {
       if (formatBar.visible) {
         setFormatBar({ visible: false, start: 0, end: 0, selectedText: '' })
+        setIsFormatAiOpen(false)
       }
     }
   }
@@ -2099,6 +2102,86 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setToast(null)
     }, 2200)
   }
+
+  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const clipboardData = e.clipboardData
+    if (!clipboardData) return
+
+    const items = clipboardData.items
+    const files = clipboardData.files
+    const newAttachments: StagedAttachment[] = []
+
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const type = classifyDroppedFile(file)
+        let filePath = ''
+        if (window.guidegram?.getPathForFile) {
+          try {
+            filePath = window.guidegram.getPathForFile(file)
+          } catch {}
+        }
+        if (!filePath) {
+          filePath = (file as any).path || ''
+        }
+
+        if (!filePath && window.guidegram?.saveTempFile) {
+          try {
+            const buffer = await file.arrayBuffer()
+            const ext = file.type.split('/')[1] || 'png'
+            filePath = await window.guidegram.saveTempFile({
+              buffer,
+              filename: file.name || `Pasted_Image_${Date.now()}.${ext}`,
+            })
+          } catch (err) {
+            console.warn('[Paste] Failed to save temp file:', err)
+          }
+        }
+
+        if (filePath) {
+          newAttachments.push({
+            path: filePath,
+            name: file.name || `Pasted_Image_${Date.now()}.png`,
+            size: file.size,
+            type,
+          })
+        }
+      }
+    } else if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.kind === 'file') {
+          const file = item.getAsFile()
+          if (file && window.guidegram?.saveTempFile) {
+            try {
+              const buffer = await file.arrayBuffer()
+              const ext = file.type.split('/')[1] || 'png'
+              const filePath = await window.guidegram.saveTempFile({
+                buffer,
+                filename: `Pasted_Image_${Date.now()}.${ext}`,
+              })
+              if (filePath) {
+                newAttachments.push({
+                  path: filePath,
+                  name: `Pasted_Image_${Date.now()}.${ext}`,
+                  size: file.size,
+                  type: 'media',
+                })
+              }
+            } catch (err) {
+              console.warn('[Paste] Failed to save in-memory clipboard image:', err)
+            }
+          }
+        }
+      }
+    }
+
+    if (newAttachments.length > 0) {
+      e.preventDefault()
+      setStagedAttachments((prev) => [...prev, ...newAttachments])
+      showToast(`Attached ${newAttachments.length} item(s) from clipboard!`)
+    }
+  }, [])
 
   // Scroll to replied message and highlight it, fetching historical context if not loaded
   const handleScrollToReply = async (replyId: number) => {
@@ -3057,60 +3140,99 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
 
-  // AI Text Transformations (Telegram Desktop v6.7 & v7.0.9)
-  const handleAiTransform = (mode: 'professional' | 'grammar' | 'summarize' | 'emojify' | 'translate') => {
-    setIsAiMenuOpen(false)
-    if (!inputText.trim()) return
-    const original = inputText.trim()
+  // AI Smart Text Transformations on Selection (Telegram Desktop contextual formatting)
+  const handleFormatAiTransform = (mode: 'professional' | 'typography' | 'summarize' | 'emojify' | 'bulletize') => {
+    setIsFormatAiOpen(false)
+    if (!formatBar.selectedText || !formatBar.selectedText.trim()) return
 
-    let result = original
-    switch (mode) {
-      case 'professional':
-        result = original
-          .replace(/gonna/gi, 'going to')
-          .replace(/wanna/gi, 'want to')
-          .replace(/hey|hi|yo/gi, 'Hello')
-          .replace(/thx|thanks/gi, 'Thank you')
-          .replace(/plz|pls/gi, 'Please')
-          .replace(/asap/gi, 'as soon as possible')
-        if (!result.endsWith('.')) result += '.'
-        showToast('Converted to professional tone')
-        break
-      case 'grammar':
-        result = original
-          .replace(/\s+/g, ' ')
-          .replace(/\s([.,!?;:])/g, '$1')
-          .replace(/([.,!?;:])(?=[^\s])/g, '$1 ')
-          .replace(/(^\w|\.\s+\w)/g, (letter) => letter.toUpperCase())
-        showToast('Grammar & punctuation polished')
-        break
-      case 'summarize':
-        const sentences = original.split(/[.!?]+/).filter((s) => s.trim().length > 0)
-        if (sentences.length > 2) {
-          result = `Summary: ${sentences[0].trim()}. ${sentences[sentences.length - 1].trim()}.`
-        } else {
-          result = `Summary: ${original}`
+    applyTextFormat((selected) => {
+      let result = selected
+      switch (mode) {
+        case 'professional': {
+          // Persian colloquial to formal replacements
+          result = result
+            .replace(/\bمیخوام\b/g, 'می‌خواهم')
+            .replace(/\bمیخوای\b/g, 'می‌خواهی')
+            .replace(/\bمیخواد\b/g, 'می‌خواهد')
+            .replace(/\bمیخوایم\b/g, 'می‌خواهیم')
+            .replace(/\bمیخوان\b/g, 'می‌خواهند')
+            .replace(/\bنمیدونم\b/g, 'اطلاعی ندارم')
+            .replace(/\bمیشه\b/g, 'می‌شود')
+            .replace(/\bنمیشه\b/g, 'امکان‌پذیر نیست')
+            .replace(/\bباشه\b/g, 'بسیار خوب')
+            .replace(/\bاوکی\b/g, 'مورد تأیید است')
+            .replace(/\bمرسی|ممنون\b/g, 'سپاسگزارم')
+            .replace(/\bدمت گرم\b/g, 'از لطف شما بسیار سپاسگزارم')
+            .replace(/\bدستت درد نکنه\b/g, 'از زحمات ارزشمند شما متشکرم')
+            .replace(/\bسلام\b/g, 'با سلام و احترام')
+            .replace(/\bخوبی\b/g, 'امیدوارم حال شما عالی باشد')
+            // English common slang to professional
+            .replace(/\bgonna\b/gi, 'going to')
+            .replace(/\bwanna\b/gi, 'want to')
+            .replace(/\bgotta\b/gi, 'must')
+            .replace(/\bhey|yo\b/gi, 'Dear Sir/Madam,')
+            .replace(/\bthx|thanks\b/gi, 'Thank you very much')
+            .replace(/\bplz|pls\b/gi, 'Please')
+            .replace(/\basap\b/gi, 'as soon as possible')
+            .replace(/\bi think\b/gi, 'In my professional assessment')
+          showToast('Converted selection to professional tone')
+          break
         }
-        showToast('Summarized text')
-        break
-      case 'emojify':
-        result = original
-          .replace(/\b(hello|hi)\b/gi, '$1 👋')
-          .replace(/\b(great|awesome|good|perfect)\b/gi, '$1 ✨')
-          .replace(/\b(yes|ok|done|sure)\b/gi, '$1 ✅')
-          .replace(/\b(love|like)\b/gi, '$1 ❤️')
-          .replace(/\b(fast|quick|speed)\b/gi, '$1 ⚡')
-          .replace(/\b(important|note)\b/gi, '$1 📌')
-          .replace(/\b(call|phone)\b/gi, '$1 📞')
-          .replace(/\b(idea|thinking)\b/gi, '$1 💡')
-        showToast('Emojis added')
-        break
-      case 'translate':
-        showToast('Translation suggestion added')
-        result = `[Translated]\n${original}`
-        break
-    }
-    setInputText(result)
+        case 'typography': {
+          // Fix Persian/Arabic chars, commas, dots, half-spaces
+          result = result
+            .replace(/ي/g, 'ی')
+            .replace(/ك/g, 'ک')
+            // Remove multiple spaces
+            .replace(/[ \t]+/g, ' ')
+            // Punctuation spacing: no space before, one space after
+            .replace(/\s+([.,!?;:،؛؟])/g, '$1')
+            .replace(/([.,!?;:،؛؟])(?=[^\s.,!?;:،؛؟\n])/g, '$1 ')
+            // Common Persian half-spaces (ZWNJ \u200c)
+            .replace(/\bمی\s+/g, 'می\u200c')
+            .replace(/\bنمی\s+/g, 'نمی\u200c')
+            .replace(/\s+تر\b/g, '\u200cتر')
+            .replace(/\s+ترین\b/g, '\u200cترین')
+            .replace(/\s+ها\b/g, '\u200cها')
+            .replace(/\s+های\b/g, '\u200cهای')
+            .replace(/\s+هایی\b/g, '\u200cهایی')
+          // English: capitalize first letter of sentences
+          result = result.replace(/(^\s*\w|[.!?]\s*\w)/g, (c) => c.toUpperCase())
+          showToast('Typography & punctuation polished')
+          break
+        }
+        case 'summarize': {
+          const sentences = result.split(/([.!?؟\n]+)/).filter((s) => s.trim().length > 0)
+          if (sentences.length > 2) {
+            result = `📌 خلاصه: ${sentences[0].trim()}... ${sentences[sentences.length - 1].trim()}`
+          } else {
+            result = `📌 خلاصه: ${result.trim()}`
+          }
+          showToast('Summarized selection')
+          break
+        }
+        case 'emojify': {
+          result = result
+            .replace(/\b(سلام|درود)\b/g, '$1 👋')
+            .replace(/\b(عالی|خوب|فوق‌العاده|perfect|great|awesome)\b/gi, '$1 ✨')
+            .replace(/\b(بله|اوکی|تأیید|موافقم|yes|done|ok)\b/gi, '$1 ✅')
+            .replace(/\b(ممنون|تشکر|سپاس|thanks|thank you)\b/gi, '$1 🙏')
+            .replace(/\b(مهم|توجه|نکته|important|note)\b/gi, '$1 📌')
+            .replace(/\b(سریع|فوری|زود|fast|urgent|quick)\b/gi, '$1 ⚡')
+            .replace(/\b(عشق|دوست|love|heart)\b/gi, '$1 ❤️')
+            .replace(/\b(هشدار|خطا|warning|error)\b/gi, '$1 ⚠️')
+          showToast('Added expressive emojis to selection')
+          break
+        }
+        case 'bulletize': {
+          const lines = result.split(/\r?\n/).filter((l) => l.trim().length > 0)
+          result = lines.map((l) => (l.trim().startsWith('•') || l.trim().startsWith('-') ? l : `• ${l.trim()}`)).join('\n')
+          showToast('Converted selection to bullet list')
+          break
+        }
+      }
+      return result
+    })
   }
 
   const handleCopyChatId = async () => {
@@ -6451,69 +6573,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           </div>
         ) : (
           <div className="p-3 relative">
-            {/* Attachment Popover Menu (Feature 17) */}
-            {isAttachMenuOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-full left-4 mb-2 w-52 bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100 z-40 text-xs select-none"
-              >
-                <button
-                  type="button"
-                  onClick={() => handlePickAttachment('media')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-primary-500/15 text-primary-400 flex items-center justify-center shrink-0 group-hover:bg-primary-500/25 transition-colors">
-                    <Image className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-100">Photos & Videos</span>
-                    <span className="text-[10px] text-gray-400">JPG, PNG, GIF, MP4</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePickAttachment('document')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0 group-hover:bg-accent-cyan/25 transition-colors">
-                    <FileUp className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-100">Files & Documents</span>
-                    <span className="text-[10px] text-gray-400">Any file up to 2GB</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePickAttachment('audio')}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-accent-violet/15 text-accent-violet flex items-center justify-center shrink-0 group-hover:bg-accent-violet/25 transition-colors">
-                    <Music className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-100">Audio</span>
-                    <span className="text-[10px] text-gray-400">MP3, M4A, FLAC, WAV</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAttachMenuOpen(false)
-                    setIsCreatePollOpen(true)
-                  }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:bg-amber-500/25 transition-colors">
-                    <BarChart2 className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-100">{t('poll.title') || 'Poll & Quiz'}</span>
-                    <span className="text-[10px] text-gray-400">Ask questions or run a quiz</span>
-                  </div>
-                </button>
-              </div>
-            )}
 
             {isRecordingVoice ? (
               <div className="flex items-center gap-3 w-full bg-dark-800/95 border border-red-500/30 rounded-2xl px-4 py-2 shadow-lg animate-in fade-in slide-in-from-bottom-1 duration-150">
@@ -6593,22 +6652,138 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 )}
 
                 {/* Paperclip Button with Attachment Popover Toggle */}
-                <button
-                  type="button"
-                  disabled={!canSendMedia}
-                  aria-label="Attach Photo, Video or Document"
-                  onClick={() => canSendMedia && setIsAttachMenuOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
-                    !canSendMedia
-                      ? 'opacity-30 cursor-not-allowed text-gray-600'
-                      : isAttachMenuOpen
-                      ? 'text-primary-400 bg-dark-750 cursor-pointer'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-dark-800 cursor-pointer'
-                  }`}
-                  title={!canSendMedia ? 'Sending media is restricted in this group' : 'Attach Photo, Video or Document'}
-                >
-                  <Paperclip className="w-4 h-4" />
-                </button>
+                <div className="relative shrink-0">
+                  {isAttachMenuOpen && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute bottom-full start-0 mb-2 w-52 bg-dark-850/98 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-0.5 z-50 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+                    >
+                      {/* 1. Photo or video */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          imageInputRef.current?.click()
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/25 transition-colors">
+                          <Image className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">Photo or video</span>
+                      </button>
+
+                      {/* 2. Document */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          fileInputRef.current?.click()
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0 group-hover:bg-accent-cyan/25 transition-colors">
+                          <FileText className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">Document</span>
+                      </button>
+
+                      {/* 3. Checklist */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          setInputText((prev) => (prev ? prev + '\n[ ] ' : '[ ] Task 1\n[ ] Task 2\n[ ] Task 3'))
+                          setTimeout(() => textareaRef.current?.focus(), 50)
+                          showToast('Checklist template added')
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 group-hover:bg-blue-500/25 transition-colors">
+                          <CheckSquare className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">Checklist</span>
+                      </button>
+
+                      {/* 4. Article */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          window.guidegram?.openExternal?.('https://telegra.ph')
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-teal-500/15 text-teal-400 flex items-center justify-center shrink-0 group-hover:bg-teal-500/25 transition-colors">
+                          <BookOpen className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">Article</span>
+                      </button>
+
+                      {/* 5. Location */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          setIsLiveLocationModalOpen(true)
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0 group-hover:bg-rose-500/25 transition-colors">
+                          <MapPin className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">Location</span>
+                      </button>
+
+                      {/* 6. Poll & Quiz */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          setIsCreatePollOpen(true)
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:bg-amber-500/25 transition-colors">
+                          <BarChart2 className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">{t('poll.title') || 'Poll & Quiz'}</span>
+                      </button>
+
+                      {/* 7. Music */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAttachMenuOpen(false)
+                          audioInputRef.current?.click()
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-accent-violet/15 text-accent-violet flex items-center justify-center shrink-0 group-hover:bg-accent-violet/25 transition-colors">
+                          <Music className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-medium text-gray-100">Music</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={!canSendMedia}
+                    aria-label="Attach Photo, Video or Document"
+                    onClick={() => canSendMedia && setIsAttachMenuOpen((prev) => !prev)}
+                    className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                      !canSendMedia
+                        ? 'opacity-30 cursor-not-allowed text-gray-600'
+                        : isAttachMenuOpen
+                        ? 'text-primary-400 bg-dark-750 cursor-pointer'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-dark-800 cursor-pointer'
+                    }`}
+                    title={!canSendMedia ? 'Sending media is restricted in this group' : 'Attach Photo, Video or Document'}
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {/* Sticker Picker Drawer Toggle Button (Telegram Desktop v7.0) */}
                 <button
@@ -6628,73 +6803,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <Smile className="w-4 h-4" />
                 </button>
 
-                {/* AI Text Tools Button (Telegram Desktop v6.7 & v7.0.9) */}
-                <div className="relative shrink-0">
-                  {isAiMenuOpen && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-full left-0 mb-2 w-52 bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100 z-50 text-xs select-none"
-                    >
-                      <div className="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-primary-400" />
-                        <span>AI Assistant</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleAiTransform('professional')}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5 text-primary-400 shrink-0" />
-                        <span>Make Professional</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAiTransform('grammar')}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
-                      >
-                        <Wand2 className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
-                        <span>Fix Grammar & Punctuation</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAiTransform('summarize')}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
-                      >
-                        <Quote className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span>Summarize Text</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAiTransform('emojify')}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
-                      >
-                        <Smile className="w-3.5 h-3.5 text-accent-violet shrink-0" />
-                        <span>Add Expressive Emojis</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAiTransform('translate')}
-                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Translate Hint</span>
-                      </button>
-                    </div>
-                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => setIsAiMenuOpen((prev) => !prev)}
-                    className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
-                      isAiMenuOpen
-                        ? 'text-primary-400 bg-dark-750'
-                        : 'text-gray-400 hover:text-primary-400 hover:bg-dark-800'
-                    }`}
-                    title="AI Text Transformations (Tone, Grammar, Emojis)"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                  </button>
-                </div>
 
                 {/* Multi-line Auto-expanding Textarea with Telegram Desktop Shortcuts */}
                 <div className="flex-1 bg-dark-800 border border-white/5 focus-within:border-primary-500/50 rounded-2xl px-3.5 py-2 transition-colors flex items-center relative">
@@ -6766,9 +6875,82 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         <LinkIcon className="w-3.5 h-3.5" />
                       </button>
                       <div className="w-px h-4 bg-white/10 mx-0.5" />
+
+                      {/* AI Smart Assistant Popover for Selected Text */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsFormatAiOpen((prev) => !prev)}
+                          className={`p-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                            isFormatAiOpen
+                              ? 'bg-primary-500/25 text-primary-300 ring-1 ring-primary-500/40'
+                              : 'text-gray-300 hover:text-primary-400 hover:bg-white/10'
+                          }`}
+                          title="AI Smart Text Transformations"
+                        >
+                          <Wand2 className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-semibold tracking-wide">AI</span>
+                        </button>
+
+                        {isFormatAiOpen && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-dark-850/98 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-1 z-50 animate-in fade-in zoom-in-95 duration-100 select-none text-xs"
+                          >
+                            <div className="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-white/5 pb-1 mb-0.5">
+                              <Sparkles className="w-3 h-3 text-primary-400 shrink-0" />
+                              <span>AI Text Assistant</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleFormatAiTransform('professional')}
+                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 text-primary-400 shrink-0" />
+                              <span>Make Professional</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFormatAiTransform('typography')}
+                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+                            >
+                              <Wand2 className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
+                              <span>Fix Typography & Spacing</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFormatAiTransform('summarize')}
+                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+                            >
+                              <Quote className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span>Summarize Selection</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFormatAiTransform('emojify')}
+                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+                            >
+                              <Smile className="w-3.5 h-3.5 text-accent-violet shrink-0" />
+                              <span>Add Expressive Emojis</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFormatAiTransform('bulletize')}
+                              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+                            >
+                              <List className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <span>Convert to Bullet List</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => setFormatBar({ visible: false, start: 0, end: 0, selectedText: '' })}
+                        onClick={() => {
+                          setFormatBar({ visible: false, start: 0, end: 0, selectedText: '' })
+                          setIsFormatAiOpen(false)
+                        }}
                         className="p-1 text-gray-400 hover:text-white rounded-lg transition-colors"
                         title="Close"
                       >
@@ -6849,6 +7031,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     value={inputText}
                     rows={1}
                     style={{ maxHeight: '160px' }}
+                    onPaste={handlePaste}
                     onChange={(e) => {
                       const val = e.target.value
                       setInputText(val)
