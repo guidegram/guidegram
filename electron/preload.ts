@@ -574,6 +574,17 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
   getStarGifts: (accountId: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gift-catalog', { accountId }),
+  convertStarGift: (
+    accountId: string,
+    stargiftMsgId: number
+  ): Promise<{ success: boolean; result?: any; error?: string }> =>
+    ipcRenderer.invoke('telegram:convert-star-gift', { accountId, stargiftMsgId }),
+  toggleSaveStarGift: (
+    accountId: string,
+    stargiftMsgId: number,
+    unsave: boolean
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('telegram:toggle-save-star-gift', { accountId, stargiftMsgId, unsave }),
   sendPaidReaction: (
     accountId: string,
     chatId: string,

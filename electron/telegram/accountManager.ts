@@ -9273,6 +9273,50 @@ export class AccountManager {
     }
   }
 
+  public async convertStarGift(
+    accountId: string,
+    stargiftMsgId: number
+  ): Promise<{ success: boolean; result?: any; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { success: false, error: 'Account is not connected.' }
+    try {
+      const res: any = await holder.client.call({
+        _: 'payments.convertStarGift',
+        stargift: {
+          _: 'inputSavedStarGiftUser',
+          msgId: Number(stargiftMsgId),
+        },
+      } as any)
+      return { success: true, result: res }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] convertStarGift error:', err?.message || err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+
+  public async toggleSaveStarGift(
+    accountId: string,
+    stargiftMsgId: number,
+    unsave: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { success: false, error: 'Account is not connected.' }
+    try {
+      await holder.client.call({
+        _: 'payments.saveStarGift',
+        stargift: {
+          _: 'inputSavedStarGiftUser',
+          msgId: Number(stargiftMsgId),
+        },
+        unsave: Boolean(unsave),
+      } as any)
+      return { success: true }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] toggleSaveStarGift error:', err?.message || err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+
   public async getActiveSessions(accountId: string): Promise<ActiveSessionItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return []

@@ -2070,6 +2070,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:convert-star-gift', async (_event, { accountId, stargiftMsgId }) => {
+    try {
+      return await accountManager.convertStarGift(accountId, stargiftMsgId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] convertStarGift error:`, err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  })
+
+  ipcMain.handle('telegram:toggle-save-star-gift', async (_event, { accountId, stargiftMsgId, unsave }) => {
+    try {
+      return await accountManager.toggleSaveStarGift(accountId, stargiftMsgId, unsave)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleSaveStarGift error:`, err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  })
+
   ipcMain.handle('telegram:send-paid-reaction', async (_event, { accountId, chatId, messageId, count, isPrivate }) => {
     try {
       return await accountManager.sendPaidReaction(accountId, chatId, messageId, count, isPrivate)
