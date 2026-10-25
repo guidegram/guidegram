@@ -17,6 +17,7 @@ import {
   SendMediaOptions,
   SendMessageOptions,
   WebPagePreview,
+  InstantViewArticle,
   BotCallbackResult,
   CustomEmojiPayload,
   ForumTopicItem,
@@ -447,6 +448,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:open-external', { url }),
   getLinkPreview: (url: string): Promise<WebPagePreview | null> =>
     ipcRenderer.invoke('web:get-link-preview', { url }),
+  getInstantView: (accountId: string, url: string, hash?: number): Promise<InstantViewArticle | null> =>
+    ipcRenderer.invoke('telegram:get-instant-view', { accountId, url, hash }),
 
   // Global Telegram Search & Historical Messages
   searchPublicPeers: (accountId: string, query: string): Promise<DialogItem[]> =>

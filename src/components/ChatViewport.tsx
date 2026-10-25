@@ -77,10 +77,11 @@ import {
   UserCheck,
   Settings,
 } from 'lucide-react'
-import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
+import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
 import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
+import { InstantViewModal } from './InstantViewModal'
 import { GroupStatsModal } from './GroupStatsModal'
 import { ForumTopicsBar } from './ForumTopicsBar'
 import { ForumTopicsModal } from './ForumTopicsModal'
@@ -234,9 +235,10 @@ interface LinkPreviewCardProps {
   url: string
   existingPreview?: WebPagePreview
   onSafeOpen: (url: string) => void
+  onOpenInstantView?: (url: string, preview?: WebPagePreview) => void
 }
 
-const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview, onSafeOpen }) => {
+const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview, onSafeOpen, onOpenInstantView }) => {
   const [preview, setPreview] = useState<WebPagePreview | null>(
     existingPreview || rendererPreviewCache.get(url) || null
   )
@@ -333,6 +335,23 @@ const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview,
             onError={() => setImageFailed(true)}
             loading="lazy"
           />
+        </div>
+      )}
+
+      {/* Instant View Action Button (Official Telegram Desktop Parity) */}
+      {(preview.hasInstantView || (preview.title && preview.description) || url.includes('telegra.ph') || url.includes('/iv?')) && (
+        <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenInstantView?.(preview.url || url, preview)
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wide transition-all duration-150 border border-cyan-500/30 shadow-sm"
+          >
+            <span>⚡ Instant View</span>
+          </button>
+          <span className="text-[10px] text-gray-400 opacity-60">Clean reader</span>
         </div>
       )}
     </div>
@@ -863,6 +882,48 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [savedTagFilter, setSavedTagFilter] = useState<string | null>(null)
   const [savedSearchQuery, setSavedSearchQuery] = useState('')
   const [savedMediaFilter, setSavedMediaFilter] = useState<'all' | 'media' | 'files' | 'links' | 'voice'>('all')
+
+  // Telegram Instant View (IV) article reader state
+  const [instantViewArticle, setInstantViewArticle] = useState<InstantViewArticle | null>(null)
+  const [isInstantViewOpen, setIsInstantViewOpen] = useState(false)
+  const [isInstantViewLoading, setIsInstantViewLoading] = useState(false)
+
+  const handleOpenInstantView = async (url: string, preview?: WebPagePreview) => {
+    setIsInstantViewOpen(true)
+    setIsInstantViewLoading(true)
+    try {
+      if (preview?.instantViewArticle) {
+        setInstantViewArticle(preview.instantViewArticle)
+        setIsInstantViewLoading(false)
+        return
+      }
+      if (window.guidegram?.getInstantView && chat?.accountId) {
+        const res = await window.guidegram.getInstantView(chat.accountId, url)
+        if (res) {
+          setInstantViewArticle(res)
+          setIsInstantViewLoading(false)
+          return
+        }
+      }
+      // Fallback reader article
+      setInstantViewArticle({
+        url,
+        title: preview?.title || url,
+        description: preview?.description,
+        siteName: preview?.siteName || preview?.domain,
+        blocks: [
+          { type: 'title', text: preview?.title || 'Article View' },
+          ...(preview?.image ? [{ type: 'photo' as const, url: preview.image }] : []),
+          ...(preview?.description ? [{ type: 'paragraph' as const, text: preview.description }] : []),
+        ],
+      })
+    } catch (err) {
+      console.warn('[ChatViewport] Failed to fetch Instant View:', err)
+    } finally {
+      setIsInstantViewLoading(false)
+    }
+  }
+
   // Group Voice & Video Call states
   const [isGroupCallModalOpen, setIsGroupCallModalOpen] = useState(false)
   const [isCallJoined, setIsCallJoined] = useState(false)
@@ -5078,6 +5139,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           url={url}
                           existingPreview={msg.webPage}
                           onSafeOpen={handleSafeOpenUrl}
+                          onOpenInstantView={handleOpenInstantView}
                         />
                       )
                     })()}
@@ -8210,6 +8272,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           initialAccessHash={chatDetails?.groupCallAccessHash}
           onClose={() => setIsGroupCallModalOpen(false)}
           onLeaveCall={() => setIsCallJoined(false)}
+        />
+      )}
+
+      {/* 14. Telegram Instant View (IV) Article Reader Modal */}
+      {isInstantViewOpen && (
+        <InstantViewModal
+          isOpen={isInstantViewOpen}
+          article={instantViewArticle}
+          isLoading={isInstantViewLoading}
+          onClose={() => setIsInstantViewOpen(false)}
+          onOpenExternal={handleSafeOpenUrl}
         />
       )}
     </div>

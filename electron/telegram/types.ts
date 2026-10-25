@@ -234,6 +234,56 @@ export interface RichMessagePayload {
   blocks: RichBlock[]
 }
 
+export interface InstantViewRichText {
+  text: string
+  type?: 'plain' | 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'url' | 'email'
+  url?: string
+  children?: InstantViewRichText[]
+}
+
+export interface InstantViewBlock {
+  type:
+    | 'title'
+    | 'subtitle'
+    | 'header'
+    | 'subheader'
+    | 'paragraph'
+    | 'preformatted'
+    | 'blockquote'
+    | 'pullquote'
+    | 'divider'
+    | 'photo'
+    | 'video'
+    | 'author_date'
+    | 'list'
+    | 'table'
+    | 'unsupported'
+  text?: string
+  richText?: InstantViewRichText[]
+  author?: string
+  date?: number
+  url?: string
+  caption?: string
+  items?: (string | InstantViewRichText[])[]
+  ordered?: boolean
+  language?: string
+  rows?: string[][]
+}
+
+export interface InstantViewArticle {
+  url: string
+  webpageId?: string
+  siteName?: string
+  title?: string
+  description?: string
+  author?: string
+  publishDate?: number
+  views?: number
+  rtl?: boolean
+  blocks: InstantViewBlock[]
+  rawHtmlSanitized?: string
+}
+
 export interface WebPagePreview {
   url: string
   siteName?: string
@@ -243,6 +293,8 @@ export interface WebPagePreview {
   image?: string
   domain?: string
   favicon?: string
+  hasInstantView?: boolean
+  instantViewArticle?: InstantViewArticle
 }
 
 export type LinkPreviewData = WebPagePreview

@@ -49,6 +49,7 @@ import { SecretChatCrypto } from './secretChatCrypto'
 import { passcodeGuard } from '../passcodeGuard'
 import { swrCache } from '../swrCache'
 import { keyedMutex } from '../asyncMutex'
+import { parseMtprotoPageToArticle, buildReaderFallbackArticle } from './instantViewService'
 import {
   AccountInfo,
   DialogItem,
@@ -59,6 +60,7 @@ import {
   InlineButton,
   ChatDetails,
   WebPagePreview,
+  InstantViewArticle,
   ReplyInfo,
   MessageEntityItem,
   PinnedMessageItem,
@@ -11821,6 +11823,37 @@ export class AccountManager {
         }
       } catch (_) {}
     })
+  }
+
+  /**
+   * Telegram Instant View (IV) Protocol: messages.getWebPage & Cached Page Resolution
+   */
+  public async getInstantView(
+    accountId: string,
+    url: string,
+    hash: number = 0
+  ): Promise<InstantViewArticle | null> {
+    try {
+      const holder = this.clients.get(accountId)
+      if (holder?.client) {
+        const res: any = await holder.client.call({
+          _: 'messages.getWebPage',
+          url,
+          hash: hash || 0,
+        } as any)
+        if (res) {
+          const parsed = parseMtprotoPageToArticle(url, res)
+          if (parsed) return parsed
+        }
+      }
+      return buildReaderFallbackArticle(url, undefined, {
+        title: url,
+        siteName: new URL(url).hostname.replace(/^www\./i, ''),
+      })
+    } catch (err) {
+      Logger.warn(`[AccountManager] getInstantView failed for ${url}:`, err)
+      return buildReaderFallbackArticle(url, undefined, { title: url })
+    }
   }
 }
 

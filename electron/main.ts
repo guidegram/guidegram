@@ -1703,6 +1703,15 @@ function setupIpcHandlers() {
     return scrapeLinkPreview(url)
   })
 
+  ipcMain.handle('telegram:get-instant-view', async (_event, { accountId, url, hash }: { accountId: string; url: string; hash?: number }) => {
+    try {
+      return await accountManager.getInstantView(accountId, url, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] telegram:get-instant-view error:', err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:test-proxy-ping', async (_event, { proxy }) => {
     return ProxyManager.testProxyPing(proxy)
   })
