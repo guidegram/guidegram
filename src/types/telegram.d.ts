@@ -60,6 +60,9 @@ import type {
   ChannelBoostStatus,
   TwoFactorStatus,
   AutoDownloadConfig,
+  NetworkProfileType,
+  AutoDownloadNetworkRule,
+  NetworkProfilesConfig,
   CacheStats,
   MyFullProfile,
   EmojiStatusItem,
@@ -259,6 +262,9 @@ export type {
   SendableTypingStatus,
   ExportChatHistoryOptions,
   ExportChatHistoryResult,
+  NetworkProfileType,
+  AutoDownloadNetworkRule,
+  NetworkProfilesConfig,
 }
 
 

@@ -11756,6 +11756,18 @@ export class AccountManager {
     }
   }
 
+  public async getAutoDownloadSettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder || !holder.client) throw new Error(`Account ${accountId} not connected`)
+    return await this.securityService.getAutoDownloadSettings(holder as any)
+  }
+
+  public async saveAutoDownloadSettings(accountId: string, low?: boolean, high?: boolean, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder || !holder.client) throw new Error(`Account ${accountId} not connected`)
+    return await this.securityService.saveAutoDownloadSettings(holder as any, low, high, settings)
+  }
+
   public sanitizeAccountInfo(info: AccountInfo): AccountInfo {
     const sanitized: AccountInfo = { ...info }
     delete sanitized.sessionString

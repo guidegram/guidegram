@@ -875,6 +875,33 @@ export interface UpdateInfo {
   severity?: 'critical' | 'normal'
 }
 
+export type NetworkProfileType = 'cellular' | 'wifi' | 'roaming'
+
+export interface AutoDownloadNetworkRule {
+  photos: boolean
+  maxPhotoSizeMB: number
+  videos: boolean
+  maxVideoSizeMB: number
+  files: boolean
+  maxFileSizeMB: number
+  voice: boolean
+  autoPlayGifs: boolean
+  autoPlayVideos: boolean
+  peers: {
+    contacts: boolean
+    privateChats: boolean
+    groups: boolean
+    channels: boolean
+  }
+}
+
+export interface NetworkProfilesConfig {
+  activeProfile: NetworkProfileType
+  cellular: AutoDownloadNetworkRule
+  wifi: AutoDownloadNetworkRule
+  roaming: AutoDownloadNetworkRule
+}
+
 export interface AutoDownloadConfig {
   enabled: boolean
   photosInPrivate: boolean
@@ -889,6 +916,9 @@ export interface AutoDownloadConfig {
   maxPhotoSizeMB: number
   maxVideoSizeMB: number
   maxFileSizeMB: number
+  // Telegram Desktop Parity: Network Profiles
+  activeNetworkProfile?: NetworkProfileType
+  networkProfiles?: NetworkProfilesConfig
 }
 
 export interface AppConfig {

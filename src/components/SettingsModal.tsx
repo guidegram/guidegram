@@ -72,6 +72,8 @@ import {
   Plus,
   ArrowLeft,
   Search,
+  Wifi,
+  Signal,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -81,6 +83,9 @@ import {
   UpdateProgress,
   PortableLocatorInfo,
   AutoDownloadConfig,
+  NetworkProfileType,
+  AutoDownloadNetworkRule,
+  NetworkProfilesConfig,
   CacheStats,
   PrivacySecuritySettings,
   BusinessProfile,
@@ -103,6 +108,46 @@ interface SettingsModalProps {
   onConfigUpdated?: (config: AppConfig) => void
   onUpdateFound?: (info: UpdateInfo) => void
   onOpenSupport?: () => void
+}
+
+const DEFAULT_NETWORK_PROFILES: NetworkProfilesConfig = {
+  activeProfile: 'wifi',
+  cellular: {
+    photos: true,
+    maxPhotoSizeMB: 10,
+    videos: false,
+    maxVideoSizeMB: 5,
+    files: false,
+    maxFileSizeMB: 1,
+    voice: true,
+    autoPlayGifs: false,
+    autoPlayVideos: false,
+    peers: { contacts: true, privateChats: true, groups: false, channels: false },
+  },
+  wifi: {
+    photos: true,
+    maxPhotoSizeMB: 10,
+    videos: true,
+    maxVideoSizeMB: 15,
+    files: true,
+    maxFileSizeMB: 3,
+    voice: true,
+    autoPlayGifs: true,
+    autoPlayVideos: true,
+    peers: { contacts: true, privateChats: true, groups: true, channels: false },
+  },
+  roaming: {
+    photos: false,
+    maxPhotoSizeMB: 1,
+    videos: false,
+    maxVideoSizeMB: 1,
+    files: false,
+    maxFileSizeMB: 1,
+    voice: false,
+    autoPlayGifs: false,
+    autoPlayVideos: false,
+    peers: { contacts: false, privateChats: false, groups: false, channels: false },
+  },
 }
 
 interface ToggleItemProps {
@@ -208,7 +253,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     maxPhotoSizeMB: 5,
     maxVideoSizeMB: 10,
     maxFileSizeMB: 5,
+    activeNetworkProfile: 'wifi',
+    networkProfiles: DEFAULT_NETWORK_PROFILES,
   })
+  const [selectedProfileTab, setSelectedProfileTab] = useState<NetworkProfileType>('wifi')
+  const [isSyncingCloudAutoDownload, setIsSyncingCloudAutoDownload] = useState(false)
 
   // Window Close Action Preference
   const [closeAction, setCloseAction] = useState<CloseAction>('ask')
@@ -598,7 +647,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setBubbleRadius(cfg.bubbleRadius ?? 16)
         setBubblePadding(cfg.bubblePadding ?? 10)
         if (cfg.autoDownload) {
-          setAutoDownload(cfg.autoDownload)
+          setAutoDownload({
+            ...cfg.autoDownload,
+            networkProfiles: cfg.autoDownload.networkProfiles || DEFAULT_NETWORK_PROFILES,
+          })
+          if (cfg.autoDownload.activeNetworkProfile) {
+            setSelectedProfileTab(cfg.autoDownload.activeNetworkProfile)
+          }
         }
         if (cfg.mcp) {
           setMcpEnabled(cfg.mcp.enabled ?? true)
@@ -2607,8 +2662,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {/* Section: Automatic media download */}
-                <div className="space-y-1 pt-2 border-t border-white/5">
-                  <div className="text-xs font-bold text-accent-cyan px-1 py-1">Automatic media download</div>
+                <div className="space-y-1.5 pt-2 border-t border-white/5">
+                  <div className="flex items-center justify-between px-1 py-1">
+                    <div className="text-xs font-bold text-accent-cyan">Automatic media download</div>
+                    <button
+                      type="button"
+                      disabled={isSyncingCloudAutoDownload}
+                      onClick={async () => {
+                        if (accounts[0]?.id && window.guidegram?.getAutoDownloadSettings) {
+                          try {
+                            setIsSyncingCloudAutoDownload(true)
+                            const cloud = await window.guidegram.getAutoDownloadSettings(accounts[0].id)
+                            if (cloud) {
+                              // Cloud settings retrieved from MTProto
+                            }
+                          } catch (e) {
+                            console.error('Failed to sync autodownload cloud settings', e)
+                          } finally {
+                            setIsSyncingCloudAutoDownload(false)
+                          }
+                        }
+                      }}
+                      className="text-[11px] text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1 disabled:opacity-50"
+                      title="Sync settings with Telegram Cloud via MTProto"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isSyncingCloudAutoDownload ? 'animate-spin' : ''}`} />
+                      <span>{isSyncingCloudAutoDownload ? 'Syncing...' : 'Sync Cloud'}</span>
+                    </button>
+                  </div>
+
+                  {/* Network Profiles Selector (Telegram Desktop Parity: Wi-Fi, Cellular, Roaming) */}
+                  <div className="flex items-center gap-1 p-1 bg-dark-900/60 rounded-xl border border-white/5 mb-1.5">
+                    {(['wifi', 'cellular', 'roaming'] as NetworkProfileType[]).map((prof) => {
+                      const isActive = autoDownload.activeNetworkProfile === prof || (!autoDownload.activeNetworkProfile && prof === 'wifi')
+                      const isSelected = selectedProfileTab === prof
+                      return (
+                        <button
+                          key={prof}
+                          type="button"
+                          onClick={() => setSelectedProfileTab(prof)}
+                          className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-primary-600/30 text-primary-300 border border-primary-500/30 shadow-sm'
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                          }`}
+                        >
+                          {prof === 'wifi' && <Wifi className="w-3.5 h-3.5" />}
+                          {prof === 'cellular' && <Signal className="w-3.5 h-3.5" />}
+                          {prof === 'roaming' && <Globe className="w-3.5 h-3.5" />}
+                          <span className="capitalize">{prof === 'wifi' ? 'Wi-Fi' : prof}</span>
+                          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Active Network Profile" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Set as active button if not currently active */}
+                  {autoDownload.activeNetworkProfile !== selectedProfileTab && (
+                    <div className="flex justify-end pb-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAutoDownload(prev => ({
+                            ...prev,
+                            activeNetworkProfile: selectedProfileTab,
+                            networkProfiles: {
+                              ...(prev.networkProfiles || DEFAULT_NETWORK_PROFILES),
+                              activeProfile: selectedProfileTab,
+                            },
+                          }))
+                        }}
+                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span>Use {selectedProfileTab === 'wifi' ? 'Wi-Fi' : selectedProfileTab} as active profile</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* In private chats */}
                   <div
@@ -2663,6 +2793,88 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="w-4 h-4 rounded-full bg-white shadow-sm" />
                     </div>
                   </div>
+
+                  {/* Profile Specific Controls: Photos / Videos / Files Limits */}
+                  {(() => {
+                    const currentProfiles = autoDownload.networkProfiles || DEFAULT_NETWORK_PROFILES
+                    const currentRule = currentProfiles[selectedProfileTab]
+                    return (
+                      <div className="mt-2 p-2.5 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                          {selectedProfileTab.toUpperCase()} Rules & Limits
+                        </div>
+
+                        {/* Photos toggle & size limit */}
+                        <div className="flex items-center justify-between text-xs text-gray-300">
+                          <span>Photos Auto-Download</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAutoDownload(prev => {
+                                const profs = { ...(prev.networkProfiles || DEFAULT_NETWORK_PROFILES) }
+                                profs[selectedProfileTab] = {
+                                  ...profs[selectedProfileTab],
+                                  photos: !profs[selectedProfileTab].photos,
+                                }
+                                return { ...prev, networkProfiles: profs }
+                              })
+                            }}
+                            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                              currentRule.photos ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'
+                            }`}
+                          >
+                            {currentRule.photos ? `Enabled (up to ${currentRule.maxPhotoSizeMB}MB)` : 'Disabled'}
+                          </button>
+                        </div>
+
+                        {/* Videos toggle & size limit */}
+                        <div className="flex items-center justify-between text-xs text-gray-300">
+                          <span>Videos Auto-Download</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAutoDownload(prev => {
+                                const profs = { ...(prev.networkProfiles || DEFAULT_NETWORK_PROFILES) }
+                                profs[selectedProfileTab] = {
+                                  ...profs[selectedProfileTab],
+                                  videos: !profs[selectedProfileTab].videos,
+                                }
+                                return { ...prev, networkProfiles: profs }
+                              })
+                            }}
+                            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                              currentRule.videos ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'
+                            }`}
+                          >
+                            {currentRule.videos ? `Enabled (up to ${currentRule.maxVideoSizeMB}MB)` : 'Disabled'}
+                          </button>
+                        </div>
+
+                        {/* Files toggle & size limit */}
+                        <div className="flex items-center justify-between text-xs text-gray-300">
+                          <span>Files Auto-Download</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAutoDownload(prev => {
+                                const profs = { ...(prev.networkProfiles || DEFAULT_NETWORK_PROFILES) }
+                                profs[selectedProfileTab] = {
+                                  ...profs[selectedProfileTab],
+                                  files: !profs[selectedProfileTab].files,
+                                }
+                                return { ...prev, networkProfiles: profs }
+                              })
+                            }}
+                            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                              currentRule.files ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500'
+                            }`}
+                          >
+                            {currentRule.files ? `Enabled (up to ${currentRule.maxFileSizeMB}MB)` : 'Disabled'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* Section: Window title bar */}

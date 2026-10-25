@@ -1122,6 +1122,10 @@ const guidegramAPI = {
     saveToFile = true
   ): Promise<ExportChatHistoryResult> =>
     ipcRenderer.invoke('telegram:export-chat-history', { accountId, chatId, options, saveToFile }),
+  getAutoDownloadSettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-autodownload-settings', { accountId }),
+  saveAutoDownloadSettings: (accountId: string, low?: boolean, high?: boolean, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-autodownload-settings', { accountId, low, high, settings }),
 
   // Channels & Supergroups Administration Domain API (Phase 2)
   channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<Record<string, unknown>> =>

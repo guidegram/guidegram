@@ -2994,6 +2994,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-autodownload-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAutoDownloadSettings(accountId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getAutoDownloadSettings error for ${accountId}:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:save-autodownload-settings', async (_event, { accountId, low, high, settings }) => {
+    try {
+      return await accountManager.saveAutoDownloadSettings(accountId, low, high, settings)
+    } catch (err: any) {
+      Logger.error(`[IPC] saveAutoDownloadSettings error for ${accountId}:`, err)
+      return null
+    }
+  })
+
   // --- Channels & Supergroups Administration IPC (Phase 2) ---
   ipcMain.handle('telegram:channel-get-participants', async (_event, { accountId, channelId, filterName, offset, limit }) => {
     try {

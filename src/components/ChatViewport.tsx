@@ -3599,13 +3599,36 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
       // Check auto-download policy
       const shouldAutoDownloadPhoto = (() => {
-        const cfg = autoDownload || {
+        const cfg: AutoDownloadConfig = autoDownload || {
           enabled: true,
           photosInPrivate: true,
           photosInGroups: true,
           photosInChannels: false,
+          videosInPrivate: false,
+          videosInGroups: false,
+          videosInChannels: false,
+          filesInPrivate: false,
+          filesInGroups: false,
+          filesInChannels: false,
+          maxPhotoSizeMB: 5,
+          maxVideoSizeMB: 10,
+          maxFileSizeMB: 5,
         }
         if (cfg.enabled === false) return false
+
+        // Check active network profile if available (Phase 71 Telegram Parity)
+        if (cfg.networkProfiles) {
+          const profileKey = cfg.activeNetworkProfile || cfg.networkProfiles.activeProfile || 'wifi'
+          const profile = cfg.networkProfiles[profileKey]
+          if (profile) {
+            if (!profile.photos) return false
+            if (isChannel && !profile.peers.channels) return false
+            if (isGroup && !profile.peers.groups) return false
+            if (isPrivate && !profile.peers.privateChats) return false
+            return true
+          }
+        }
+
         if (isChannel) return !!cfg.photosInChannels
         if (isGroup) return !!cfg.photosInGroups
         if (isPrivate) return !!cfg.photosInPrivate
