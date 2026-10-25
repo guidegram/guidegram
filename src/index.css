@@ -726,3 +726,19 @@ textarea:focus-visible {
   filter: blur(40px);
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Phase 112: WebGL Fluid Particle Canvas & Shimmering Ambient Glow
+   Floating micro-particles, cursor reactivity, and shimmering depth
+   ========================================================================== */
+.particle-canvas-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.85;
+  mix-blend-mode: screen;
+  contain: strict;
+  will-change: transform;
+}
