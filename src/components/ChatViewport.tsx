@@ -5249,46 +5249,55 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           >
                             <Smile className="w-3.5 h-3.5" />
                           </button>
-                          {activeReactionPickerMsgId === msg.id && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute bottom-full mb-2 right-0 z-50 p-2 rounded-2xl bg-dark-850/98 backdrop-blur-xl border border-white/15 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
-                            >
-                              <div className="flex items-center gap-1 flex-wrap max-w-[220px]">
-                                {allowedReactions.slice(0, showAllReactions ? 36 : 6).map((emoji: string) => {
-                                  const isChosen = (reactionOverrides[msg.id] ?? msg.reactions ?? []).some(
-                                    (r) => r.emoji === emoji && r.chosen
-                                  )
-                                  return (
+                          <AnimatePresence>
+                            {activeReactionPickerMsgId === msg.id && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.85, y: 8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.88, y: 6 }}
+                                transition={{ type: 'spring', stiffness: 460, damping: 26, mass: 0.6 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute bottom-full mb-2 right-0 z-50 p-2 rounded-2xl bg-dark-850/98 backdrop-blur-xl border border-white/15 shadow-2xl reaction-picker-spring"
+                              >
+                                <div className="flex items-center gap-1 flex-wrap max-w-[220px]">
+                                  {allowedReactions.slice(0, showAllReactions ? 36 : 6).map((emoji: string) => {
+                                    const isChosen = (reactionOverrides[msg.id] ?? msg.reactions ?? []).some(
+                                      (r) => r.emoji === emoji && r.chosen
+                                    )
+                                    return (
+                                      <motion.button
+                                        key={emoji}
+                                        type="button"
+                                        whileHover={{ scale: 1.3 }}
+                                        whileTap={{ scale: 0.85 }}
+                                        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                                        onClick={() => {
+                                          handleToggleReaction(msg, emoji)
+                                          setActiveReactionPickerMsgId(null)
+                                        }}
+                                        className={`transition-all text-sm cursor-pointer p-1 rounded-xl ${
+                                          isChosen ? 'bg-primary-500/30 ring-1 ring-primary-400 reaction-burst-pop' : 'hover:bg-white/10'
+                                        }`}
+                                        title={`${isChosen ? 'Remove' : 'React with'} ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </motion.button>
+                                    )
+                                  })}
+                                  {allowedReactions.length > 6 && !showAllReactions && (
                                     <button
-                                      key={emoji}
                                       type="button"
-                                      onClick={() => {
-                                        handleToggleReaction(msg, emoji)
-                                        setActiveReactionPickerMsgId(null)
-                                      }}
-                                      className={`hover:scale-130 active:scale-95 transition-all text-sm cursor-pointer p-1 rounded-xl ${
-                                        isChosen ? 'bg-primary-500/30 ring-1 ring-primary-400' : 'hover:bg-white/10'
-                                      }`}
-                                      title={`${isChosen ? 'Remove' : 'React with'} ${emoji}`}
+                                      onClick={() => setShowAllReactions(true)}
+                                      className="p-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                                      title="Show all reactions"
                                     >
-                                      {emoji}
+                                      +{allowedReactions.length - 6}
                                     </button>
-                                  )
-                                })}
-                                {allowedReactions.length > 6 && !showAllReactions && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowAllReactions(true)}
-                                    className="p-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
-                                    title="Show all reactions"
-                                  >
-                                    +{allowedReactions.length - 6}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
 
@@ -5645,8 +5654,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             <motion.button
                               key={rIdx}
                               type="button"
-                              whileHover={{ scale: 1.12 }}
-                              whileTap={{ scale: 0.88 }}
+                              whileHover={{ scale: 1.14 }}
+                              whileTap={{ scale: 0.86 }}
                               transition={{ type: 'spring', stiffness: 500, damping: 22 }}
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -5656,11 +5665,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                   handleToggleReaction(msg, rx.emoji)
                                 }
                               }}
-                              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-colors select-none cursor-pointer ${
+                              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-colors select-none cursor-pointer reaction-pill-spring ${
                                 rx.isPaid || rx.emoji === '⭐️'
                                   ? 'bg-amber-500/20 border-amber-400/50 text-amber-300 shadow-glow'
                                   : rx.chosen
-                                  ? 'bg-primary-500/25 border-primary-400 text-primary-200'
+                                  ? 'bg-primary-500/25 border-primary-400 text-primary-200 reaction-burst-pop'
                                   : 'bg-black/30 border-white/10 text-gray-200 hover:bg-black/40'
                               }`}
                               title={`${rx.chosen ? 'Remove reaction' : 'React with'} ${rx.emoji}`}
@@ -5902,58 +5911,70 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           >
                             <Smile className="w-3.5 h-3.5" />
                           </button>
-                          {activeReactionPickerMsgId === msg.id && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute bottom-full mb-2 left-0 z-50 p-2 rounded-2xl bg-dark-850/98 backdrop-blur-xl border border-white/15 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
-                            >
-                              <div className="flex items-center gap-1 flex-wrap max-w-[220px]">
-                                {allowedReactions.slice(0, showAllReactions ? 36 : 6).map((emoji: string) => {
-                                  const isChosen = (reactionOverrides[msg.id] ?? msg.reactions ?? []).some(
-                                    (r) => r.emoji === emoji && r.chosen
-                                  )
-                                  return (
+                          <AnimatePresence>
+                            {activeReactionPickerMsgId === msg.id && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.85, y: 8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.88, y: 6 }}
+                                transition={{ type: 'spring', stiffness: 460, damping: 26, mass: 0.6 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute bottom-full mb-2 left-0 z-50 p-2 rounded-2xl bg-dark-850/98 backdrop-blur-xl border border-white/15 shadow-2xl reaction-picker-spring"
+                              >
+                                <div className="flex items-center gap-1 flex-wrap max-w-[220px]">
+                                  {allowedReactions.slice(0, showAllReactions ? 36 : 6).map((emoji: string) => {
+                                    const isChosen = (reactionOverrides[msg.id] ?? msg.reactions ?? []).some(
+                                      (r) => r.emoji === emoji && r.chosen
+                                    )
+                                    return (
+                                      <motion.button
+                                        key={emoji}
+                                        type="button"
+                                        whileHover={{ scale: 1.3 }}
+                                        whileTap={{ scale: 0.85 }}
+                                        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                                        onClick={() => {
+                                          handleToggleReaction(msg, emoji)
+                                          setActiveReactionPickerMsgId(null)
+                                        }}
+                                        className={`transition-all text-sm cursor-pointer p-1 rounded-xl ${
+                                          isChosen ? 'bg-primary-500/30 ring-1 ring-primary-400 reaction-burst-pop' : 'hover:bg-white/10'
+                                        }`}
+                                        title={`${isChosen ? 'Remove' : 'React with'} ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </motion.button>
+                                    )
+                                  })}
+                                  {allowedReactions.length > 6 && !showAllReactions && (
                                     <button
-                                      key={emoji}
                                       type="button"
-                                      onClick={() => {
-                                        handleToggleReaction(msg, emoji)
-                                        setActiveReactionPickerMsgId(null)
-                                      }}
-                                      className={`hover:scale-130 active:scale-95 transition-all text-sm cursor-pointer p-1 rounded-xl ${
-                                        isChosen ? 'bg-primary-500/30 ring-1 ring-primary-400' : 'hover:bg-white/10'
-                                      }`}
-                                      title={`${isChosen ? 'Remove' : 'React with'} ${emoji}`}
+                                      onClick={() => setShowAllReactions(true)}
+                                      className="p-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
+                                      title="Show all reactions"
                                     >
-                                      {emoji}
+                                      +{allowedReactions.length - 6}
                                     </button>
-                                  )
-                                })}
-                                {allowedReactions.length > 6 && !showAllReactions && (
-                                  <button
+                                  )}
+                                  {/* Star / Paid Reaction button */}
+                                  <motion.button
                                     type="button"
-                                    onClick={() => setShowAllReactions(true)}
-                                    className="p-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 text-xs font-bold transition-colors cursor-pointer"
-                                    title="Show all reactions"
+                                    whileHover={{ scale: 1.25 }}
+                                    whileTap={{ scale: 0.88 }}
+                                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                                    onClick={() => {
+                                      setActiveReactionPickerMsgId(null)
+                                      setPaidReactionModalState({ isOpen: true, messageId: msg.id })
+                                    }}
+                                    className="p-1 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 text-xs font-bold transition-all cursor-pointer flex items-center justify-center shadow-xs"
+                                    title={t('stars.send_star_reaction')}
                                   >
-                                    +{allowedReactions.length - 6}
-                                  </button>
-                                )}
-                                {/* Star / Paid Reaction button */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveReactionPickerMsgId(null)
-                                    setPaidReactionModalState({ isOpen: true, messageId: msg.id })
-                                  }}
-                                  className="p-1 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 text-xs font-bold transition-all hover:scale-125 cursor-pointer flex items-center justify-center shadow-xs"
-                                  title={t('stars.send_star_reaction')}
-                                >
-                                  ⭐️
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                                    ⭐️
+                                  </motion.button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
 

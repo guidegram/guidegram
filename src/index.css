@@ -633,3 +633,36 @@ textarea:focus-visible {
   -webkit-overflow-scrolling: touch;
   will-change: transform;
 }
+
+/* ==========================================================================
+   Phase 109: Interactive Reaction Emoji Spring Burst & Particle Physics
+   Tactile spring popups, elastic scale burst, and ergonomic reaction pills
+   ========================================================================== */
+.reaction-picker-spring {
+  transform-origin: bottom center;
+  will-change: transform, opacity;
+}
+
+.reaction-burst-pop {
+  animation: reactionBurst 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.reaction-pill-spring {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, border-color 0.15s ease;
+  will-change: transform;
+}
+
+@keyframes reactionBurst {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
