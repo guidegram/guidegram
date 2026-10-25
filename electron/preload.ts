@@ -1516,6 +1516,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-default-history-ttl', { accountId }),
   setDefaultHistoryTTL: (accountId: string, period: number): Promise<boolean> =>
     ipcRenderer.invoke('telegram:set-default-history-ttl', { accountId, period }),
+  transcribeAudio: (
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<{ text: string; transcriptionId?: string; isPending?: boolean; trialRemainsNum?: number } | null> =>
+    ipcRenderer.invoke('telegram:transcribe-audio', { accountId, chatId, messageId }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>

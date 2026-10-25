@@ -429,6 +429,9 @@ export interface MessageItem {
   deletedAt?: number
   editDate?: number
   editHistory?: MessageEditRevision[]
+  // Telegram Voice Transcription (Speech-to-Text)
+  transcription?: string
+  isTranscribing?: boolean
   // Telegram Service Messages & Chat Actions
   isService?: boolean
   actionType?: ServiceActionType

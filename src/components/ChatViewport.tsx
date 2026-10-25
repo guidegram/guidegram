@@ -63,6 +63,7 @@ import {
   Cake,
   Tv,
   Languages,
+  Loader2,
   Zap,
   AtSign,
   Phone,
@@ -959,6 +960,50 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [voicePlaybackSpeed, setVoicePlaybackSpeed] = useState<number>(1)
   const [voiceCurrentTime, setVoiceCurrentTime] = useState<number>(0)
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
+
+  // Voice Transcription State (Speech-to-Text)
+  const [transcriptions, setTranscriptions] = useState<
+    Record<number, { text: string; isPending?: boolean; error?: string }>
+  >({})
+  const [transcribingIds, setTranscribingIds] = useState<Record<number, boolean>>({})
+
+  const handleTranscribeAudio = async (msgId: number) => {
+    if (!chat) return
+    if (transcriptions[msgId]?.text) {
+      setTranscriptions((prev) => {
+        const copy = { ...prev }
+        delete copy[msgId]
+        return copy
+      })
+      return
+    }
+
+    setTranscribingIds((prev) => ({ ...prev, [msgId]: true }))
+    try {
+      if (window.guidegram?.transcribeAudio) {
+        const res = await window.guidegram.transcribeAudio(chat.accountId, chat.id, msgId)
+        if (res && res.text) {
+          setTranscriptions((prev) => ({
+            ...prev,
+            [msgId]: { text: res.text, isPending: res.isPending },
+          }))
+        } else {
+          setTranscriptions((prev) => ({
+            ...prev,
+            [msgId]: { text: '', error: 'No transcription available' },
+          }))
+        }
+      }
+    } catch (err: any) {
+      console.warn('Voice transcription failed:', err)
+      setTranscriptions((prev) => ({
+        ...prev,
+        [msgId]: { text: '', error: err?.message || 'Transcription unavailable' },
+      }))
+    } finally {
+      setTranscribingIds((prev) => ({ ...prev, [msgId]: false }))
+    }
+  }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -4212,18 +4257,69 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     : `Voice • ${formatDuration(duration)}`}
                 </span>
 
-                {/* 1x / 1.5x / 2x Speed Controller */}
-                <button
-                  type="button"
-                  onClick={handleToggleVoiceSpeed}
-                  title="Toggle playback speed"
-                  className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white font-mono text-[9px] transition-colors cursor-pointer"
-                >
-                  {voicePlaybackSpeed}x
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {/* 1x / 1.5x / 2x Speed Controller */}
+                  <button
+                    type="button"
+                    onClick={handleToggleVoiceSpeed}
+                    title="Toggle playback speed"
+                    className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white font-mono text-[9px] transition-colors cursor-pointer"
+                  >
+                    {voicePlaybackSpeed}x
+                  </button>
+
+                  {/* Speech-to-Text Voice Transcription Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleTranscribeAudio(msg.id)}
+                    title={transcriptions[msg.id]?.text ? 'Hide transcription' : 'Transcribe voice to text (Speech-to-Text)'}
+                    className={`px-1.5 py-0.5 rounded font-medium text-[9px] transition-colors flex items-center gap-1 cursor-pointer ${
+                      transcriptions[msg.id]?.text
+                        ? 'bg-accent-cyan/25 text-accent-cyan border border-accent-cyan/40'
+                        : transcribingIds[msg.id]
+                        ? 'bg-accent-cyan/15 text-accent-cyan animate-pulse'
+                        : 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    {transcribingIds[msg.id] ? (
+                      <Loader2 className="w-2.5 h-2.5 animate-spin inline" />
+                    ) : (
+                      <Languages className="w-2.5 h-2.5 inline" />
+                    )}
+                    <span>{transcribingIds[msg.id] ? 'Transcribing...' : 'A➔文'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Transcribed Text Bubble */}
+          {transcriptions[msg.id]?.text && (
+            <div className="mt-2.5 pt-2 border-t border-white/5 text-xs text-gray-200 leading-relaxed font-sans animate-in fade-in duration-150">
+              <div className="flex items-center justify-between text-[10px] text-accent-cyan font-semibold mb-1">
+                <span className="flex items-center gap-1">
+                  <Languages className="w-3 h-3" />
+                  <span>Transcription</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    copyTextToClipboard(transcriptions[msg.id].text)
+                    showToast('Transcription copied!')
+                  }}
+                  className="hover:underline text-gray-400 hover:text-white cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="select-text whitespace-pre-wrap">{transcriptions[msg.id].text}</p>
+            </div>
+          )}
+          {transcriptions[msg.id]?.error && (
+            <div className="mt-2 text-[10px] text-accent-rose opacity-80">
+              {transcriptions[msg.id].error}
+            </div>
+          )}
         </div>
       )
     }

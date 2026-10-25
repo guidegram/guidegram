@@ -11487,6 +11487,37 @@ export class AccountManager {
     }
   }
 
+  public async transcribeAudio(
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<{
+    text: string
+    transcriptionId?: string
+    isPending?: boolean
+    trialRemainsNum?: number
+  } | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const res: any = await holder.client.call({
+        _: 'messages.transcribeAudio',
+        peer: inputPeer,
+        msgId: Number(messageId),
+      } as any)
+      return {
+        text: res?.text || '',
+        transcriptionId: res?.transcriptionId ? String(res.transcriptionId) : undefined,
+        isPending: Boolean(res?.pending),
+        trialRemainsNum: res?.trialRemainsNum,
+      }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] transcribeAudio error:', err?.message || err)
+      throw err
+    }
+  }
+
   public async getChannelBoostStatus(
     accountId: string,
     channelId: string

@@ -3889,6 +3889,16 @@ function setupIpcHandlers() {
     }
   })
 
+  // Voice Transcription IPC (Speech-to-Text)
+  ipcMain.handle('telegram:transcribe-audio', async (_event, { accountId, chatId, messageId }) => {
+    try {
+      return await accountManager.transcribeAudio(accountId, chatId, messageId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] transcribeAudio error:`, err)
+      throw err
+    }
+  })
+
   // Channel Boosts IPC
   ipcMain.handle('telegram:get-channel-boosts', async (_event, { accountId, channelId }) => {
     try {
