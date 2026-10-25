@@ -1372,5 +1372,36 @@ textarea:focus-visible {
   font-size: 11px;
 }
 
+/* ==========================================================================
+   Phase 140: Google Jules MCP Hub Bridge & Tool Execution Dispatcher
+   Bridge status pill and sandboxed tool terminal output block
+   ========================================================================== */
+.mcp-bridge-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #818cf8;
+}
+
+.tool-execution-terminal {
+  display: block;
+  padding: 10px 14px;
+  background: #090d16;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+
 
 
