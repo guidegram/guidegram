@@ -160,7 +160,9 @@ export interface InlineButton {
   isMiniApp?: boolean
   style?: 'primary' | 'danger' | 'success' | string
   iconCustomEmojiId?: string
-  type?: 'default' | 'request_phone' | 'request_location' | 'request_poll' | 'web_app' | string
+  type?: 'default' | 'request_phone' | 'request_location' | 'request_poll' | 'web_app' | 'buy' | 'switch_inline' | string
+  switchInlineQuery?: string
+  switchInlineQueryCurrentChat?: boolean
   _?: string
 }
 

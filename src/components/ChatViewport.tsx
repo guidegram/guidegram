@@ -5394,6 +5394,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         handleSafeOpenUrl(btn.url)
                                         return
                                       }
+                                      if (btn.type === 'switch_inline' || btn.switchInlineQuery !== undefined) {
+                                        const botHandle = chat?.username ? `@${chat.username}` : (msg.senderName ? `@${msg.senderName}` : '@bot')
+                                        const queryText = `${botHandle} ${btn.switchInlineQuery || ''}`.trim() + ' '
+                                        if (btn.switchInlineQueryCurrentChat) {
+                                          setInputText(queryText)
+                                          showToast(`Inline query: ${queryText}`)
+                                        } else {
+                                          await copyTextToClipboard(queryText)
+                                          showToast(`Copied inline query: ${queryText}`)
+                                        }
+                                        return
+                                      }
+                                      if (btn.type === 'buy') {
+                                        showToast(`Invoice Checkout: ${btn.text} (Telegram Payments & Star Invoices)`)
+                                        return
+                                      }
                                       if (btn.data) {
                                         setCallingBotBtnId(btnId)
                                         try {

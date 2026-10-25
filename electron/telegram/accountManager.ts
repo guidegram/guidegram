@@ -1912,6 +1912,24 @@ export class AccountManager {
                 btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
               } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
                 btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
+              } else if (b._ === 'keyboardButtonSwitchInline') {
+                btnRow.push({
+                  text: b.text,
+                  type: 'switch_inline',
+                  switchInlineQuery: b.query ?? '',
+                  switchInlineQueryCurrentChat: Boolean(b.samePeer),
+                  _: 'keyboardButtonSwitchInline',
+                  style: btnStyle,
+                  iconCustomEmojiId,
+                })
+              } else if (b._ === 'keyboardButtonBuy') {
+                btnRow.push({
+                  text: b.text,
+                  type: 'buy',
+                  _: 'keyboardButtonBuy',
+                  style: btnStyle || 'success',
+                  iconCustomEmojiId,
+                })
               } else if (b.text) {
                 btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
               }
@@ -2765,6 +2783,24 @@ export class AccountManager {
                   btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
                   btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonSwitchInline') {
+                  btnRow.push({
+                    text: b.text,
+                    type: 'switch_inline',
+                    switchInlineQuery: b.query ?? '',
+                    switchInlineQueryCurrentChat: Boolean(b.samePeer),
+                    _: 'keyboardButtonSwitchInline',
+                    style: btnStyle,
+                    iconCustomEmojiId,
+                  })
+                } else if (b._ === 'keyboardButtonBuy') {
+                  btnRow.push({
+                    text: b.text,
+                    type: 'buy',
+                    _: 'keyboardButtonBuy',
+                    style: btnStyle || 'success',
+                    iconCustomEmojiId,
+                  })
                 } else if (b.text) {
                   btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
                 }
@@ -11663,6 +11699,24 @@ export class AccountManager {
                   btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
                 } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
                   btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
+                } else if (b._ === 'keyboardButtonSwitchInline') {
+                  btnRow.push({
+                    text: b.text,
+                    type: 'switch_inline',
+                    switchInlineQuery: b.query ?? '',
+                    switchInlineQueryCurrentChat: Boolean(b.samePeer),
+                    _: 'keyboardButtonSwitchInline',
+                    style: btnStyle,
+                    iconCustomEmojiId,
+                  })
+                } else if (b._ === 'keyboardButtonBuy') {
+                  btnRow.push({
+                    text: b.text,
+                    type: 'buy',
+                    _: 'keyboardButtonBuy',
+                    style: btnStyle || 'success',
+                    iconCustomEmojiId,
+                  })
                 } else if (b.text) {
                   btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
                 }
