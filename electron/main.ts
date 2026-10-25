@@ -26,6 +26,7 @@ import { DohResolver } from './telegram/dohResolver'
 import { IntegrityGuard } from './integrityGuard'
 import { SqliteTuner } from './telegram/sqliteTuner'
 import { EphemeralMediaManager } from './ephemeralMediaManager'
+import { SecretChatCrypto } from './telegram/secretChatCrypto'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -2332,6 +2333,44 @@ function setupIpcHandlers() {
       return false
     }
   })
+
+  ipcMain.handle('telegram:generate-secret-chat-dh', async (_event, { primeHex, g } = {}) => {
+    try {
+      const prime = primeHex ? Buffer.from(primeHex, 'hex') : SecretChatCrypto.getStandardGroup14Prime()
+      const generator = typeof g === 'number' ? g : 3
+      const keyPair = SecretChatCrypto.generateDhKeyPair(prime, generator)
+      return {
+        privateKeyHex: keyPair.privateKey.toString('hex'),
+        publicKeyHex: keyPair.publicKey.toString('hex'),
+      }
+    } catch (err: any) {
+      Logger.warn(`[IPC] generate-secret-chat-dh error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:compute-secret-chat-auth',
+    async (_event, { privateKeyHex, peerPublicKeyHex, primeHex, g }) => {
+      try {
+        const prime = primeHex ? Buffer.from(primeHex, 'hex') : SecretChatCrypto.getStandardGroup14Prime()
+        const generator = typeof g === 'number' ? g : 3
+        const privateKey = Buffer.from(privateKeyHex, 'hex')
+        const peerPublicKey = Buffer.from(peerPublicKeyHex, 'hex')
+        const sharedKey = SecretChatCrypto.computeSharedKey(privateKey, peerPublicKey, prime, generator)
+        const details = SecretChatCrypto.deriveAuthKeyDetails(sharedKey)
+        return {
+          authKeyHex: details.authKey.toString('hex'),
+          fingerprint: details.fingerprint.toString(),
+          fingerprintHex: details.fingerprintHex,
+          visualFingerprint: details.visualFingerprint,
+        }
+      } catch (err: any) {
+        Logger.warn(`[IPC] compute-secret-chat-auth error:`, err)
+        throw err
+      }
+    }
+  )
 
   ipcMain.handle('telegram:read-encrypted-history', async (_event, { accountId, chatId, accessHash, maxDate }) => {
     try {

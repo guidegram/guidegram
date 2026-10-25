@@ -724,6 +724,32 @@ const guidegramAPI = {
     typing = true
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:set-encrypted-typing', { accountId, chatId, accessHash, typing }),
+  generateSecretChatDh: (
+    primeHex?: string,
+    g?: number
+  ): Promise<{ privateKeyHex: string; publicKeyHex: string }> =>
+    ipcRenderer.invoke('telegram:generate-secret-chat-dh', { primeHex, g }),
+  computeSecretChatAuth: (
+    privateKeyHex: string,
+    peerPublicKeyHex: string,
+    primeHex?: string,
+    g?: number
+  ): Promise<{
+    authKeyHex: string
+    fingerprint: string
+    fingerprintHex: string
+    visualFingerprint: {
+      hexFormatted: string
+      emojis: string[]
+      identiconMatrix: boolean[][]
+    }
+  }> =>
+    ipcRenderer.invoke('telegram:compute-secret-chat-auth', {
+      privateKeyHex,
+      peerPublicKeyHex,
+      primeHex,
+      g,
+    }),
   readEncryptedHistory: (
     accountId: string,
     chatId: number,

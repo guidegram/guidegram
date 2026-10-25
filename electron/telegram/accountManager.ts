@@ -43,6 +43,7 @@ import { AccountSecurityService } from './services/accountSecurityService'
 import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
+import { SecretChatCrypto } from './secretChatCrypto'
 import { swrCache } from '../swrCache'
 import { keyedMutex } from '../asyncMutex'
 import {
@@ -6977,14 +6978,17 @@ export class AccountManager {
           : { _: 'inputUserSelf' }
 
       const randomId = Math.floor(Math.random() * 2147483647)
-      const fakeDhBytes = Buffer.alloc(32, 1)
+      // Generate genuine Diffie-Hellman keypair and SHA-256 commitment for VoIP call (MM-004)
+      const group14Prime = SecretChatCrypto.getStandardGroup14Prime()
+      const dhKeyPair = SecretChatCrypto.generateDhKeyPair(group14Prime, 3)
+      const commitment = SecretChatCrypto.generatePhoneCallCommitment(dhKeyPair.publicKey)
 
       const res: any = await holder.client.call({
         _: 'phone.requestCall',
         video: Boolean(isVideo),
         userId: inputUser,
         randomId,
-        gAHash: fakeDhBytes,
+        gAHash: commitment.gAHash,
         protocol: {
           _: 'phoneCallProtocol',
           udpP2p: true,
@@ -7010,7 +7014,14 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
     try {
-      const gB = gBHex ? Buffer.from(gBHex, 'hex') : Buffer.alloc(32, 2)
+      let gB: Buffer
+      if (gBHex) {
+        gB = Buffer.from(gBHex, 'hex')
+      } else {
+        const group14Prime = SecretChatCrypto.getStandardGroup14Prime()
+        const dhKeyPair = SecretChatCrypto.generateDhKeyPair(group14Prime, 3)
+        gB = dhKeyPair.publicKey
+      }
       const res: any = await holder.client.call({
         _: 'phone.acceptCall',
         peer: {
@@ -7045,7 +7056,18 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
     try {
-      const gA = gAHex ? Buffer.from(gAHex, 'hex') : Buffer.alloc(32, 1)
+      let gA: Buffer
+      let finalFingerprint: string
+      if (gAHex && keyFingerprint) {
+        gA = Buffer.from(gAHex, 'hex')
+        finalFingerprint = keyFingerprint
+      } else {
+        const group14Prime = SecretChatCrypto.getStandardGroup14Prime()
+        const dhKeyPair = SecretChatCrypto.generateDhKeyPair(group14Prime, 3)
+        gA = gAHex ? Buffer.from(gAHex, 'hex') : dhKeyPair.publicKey
+        const authKeyDetails = SecretChatCrypto.deriveAuthKeyDetails(dhKeyPair.privateKey)
+        finalFingerprint = keyFingerprint || authKeyDetails.fingerprint.toString()
+      }
       const res: any = await holder.client.call({
         _: 'phone.confirmCall',
         peer: {
@@ -7054,7 +7076,7 @@ export class AccountManager {
           accessHash: toLong(accessHash),
         },
         gA,
-        keyFingerprint: toLong(keyFingerprint || '123456789'),
+        keyFingerprint: toLong(finalFingerprint),
         protocol: {
           _: 'phoneCallProtocol',
           udpP2p: true,
@@ -7291,7 +7313,14 @@ export class AccountManager {
           : { _: 'inputUserSelf' }
 
       const randomId = Math.floor(Math.random() * 2147483647)
-      const gA = gAHex ? Buffer.from(gAHex, 'hex') : Buffer.alloc(256, 3)
+      let gA: Buffer
+      if (gAHex) {
+        gA = Buffer.from(gAHex, 'hex')
+      } else {
+        const prime = SecretChatCrypto.getStandardGroup14Prime()
+        const keyPair = SecretChatCrypto.generateDhKeyPair(prime, 3)
+        gA = keyPair.publicKey
+      }
 
       const res: any = await holder.client.call({
         _: 'messages.requestEncryption',
@@ -7316,7 +7345,18 @@ export class AccountManager {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
     try {
-      const gB = gBHex ? Buffer.from(gBHex, 'hex') : Buffer.alloc(256, 4)
+      let gB: Buffer
+      let finalFingerprint: string
+      if (gBHex && keyFingerprint) {
+        gB = Buffer.from(gBHex, 'hex')
+        finalFingerprint = keyFingerprint
+      } else {
+        const prime = SecretChatCrypto.getStandardGroup14Prime()
+        const keyPair = SecretChatCrypto.generateDhKeyPair(prime, 3)
+        gB = gBHex ? Buffer.from(gBHex, 'hex') : keyPair.publicKey
+        const authDetails = SecretChatCrypto.deriveAuthKeyDetails(keyPair.privateKey)
+        finalFingerprint = keyFingerprint || authDetails.fingerprint.toString()
+      }
       const res: any = await holder.client.call({
         _: 'messages.acceptEncryption',
         peer: {
@@ -7325,7 +7365,7 @@ export class AccountManager {
           accessHash: toLong(accessHash),
         },
         gB,
-        keyFingerprint: toLong(keyFingerprint || '987654321'),
+        keyFingerprint: toLong(finalFingerprint),
       } as any)
       return res
     } catch (err: any) {
