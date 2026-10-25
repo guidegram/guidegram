@@ -19,6 +19,7 @@ import { memoryMonitor } from './memoryMonitor'
 import { SafeDownloader } from './safeDownloader'
 import { crashRecoveryManager } from './crashRecovery'
 import { StorageGuardrails } from './storageGuardrails'
+import { DeepLinkHandler } from './deepLinkHandler'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -155,11 +156,33 @@ app.on('second-instance', (_event, commandLine) => {
     mainWindow.show()
     mainWindow.focus()
     mainWindow.setAlwaysOnTop(false)
+
+    // DeepLinkHandler: Safely extract and dispatch deep link from second instance commandLine
+    const rawDeepLink = DeepLinkHandler.extractDeepLinkFromArgv(commandLine)
+    if (rawDeepLink) {
+      const parsed = DeepLinkHandler.parseAndValidateDeepLink(rawDeepLink)
+      if (parsed) {
+        Logger.info(`[DeepLink] Dispatched deep link: ${parsed.scheme}://${parsed.action}`)
+        DeepLinkHandler.dispatchDeepLink(mainWindow, parsed)
+      } else {
+        Logger.warn(`[DeepLink] Rejected invalid or malicious deep link: "${rawDeepLink}"`)
+      }
+    }
   } else {
     const isHeadless = commandLine?.includes('--headless')
     if (!isHeadless) {
       createWindow()
     }
+  }
+})
+
+// macOS open-url deep link handler
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  const parsed = DeepLinkHandler.parseAndValidateDeepLink(url)
+  if (parsed && mainWindow && !mainWindow.isDestroyed()) {
+    Logger.info(`[DeepLink] Dispatched open-url: ${parsed.scheme}://${parsed.action}`)
+    DeepLinkHandler.dispatchDeepLink(mainWindow, parsed)
   }
 })
 
@@ -370,6 +393,20 @@ function createWindow() {
     } catch (markerErr) {
       Logger.warn('[Main] Error reading update marker:', markerErr)
     }
+
+    // Dispatch any deep link passed via process.argv at startup
+    try {
+      const rawDeepLink = DeepLinkHandler.extractDeepLinkFromArgv(process.argv)
+      if (rawDeepLink) {
+        const parsed = DeepLinkHandler.parseAndValidateDeepLink(rawDeepLink)
+        if (parsed) {
+          Logger.info(`[DeepLink] Dispatching startup deep link: ${parsed.scheme}://${parsed.action}`)
+          DeepLinkHandler.dispatchDeepLink(mainWindow, parsed)
+        }
+      }
+    } catch (deepLinkErr) {
+      Logger.warn('[DeepLink] Error checking startup deep link:', deepLinkErr)
+    }
   })
 
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
@@ -530,6 +567,9 @@ function openMiniAppWindow(url: string, title = 'Telegram Mini App') {
 
 app.whenReady().then(async () => {
   Logger.info('[App] Electron app is ready. Initializing SessionStore & AccountManager...')
+
+  // Register OS protocol clients (tg:// and guidegram://)
+  DeepLinkHandler.registerProtocolClients()
 
   // Register local media streaming protocol for videos, voice, audio, photos, and documents
   protocol.handle('guidegram-media', async (request) => {
