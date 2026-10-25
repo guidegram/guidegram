@@ -954,3 +954,19 @@ textarea:focus-visible {
   background: radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(139, 92, 246, 0.08) 50%, transparent 80%);
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Phase 123: Dynamic Neomorphic Shadow Cast & Interactive Lighting
+   Dual-vector specular highlight and deep ambient shadow projection
+   ========================================================================== */
+.neomorphic-surface-card {
+  background: #1e2638;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: -4px -4px 14px rgba(255, 255, 255, 0.08), 4px 4px 18px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease-out;
+}
+
+.neomorphic-pressed-inset {
+  box-shadow: inset -3px -3px 8px rgba(255, 255, 255, 0.06), inset 3px 3px 10px rgba(0, 0, 0, 0.55);
+}
