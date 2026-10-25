@@ -55,6 +55,7 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [ghostMode, setGhostMode] = useState(false)
   const [config, setConfig] = useState<AppConfig | null>(null)
+  const [a11yAnnouncement, setA11yAnnouncement] = useState<string>('')
 
   // Modals state
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
@@ -222,6 +223,11 @@ export const App: React.FC = () => {
         const isChatMuted = targetDialog?.isMuted ?? false
         if (!message?.isOutgoing && !isChatMuted && configRef.current?.soundEnabled !== false) {
           playNotificationSound(configRef.current?.notificationTone || 'classic')
+        }
+        if (!message?.isOutgoing) {
+          const sender = message?.senderName || 'Someone'
+          const summary = message?.text || (message?.mediaType ? `sent a ${message.mediaType}` : 'sent a message')
+          setA11yAnnouncement(`New message from ${sender}: ${summary}`)
         }
         setDialogsByAccount((prev) => {
           const list = prev[accountId] || []
@@ -1306,6 +1312,17 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-dark-950 font-sans">
+      {/* Accessible Screen-Reader Polite Live Region (WCAG 4.1.3 Status Messages) */}
+      <div
+        id="a11y-live-announcer"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {a11yAnnouncement}
+      </div>
+
       {/* 1. Integrated Custom TitleBar */}
       <TitleBar
         activeAccount={currentAccount}
@@ -1324,17 +1341,19 @@ export const App: React.FC = () => {
         />
       ) : isUnifiedInboxOpen ? (
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <AccountDock
-            accounts={accounts}
-            activeAccountId={activeAccountId}
-            isUnifiedInboxOpen={isUnifiedInboxOpen}
-            onSelectAccount={handleSelectAccount}
-            onOpenAddAccount={() => setIsAddAccountOpen(true)}
-            onToggleUnifiedInbox={() => setIsUnifiedInboxOpen(!isUnifiedInboxOpen)}
-            onOpenProxyModal={() => setIsProxyModalOpen(true)}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onOpenMcpHub={() => setIsMcpHubOpen(true)}
-          />
+          <nav role="navigation" aria-label="Accounts and services">
+            <AccountDock
+              accounts={accounts}
+              activeAccountId={activeAccountId}
+              isUnifiedInboxOpen={isUnifiedInboxOpen}
+              onSelectAccount={handleSelectAccount}
+              onOpenAddAccount={() => setIsAddAccountOpen(true)}
+              onToggleUnifiedInbox={() => setIsUnifiedInboxOpen(!isUnifiedInboxOpen)}
+              onOpenProxyModal={() => setIsProxyModalOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenMcpHub={() => setIsMcpHubOpen(true)}
+            />
+          </nav>
           <React.Suspense fallback={<div className="flex-1 flex items-center justify-center bg-dark-900 text-gray-400 text-sm">Loading Unified Inbox...</div>}>
             <UnifiedInbox
               accounts={accounts}
@@ -1351,20 +1370,24 @@ export const App: React.FC = () => {
       ) : (
         <div className={`flex flex-1 min-h-0 overflow-hidden ${isResizingSidebar ? 'select-none' : ''}`}>
           {/* Vertical Multi-Account Dock */}
-          <AccountDock
-            accounts={accounts}
-            activeAccountId={activeAccountId}
-            isUnifiedInboxOpen={isUnifiedInboxOpen}
-            onSelectAccount={handleSelectAccount}
-            onOpenAddAccount={() => setIsAddAccountOpen(true)}
-            onToggleUnifiedInbox={() => setIsUnifiedInboxOpen(!isUnifiedInboxOpen)}
-            onOpenProxyModal={() => setIsProxyModalOpen(true)}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onOpenMcpHub={() => setIsMcpHubOpen(true)}
-          />
+          <nav role="navigation" aria-label="Accounts and services">
+            <AccountDock
+              accounts={accounts}
+              activeAccountId={activeAccountId}
+              isUnifiedInboxOpen={isUnifiedInboxOpen}
+              onSelectAccount={handleSelectAccount}
+              onOpenAddAccount={() => setIsAddAccountOpen(true)}
+              onToggleUnifiedInbox={() => setIsUnifiedInboxOpen(!isUnifiedInboxOpen)}
+              onOpenProxyModal={() => setIsProxyModalOpen(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenMcpHub={() => setIsMcpHubOpen(true)}
+            />
+          </nav>
 
           {/* Resizable Chat List Column with Telegram Tabs */}
-          <div
+          <aside
+            role="complementary"
+            aria-label="Conversations sidebar"
             style={{ width: `${sidebarWidth}px` }}
             className="shrink-0 flex flex-col h-full bg-dark-850 overflow-hidden"
           >
@@ -1393,10 +1416,14 @@ export const App: React.FC = () => {
               isLoadingMoreDialogs={isLoadingMoreDialogs}
               onLoadMoreDialogs={handleLoadMoreDialogs}
             />
-          </div>
+          </aside>
 
           {/* Draggable Divider / Splitter between ChatList and ChatViewport */}
           <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            tabIndex={0}
             onMouseDown={() => setIsResizingSidebar(true)}
             title="Drag to resize sidebar"
             className="w-1.5 hover:w-2 bg-white/5 hover:bg-primary-500/50 active:bg-primary-500 cursor-col-resize shrink-0 transition-all z-20 group relative flex items-center justify-center"
@@ -1405,35 +1432,37 @@ export const App: React.FC = () => {
           </div>
 
           {/* Active Conversation Viewport with 64Gram Fork Enhancements */}
-          <ChatViewport
-            chat={currentChat}
-            messages={currentMessages}
-            ghostMode={ghostMode}
-            showChatId={config?.showChatId ?? true}
-            showMessageId={config?.showMessageId ?? true}
-            showSeconds={config?.showSeconds ?? true}
-            showSenderAvatar={config?.showSenderAvatar ?? true}
-            quickForwardToSaved={config?.quickForwardToSaved ?? true}
-            alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
-            copyCallbackData={config?.copyCallbackData ?? true}
-            suppressLinkWarning={config?.suppressLinkWarning ?? false}
-            autoDownload={config?.autoDownload}
-            chatFontSize={config?.chatFontSize || 14}
-            bubbleRadius={config?.bubbleRadius ?? 16}
-            bubblePadding={config?.bubblePadding ?? 10}
-            onSendMessage={handleSendMessage}
-            onSendMedia={handleSendMedia}
-            onOpenDirectForward={(msg) => setForwardMessage(msg)}
-            onQuickForwardToSaved={handleQuickForwardToSaved}
-            onDeleteMessage={handleDeleteMessage}
-            onEditMessage={handleEditMessage}
-            onToggleGhostMode={handleToggleGhostMode}
-            onSelectUserOrChat={handleSelectUserOrChat}
-            initialScrollMsgId={initialScrollMsgId}
-            onClearInitialScroll={() => setInitialScrollMsgId(null)}
-            onMergeHistoricalMessages={handleMergeHistoricalMessages}
-            onUpdateUnreadCount={handleUpdateUnreadCount}
-          />
+          <main role="main" aria-label="Active conversation" className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+            <ChatViewport
+              chat={currentChat}
+              messages={currentMessages}
+              ghostMode={ghostMode}
+              showChatId={config?.showChatId ?? true}
+              showMessageId={config?.showMessageId ?? true}
+              showSeconds={config?.showSeconds ?? true}
+              showSenderAvatar={config?.showSenderAvatar ?? true}
+              quickForwardToSaved={config?.quickForwardToSaved ?? true}
+              alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
+              copyCallbackData={config?.copyCallbackData ?? true}
+              suppressLinkWarning={config?.suppressLinkWarning ?? false}
+              autoDownload={config?.autoDownload}
+              chatFontSize={config?.chatFontSize || 14}
+              bubbleRadius={config?.bubbleRadius ?? 16}
+              bubblePadding={config?.bubblePadding ?? 10}
+              onSendMessage={handleSendMessage}
+              onSendMedia={handleSendMedia}
+              onOpenDirectForward={(msg) => setForwardMessage(msg)}
+              onQuickForwardToSaved={handleQuickForwardToSaved}
+              onDeleteMessage={handleDeleteMessage}
+              onEditMessage={handleEditMessage}
+              onToggleGhostMode={handleToggleGhostMode}
+              onSelectUserOrChat={handleSelectUserOrChat}
+              initialScrollMsgId={initialScrollMsgId}
+              onClearInitialScroll={() => setInitialScrollMsgId(null)}
+              onMergeHistoricalMessages={handleMergeHistoricalMessages}
+              onUpdateUnreadCount={handleUpdateUnreadCount}
+            />
+          </main>
         </div>
       )}
 

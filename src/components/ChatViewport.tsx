@@ -4766,6 +4766,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       >
         <div
           ref={messagesContainerRef}
+          role="log"
+          aria-label="Messages stream"
+          aria-live="polite"
           onScroll={handleScroll}
           className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
           onClick={(e) => {
@@ -6176,6 +6179,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 <button
                   type="button"
                   disabled={!canSendMedia}
+                  aria-label="Attach Photo, Video or Document"
                   onClick={() => canSendMedia && setIsAttachMenuOpen((prev) => !prev)}
                   className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
                     !canSendMedia
@@ -6193,6 +6197,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 <button
                   type="button"
                   disabled={!canSendStickers}
+                  aria-label="Stickers & Animated Packs"
                   onClick={() => canSendStickers && setIsStickerDrawerOpen((prev) => !prev)}
                   className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
                     !canSendStickers
@@ -6393,6 +6398,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
                   <textarea
                     ref={textareaRef}
+                    aria-label="Write a message"
                     dir={isRTL(inputText) ? 'rtl' : 'ltr'}
                     placeholder={editingMessage ? 'Edit message...' : 'Write a message... (Enter to send, Shift+Enter for newline, Alt+F to forward)'}
                     value={inputText}
@@ -6536,6 +6542,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <button
                       type="submit"
                       disabled={slowModeSecondsLeft > 0}
+                      aria-label={slowModeSecondsLeft > 0 ? `Slow mode active: wait ${slowModeSecondsLeft}s` : 'Send message'}
                       onContextMenu={(e) => {
                         e.preventDefault()
                         if (slowModeSecondsLeft <= 0) {
@@ -6565,6 +6572,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <button
                       type="button"
                       disabled={slowModeSecondsLeft > 0}
+                      aria-label="More send options (Silent or Schedule)"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (slowModeSecondsLeft <= 0) {
@@ -6585,6 +6593,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <button
                     type="button"
                     disabled={!canSendMedia || slowModeSecondsLeft > 0}
+                    aria-label={!canSendMedia ? 'Voice messages restricted in this group' : 'Record Voice Message'}
                     onClick={() => {
                       if (!canSendMedia) {
                         showToast('Sending voice/media is restricted in this group.')

@@ -445,4 +445,49 @@ html.light ::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* ==========================================================================
+   Phase 74: Accessibility & Screen-Reader Hardening (WCAG AAA & A11y)
+   ARIA-Live regions, keyboard focus visible rings, reduced-motion, sr-only
+   ========================================================================== */
+
+/* Screen reader only utility (accessible to NVDA/VoiceOver/JAWS but visually hidden) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Enhanced Focus Visible Rings for Keyboard Navigation (WCAG 2.4.7 Focus Visible) */
+:focus-visible {
+  outline: 2px solid var(--color-primary-400, #38bdf8);
+  outline-offset: 2px;
+}
+
+/* High-Contrast Interactive Accessible Elements */
+[role="button"]:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #38bdf8 !important;
+  outline-offset: 2px !important;
+}
+
+/* Reduced motion preference respect (WCAG 2.3.3 Animation from Interactions) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 

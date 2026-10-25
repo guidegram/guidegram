@@ -370,6 +370,7 @@ export const ChatList: React.FC<ChatListProps> = ({
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            aria-label={t('app.search_placeholder') || 'Search chats, media, and links'}
             placeholder={t('app.search_placeholder')}
             value={searchQuery}
             onFocus={() => setIsSearchFocused(true)}
@@ -391,6 +392,7 @@ export const ChatList: React.FC<ChatListProps> = ({
               type="button"
               onClick={() => onSearchChange('')}
               title={t('app.cancel')}
+              aria-label={t('app.cancel') || 'Clear search query'}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white rounded-md hover:bg-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[32px] min-h-[32px] flex items-center justify-center"
             >
               <X className="w-3.5 h-3.5" />
