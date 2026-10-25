@@ -14,6 +14,7 @@ import { globalIpcRateLimiter } from './rateLimiter'
 import { idempotencyManager } from './idempotency'
 import { offlineQueue } from './offlineQueue'
 import { SecurityGuardrails } from './securityGuardrails'
+import { memoryMonitor } from './memoryMonitor'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1840,6 +1841,9 @@ function setupIpcHandlers() {
   ipcMain.handle('telegram:purge-dead-letters', () => {
     return offlineQueue.purgeDeadLetters()
   })
+
+  // Memory Monitor IPC Handlers (MM-211)
+  memoryMonitor.registerIpc()
 
   ipcMain.handle('telegram:save-draft', async (_event, { accountId, chatId, message, replyToMsgId }) => {
     try {

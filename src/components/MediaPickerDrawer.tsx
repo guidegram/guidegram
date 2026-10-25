@@ -226,6 +226,7 @@ const StickerThumbnail: React.FC<{
 
   useEffect(() => {
     let active = true
+    let animItem: any = null
     if (!window.guidegram?.getStickerData) return
 
     window.guidegram
@@ -235,7 +236,7 @@ const StickerThumbnail: React.FC<{
         if (res.format === 'lottie' && res.data && containerRef.current) {
           try {
             containerRef.current.innerHTML = ''
-            lottie.loadAnimation({
+            animItem = lottie.loadAnimation({
               container: containerRef.current,
               renderer: 'svg',
               loop: true,
@@ -254,6 +255,9 @@ const StickerThumbnail: React.FC<{
 
     return () => {
       active = false
+      if (animItem) {
+        animItem.destroy()
+      }
     }
   }, [accountId, sticker.id, sticker.accessHash])
 
