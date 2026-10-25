@@ -4,7 +4,7 @@ import fs from 'fs'
 import { Readable } from 'node:stream'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { SessionStore } from './telegram/sessionStore'
-import { AccountManager } from './telegram/accountManager'
+import { AccountManager, decodeMtprotoWaveform, encodeMtprotoWaveform, normalizeWaveformSamples } from './telegram/accountManager'
 import { ProxyManager } from './telegram/proxyManager'
 import { Logger } from './telegram/logger'
 import { UpdateManager } from './telegram/updateManager'
@@ -1996,6 +1996,26 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.error(`[IPC] openMiniApp error:`, err)
       return false
+    }
+  })
+
+  ipcMain.handle('telegram:decode-waveform', async (_event, { waveform }) => {
+    try {
+      return decodeMtprotoWaveform(waveform)
+    } catch (err: any) {
+      Logger.warn(`[IPC] decodeWaveform error:`, err)
+      return undefined
+    }
+  })
+
+  ipcMain.handle('telegram:encode-waveform', async (_event, { samples }) => {
+    try {
+      const normalized = normalizeWaveformSamples(samples)
+      const buf = encodeMtprotoWaveform(normalized)
+      return Array.from(buf)
+    } catch (err: any) {
+      Logger.warn(`[IPC] encodeWaveform error:`, err)
+      return []
     }
   })
 

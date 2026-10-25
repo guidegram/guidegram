@@ -365,6 +365,51 @@ export function decodeMtprotoWaveform(waveformBuffer?: any): number[] | undefine
   }
 }
 
+export function encodeMtprotoWaveform(samples?: number[]): Buffer {
+  if (!samples || samples.length === 0) return Buffer.alloc(0)
+  const bitCount = samples.length * 5
+  const byteCount = Math.ceil(bitCount / 8)
+  const buf = Buffer.alloc(byteCount, 0)
+
+  for (let i = 0; i < samples.length; i++) {
+    const val = Math.max(0, Math.min(31, Math.round(samples[i])))
+    const bitOffset = i * 5
+    const byteOffset = Math.floor(bitOffset / 8)
+    const bitShift = bitOffset % 8
+
+    buf[byteOffset] |= (val & 0x1f) << bitShift
+    if (bitShift > 3 && byteOffset + 1 < byteCount) {
+      buf[byteOffset + 1] |= (val & 0x1f) >> (8 - bitShift)
+    }
+  }
+
+  return buf
+}
+
+export function normalizeWaveformSamples(samples: number[], targetBars = 32): number[] {
+  if (!samples || samples.length === 0) return Array(targetBars).fill(0)
+  if (samples.length === targetBars) {
+    return samples.map((s) => Math.max(0, Math.min(31, Math.round(s))))
+  }
+
+  const result: number[] = []
+  const step = samples.length / targetBars
+  for (let i = 0; i < targetBars; i++) {
+    const start = Math.floor(i * step)
+    const end = Math.floor((i + 1) * step)
+    let sum = 0
+    let count = 0
+    for (let j = start; j < end && j < samples.length; j++) {
+      sum += samples[j]
+      count++
+    }
+    const avg = count > 0 ? sum / count : 0
+    const scaled = avg <= 1.0 ? avg * 31 : avg
+    result.push(Math.max(0, Math.min(31, Math.round(scaled))))
+  }
+  return result
+}
+
 export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] | undefined {
   if (!rawEntities || !Array.isArray(rawEntities) || rawEntities.length === 0) return undefined
   const result: MessageEntityItem[] = []

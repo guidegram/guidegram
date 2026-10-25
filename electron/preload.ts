@@ -1180,6 +1180,10 @@ const guidegramAPI = {
     accountId: string
   ): Promise<any[]> =>
     ipcRenderer.invoke('telegram:get-suggested-dialog-filters', { accountId }),
+  decodeWaveform: (waveform: number[] | Uint8Array): Promise<number[] | undefined> =>
+    ipcRenderer.invoke('telegram:decode-waveform', { waveform }),
+  encodeWaveform: (samples: number[]): Promise<number[]> =>
+    ipcRenderer.invoke('telegram:encode-waveform', { samples }),
 
   // MTProto Stickers, Stories, Boosts & 2FA
   getInstalledStickerSets: (accountId: string): Promise<StickerSetItem[]> =>
