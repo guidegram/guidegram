@@ -10318,6 +10318,52 @@ export class AccountManager {
     }
   }
 
+  public async activateStoryStealthMode(
+    accountId: string,
+    options?: { past?: boolean; future?: boolean }
+  ): Promise<{ success: boolean; result?: any; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { success: false, error: 'Account is not connected.' }
+    try {
+      const res: any = await holder.client.call({
+        _: 'stories.activateStealthMode',
+        past: options?.past !== false,
+        future: options?.future !== false,
+      } as any)
+      return { success: true, result: res }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] activateStoryStealthMode error:`, err?.message || err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+
+  public async sendStoryReaction(
+    accountId: string,
+    peerId: string,
+    storyId: number,
+    reaction: string
+  ): Promise<{ success: boolean; result?: any; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { success: false, error: 'Account is not connected.' }
+    try {
+      const targetPeer =
+        !peerId || peerId === 'self' || peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.sendReaction',
+        peer: targetPeer,
+        storyId: Number(storyId),
+        reaction: { _: 'reactionEmoji', emoticon: reaction },
+        addToRecent: true,
+      } as any)
+      return { success: true, result: res }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] sendStoryReaction error:`, err?.message || err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+
   public async checkChatlistInvite(accountId: string, slug: string): Promise<any> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null

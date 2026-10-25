@@ -3451,6 +3451,14 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:activate-story-stealth-mode', async (_event, { accountId, past, future }) => {
+    return await accountManager.activateStoryStealthMode(accountId, { past, future })
+  })
+
+  ipcMain.handle('telegram:send-story-reaction', async (_event, { accountId, peerId, storyId, reaction }) => {
+    return await accountManager.sendStoryReaction(accountId, peerId, Number(storyId), reaction)
+  })
+
   ipcMain.handle('telegram:check-chatlist-invite', async (_event, { accountId, slug }) => {
     try {
       return await accountManager.checkChatlistInvite(accountId, slug)

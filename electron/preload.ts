@@ -1234,6 +1234,18 @@ const guidegramAPI = {
     options?: { offset?: string; limit?: number; peerId?: string }
   ): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:get-story-views-list', { accountId, storyId, options }),
+  activateStoryStealthMode: (
+    accountId: string,
+    options?: { past?: boolean; future?: boolean }
+  ): Promise<{ success: boolean; result?: any; error?: string }> =>
+    ipcRenderer.invoke('telegram:activate-story-stealth-mode', { accountId, ...options }),
+  sendStoryReaction: (
+    accountId: string,
+    peerId: string,
+    storyId: number,
+    reaction: string
+  ): Promise<{ success: boolean; result?: any; error?: string }> =>
+    ipcRenderer.invoke('telegram:send-story-reaction', { accountId, peerId, storyId, reaction }),
   checkChatlistInvite: (accountId: string, slug: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:check-chatlist-invite', { accountId, slug }),
   joinChatlistInvite: (accountId: string, slug: string, peerIds: string[]): Promise<boolean> =>
