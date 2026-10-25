@@ -1161,3 +1161,26 @@ textarea:focus-visible {
     box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
   }
 }
+
+/* ==========================================================================
+   Phase 132: Google Jules Autonomous Question & Plan Resolver
+   Autonomous unblocking badge, feedback resolution indicator, and plan approval state
+   ========================================================================== */
+.jules-feedback-modal {
+  background: rgba(18, 24, 38, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.unblocking-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  font-size: 11px;
+}
