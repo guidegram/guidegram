@@ -44,6 +44,7 @@ import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
 import { swrCache } from '../swrCache'
+import { keyedMutex } from '../asyncMutex'
 import {
   AccountInfo,
   DialogItem,
@@ -967,7 +968,8 @@ export class AccountManager {
   }
 
   public async connectSavedAccount(savedAcc: AccountInfo): Promise<AccountInfo> {
-    const config = this.store.getConfig()
+    return keyedMutex.runExclusiveDedup(savedAcc.id, async () => {
+      const config = this.store.getConfig()
     let sessionString = this.store.getSessionString(savedAcc.id)
     if (!sessionString) {
       Logger.warn(`[AccountManager] No session file found on disk for account ${savedAcc.id}`)
@@ -1107,13 +1109,14 @@ export class AccountManager {
       this.onEventCallback?.('telegram:account-updated', { account: disconnectedInfo, error: err?.message })
       return disconnectedInfo
     }
-  }
+  })
+}
 
   public async reconnectAccount(accountId: string): Promise<AccountInfo> {
     const config = this.store.getConfig()
     const savedAcc = config.accounts.find((a) => a.id === accountId)
     if (!savedAcc) {
-      throw new Error(`Account  not found in saved accounts.`)
+      throw new Error(`Account ${accountId} not found in saved accounts.`)
     }
 
     const connectingInfo: AccountInfo = { ...savedAcc, status: 'connecting' }
