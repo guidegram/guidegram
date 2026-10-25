@@ -31,6 +31,7 @@ interface FieldErrors {
   joinRequests?: string
   permissions?: string
   forum?: string
+  antiSpam?: string
   general?: string
 }
 
@@ -119,6 +120,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
   const [slowModeSeconds, setSlowModeSeconds] = useState(0)
   const [joinRequests, setJoinRequests] = useState(false)
   const [isForum, setIsForum] = useState(false)
+  const [antiSpam, setAntiSpam] = useState(false)
   const [defaultRestrictions, setDefaultRestrictions] = useState<ChatRestrictionsPayload>({})
   const [errors, setErrors] = useState<FieldErrors>({})
   const [isSaving, setIsSaving] = useState(false)
@@ -131,6 +133,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
   const canEditUsername = isChannelLike && Boolean(details?.canChangeInfo || details?.isCreator)
   const canEditSlowMode = Boolean(details?.canSetSlowMode && details?.isSupergroup)
   const canEditJoinRequests = Boolean(details?.canManageJoinRequests)
+  const canEditAntiSpam = Boolean(details?.isSupergroup && (details?.canToggleAntiSpam || details?.isCreator))
   const canEditPermissions = Boolean(
     details?.canEditPermissions && details?.isGroup && !details?.isBroadcast
   )
@@ -146,6 +149,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
     canEditUsername ||
     canEditSlowMode ||
     canEditJoinRequests ||
+    canEditAntiSpam ||
     canEditPermissions ||
     canEditForum
   const normalizedUsername = normalizeUsernameInput(username)
@@ -166,6 +170,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
     setSlowModeSeconds(Number(details.slowModeSeconds || 0))
     setJoinRequests(Boolean(details.joinRequestsEnabled))
     setIsForum(Boolean(details.isForum))
+    setAntiSpam(Boolean(details.antiSpamEnabled))
     setDefaultRestrictions({ ...(details.defaultRestrictions || {}) })
     setErrors({})
     setSaved(false)
@@ -181,6 +186,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       errors.joinRequests ||
       errors.permissions ||
       errors.forum ||
+      errors.antiSpam ||
       errors.general
     ) {
       setErrors({})
@@ -200,6 +206,7 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
       else if (key === 'joinRequests') next.joinRequests = message
       else if (key === 'permissions') next.permissions = message
       else if (key === 'forum') next.forum = message
+      else if (key === 'antiSpam') next.antiSpam = message
       else next.general = next.general ? `${next.general}\n${raw}` : raw
     }
     return next
@@ -245,6 +252,9 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
     }
     if (canEditForum && isForum !== Boolean(details.isForum)) {
       input.isForum = isForum
+    }
+    if (canEditAntiSpam && antiSpam !== Boolean(details.antiSpamEnabled)) {
+      input.antiSpamEnabled = antiSpam
     }
     if (canEditPermissions) {
       const permissionChanges: Record<string, boolean> = {}
@@ -585,6 +595,35 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
                       clearFeedback()
                     }}
                     label={t('chat_settings.forum_label')}
+                  />
+                </div>
+              )}
+
+              {canEditAntiSpam && (
+                <div className="p-3.5 rounded-2xl bg-dark-850/80 border border-white/5 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold text-gray-200">
+                      Aggressive Anti-Spam
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">
+                      Enable Telegram automated aggressive spam filtering for this supergroup
+                    </p>
+                    {errors.antiSpam && (
+                      <p className="mt-1.5 text-[10px] text-rose-300">
+                        Error:{' '}
+                        <span className="text-rose-300/70 break-all" dir="ltr">
+                          {errors.antiSpam}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                  <Toggle
+                    checked={antiSpam}
+                    onChange={(next) => {
+                      setAntiSpam(next)
+                      clearFeedback()
+                    }}
+                    label="Aggressive Anti-Spam"
                   />
                 </div>
               )}

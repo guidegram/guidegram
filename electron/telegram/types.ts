@@ -551,6 +551,9 @@ export interface ChatDetails {
   linkedChatId?: string
   linkedChatTitle?: string
   hasDiscussionGroup?: boolean
+  antiSpamEnabled?: boolean
+  canToggleAntiSpam?: boolean
+  slowmodeNextSendDate?: number
 }
 
 export interface DiscussionThreadInfo {
@@ -669,6 +672,7 @@ export interface ChatSettingsInput {
   username?: string | null
   /** Default member restrictions to set (true = restricted). Unspecified flags keep their current value. */
   defaultRestrictions?: ChatRestrictionsPayload
+  antiSpamEnabled?: boolean
 }
 
 export interface ChatSettingsUpdateResult {

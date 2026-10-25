@@ -722,6 +722,43 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }, [chat?.id, chat?.accountId])
 
+  // Slow Mode & Countdown Timer State (MTProto Layer 180+)
+  const [slowModeSecondsLeft, setSlowModeSecondsLeft] = useState<number>(0)
+
+  // Reset or initialize slowModeSecondsLeft when chat changes or chatDetails updates
+  useEffect(() => {
+    if (chatDetails?.slowmodeNextSendDate) {
+      const now = Math.floor(Date.now() / 1000)
+      const diff = chatDetails.slowmodeNextSendDate - now
+      if (diff > 0) {
+        setSlowModeSecondsLeft(diff)
+        return
+      }
+    }
+    setSlowModeSecondsLeft(0)
+  }, [chat?.id, chat?.accountId, chatDetails?.slowmodeNextSendDate])
+
+  // Countdown timer ticker
+  useEffect(() => {
+    if (slowModeSecondsLeft <= 0) return
+    const timer = setInterval(() => {
+      setSlowModeSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [slowModeSecondsLeft])
+
+  // Granular Chat Permissions helpers
+  const isUserAdminOrCreator = Boolean(chatDetails?.isAdmin || chatDetails?.isCreator)
+  const canSendMessages = chatDetails?.permissionsMatrix?.sendMessages !== false && (chat?.isChannel ? chatDetails?.canSendMessages !== false : true)
+  const canSendMedia = isUserAdminOrCreator || chatDetails?.permissionsMatrix?.sendMedia !== false
+  const canSendStickers = isUserAdminOrCreator || chatDetails?.permissionsMatrix?.sendStickers !== false
+
   // Forum Topics (MTProto channels.getForumTopics)
   const [forumTopics, setForumTopics] = useState<ForumTopicItem[]>([])
   const [activeTopicId, setActiveTopicId] = useState<number | null>(null)
@@ -2528,6 +2565,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     if (isRecordingVoice) return
     setIsSendMenuOpen(false)
 
+    // Enforce slow mode lock
+    if (slowModeSecondsLeft > 0) {
+      showToast(`Slow mode is active. Please wait ${slowModeSecondsLeft}s before sending.`)
+      return
+    }
+
     // Editing an existing message takes precedence over sending
     if (editingMessage) {
       const newText = inputText.trim()
@@ -2600,6 +2643,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         }
         if (options?.silent) showToast('Attachment sent without sound')
         else if (options?.scheduleDate) showToast('Attachment scheduled')
+        if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
+          setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
+        }
       } catch (err: any) {
         console.error('Failed to send attachments:', err)
         showToast(`Failed to send attachment: ${err.message || err}`)
@@ -2618,6 +2664,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     } else if (options?.scheduleDate) {
       showToast(`Message scheduled for ${new Date(options.scheduleDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`)
     }
+    if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
+      setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
+    }
     setInputText('')
     setReplyMessage(null)
     setDismissedComposerUrl(null)
@@ -2629,6 +2678,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   // MTProto Native Send Sticker
   const handleSendSticker = async (sticker: StickerItem) => {
     if (!chat?.accountId || !chat?.id) return
+    if (!canSendStickers) {
+      showToast('Sending stickers is not allowed in this group.')
+      return
+    }
+    if (slowModeSecondsLeft > 0) {
+      showToast(`Slow mode is active. Please wait ${slowModeSecondsLeft}s before sending.`)
+      return
+    }
     try {
       const targetReplyId = replyMessage?.id ?? (activeTopicId !== null ? activeTopicId : undefined)
       await window.guidegram?.sendSticker?.(
@@ -2639,6 +2696,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         sticker.fileReferenceHex,
         targetReplyId
       )
+      if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
+        setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
+      }
       setIsStickerDrawerOpen(false)
       setReplyMessage(null)
       showToast('Sticker sent!')
@@ -6034,6 +6094,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   )}
                 </button>
               </div>
+            ) : !canSendMessages ? (
+              <div className="flex items-center justify-center py-3.5 px-4 bg-dark-850/80 border border-white/5 rounded-2xl text-xs text-gray-400 gap-2">
+                <Lock className="w-4 h-4 text-gray-500" />
+                <span>{chat.isChannel ? 'Posting in this channel is restricted' : 'Sending messages is not allowed in this group'}</span>
+              </div>
             ) : (
               <form onSubmit={handleSend} className="flex items-end gap-2">
                 {/* Bot Menu & Command Drawer (Telegram MTProto Layer 180+) */}
@@ -6059,13 +6124,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 {/* Paperclip Button with Attachment Popover Toggle */}
                 <button
                   type="button"
-                  onClick={() => setIsAttachMenuOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 ${
-                    isAttachMenuOpen
-                      ? 'text-primary-400 bg-dark-750'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-dark-800'
+                  disabled={!canSendMedia}
+                  onClick={() => canSendMedia && setIsAttachMenuOpen((prev) => !prev)}
+                  className={`p-2.5 rounded-xl transition-colors shrink-0 ${
+                    !canSendMedia
+                      ? 'opacity-30 cursor-not-allowed text-gray-600'
+                      : isAttachMenuOpen
+                      ? 'text-primary-400 bg-dark-750 cursor-pointer'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-dark-800 cursor-pointer'
                   }`}
-                  title="Attach Photo, Video or Document"
+                  title={!canSendMedia ? 'Sending media is restricted in this group' : 'Attach Photo, Video or Document'}
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
@@ -6073,13 +6141,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 {/* Sticker Picker Drawer Toggle Button (Telegram Desktop v7.0) */}
                 <button
                   type="button"
-                  onClick={() => setIsStickerDrawerOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 ${
-                    isStickerDrawerOpen
-                      ? 'text-accent-violet bg-dark-750'
-                      : 'text-gray-400 hover:text-accent-violet hover:bg-dark-800'
+                  disabled={!canSendStickers}
+                  onClick={() => canSendStickers && setIsStickerDrawerOpen((prev) => !prev)}
+                  className={`p-2.5 rounded-xl transition-colors shrink-0 ${
+                    !canSendStickers
+                      ? 'opacity-30 cursor-not-allowed text-gray-600'
+                      : isStickerDrawerOpen
+                      ? 'text-accent-violet bg-dark-750 cursor-pointer'
+                      : 'text-gray-400 hover:text-accent-violet hover:bg-dark-800 cursor-pointer'
                   }`}
-                  title="Stickers & Animated Packs"
+                  title={!canSendStickers ? 'Sending stickers is restricted in this group' : 'Stickers & Animated Packs'}
                 >
                   <Smile className="w-4 h-4" />
                 </button>
@@ -6413,22 +6484,47 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
                     <button
                       type="submit"
+                      disabled={slowModeSecondsLeft > 0}
                       onContextMenu={(e) => {
                         e.preventDefault()
-                        setIsSendMenuOpen((prev) => !prev)
+                        if (slowModeSecondsLeft <= 0) {
+                          setIsSendMenuOpen((prev) => !prev)
+                        }
                       }}
-                      className="p-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-l-2xl transition-all shadow-glow flex items-center justify-center cursor-pointer"
-                      title="Send message (Enter) • Right click for Send Without Sound / Schedule"
+                      className={`p-2.5 text-white rounded-l-2xl transition-all shadow-glow flex items-center justify-center ${
+                        slowModeSecondsLeft > 0
+                          ? 'bg-dark-700 text-gray-400 cursor-not-allowed opacity-80 gap-1.5 px-3'
+                          : 'bg-primary-600 hover:bg-primary-500 cursor-pointer'
+                      }`}
+                      title={
+                        slowModeSecondsLeft > 0
+                          ? `Slow mode active: wait ${slowModeSecondsLeft}s`
+                          : 'Send message (Enter) • Right click for Send Without Sound / Schedule'
+                      }
                     >
-                      <Send className="w-4 h-4" />
+                      {slowModeSecondsLeft > 0 ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+                          <span className="text-xs font-mono font-bold text-amber-300">{slowModeSecondsLeft}s</span>
+                        </>
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
                     </button>
                     <button
                       type="button"
+                      disabled={slowModeSecondsLeft > 0}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setIsSendMenuOpen((prev) => !prev)
+                        if (slowModeSecondsLeft <= 0) {
+                          setIsSendMenuOpen((prev) => !prev)
+                        }
                       }}
-                      className="p-2.5 bg-primary-700 hover:bg-primary-600 text-primary-200 hover:text-white rounded-r-2xl border-l border-white/10 transition-colors cursor-pointer flex items-center justify-center"
+                      className={`p-2.5 text-primary-200 hover:text-white rounded-r-2xl border-l border-white/10 transition-colors flex items-center justify-center ${
+                        slowModeSecondsLeft > 0
+                          ? 'bg-dark-750 cursor-not-allowed opacity-50'
+                          : 'bg-primary-700 hover:bg-primary-600 cursor-pointer'
+                      }`}
                       title="More send options (Silent / Schedule)"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -6437,9 +6533,30 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 ) : (
                   <button
                     type="button"
-                    onClick={handleStartRecording}
-                    className="p-2.5 text-gray-400 hover:text-white hover:bg-dark-800 rounded-2xl transition-colors cursor-pointer shrink-0"
-                    title="Record Voice Message"
+                    disabled={!canSendMedia || slowModeSecondsLeft > 0}
+                    onClick={() => {
+                      if (!canSendMedia) {
+                        showToast('Sending voice/media is restricted in this group.')
+                        return
+                      }
+                      if (slowModeSecondsLeft > 0) {
+                        showToast(`Slow mode active. Please wait ${slowModeSecondsLeft}s.`)
+                        return
+                      }
+                      handleStartRecording()
+                    }}
+                    className={`p-2.5 rounded-2xl transition-colors shrink-0 ${
+                      !canSendMedia || slowModeSecondsLeft > 0
+                        ? 'opacity-30 cursor-not-allowed text-gray-600'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-800 cursor-pointer'
+                    }`}
+                    title={
+                      !canSendMedia
+                        ? 'Voice messages restricted in this group'
+                        : slowModeSecondsLeft > 0
+                        ? `Slow mode: wait ${slowModeSecondsLeft}s`
+                        : 'Record Voice Message'
+                    }
                   >
                     <Mic className="w-4 h-4" />
                   </button>

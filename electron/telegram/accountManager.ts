@@ -4672,6 +4672,9 @@ export class AccountManager {
           linkedChatId,
           linkedChatTitle,
           hasDiscussionGroup,
+          antiSpamEnabled: Boolean(res.fullChat?.antispam),
+          canToggleAntiSpam: isSupergroup && (isCreator || Boolean(adminRights?.changeInfo || adminRights?.banUsers)),
+          slowmodeNextSendDate: res.fullChat?.slowmodeNextSendDate ? Number(res.fullChat.slowmodeNextSendDate) : undefined,
         }
       } else if (inputPeer._ === 'inputPeerChat') {
         const res: any = await holder.client.call({
@@ -5280,6 +5283,20 @@ export class AccountManager {
           }
         } catch (err: any) {
           errors.push(`permissions: ${err?.message || err}`)
+        }
+      }
+    }
+
+    if (input.antiSpamEnabled !== undefined) {
+      if (!details.isSupergroup) {
+        errors.push('antiSpam: Aggressive anti-spam is only available in supergroups.')
+      } else if (!details.canToggleAntiSpam && !details.isCreator) {
+        errors.push('antiSpam: You do not have permission to toggle anti-spam.')
+      } else if (Boolean(input.antiSpamEnabled) !== Boolean(details.antiSpamEnabled)) {
+        try {
+          await this.channelToggleAntiSpam(accountId, chatId, Boolean(input.antiSpamEnabled))
+        } catch (err: any) {
+          errors.push(`antiSpam: ${err?.message || err}`)
         }
       }
     }
