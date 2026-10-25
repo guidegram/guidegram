@@ -23,6 +23,10 @@ import { DeepLinkHandler } from './deepLinkHandler'
 import { WebrtcSecurityGuard } from './webrtcSecurityGuard'
 import { ClipboardGuard } from './clipboardGuard'
 import { DohResolver } from './telegram/dohResolver'
+import { IntegrityGuard } from './integrityGuard'
+
+// Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
+IntegrityGuard.sanitizeEnvironment()
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -3663,6 +3667,10 @@ function setupIpcHandlers() {
       Logger.warn('[IPC] resolve-doh error:', err)
       return []
     }
+  })
+
+  ipcMain.handle('system:get-integrity-report', async () => {
+    return IntegrityGuard.detectTamperedEnvironment(app.isPackaged)
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {

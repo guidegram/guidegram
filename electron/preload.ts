@@ -272,6 +272,13 @@ const guidegramAPI = {
     recordType?: 'A' | 'AAAA'
   ): Promise<string[]> =>
     ipcRenderer.invoke('telegram:resolve-doh', { hostname, recordType }),
+  getIntegrityReport: (): Promise<{
+    isTampered: boolean
+    reasons: string[]
+    inspectedFlags: string[]
+    detectedEnvThreats: string[]
+    timestamp: number
+  }> => ipcRenderer.invoke('system:get-integrity-report'),
   forwardMessages: (
     accountId: string,
     toChatId: string | string[],
