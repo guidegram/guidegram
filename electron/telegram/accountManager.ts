@@ -44,6 +44,7 @@ import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
 import { accountVaultManager } from './accountVaultManager'
+import { networkReconnectManager } from './reconnectManager'
 import { SecretChatCrypto } from './secretChatCrypto'
 import { passcodeGuard } from '../passcodeGuard'
 import { swrCache } from '../swrCache'
@@ -1096,6 +1097,7 @@ export class AccountManager {
         }
 
         Logger.info(`[AccountManager] Account ${updatedInfo.id} connected successfully!`)
+        networkReconnectManager.onAccountConnected(updatedInfo.id)
         this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
         return updatedInfo
       } else {
@@ -1110,6 +1112,17 @@ export class AccountManager {
       const disconnectedInfo: AccountInfo = { ...savedAcc, status: 'disconnected' }
       this.clients.set(savedAcc.id, { client, session: sessionString, info: disconnectedInfo })
       this.onEventCallback?.('telegram:account-updated', { account: disconnectedInfo, error: err?.message })
+
+      // Schedule full jitter exponential backoff retry (Layer 11)
+      networkReconnectManager.scheduleReconnect(
+        savedAcc.id,
+        async () => {
+          const res = await this.reconnectAccount(savedAcc.id).catch(() => null)
+          return res ? res.status === 'connected' : false
+        },
+        err?.message || 'Connection failed'
+      )
+
       return disconnectedInfo
     }
   })
@@ -10695,6 +10708,23 @@ export class AccountManager {
   }
 
   private setupEventListeners(accountId: string, client: TelegramClient): void {
+    if (client.onConnectionState) {
+      client.onConnectionState.add((state: string) => {
+        if (state === 'connected') {
+          networkReconnectManager.onAccountConnected(accountId)
+        } else if (state === 'offline') {
+          networkReconnectManager.scheduleReconnect(
+            accountId,
+            async () => {
+              const res = await this.reconnectAccount(accountId).catch(() => null)
+              return res ? res.status === 'connected' : false
+            },
+            'MTProto connection state offline'
+          )
+        }
+      })
+    }
+
     client.onNewMessage.add(async (msg: any) => {
       try {
         const chat = msg.chat as any

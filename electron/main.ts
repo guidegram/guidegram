@@ -32,6 +32,7 @@ import { IpcSecurityFilter } from './ipcSecurityFilter'
 import { privacyProtectionGuard } from './privacyProtectionGuard'
 import { accountVaultManager } from './telegram/accountVaultManager'
 import { MediaStreamValidator } from './mediaStreamValidator'
+import { networkReconnectManager } from './telegram/reconnectManager'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3773,6 +3774,18 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-media-stream-telemetry', async () => {
     return MediaStreamValidator.getTelemetry()
+  })
+
+  ipcMain.handle('system:get-network-reconnect-telemetry', async () => {
+    return networkReconnectManager.getTelemetry()
+  })
+
+  ipcMain.handle('telegram:reconnect-all-accounts', async () => {
+    networkReconnectManager.onNetworkOnline((accId) => async () => {
+      const res = await accountManager.reconnectAccount(accId).catch(() => null)
+      return res ? res.status === 'connected' : false
+    })
+    return { ok: true }
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {

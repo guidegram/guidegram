@@ -1362,6 +1362,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:get-account-vault-telemetry'),
   getMediaStreamTelemetry: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('system:get-media-stream-telemetry'),
+  getNetworkReconnectTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-network-reconnect-telemetry'),
+  reconnectAllAccounts: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('telegram:reconnect-all-accounts'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {
