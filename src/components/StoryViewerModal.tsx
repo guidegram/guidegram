@@ -392,12 +392,25 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       dir="ltr"
     >
       <motion.div
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0.2, bottom: 0.7 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 110 || info.velocity.y > 500) {
+            onClose()
+          }
+        }}
         initial={{ scale: 0.94, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.96, opacity: 0, y: 10 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 360 }}
-        className="relative flex h-full w-full flex-col overflow-hidden bg-dark-950 shadow-2xl sm:h-[88vh] sm:max-w-[440px] sm:rounded-2xl sm:border sm:border-white/10"
+        transition={{ type: 'spring', damping: 26, stiffness: 400, mass: 0.8 }}
+        className="story-drag-canvas relative flex h-full w-full flex-col overflow-hidden bg-dark-950 shadow-2xl sm:h-[88vh] sm:max-w-[440px] sm:rounded-2xl sm:border sm:border-white/10"
       >
+        {/* Mobile/Desktop Pull-Down Dismissal Indicator */}
+        <div className="absolute top-1 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <div className="w-10 h-1 rounded-full bg-white/30 backdrop-blur-sm" />
+        </div>
+
         {/* Progress bars */}
         <div className="absolute left-0 right-0 top-0 z-40 px-3 pt-3">
           <div className="flex gap-1">
@@ -413,7 +426,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 className="h-1 flex-1 overflow-hidden rounded-full bg-white/25"
               >
                 <div
-                  className="h-full rounded-full bg-white transition-all duration-100 ease-linear"
+                  className="h-full rounded-full bg-white story-progress-fluid"
                   style={{
                     width:
                       index < currentIndex
