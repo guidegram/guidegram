@@ -889,6 +889,7 @@ export interface SendMessageOptions {
   replyToMsgId?: number
   silent?: boolean
   scheduleDate?: number // unix timestamp in milliseconds
+  scheduleWhenOnline?: boolean
 }
 
 export interface SendMediaOptions {
@@ -900,6 +901,7 @@ export interface SendMediaOptions {
   uploadId?: string
   silent?: boolean
   scheduleDate?: number // unix timestamp in milliseconds
+  scheduleWhenOnline?: boolean
 }
 
 export interface UploadProgressPayload {
@@ -973,6 +975,7 @@ export interface ScheduledMessageItem {
   date: number
   scheduledDate: number
   isOutgoing: boolean
+  isWhenOnline?: boolean
   mediaType?: string
   replyToMsgId?: number
 }

@@ -5165,13 +5165,19 @@ export class AccountManager {
     let msgId: number = Math.floor(Date.now() / 1000)
     let itemDate = Math.floor(Date.now() / 1000)
 
+    const targetSchedule = options?.scheduleWhenOnline
+      ? 0x7ffffffe
+      : options?.scheduleDate
+        ? Math.floor(options.scheduleDate / 1000)
+        : undefined
+
     try {
       // First attempt using mtcute's high-level sendText (automatically handles entities, drafts, schedule)
       const sentMsg: any = await holder.client.sendText(inputPeer as any, text, {
         replyTo: actualReplyTo,
         silent: options?.silent,
-        schedule: options?.scheduleDate ? new Date(options.scheduleDate) : undefined,
-      })
+        schedule: targetSchedule ? (targetSchedule === 0x7ffffffe ? 0x7ffffffe : new Date(targetSchedule * 1000)) : undefined,
+      } as any)
       if (sentMsg?.id) {
         msgId = sentMsg.id
         if (sentMsg.date) itemDate = Math.floor(sentMsg.date.getTime() / 1000)
@@ -5188,7 +5194,7 @@ export class AccountManager {
           ? { _: 'inputReplyToMessage', replyToMsgId: actualReplyTo }
           : undefined,
         silent: options?.silent,
-        scheduleDate: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
+        scheduleDate: targetSchedule,
       })
 
       if (res) {
@@ -6330,8 +6336,10 @@ export class AccountManager {
         id: m.id,
         text: m.message,
         date: m.date,
-        scheduledDate: m.date * 1000,
-        isOutgoing: m.out,
+        scheduledDate: m.date === 0x7ffffffe ? 0x7ffffffe * 1000 : m.date * 1000,
+        isOutgoing: Boolean(m.out),
+        isWhenOnline: m.date === 0x7ffffffe,
+        replyToMsgId: m.replyTo?.replyToMsgId,
       }))
     } catch (_) {
       return []
