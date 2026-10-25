@@ -25,6 +25,7 @@ import { ClipboardGuard } from './clipboardGuard'
 import { DohResolver } from './telegram/dohResolver'
 import { IntegrityGuard } from './integrityGuard'
 import { SqliteTuner } from './telegram/sqliteTuner'
+import { EphemeralMediaManager } from './ephemeralMediaManager'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3572,6 +3573,31 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.warn('[IPC] enforceMediaQuota error:', err)
       return { evictedFiles: 0, freedBytes: 0, remainingBytes: 0, totalFiles: 0 }
+    }
+  })
+
+  ipcMain.handle('telegram:mark-ephemeral-played', async (_event, { token }: { token: string }) => {
+    try {
+      if (typeof token === 'string') {
+        return await EphemeralMediaManager.markPlayed(token, 100)
+      }
+      return false
+    } catch (err: any) {
+      Logger.warn('[IPC] mark-ephemeral-played error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:register-ephemeral-media', async (_event, payload: { token: string; filePath: string; ttlSeconds?: number; viewOnce?: boolean }) => {
+    try {
+      if (typeof payload?.token === 'string' && typeof payload?.filePath === 'string') {
+        EphemeralMediaManager.registerEphemeralMedia(payload.token, payload.filePath, payload.ttlSeconds || 30, payload.viewOnce ?? false)
+        return true
+      }
+      return false
+    } catch (err: any) {
+      Logger.warn('[IPC] register-ephemeral-media error:', err)
+      return false
     }
   })
 

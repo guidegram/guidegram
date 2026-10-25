@@ -1305,6 +1305,15 @@ const guidegramAPI = {
     remainingBytes: number
     totalFiles: number
   }> => ipcRenderer.invoke('telegram:enforce-media-quota', { maxBytes }),
+  markEphemeralPlayed: (token: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:mark-ephemeral-played', { token }),
+  registerEphemeralMedia: (
+    token: string,
+    filePath: string,
+    ttlSeconds?: number,
+    viewOnce?: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:register-ephemeral-media', { token, filePath, ttlSeconds, viewOnce }),
   selectDownloadDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke('telegram:select-download-directory'),
 
