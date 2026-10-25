@@ -43,6 +43,7 @@ import { AccountSecurityService } from './services/accountSecurityService'
 import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
+import { accountVaultManager } from './accountVaultManager'
 import { SecretChatCrypto } from './secretChatCrypto'
 import { passcodeGuard } from '../passcodeGuard'
 import { swrCache } from '../swrCache'
@@ -1631,6 +1632,9 @@ export class AccountManager {
       this.thumbCache,
       this.mediaCache,
     ])
+
+    // Layer 10 & Layer 08: Zero-Credential memory wipe of account vault secrets
+    accountVaultManager.purgeAccount(safeId)
 
     this.pendingAuthClients.delete(safeId)
     this.clients.delete(safeId)

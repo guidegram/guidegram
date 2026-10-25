@@ -30,6 +30,7 @@ import { SecretChatCrypto } from './telegram/secretChatCrypto'
 import { passcodeGuard } from './passcodeGuard'
 import { IpcSecurityFilter } from './ipcSecurityFilter'
 import { privacyProtectionGuard } from './privacyProtectionGuard'
+import { accountVaultManager } from './telegram/accountVaultManager'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3817,6 +3818,10 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-ipc-security-telemetry', async () => {
     return IpcSecurityFilter.getTelemetry()
+  })
+
+  ipcMain.handle('system:get-account-vault-telemetry', async () => {
+    return accountVaultManager.getTelemetry()
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {

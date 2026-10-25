@@ -1358,6 +1358,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:log-renderer-error', { message, stack }),
   getIpcSecurityTelemetry: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('system:get-ipc-security-telemetry'),
+  getAccountVaultTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-account-vault-telemetry'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {
