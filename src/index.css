@@ -1785,6 +1785,29 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
+/* ==========================================================================
+   Phase 155: Virtualized Infinite Message List & 100k Render Optimization
+   Scroll viewport container and cumulative height spacer classes
+   ========================================================================== */
+.virtual-scroll-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  contain: strict;
+  will-change: scroll-position;
+}
+
+.virtual-message-spacer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+
 
 
 
