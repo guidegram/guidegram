@@ -1357,6 +1357,36 @@ const guidegramAPI = {
   logError: (message: string, stack?: string) =>
     ipcRenderer.invoke('system:log-renderer-error', { message, stack }),
 
+  // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
+  passcode: {
+    getStatus: (): Promise<{
+      isPasscodeSet: boolean
+      isLocked: boolean
+      autoLockMinutes: number
+      failedAttempts: number
+      isRateLimited: boolean
+      rateLimitedUntilMs: number | null
+    }> => ipcRenderer.invoke('passcode:get-status'),
+    setPasscode: (
+      newPasscode: string,
+      currentPasscode?: string
+    ): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('passcode:set', { newPasscode, currentPasscode }),
+    removePasscode: (currentPasscode: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('passcode:remove', { currentPasscode }),
+    unlock: (
+      passcode: string
+    ): Promise<{
+      success: boolean
+      error?: string
+      remainingAttempts?: number
+      lockedUntil?: number
+    }> => ipcRenderer.invoke('passcode:unlock', { passcode }),
+    lock: (): Promise<boolean> => ipcRenderer.invoke('passcode:lock'),
+    setAutoLockMinutes: (minutes: number): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('passcode:set-autolock-minutes', { minutes }),
+  },
+
   // Events
   on: (channel: string, callback: (...args: any[]) => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, ...args: any[]) => callback(...args)

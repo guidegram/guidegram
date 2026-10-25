@@ -44,6 +44,7 @@ import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
 import { SecretChatCrypto } from './secretChatCrypto'
+import { passcodeGuard } from '../passcodeGuard'
 import { swrCache } from '../swrCache'
 import { keyedMutex } from '../asyncMutex'
 import {
@@ -10568,7 +10569,7 @@ export class AccountManager {
     return {
       twoStepVerification: true,
       autoDeleteMessages: 'off',
-      localPasscode: false,
+      localPasscode: passcodeGuard.isPasscodeSet(),
       passkeys: false,
       blockedUsersCount: 0,
       connectedWebsitesCount: 0,

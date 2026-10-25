@@ -27,6 +27,7 @@ import { IntegrityGuard } from './integrityGuard'
 import { SqliteTuner } from './telegram/sqliteTuner'
 import { EphemeralMediaManager } from './ephemeralMediaManager'
 import { SecretChatCrypto } from './telegram/secretChatCrypto'
+import { passcodeGuard } from './passcodeGuard'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -72,6 +73,7 @@ const portableDataDir = dataDirOverride
     : path.join(path.dirname(app.getPath('exe')), 'data')
 
 app.setPath('userData', portableDataDir)
+passcodeGuard.init(portableDataDir)
 
 // Enforce Single Instance Application Lock: prevent duplicate instances/windows
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
@@ -3754,6 +3756,32 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-sqlite-status', async () => {
     return SqliteTuner.getPragmaStatus(null)
+  })
+
+  // Master Local Passcode & Key Derivation Endpoints (Layer 08 / MM-004)
+  ipcMain.handle('passcode:get-status', async () => {
+    return passcodeGuard.getStatus()
+  })
+
+  ipcMain.handle('passcode:set', async (_event, payload: { newPasscode: string; currentPasscode?: string }) => {
+    return passcodeGuard.setPasscode(payload.newPasscode, payload.currentPasscode)
+  })
+
+  ipcMain.handle('passcode:remove', async (_event, payload: { currentPasscode: string }) => {
+    return passcodeGuard.removePasscode(payload.currentPasscode)
+  })
+
+  ipcMain.handle('passcode:unlock', async (_event, payload: { passcode: string }) => {
+    return passcodeGuard.unlock(payload.passcode)
+  })
+
+  ipcMain.handle('passcode:lock', async () => {
+    passcodeGuard.lockSession()
+    return true
+  })
+
+  ipcMain.handle('passcode:set-autolock-minutes', async (_event, payload: { minutes: number }) => {
+    return passcodeGuard.setAutoLockMinutes(payload.minutes)
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
