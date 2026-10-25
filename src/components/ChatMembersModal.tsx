@@ -44,7 +44,7 @@ export interface ChatMembersModalProps {
 }
 
 type ModalMode = 'list' | 'add'
-type ActionPanel = 'promote' | 'restrict' | 'ban' | null
+type ActionPanel = 'promote' | 'restrict' | 'ban' | 'transferOwnership' | null
 type ConfirmAction = 'kick' | 'demote' | 'unban' | null
 
 type RestrictionKey =
@@ -97,6 +97,9 @@ const ADMIN_RIGHTS: Array<{ key: keyof ChatAdminRightsPayload; labelKey: string 
   { key: 'manageTopics', labelKey: 'members.rights.manage_topics' },
   { key: 'postMessages', labelKey: 'members.rights.post_messages' },
   { key: 'editMessages', labelKey: 'members.rights.edit_messages' },
+  { key: 'postStories', labelKey: 'members.rights.post_stories' },
+  { key: 'editStories', labelKey: 'members.rights.edit_stories' },
+  { key: 'deleteStories', labelKey: 'members.rights.delete_stories' },
 ]
 
 function memberName(member: ChatMemberPayload): string {
@@ -247,6 +250,7 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
     buildAllowedRestrictions({} as ChatMemberPayload)
   )
   const [banDuration, setBanDuration] = useState(0)
+  const [transferPassword, setTransferPassword] = useState('')
 
   const [contacts, setContacts] = useState<ContactItem[]>([])
   const [contactsLoading, setContactsLoading] = useState(false)
@@ -459,8 +463,23 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
   const handleDemote = async () => {
     if (!selectedMember) return
     await runMemberAction('demote', () =>
-      window.guidegram.promoteChatMember(accountId, chatId, selectedMember.id, {}, '')
+      window.guidegram.demoteChatMember(accountId, chatId, selectedMember.id)
     )
+  }
+
+  const handleTransferOwnership = async () => {
+    if (!selectedMember) return
+    await runMemberAction('transferOwnership', async () => {
+      await window.guidegram.transferChatOwnership(
+        accountId,
+        chatId,
+        selectedMember.id,
+        transferPassword.trim() || undefined
+      )
+      setTransferPassword('')
+      setActionPanel(null)
+      setNotice('Group ownership transferred successfully.')
+    })
   }
 
   const handleRestrict = async () => {
@@ -1291,6 +1310,51 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
                               </button>
                             </div>
                           </div>
+                        ) : actionPanel === 'transferOwnership' ? (
+                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                            <div>
+                              <div className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                                <Crown className="w-3.5 h-3.5" />
+                                Transfer Group Ownership
+                              </div>
+                              <div className="text-[9px] text-gray-400 mt-0.5 leading-relaxed">
+                                Transfer full creator rights of this group to {memberName(selectedMember)}. This action is irreversible. Enter your 2FA password if enabled.
+                              </div>
+                            </div>
+                            <input
+                              type="password"
+                              value={transferPassword}
+                              onChange={(e) => setTransferPassword(e.target.value)}
+                              placeholder="2FA Password (if enabled)"
+                              className="w-full bg-dark-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400/50"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleTransferOwnership()}
+                                disabled={Boolean(busy)}
+                                className="flex-1 px-2 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-dark-950 text-[10px] font-bold flex items-center justify-center gap-1"
+                              >
+                                {busy === 'transferOwnership' ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Crown className="w-3 h-3" />
+                                )}
+                                Confirm Transfer
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActionPanel(null)
+                                  setTransferPassword('')
+                                }}
+                                disabled={Boolean(busy)}
+                                className="px-2 py-1.5 rounded-lg bg-white/10 text-gray-200 text-[10px] font-semibold"
+                              >
+                                {t('members.cancel')}
+                              </button>
+                            </div>
+                          </div>
                         ) : (
                           <>
                             {canPromote && (
@@ -1316,6 +1380,18 @@ export const ChatMembersModal: React.FC<ChatMembersModalProps> = ({
                                   </button>
                                 )}
                               </div>
+                            )}
+
+                            {details?.isCreator && (
+                              <button
+                                type="button"
+                                onClick={() => setActionPanel('transferOwnership')}
+                                disabled={Boolean(busy)}
+                                className="w-full px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-300 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                              >
+                                <Crown className="w-3 h-3" />
+                                Transfer Ownership
+                              </button>
                             )}
 
                             {canBan && (

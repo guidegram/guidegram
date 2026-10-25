@@ -26,6 +26,7 @@ import {
   pinMessage as mtcutePinMessage,
   unpinMessage as mtcuteUnpinMessage,
   setTyping as mtcuteSetTyping,
+  transferChatOwnership as mtcuteTransferChatOwnership,
 } from '@mtcute/core/methods.js'
 import { writeStringSession } from '@mtcute/core/utils.js'
 import { convertFromGramjsSession } from '@mtcute/convert'
@@ -5092,6 +5093,33 @@ export class AccountManager {
       chatId: chatPeer,
       participantId: userPeer,
       rank: rank?.trim() || null,
+    })
+  }
+
+  public async demoteChatMember(
+    accountId: string,
+    chatId: string,
+    userId: string
+  ): Promise<void> {
+    await this.promoteChatMember(accountId, chatId, userId, {}, '')
+  }
+
+  public async transferChatOwnership(
+    accountId: string,
+    chatId: string,
+    userId: string,
+    password?: string
+  ): Promise<void> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const chatPeer = await this.resolveInputPeer(accountId, chatId)
+    const userPeer = await this.resolveParticipantPeer(accountId, userId)
+
+    await mtcuteTransferChatOwnership(holder.client, {
+      chatId: chatPeer,
+      userId: userPeer,
+      password: password || '',
     })
   }
 

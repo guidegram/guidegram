@@ -435,6 +435,19 @@ const guidegramAPI = {
     rank: string | null
   ): Promise<void> =>
     ipcRenderer.invoke('telegram:set-chat-member-rank', { accountId, chatId, userId, rank }),
+  demoteChatMember: (
+    accountId: string,
+    chatId: string,
+    userId: string
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:demote-chat-member', { accountId, chatId, userId }),
+  transferChatOwnership: (
+    accountId: string,
+    chatId: string,
+    userId: string,
+    password?: string
+  ): Promise<void> =>
+    ipcRenderer.invoke('telegram:transfer-chat-ownership', { accountId, chatId, userId, password }),
   updateChatSettings: (
     accountId: string,
     chatId: string,

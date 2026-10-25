@@ -1662,6 +1662,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:demote-chat-member', async (_event, { accountId, chatId, userId }) => {
+    try {
+      return await accountManager.demoteChatMember(accountId, chatId, userId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] demoteChatMember error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:transfer-chat-ownership', async (_event, { accountId, chatId, userId, password }) => {
+    try {
+      return await accountManager.transferChatOwnership(accountId, chatId, userId, password)
+    } catch (err: any) {
+      Logger.warn(`[IPC] transferChatOwnership error:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:update-chat-settings', async (_event, { accountId, chatId, settings }) => {
     try {
       return await accountManager.updateChatSettings(accountId, chatId, settings)
