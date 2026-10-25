@@ -3834,6 +3834,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:send-inline-bot-result', async (_event, { accountId, peerId, queryId, resultId, options }) => {
+    try {
+      return await accountManager.sendInlineBotResult(accountId, peerId, queryId, resultId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendInlineBotResult error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:get-game-high-scores', async (_event, { accountId, peerId, messageId, userId }) => {
+    try {
+      return await accountManager.getGameHighScores(accountId, peerId, messageId, userId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getGameHighScores error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:set-game-score', async (_event, { accountId, peerId, messageId, score, userId, force, editMessage }) => {
+    try {
+      return await accountManager.setGameScore(accountId, peerId, messageId, score, userId, force, editMessage)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setGameScore error:`, err)
+      throw err
+    }
+  })
+
   // Channel Boosts IPC
   ipcMain.handle('telegram:get-channel-boosts', async (_event, { accountId, channelId }) => {
     try {

@@ -78,7 +78,7 @@ import {
   Settings,
   FolderDown,
 } from 'lucide-react'
-import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
+import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem } from '../types/telegram'
 import lottie from 'lottie-web'
 import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
@@ -99,6 +99,8 @@ import { ChatSettingsModal } from './ChatSettingsModal'
 import { ChatInviteLinksModal } from './ChatInviteLinksModal'
 import { PaidReactionModal } from './PaidReactionModal'
 import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
+import { GameScoreModal } from './GameScoreModal'
+import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
 import { GroupCallModal } from './GroupCallModal'
@@ -727,6 +729,78 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isBotStarting, setIsBotStarting] = useState(false)
   const [botInfoState, setBotInfoState] = useState<any>(null)
   const [botMenuButtonState, setBotMenuButtonState] = useState<BotMenuButtonType | null>(null)
+
+  // Inline Bot Queries & Game Protocol (MTProto Layer 180+)
+  const [inlineBotState, setInlineBotState] = useState<{
+    botUsername: string
+    query: string
+    payload: InlineBotResultsPayload | null
+    isLoading: boolean
+  } | null>(null)
+  const [gameScoreModalState, setGameScoreModalState] = useState<{
+    isOpen: boolean
+    messageId: number
+    gameTitle?: string
+  }>({ isOpen: false, messageId: 0 })
+
+  const handleSelectInlineResult = async (queryId: string, result: InlineBotResultItem) => {
+    if (!chat) return
+    try {
+      if (window.guidegram?.sendInlineBotResult) {
+        await window.guidegram.sendInlineBotResult(
+          chat.accountId,
+          chat.id,
+          queryId,
+          result.id,
+          { replyToMsgId: replyMessage?.id }
+        )
+        setInputText('')
+        setInlineBotState(null)
+        setReplyMessage(null)
+      }
+    } catch (err) {
+      console.warn('Failed to send inline bot result:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (!inlineBotState?.botUsername || !chat) return
+    const timer = setTimeout(async () => {
+      try {
+        if (window.guidegram?.getInlineBotResults) {
+          const res: any = await window.guidegram.getInlineBotResults(
+            chat.accountId,
+            inlineBotState.botUsername,
+            inlineBotState.query,
+            '',
+            chat.id
+          )
+          if (res) {
+            setInlineBotState((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    payload: {
+                      queryId: String(res.queryId || res.query_id || ''),
+                      nextOffset: res.nextOffset || res.next_offset,
+                      switchPm: res.switchPm || res.switch_pm,
+                      switchWebview: res.switchWebview || res.switch_webview,
+                      results: res.results || [],
+                      gallery: Boolean(res.gallery),
+                    },
+                    isLoading: false,
+                  }
+                : null
+            )
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to get inline bot results:', err)
+        setInlineBotState((prev) => (prev ? { ...prev, isLoading: false } : null))
+      }
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [inlineBotState?.botUsername, inlineBotState?.query, chat?.accountId, chat?.id])
 
   // Sync isMuted state whenever selected chat changes or updates
   useEffect(() => {
@@ -5491,6 +5565,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         showToast(`Invoice Checkout: ${btn.text} (Telegram Payments & Star Invoices)`)
                                         return
                                       }
+                                      if (btn.type === 'game' || btn.type === 'callback_game' || (btn as any).isGame) {
+                                        setGameScoreModalState({
+                                          isOpen: true,
+                                          messageId: msg.id,
+                                          gameTitle: btn.text || 'Game',
+                                        })
+                                        return
+                                      }
                                       if (btn.data) {
                                         setCallingBotBtnId(btnId)
                                         try {
@@ -6439,6 +6521,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     </div>
                   )}
 
+                  {/* Inline Bot Queries Results Panel */}
+                  {inlineBotState && (
+                    <InlineBotResultsPanel
+                      botUsername={inlineBotState.botUsername}
+                      query={inlineBotState.query}
+                      resultsPayload={inlineBotState.payload}
+                      isLoading={inlineBotState.isLoading}
+                      onSelectResult={handleSelectInlineResult}
+                      onSwitchPm={(startParam) => {
+                        window.guidegram?.openExternal?.(`https://t.me/${inlineBotState.botUsername}?start=${startParam}`)
+                      }}
+                      onSwitchWebview={(url) => {
+                        window.guidegram?.openExternal?.(url)
+                      }}
+                    />
+                  )}
+
                   <textarea
                     ref={textareaRef}
                     aria-label="Write a message"
@@ -6454,6 +6553,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         lastTypingSentRef.current = Date.now()
                         window.guidegram.sendTyping(chat.accountId, chat.id, 'typing').catch(() => {})
                       }
+
+                      // Check for inline bot query: e.g. "@gif funny cat" or "@pic mountains"
+                      const inlineMatch = val.match(/^@([a-zA-Z0-9_]{3,32})\s(.*)$/)
+                      if (inlineMatch && chat) {
+                        const botUser = inlineMatch[1]
+                        const inlineQ = inlineMatch[2]
+                        setInlineBotState((prev) => ({
+                          botUsername: botUser,
+                          query: inlineQ,
+                          payload: prev?.botUsername === botUser ? prev.payload : null,
+                          isLoading: true,
+                        }))
+                      } else {
+                        setInlineBotState(null)
+                      }
+
                       const cursorPos = e.target.selectionEnd || val.length
                       const textBefore = val.slice(0, cursorPos)
                       const match = textBefore.match(/@([a-zA-Z0-9_\u0600-\u06FF]*)$/)
@@ -8539,6 +8654,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           currentTtl={chat.secretChatTtl || chatDetails?.secretChatTtl || 0}
           onSetTtl={handleSetSecretChatTtl}
           onClose={() => setIsSecretFingerprintOpen(false)}
+        />
+      )}
+
+      {/* 17. Telegram Game Leaderboard & High Scores Modal */}
+      {gameScoreModalState.isOpen && chat && (
+        <GameScoreModal
+          isOpen={gameScoreModalState.isOpen}
+          accountId={chat.accountId}
+          peerId={chat.id}
+          messageId={gameScoreModalState.messageId}
+          gameTitle={gameScoreModalState.gameTitle}
+          onClose={() => setGameScoreModalState({ isOpen: false, messageId: 0 })}
         />
       )}
     </div>

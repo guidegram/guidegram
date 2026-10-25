@@ -11328,6 +11328,115 @@ export class AccountManager {
     }
   }
 
+  public async sendInlineBotResult(
+    accountId: string,
+    peerId: string,
+    queryId: string,
+    resultId: string,
+    options?: {
+      replyToMsgId?: number
+      silent?: boolean
+      clearDraft?: boolean
+      hideVia?: boolean
+      scheduleDate?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const replyTo = options?.replyToMsgId
+        ? { _: 'inputReplyToMessage', replyToMsgId: Number(options.replyToMsgId) }
+        : undefined
+
+      const res: any = await holder.client.call({
+        _: 'messages.sendInlineBotResult',
+        peer: inputPeer,
+        queryId: toLong(queryId),
+        id: resultId,
+        randomId,
+        replyTo,
+        silent: Boolean(options?.silent),
+        clearDraft: Boolean(options?.clearDraft),
+        hideVia: Boolean(options?.hideVia),
+        scheduleDate: options?.scheduleDate ? Number(options.scheduleDate) : undefined,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendInlineBotResult error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async getGameHighScores(
+    accountId: string,
+    peerId: string,
+    messageId: number,
+    userId?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const inputUser = userId
+        ? await this.resolveInputPeer(accountId, userId).then((p: any) =>
+            p._ === 'inputPeerUser'
+              ? { _: 'inputUser', userId: p.userId, accessHash: p.accessHash }
+              : { _: 'inputUserSelf' }
+          )
+        : { _: 'inputUserSelf' }
+
+      const res: any = await holder.client.call({
+        _: 'messages.getGameHighScores',
+        peer: inputPeer,
+        id: Number(messageId),
+        userId: inputUser,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getGameHighScores error:', err?.message || err)
+      return null
+    }
+  }
+
+  public async setGameScore(
+    accountId: string,
+    peerId: string,
+    messageId: number,
+    score: number,
+    userId?: string,
+    force = false,
+    editMessage = true
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const inputUser = userId
+        ? await this.resolveInputPeer(accountId, userId).then((p: any) =>
+            p._ === 'inputPeerUser'
+              ? { _: 'inputUser', userId: p.userId, accessHash: p.accessHash }
+              : { _: 'inputUserSelf' }
+          )
+        : { _: 'inputUserSelf' }
+
+      const res: any = await holder.client.call({
+        _: 'messages.setGameScore',
+        peer: inputPeer,
+        id: Number(messageId),
+        userId: inputUser,
+        score: Number(score),
+        force: Boolean(force),
+        editMessage: Boolean(editMessage),
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] setGameScore error:', err?.message || err)
+      throw err
+    }
+  }
+
   public async getChannelBoostStatus(
     accountId: string,
     channelId: string

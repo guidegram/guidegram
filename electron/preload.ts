@@ -1460,6 +1460,56 @@ const guidegramAPI = {
       offset,
       peerId,
     }),
+  sendInlineBotResult: (
+    accountId: string,
+    peerId: string,
+    queryId: string,
+    resultId: string,
+    options?: {
+      replyToMsgId?: number
+      silent?: boolean
+      clearDraft?: boolean
+      hideVia?: boolean
+      scheduleDate?: number
+    }
+  ): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('telegram:send-inline-bot-result', {
+      accountId,
+      peerId,
+      queryId,
+      resultId,
+      options,
+    }),
+  getGameHighScores: (
+    accountId: string,
+    peerId: string,
+    messageId: number,
+    userId?: string
+  ): Promise<Record<string, unknown> | null> =>
+    ipcRenderer.invoke('telegram:get-game-high-scores', {
+      accountId,
+      peerId,
+      messageId,
+      userId,
+    }),
+  setGameScore: (
+    accountId: string,
+    peerId: string,
+    messageId: number,
+    score: number,
+    userId?: string,
+    force = false,
+    editMessage = true
+  ): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('telegram:set-game-score', {
+      accountId,
+      peerId,
+      messageId,
+      score,
+      userId,
+      force,
+      editMessage,
+    }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>

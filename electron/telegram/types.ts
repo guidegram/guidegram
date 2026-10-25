@@ -1545,3 +1545,48 @@ export interface ExportChatHistoryResult {
   error?: string
 }
 
+export interface InlineBotResultItem {
+  id: string
+  type: 'article' | 'photo' | 'gif' | 'video' | 'audio' | 'voice' | 'document' | 'location' | 'venue' | 'contact' | 'game' | string
+  title?: string
+  description?: string
+  url?: string
+  thumb?: {
+    url?: string
+    width?: number
+    height?: number
+  }
+  content?: {
+    url?: string
+    width?: number
+    height?: number
+    type?: string
+  }
+  sendMessage?: any
+}
+
+export interface InlineBotResultsPayload {
+  queryId: string
+  nextOffset?: string
+  switchPm?: {
+    text: string
+    startParam: string
+  }
+  switchWebview?: {
+    text: string
+    url: string
+  }
+  results: InlineBotResultItem[]
+  users?: any[]
+  gallery?: boolean
+  cacheTime?: number
+}
+
+export interface GameHighScoreItem {
+  pos: number
+  userId: string
+  score: number
+  userName?: string
+}
+
+

@@ -126,6 +126,9 @@ import type {
   SendableTypingStatus,
   ExportChatHistoryOptions,
   ExportChatHistoryResult,
+  InlineBotResultItem,
+  InlineBotResultsPayload,
+  GameHighScoreItem,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -267,6 +270,9 @@ export type {
   AutoDownloadNetworkRule,
   NetworkProfilesConfig,
   SavedRingtoneItem,
+  InlineBotResultItem,
+  InlineBotResultsPayload,
+  GameHighScoreItem,
 }
 
 
