@@ -11607,6 +11607,50 @@ export class AccountManager {
     }
   }
 
+  public async setChatTheme(
+    accountId: string,
+    chatId: string,
+    emoticon: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.call({
+        _: 'messages.setChatTheme',
+        peer: inputPeer,
+        emoticon: String(emoticon || ''),
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn('[AccountManager] setChatTheme error:', err?.message || err)
+      throw err
+    }
+  }
+
+  public async setChatWallPaper(
+    accountId: string,
+    chatId: string,
+    wallpaperSlug?: string,
+    forBoth = false
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.call({
+        _: 'messages.setChatWallPaper',
+        peer: inputPeer,
+        forBoth: Boolean(forBoth),
+        revert: !wallpaperSlug,
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn('[AccountManager] setChatWallPaper error:', err?.message || err)
+      throw err
+    }
+  }
+
   public async getChannelBoostStatus(
     accountId: string,
     channelId: string

@@ -3936,6 +3936,25 @@ function setupIpcHandlers() {
     }
   })
 
+  // Chat Themes & Custom Wallpaper IPC (MTProto messages.setChatTheme & messages.setChatWallPaper)
+  ipcMain.handle('telegram:set-chat-theme', async (_event, { accountId, chatId, emoticon }) => {
+    try {
+      return await accountManager.setChatTheme(accountId, chatId, emoticon)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setChatTheme error:`, err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:set-chat-wallpaper', async (_event, { accountId, chatId, wallpaperSlug, forBoth }) => {
+    try {
+      return await accountManager.setChatWallPaper(accountId, chatId, wallpaperSlug, forBoth)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setChatWallPaper error:`, err)
+      throw err
+    }
+  })
+
   // Channel Boosts IPC
   ipcMain.handle('telegram:get-channel-boosts', async (_event, { accountId, channelId }) => {
     try {

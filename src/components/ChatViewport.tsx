@@ -78,6 +78,7 @@ import {
   UserCheck,
   Settings,
   FolderDown,
+  Palette,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -102,6 +103,7 @@ import { PaidReactionModal } from './PaidReactionModal'
 import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
 import { GameScoreModal } from './GameScoreModal'
 import { AutoDeleteModal } from './AutoDeleteModal'
+import { ChatThemeModal, OFFICIAL_CHAT_THEMES } from './chat/ChatThemeModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
@@ -713,6 +715,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isExportChatOpen, setIsExportChatOpen] = useState(false)
   const [isSecretFingerprintOpen, setIsSecretFingerprintOpen] = useState(false)
   const [isAutoDeleteModalOpen, setIsAutoDeleteModalOpen] = useState(false)
+  const [isChatThemeModalOpen, setIsChatThemeModalOpen] = useState(false)
+
+  const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
+    if (!chat) return
+    try {
+      if (window.guidegram?.setChatTheme) {
+        await window.guidegram.setChatTheme(chat.accountId, chat.id, emoticon)
+        showToast(`Theme updated: ${emoticon || 'Default'}`)
+        if (chatDetails) {
+          setChatDetails({ ...chatDetails, chatTheme: emoticon })
+        }
+      }
+    } catch (err: any) {
+      console.warn('Failed to set chat theme:', err)
+      showToast(err?.message || 'Failed to set chat theme')
+    }
+  }
+
+  const activeThemeObj = useMemo(() => {
+    const themeEmoticon = chatDetails?.chatTheme || chat?.chatTheme
+    if (!themeEmoticon) return null
+    return OFFICIAL_CHAT_THEMES.find((t) => t.emoticon === themeEmoticon) || null
+  }, [chatDetails?.chatTheme, chat?.chatTheme])
 
   const handleSetSecretChatTtl = async (ttlSeconds: number) => {
     if (!chat || !chat.accessHash) return
@@ -4698,6 +4723,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <FolderDown className="w-4 h-4 text-accent-cyan" />
           </button>
 
+          {/* Chat Theme & Wallpaper Button */}
+          <button
+            onClick={() => setIsChatThemeModalOpen(true)}
+            title="Chat Theme & Wallpaper"
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-violet border border-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center"
+          >
+            <Palette className="w-4 h-4 text-accent-violet" />
+          </button>
+
           {/* Chat Info Drawer Button */}
           <button
             onClick={handleOpenInfo}
@@ -5018,9 +5052,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
       {/* 2. Messages Feed Outer Relative Wrapper */}
       <div
-        className="flex-1 min-h-0 relative flex flex-col"
+        className={`flex-1 min-h-0 relative flex flex-col ${activeThemeObj ? `bg-gradient-to-b ${activeThemeObj.gradient}` : ''}`}
         style={{
-          backgroundImage: 'var(--chat-wallpaper, none)',
+          backgroundImage: chatDetails?.chatWallpaper || chat?.chatWallpaper ? `url(${chatDetails?.chatWallpaper || chat?.chatWallpaper})` : 'var(--chat-wallpaper, none)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',
@@ -8858,6 +8892,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               setChatDetails({ ...chatDetails, historyTtlPeriod: newPeriod })
             }
           }}
+        />
+      )}
+
+      {/* 19. Telegram Chat Themes & Custom Wallpaper Modal */}
+      {isChatThemeModalOpen && chat && (
+        <ChatThemeModal
+          isOpen={isChatThemeModalOpen}
+          chatTitle={chatDetails?.title || chat.title}
+          currentTheme={chatDetails?.chatTheme || chat.chatTheme}
+          currentWallpaper={chatDetails?.chatWallpaper || chat.chatWallpaper}
+          onSelectTheme={handleSetChatTheme}
+          onClose={() => setIsChatThemeModalOpen(false)}
         />
       )}
     </div>

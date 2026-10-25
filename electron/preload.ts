@@ -1531,6 +1531,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:edit-quick-reply-shortcut', { accountId, shortcutId, shortcut }),
   deleteQuickReplyShortcut: (accountId: string, shortcutId: number): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-quick-reply-shortcut', { accountId, shortcutId }),
+  setChatTheme: (accountId: string, chatId: string, emoticon: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-chat-theme', { accountId, chatId, emoticon }),
+  setChatWallPaper: (accountId: string, chatId: string, wallpaperSlug?: string, forBoth?: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-chat-wallpaper', { accountId, chatId, wallpaperSlug, forBoth }),
   getChannelBoostStatus: (accountId: string, channelId: string): Promise<ChannelBoostStatus | null> =>
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>

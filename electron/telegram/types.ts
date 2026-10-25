@@ -149,6 +149,8 @@ export interface DialogItem {
   secretChatVisualEmojis?: string[]
   secretChatTtl?: number
   historyTtlPeriod?: number
+  chatTheme?: string
+  chatWallpaper?: string
 }
 
 export interface DraftItem {
@@ -571,6 +573,8 @@ export interface ChatDetails {
   secretChatState?: 'waiting' | 'active' | 'discarded'
   historyTtlPeriod?: number
   defaultHistoryTtl?: number
+  chatTheme?: string
+  chatWallpaper?: string
 }
 
 export interface DiscussionThreadInfo {
