@@ -1518,6 +1518,29 @@ textarea:focus-visible {
   transform: scale(1.04);
 }
 
+/* ==========================================================================
+   Phase 146: Telegram Voice Waveform 60fps Spring FFT Visualizer
+   Audio waveform canvas in chat bubbles and progress scrubber classes
+   ========================================================================== */
+.voice-waveform-canvas {
+  display: block;
+  height: 32px;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.voice-play-scrubber {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 8px;
+}
+
+
 
 
 
