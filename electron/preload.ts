@@ -1384,6 +1384,10 @@ const guidegramAPI = {
   }> => ipcRenderer.invoke('system:sanitize-dropped-text', text),
   getDragDropTelemetry: (): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('system:get-drag-drop-telemetry'),
+  getMemoryPressureTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-memory-pressure-telemetry'),
+  forceMemoryCleanup: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('system:force-memory-cleanup'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {

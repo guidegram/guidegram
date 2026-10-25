@@ -35,6 +35,8 @@ import { MediaStreamValidator } from './mediaStreamValidator'
 import { networkReconnectManager } from './telegram/reconnectManager'
 import { sqliteDeadlockGuard } from './telegram/sqliteDeadlockGuard'
 import { dragDropSanitizer } from './dragDropSanitizer'
+import { memoryPressureManager } from './memoryPressureManager'
+import { swrCache } from './swrCache'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -1886,8 +1888,12 @@ function setupIpcHandlers() {
     return offlineQueue.purgeDeadLetters()
   })
 
-  // Memory Monitor IPC Handlers (MM-211)
+  // Memory Monitor & Memory Pressure Manager (MM-211)
   memoryMonitor.registerIpc()
+  memoryPressureManager.registerHandler('elevated', 'swr_cache', () => {
+    swrCache.clear()
+  })
+  memoryPressureManager.start(30_000)
 
   // Crash Recovery IPC Handlers (MM-205)
   ipcMain.handle('system:get-crash-reports', () => {
@@ -3807,6 +3813,15 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-drag-drop-telemetry', async () => {
     return dragDropSanitizer.getTelemetry()
+  })
+
+  ipcMain.handle('system:get-memory-pressure-telemetry', async () => {
+    return memoryPressureManager.getTelemetry()
+  })
+
+  ipcMain.handle('system:force-memory-cleanup', async () => {
+    await memoryPressureManager.runCriticalEviction()
+    return { ok: true }
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
