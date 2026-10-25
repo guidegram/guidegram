@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, protocol, net, dialog, session, clipboard } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, protocol, net, dialog, session, clipboard, powerMonitor } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { Readable } from 'node:stream'
@@ -38,6 +38,7 @@ import { dragDropSanitizer } from './dragDropSanitizer'
 import { memoryPressureManager } from './memoryPressureManager'
 import { swrCache } from './swrCache'
 import { IpcPayloadRedactor } from './ipcPayloadRedactor'
+import { powerLifecycleManager } from './powerLifecycleManager'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -1895,6 +1896,24 @@ function setupIpcHandlers() {
     swrCache.clear()
   })
   memoryPressureManager.start(30_000)
+
+  // Power Lifecycle Manager (Layer 11 Network Resilience / OS Sleep & Wake Guard)
+  powerLifecycleManager.updateDependencies({
+    powerMonitor,
+    accountManager,
+    networkReconnectManager,
+    dohResolver: DohResolver,
+    sqliteTuner: SqliteTuner,
+    getDatabase: () => (accountManager as any).database,
+    getProxyConfig: () => sessionStore.getConfig()?.proxies?.find((p) => p.enabled),
+    testProxyPing: (proxy: any) => ProxyManager.testProxyPing(proxy),
+    broadcastWebContents: (channel: string, payload: any) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        IpcSecurityFilter.safeSend(mainWindow.webContents, channel, payload)
+      }
+    },
+  })
+  powerLifecycleManager.init()
 
   // Crash Recovery IPC Handlers (MM-205)
   ipcMain.handle('system:get-crash-reports', () => {
@@ -3836,6 +3855,19 @@ function setupIpcHandlers() {
   ipcMain.handle('system:reset-ipc-redaction-telemetry', async () => {
     IpcPayloadRedactor.resetTelemetry()
     return { ok: true }
+  })
+
+  ipcMain.handle('system:get-power-lifecycle-telemetry', async () => {
+    return powerLifecycleManager.getTelemetry()
+  })
+
+  ipcMain.handle('system:simulate-power-suspend', async () => {
+    await powerLifecycleManager.simulateSuspend()
+    return { ok: true }
+  })
+
+  ipcMain.handle('system:simulate-power-resume', async (_event, payload) => {
+    return await powerLifecycleManager.simulateResume(payload?.sleepDurationMs)
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {

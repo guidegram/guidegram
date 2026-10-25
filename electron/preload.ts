@@ -1394,6 +1394,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:redact-ipc-payload', payload, options),
   resetIpcRedactionTelemetry: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('system:reset-ipc-redaction-telemetry'),
+  getPowerLifecycleTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-power-lifecycle-telemetry'),
+  simulatePowerSuspend: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('system:simulate-power-suspend'),
+  simulatePowerResume: (sleepDurationMs?: number): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:simulate-power-resume', { sleepDurationMs }),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {
