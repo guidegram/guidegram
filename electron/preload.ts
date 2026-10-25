@@ -261,8 +261,11 @@ const guidegramAPI = {
       return (file as any).path || ''
     }
   },
-  copyToClipboard: (text: string): Promise<boolean> =>
-    ipcRenderer.invoke('system:copy-to-clipboard', { text }),
+  copyToClipboard: (
+    text: string,
+    options?: { isSensitive?: boolean; ttlMs?: number }
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('system:copy-to-clipboard', { text, ...options }),
   forwardMessages: (
     accountId: string,
     toChatId: string | string[],

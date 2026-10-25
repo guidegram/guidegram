@@ -21,6 +21,7 @@ import { crashRecoveryManager } from './crashRecovery'
 import { StorageGuardrails } from './storageGuardrails'
 import { DeepLinkHandler } from './deepLinkHandler'
 import { WebrtcSecurityGuard } from './webrtcSecurityGuard'
+import { ClipboardGuard } from './clipboardGuard'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -3632,11 +3633,13 @@ function setupIpcHandlers() {
     return logDir
   })
 
-  ipcMain.handle('system:copy-to-clipboard', async (_event, { text }: { text: string }) => {
+  ipcMain.handle('system:copy-to-clipboard', async (_event, payload: { text: string; isSensitive?: boolean; ttlMs?: number }) => {
     try {
-      if (typeof text === 'string') {
-        clipboard.writeText(text)
-        return true
+      if (typeof payload?.text === 'string') {
+        return ClipboardGuard.writeText(payload.text, {
+          isSensitive: payload.isSensitive,
+          ttlMs: payload.ttlMs,
+        }, clipboard)
       }
       return false
     } catch (err: any) {

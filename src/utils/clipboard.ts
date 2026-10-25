@@ -1,13 +1,21 @@
+export interface CopyClipboardOptions {
+  isSensitive?: boolean
+  ttlMs?: number
+}
+
 /**
  * Native Electron Clipboard copy helper with fallback
  */
-export async function copyTextToClipboard(text: string): Promise<boolean> {
+export async function copyTextToClipboard(
+  text: string,
+  options?: CopyClipboardOptions
+): Promise<boolean> {
   if (!text && text !== '') return false
 
   // 1. Primary: Native Electron Main Process via IPC (Bypasses Chromium focus constraints)
   if (window.guidegram?.copyToClipboard) {
     try {
-      const ok = await window.guidegram.copyToClipboard(text)
+      const ok = await window.guidegram.copyToClipboard(text, options)
       if (ok) return true
     } catch (_) {}
   }
