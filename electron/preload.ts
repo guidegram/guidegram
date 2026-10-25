@@ -84,6 +84,8 @@ import {
   ForumTopicMutationResult,
   ForumTopicCreateResult,
   SendableTypingStatus,
+  ExportChatHistoryOptions,
+  ExportChatHistoryResult,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -1113,6 +1115,13 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-requirements-to-contact', { accountId, userIds }),
   exportContactCard: (accountId: string): Promise<number[]> =>
     ipcRenderer.invoke('telegram:export-contact-card', { accountId }),
+  exportChatHistory: (
+    accountId: string,
+    chatId: string,
+    options: ExportChatHistoryOptions,
+    saveToFile = true
+  ): Promise<ExportChatHistoryResult> =>
+    ipcRenderer.invoke('telegram:export-chat-history', { accountId, chatId, options, saveToFile }),
 
   // Channels & Supergroups Administration Domain API (Phase 2)
   channelGetParticipants: (accountId: string, channelId: string, filterName = 'recent', offset = 0, limit = 50): Promise<Record<string, unknown>> =>

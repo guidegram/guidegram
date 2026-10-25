@@ -76,12 +76,14 @@ import {
   Ban,
   UserCheck,
   Settings,
+  FolderDown,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig } from '../types/telegram'
 import lottie from 'lottie-web'
 import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
 import { InstantViewModal } from './InstantViewModal'
+import { ExportChatModal } from './ExportChatModal'
 import { GroupStatsModal } from './GroupStatsModal'
 import { ForumTopicsBar } from './ForumTopicsBar'
 import { ForumTopicsModal } from './ForumTopicsModal'
@@ -701,6 +703,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isLoadingUserProfile, setIsLoadingUserProfile] = useState(false)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [isExportingInvite, setIsExportingInvite] = useState(false)
+  const [isExportChatOpen, setIsExportChatOpen] = useState(false)
 
   // Bot Subsystem State (MTProto Layer 180+)
   const [isReplyKeyboardOpen, setIsReplyKeyboardOpen] = useState(true)
@@ -4399,6 +4402,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-primary-400 border border-white/10 transition-colors cursor-pointer"
           >
             <ImageIcon className="w-4 h-4 text-primary-400" />
+          </button>
+
+          {/* Export Chat History Button */}
+          <button
+            onClick={() => setIsExportChatOpen(true)}
+            title="Export Chat History (HTML/JSON)"
+            className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-cyan border border-white/10 transition-colors cursor-pointer"
+          >
+            <FolderDown className="w-4 h-4 text-accent-cyan" />
           </button>
 
           {/* Chat Info Drawer Button */}
@@ -8429,6 +8441,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           isLoading={isInstantViewLoading}
           onClose={() => setIsInstantViewOpen(false)}
           onOpenExternal={handleSafeOpenUrl}
+        />
+      )}
+
+      {/* 15. Telegram Chat History Exporter Modal */}
+      {isExportChatOpen && chat && (
+        <ExportChatModal
+          isOpen={isExportChatOpen}
+          chat={chat}
+          accountId={chat.accountId}
+          onClose={() => setIsExportChatOpen(false)}
         />
       )}
     </div>

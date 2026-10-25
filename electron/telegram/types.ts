@@ -1478,3 +1478,21 @@ export type SendableTypingStatus =
   | 'speak_call'
   | 'history_import'
   | 'sticker'
+
+export interface ExportChatHistoryOptions {
+  format: 'json' | 'html'
+  limit?: number
+  fromDate?: number
+  toDate?: number
+  includeMedia?: boolean
+  selectedTypes?: Array<'text' | 'photo' | 'video' | 'voice' | 'audio' | 'document' | 'sticker'>
+}
+
+export interface ExportChatHistoryResult {
+  success: boolean
+  totalMessages: number
+  filePath?: string
+  content?: string
+  error?: string
+}
+

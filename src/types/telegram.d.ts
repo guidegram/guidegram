@@ -120,6 +120,8 @@ import type {
   ForumTopicMutationResult,
   ForumTopicCreateResult,
   SendableTypingStatus,
+  ExportChatHistoryOptions,
+  ExportChatHistoryResult,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -255,6 +257,8 @@ export type {
   ForumTopicMutationResult,
   ForumTopicCreateResult,
   SendableTypingStatus,
+  ExportChatHistoryOptions,
+  ExportChatHistoryResult,
 }
 
 

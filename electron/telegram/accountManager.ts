@@ -155,6 +155,8 @@ import {
   ChatJoinRequestResolveResult,
   ChatJoinRequestBulkResolveResult,
   SendableTypingStatus,
+  ExportChatHistoryOptions,
+  ExportChatHistoryResult,
 } from './types'
 
 export interface ClientHolder {
@@ -11551,6 +11553,206 @@ export class AccountManager {
     } catch (err) {
       Logger.error('[AccountManager] createChannel error:', err)
       return null
+    }
+  }
+
+  public async exportChatHistory(
+    accountId: string,
+    chatId: string,
+    options: ExportChatHistoryOptions
+  ): Promise<ExportChatHistoryResult> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) {
+      return { success: false, totalMessages: 0, error: `Account ${accountId} is not connected.` }
+    }
+
+    try {
+      const maxLimit = options.limit && options.limit > 0 ? Math.min(options.limit, 10000) : 500
+      const batchSize = 100
+      let fetchedMessages: MessageItem[] = []
+      let lastOffsetId = 0
+      let hasMore = true
+
+      while (hasMore && fetchedMessages.length < maxLimit) {
+        const batchLimit = Math.min(batchSize, maxLimit - fetchedMessages.length)
+        const batch = await this.getMessages(accountId, chatId, batchLimit, lastOffsetId)
+        if (!batch || batch.length === 0) {
+          hasMore = false
+          break
+        }
+
+        for (const m of batch) {
+          if (options.fromDate && m.date < options.fromDate) {
+            hasMore = false
+            break
+          }
+          if (options.toDate && m.date > options.toDate) {
+            continue
+          }
+          if (options.selectedTypes && options.selectedTypes.length > 0) {
+            const mType = m.mediaType || 'text'
+            if (!options.selectedTypes.includes(mType as any)) {
+              continue
+            }
+          }
+          fetchedMessages.push(m)
+        }
+
+        const oldestInBatch = batch[batch.length - 1]
+        if (!oldestInBatch || oldestInBatch.id === lastOffsetId || batch.length < batchLimit) {
+          hasMore = false
+        } else {
+          lastOffsetId = oldestInBatch.id
+        }
+      }
+
+      // Sort chronological (oldest to newest)
+      fetchedMessages.sort((a, b) => a.date - b.date)
+
+      let content = ''
+      if (options.format === 'json') {
+        const exportPayload = {
+          exportDate: new Date().toISOString(),
+          chatId,
+          accountId,
+          totalMessages: fetchedMessages.length,
+          messages: fetchedMessages.map((m) => ({
+            id: m.id,
+            date: m.date,
+            dateIso: new Date(m.date * 1000).toISOString(),
+            senderName: m.senderName,
+            senderId: m.senderId,
+            isOutgoing: m.isOutgoing,
+            text: m.text,
+            mediaType: m.mediaType,
+            mediaFileName: m.mediaFileName,
+            replyToMsgId: m.replyToMsgId,
+            views: (m as any).views,
+            forwards: (m as any).forwards,
+          })),
+        }
+        content = JSON.stringify(exportPayload, null, 2)
+      } else {
+        const escapeHtml = (str: string) =>
+          str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+        const rowsHtml = fetchedMessages
+          .map((m) => {
+            const timeStr = new Date(m.date * 1000).toLocaleTimeString()
+            const dateStr = new Date(m.date * 1000).toLocaleDateString()
+            const textHtml = escapeHtml(m.text || '').replace(/\n/g, '<br/>')
+            const senderClass = m.isOutgoing ? 'outgoing' : 'incoming'
+            const mediaBadge = m.mediaType ? `<div class="media-badge">[${escapeHtml(m.mediaType)} ${escapeHtml(m.mediaFileName || '')}]</div>` : ''
+
+            return `
+        <div class="message ${senderClass}">
+          <div class="msg-bubble">
+            <div class="msg-header">
+              <span class="sender">${escapeHtml(m.senderName || (m.isOutgoing ? 'You' : 'User'))}</span>
+              <span class="time">${timeStr} · ${dateStr}</span>
+            </div>
+            ${mediaBadge}
+            <div class="msg-text">${textHtml}</div>
+          </div>
+        </div>`
+          })
+          .join('\n')
+
+        content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat History Archive - ${escapeHtml(chatId)}</title>
+  <style>
+    :root {
+      --bg: #0e1621;
+      --card-bg: #17212b;
+      --bubble-in: #182533;
+      --bubble-out: #2b5278;
+      --accent: #00F0FF;
+      --text: #f5f5f5;
+      --text-sub: #7f91a4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .container { max-width: 820px; margin: 0 auto; }
+    .header {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 18px; color: var(--accent); }
+    .header p { font-size: 12px; color: var(--text-sub); }
+    .history { display: flex; flex-direction: column; gap: 8px; }
+    .message { display: flex; width: 100%; }
+    .message.outgoing { justify-content: flex-end; }
+    .message.incoming { justify-content: flex-start; }
+    .msg-bubble {
+      max-width: 72%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13.5px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .incoming .msg-bubble { background: var(--bubble-in); border-bottom-left-radius: 4px; }
+    .outgoing .msg-bubble { background: var(--bubble-out); border-bottom-right-radius: 4px; }
+    .msg-header { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; margin-bottom: 4px; }
+    .sender { font-weight: bold; color: var(--accent); }
+    .time { color: var(--text-sub); font-size: 10px; }
+    .media-badge {
+      display: inline-block;
+      font-size: 11px;
+      background: rgba(0, 240, 255, 0.15);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+    .msg-text { word-break: break-word; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Telegram Chat Export</h1>
+        <p>Chat ID: ${escapeHtml(chatId)} · Total Messages: ${fetchedMessages.length}</p>
+      </div>
+      <div>
+        <p>Exported via Guidegram on ${new Date().toLocaleDateString()}</p>
+      </div>
+    </div>
+    <div class="history">
+      ${rowsHtml}
+    </div>
+  </div>
+</body>
+</html>`
+      }
+
+      return {
+        success: true,
+        totalMessages: fetchedMessages.length,
+        content,
+      }
+    } catch (err: any) {
+      Logger.error(`[AccountManager] exportChatHistory failed for ${chatId}:`, err)
+      return {
+        success: false,
+        totalMessages: 0,
+        error: err?.message || 'Export failed',
+      }
     }
   }
 

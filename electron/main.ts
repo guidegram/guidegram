@@ -2961,6 +2961,39 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:export-chat-history', async (_event, { accountId, chatId, options, saveToFile }) => {
+    try {
+      const res = await accountManager.exportChatHistory(accountId, chatId, options)
+      if (!res.success || !res.content) {
+        return res
+      }
+
+      if (saveToFile) {
+        const ext = options.format === 'html' ? 'html' : 'json'
+        const filterName = options.format === 'html' ? 'HTML Archive (*.html)' : 'JSON Data (*.json)'
+        const dialogRes = await dialog.showSaveDialog({
+          title: 'Save Chat Export',
+          defaultPath: `chat_export_${chatId.replace(/[^a-zA-Z0-9_-]/g, '_')}_${Date.now()}.${ext}`,
+          filters: [{ name: filterName, extensions: [ext] }],
+        })
+
+        if (!dialogRes.canceled && dialogRes.filePath) {
+          await fs.promises.writeFile(dialogRes.filePath, res.content, 'utf8')
+          return {
+            success: true,
+            totalMessages: res.totalMessages,
+            filePath: dialogRes.filePath,
+          }
+        }
+      }
+
+      return res
+    } catch (err: any) {
+      Logger.error(`[IPC] exportChatHistory error for ${chatId}:`, err)
+      return { success: false, totalMessages: 0, error: err?.message || 'Export failed' }
+    }
+  })
+
   // --- Channels & Supergroups Administration IPC (Phase 2) ---
   ipcMain.handle('telegram:channel-get-participants', async (_event, { accountId, channelId, filterName, offset, limit }) => {
     try {
