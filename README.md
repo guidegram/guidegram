@@ -374,6 +374,6 @@ For the long-term international launch strategy and competitive benchmarks, expl
 
 ## 📜 License & Intellectual Property
  
-Copyright © 2026 Dr. Ershad Zolfi (DoctorGuidance). All Rights Reserved.
+Copyright © 2026 [Dr. Ershad Zolfi (DoctorGuidance)](https://github.com/DoctorGuidance). All Rights Reserved.
  
 This software and its underlying source code, algorithms, assets, and design architectures are proprietary and confidential. Unauthorized copying, reproduction, decompilation, distribution, public hosting, or commercial exploitation is strictly prohibited under domestic and international copyright laws. See [LICENSE](LICENSE) for full legal terms.
