@@ -910,3 +910,26 @@ textarea:focus-visible {
   transform: scale(1.002);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ==========================================================================
+   Phase 121: Dynamic Holographic Prismatic Foil & Iridescent Shimmer
+   Angle-of-incidence rainbow refraction and specular sheen highlights
+   ========================================================================== */
+.holographic-foil-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  mix-blend-mode: color-dodge;
+  opacity: 0.85;
+  will-change: transform;
+}
+
+.prismatic-card-sheen {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
