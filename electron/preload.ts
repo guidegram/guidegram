@@ -1650,6 +1650,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('proxy:toggle-warp', { enabled }),
   getWarpStatus: (): Promise<WarpStatus> =>
     ipcRenderer.invoke('proxy:get-warp-status'),
+  benchmarkProxies: (proxies?: ProxyConfig[]): Promise<Array<ProxyConfig & { pingMs: number }>> =>
+    ipcRenderer.invoke('proxy:benchmark-proxies', { proxies }),
+  rotateAccountProxy: (accountId: string): Promise<ProxyConfig | null> =>
+    ipcRenderer.invoke('proxy:rotate-account-proxy', { accountId }),
   getConfig: () => ipcRenderer.invoke('telegram:get-config'),
   updateConfig: (partial: Partial<AppConfig>) =>
     ipcRenderer.invoke('telegram:update-config', { partial }),

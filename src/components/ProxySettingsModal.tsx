@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Shield, Plus, RefreshCw, Check, Trash2, Globe, Radio, Zap, Sparkles, AlertCircle, User, Share2, Layers, CheckCircle2 } from 'lucide-react'
+import { X, Shield, Plus, RefreshCw, Check, Trash2, Globe, Radio, Zap, Sparkles, AlertCircle, User, Share2, Layers, CheckCircle2, Activity } from 'lucide-react'
 import { ProxyConfig, AccountInfo, AutoHarvestStatus, WarpStatus } from '../types/telegram'
 
 interface ProxySettingsModalProps {
@@ -56,6 +56,8 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
   const [isDistributing, setIsDistributing] = useState(false)
   const [distributionSuccess, setDistributionSuccess] = useState<string | null>(null)
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || '')
+  const [isBenchmarking, setIsBenchmarking] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
 
   // Load initial status on mount
   useEffect(() => {
@@ -136,6 +138,45 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
       console.error('Failed to distribute proxies:', e)
     } finally {
       setIsDistributing(false)
+    }
+  }
+
+  const handleBenchmarkAll = async () => {
+    setIsBenchmarking(true)
+    try {
+      if ((window.guidegram as any).benchmarkProxies) {
+        const allCandidates = [...proxies, ...harvestedProxies]
+        const sorted = await (window.guidegram as any).benchmarkProxies(allCandidates)
+        if (sorted && sorted.length > 0) {
+          setHarvestedProxies(sorted)
+        }
+      }
+    } catch (e) {
+      console.error('Benchmark error:', e)
+    } finally {
+      setIsBenchmarking(false)
+    }
+  }
+
+  const handleAutoRotateForAccount = async () => {
+    const targetId = selectedAccountId || accounts[0]?.id
+    if (!targetId) return
+    setIsRotating(true)
+    try {
+      if ((window.guidegram as any).rotateAccountProxy) {
+        const best = await (window.guidegram as any).rotateAccountProxy(targetId)
+        if (best) {
+          onUpdateAccountProxy(targetId, best)
+          const acc = accounts.find((a) => a.id === targetId)
+          const name = acc?.firstName || acc?.phone || 'Account'
+          setDistributionSuccess(`Auto-rotated ${name} to fastest proxy: ${best.name || best.host} (${best.pingMs || 'fast'}ms)!`)
+          setTimeout(() => setDistributionSuccess(null), 4000)
+        }
+      }
+    } catch (e) {
+      console.error('Auto-rotate error:', e)
+    } finally {
+      setIsRotating(false)
     }
   }
 
@@ -319,7 +360,31 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleBenchmarkAll}
+                      disabled={isBenchmarking}
+                      title="Test live TCP latency across all proxies in parallel"
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer"
+                    >
+                      <Activity className={`w-3 h-3 ${isBenchmarking ? 'animate-spin' : ''}`} />
+                      <span>{isBenchmarking ? 'Benchmarking...' : 'Benchmark Latencies'}</span>
+                    </button>
+
+                    {accounts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleAutoRotateForAccount}
+                        disabled={isRotating}
+                        title="Auto-switch selected account to lowest-latency proxy"
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer"
+                      >
+                        <Zap className={`w-3 h-3 ${isRotating ? 'animate-spin' : ''}`} />
+                        <span>{isRotating ? 'Rotating...' : 'Auto-Rotate Best'}</span>
+                      </button>
+                    )}
+
                     {accounts.length > 0 && (
                       <button
                         onClick={handleDistributeToAccounts}
@@ -328,7 +393,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                         className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer"
                       >
                         <Share2 className={`w-3 h-3 ${isDistributing ? 'animate-spin' : ''}`} />
-                        <span>{isDistributing ? 'Distributing...' : 'Distribute to Accounts'}</span>
+                        <span>{isDistributing ? 'Distributing...' : 'Distribute'}</span>
                       </button>
                     )}
                     <button

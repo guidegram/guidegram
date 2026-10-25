@@ -1824,6 +1824,25 @@ function setupIpcHandlers() {
     return ProxyManager.getWarpStatus()
   })
 
+  ipcMain.handle('proxy:benchmark-proxies', async (_event, { proxies } = {}) => {
+    return await ProxyManager.benchmarkProxies(proxies)
+  })
+
+  ipcMain.handle('proxy:rotate-account-proxy', async (_event, { accountId }) => {
+    const best = await ProxyManager.rotateProxyForAccount(accountId)
+    if (best) {
+      const config = sessionStore.getConfig()
+      const updatedAccounts = config.accounts.map((acc) => {
+        if (acc.id === accountId) {
+          return { ...acc, proxyConfig: best }
+        }
+        return acc
+      })
+      sessionStore.updateConfig({ accounts: updatedAccounts })
+    }
+    return best
+  })
+
   ipcMain.handle('telegram:get-config', async () => {
     return sessionStore.getConfig()
   })

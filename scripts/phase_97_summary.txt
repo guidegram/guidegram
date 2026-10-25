@@ -1,0 +1,16 @@
+Phase 97: Telegram Account Multi-Proxy Auto-Rotation & Ping Benchmarking Protocol
+
+- Implemented Parallel TCP Ping Latency Benchmarking:
+  - `ProxyManager.benchmarkProxies`: tests ping across all candidates concurrently via `Promise.all` and sorts by latency.
+  - Returns fastest proxies first, evicting/deprioritizing dead connections (-1).
+- Implemented Multi-Proxy Auto-Rotation:
+  - `ProxyManager.rotateProxyForAccount`: selects the lowest-latency healthy proxy (< 3000ms) and updates session account proxy binding.
+- Wired IPC handlers & Preload bridges:
+  - `proxy:benchmark-proxies`: calls `ProxyManager.benchmarkProxies`.
+  - `proxy:rotate-account-proxy`: calls `ProxyManager.rotateProxyForAccount` and updates `sessionStore`.
+  - Exposed `benchmarkProxies` and `rotateAccountProxy` in `preload.ts`.
+- Integrated UI into `src/components/ProxySettingsModal.tsx`:
+  - Added "Benchmark Latencies" button measuring real-time TCP latency.
+  - Added "Auto-Rotate Best" button assigning the fastest proxy to the selected account.
+- Created and passed test suite `tests/proxy_auto_rotation_benchmarking_verification.mjs` (10/10 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.

@@ -96,6 +96,40 @@ export class ProxyManager {
   }
 
   /**
+   * Benchmark latencies of all proxies in parallel and return sorted by latency
+   */
+  public static async benchmarkProxies(proxies?: ProxyConfig[]): Promise<Array<ProxyConfig & { pingMs: number }>> {
+    const list = proxies && proxies.length > 0 ? proxies : ProxyHarvester.getCachedProxies()
+    if (!list || list.length === 0) return []
+
+    const benchmarkPromises = list.map(async (p) => {
+      try {
+        const ping = await this.testProxyPing(p)
+        return { ...p, pingMs: ping }
+      } catch {
+        return { ...p, pingMs: -1 }
+      }
+    })
+
+    const results = await Promise.all(benchmarkPromises)
+    return results.sort((a, b) => {
+      if (a.pingMs > 0 && b.pingMs > 0) return a.pingMs - b.pingMs
+      if (a.pingMs > 0) return -1
+      if (b.pingMs > 0) return 1
+      return 0
+    })
+  }
+
+  /**
+   * Auto-rotate proxy for account to lowest-latency healthy proxy
+   */
+  public static async rotateProxyForAccount(_accountId: string): Promise<ProxyConfig | null> {
+    const sorted = await this.benchmarkProxies()
+    const best = sorted.find((p) => p.pingMs > 0 && p.pingMs < 3000)
+    return best || null
+  }
+
+  /**
    * Toggle Cloudflare WARP tunnel
    */
   public static async toggleWarp(enable?: boolean): Promise<WarpStatus> {
