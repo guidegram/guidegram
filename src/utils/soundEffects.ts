@@ -1,12 +1,23 @@
 // Web Audio API notification sound synthesizer for Guidegram
 // Synthesizes pleasant harmonic notification chimes without external audio assets
+// Enforces MM-211 AudioContext resource hygiene & idle hardware release
 
 let audioCtx: AudioContext | null = null
+let idleSuspendTimer: any = null
+
+function scheduleIdleSuspend(): void {
+  if (idleSuspendTimer) clearTimeout(idleSuspendTimer)
+  idleSuspendTimer = setTimeout(() => {
+    if (audioCtx && audioCtx.state === 'running') {
+      audioCtx.suspend().catch(() => {})
+    }
+  }, 15000)
+}
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     if (AudioContextClass) {
       audioCtx = new AudioContextClass()
     }
@@ -14,11 +25,30 @@ function getAudioContext(): AudioContext | null {
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {})
   }
+  scheduleIdleSuspend()
   return audioCtx
 }
 
 /**
- * Play a delicate, high-fidelity Telegram-like notification chime
+ * Explicitly disposes and closes the global notification AudioContext (MM-211).
+ */
+export async function disposeNotificationAudioContext(): Promise<void> {
+  if (idleSuspendTimer) {
+    clearTimeout(idleSuspendTimer)
+    idleSuspendTimer = null
+  }
+  if (audioCtx) {
+    try {
+      if (audioCtx.state !== 'closed') {
+        await audioCtx.close()
+      }
+    } catch {}
+    audioCtx = null
+  }
+}
+
+/**
+ * Play a delicate, high-fidelity Telegram-like notification chime with full graph disconnection
  */
 export function playNotificationSound(): void {
   try {
@@ -53,6 +83,21 @@ export function playNotificationSound(): void {
 
     osc2.connect(gain2)
     gain2.connect(ctx.destination)
+
+    // Enforce immediate node disconnection on completion to prevent memory leaks (MM-211)
+    osc1.onended = () => {
+      try {
+        osc1.disconnect()
+        gain1.disconnect()
+      } catch {}
+    }
+
+    osc2.onended = () => {
+      try {
+        osc2.disconnect()
+        gain2.disconnect()
+      } catch {}
+    }
 
     osc1.start(now)
     osc1.stop(now + 0.35)

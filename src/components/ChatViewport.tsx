@@ -98,6 +98,7 @@ import { PaidReactionModal } from './PaidReactionModal'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
 import { GroupCallModal } from './GroupCallModal'
+import { AudioResourceManager, VoiceVisualizerSession } from '../utils/audioResourceManager'
 import { BotIntroCard } from './chat/BotIntroCard'
 import { BotMenuDrawer, BotMenuButtonType } from './chat/BotMenuDrawer'
 import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeyboardPanel'
@@ -931,10 +932,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
+  const visualizerSessionRef = useRef<VoiceVisualizerSession | null>(null)
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const recordingChunksRef = useRef<Blob[]>([])
-  const analyserIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Floating "Scroll to Bottom" state
   const [showScrollBottom, setShowScrollBottom] = useState(false)
@@ -2304,22 +2304,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         }
       }
 
-      // Live Web Audio visualizer
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const source = audioCtx.createMediaStreamSource(stream)
-        const analyser = audioCtx.createAnalyser()
-        analyser.fftSize = 64
-        source.connect(analyser)
-        audioContextRef.current = audioCtx
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount)
-        analyserIntervalRef.current = setInterval(() => {
-          analyser.getByteFrequencyData(dataArray)
-          const sampled = Array.from(dataArray.slice(0, 16)).map((v) => Math.max(15, Math.round((v / 255) * 100)))
-          setRecordingWaveform(sampled)
-        }, 70)
-      } catch (_) {}
+      // Live Web Audio visualizer via AudioResourceManager (MM-211)
+      visualizerSessionRef.current = AudioResourceManager.createVoiceVisualizer(stream, (sampled) => {
+        setRecordingWaveform(sampled)
+      })
 
       recorder.start(100)
       setIsRecordingVoice(true)
@@ -2352,21 +2340,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       clearInterval(recordingTimerRef.current)
       recordingTimerRef.current = null
     }
-    if (analyserIntervalRef.current) {
-      clearInterval(analyserIntervalRef.current)
-      analyserIntervalRef.current = null
+    if (visualizerSessionRef.current) {
+      visualizerSessionRef.current.stop()
+      visualizerSessionRef.current = null
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.onstop = null
       mediaRecorderRef.current.stop()
     }
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => t.stop())
+      AudioResourceManager.stopMediaStream(mediaStreamRef.current)
       mediaStreamRef.current = null
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(() => {})
-      audioContextRef.current = null
     }
     recordingChunksRef.current = []
     setIsRecordingVoice(false)
@@ -2386,9 +2370,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       clearInterval(recordingTimerRef.current)
       recordingTimerRef.current = null
     }
-    if (analyserIntervalRef.current) {
-      clearInterval(analyserIntervalRef.current)
-      analyserIntervalRef.current = null
+    if (visualizerSessionRef.current) {
+      visualizerSessionRef.current.stop()
+      visualizerSessionRef.current = null
     }
     setIsUploadingVoice(true)
     if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
@@ -2437,13 +2421,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         console.error('Failed to send voice message:', err)
         showToast('Failed to send voice message')
       } finally {
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((t) => t.stop())
-          mediaStreamRef.current = null
+        if (visualizerSessionRef.current) {
+          visualizerSessionRef.current.stop()
+          visualizerSessionRef.current = null
         }
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close().catch(() => {})
-          audioContextRef.current = null
+        if (mediaStreamRef.current) {
+          AudioResourceManager.stopMediaStream(mediaStreamRef.current)
+          mediaStreamRef.current = null
         }
         setIsUploadingVoice(false)
         setIsRecordingVoice(false)
@@ -2459,16 +2443,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   useEffect(() => {
     return () => {
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
-      if (analyserIntervalRef.current) clearInterval(analyserIntervalRef.current)
+      if (visualizerSessionRef.current) {
+        visualizerSessionRef.current.stop()
+        visualizerSessionRef.current = null
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.onstop = null
         mediaRecorderRef.current.stop()
       }
       if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop())
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {})
+        AudioResourceManager.stopMediaStream(mediaStreamRef.current)
+        mediaStreamRef.current = null
       }
     }
   }, [])

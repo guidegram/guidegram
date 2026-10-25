@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { GroupCallInfo, GroupCallParticipantItem } from '../types/telegram'
 import { useI18n } from '../i18n'
+import { AudioResourceManager, VoiceVisualizerSession } from '../utils/audioResourceManager'
 
 export interface GroupCallModalProps {
   isOpen: boolean
@@ -59,7 +60,7 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const videoStreamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
+  const visualizerSessionRef = useRef<VoiceVisualizerSession | null>(null)
   const hasJoinedRef = useRef(false)
 
   // 1. Duration Timer
@@ -118,70 +119,55 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   // 3. WebRTC Local Microphone Analyzer
   useEffect(() => {
     if (!isOpen || isMuted) {
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach((t) => t.stop())
-        audioStreamRef.current = null
+      if (visualizerSessionRef.current) {
+        visualizerSessionRef.current.stop()
+        visualizerSessionRef.current = null
       }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {})
-        audioContextRef.current = null
-      }
+      AudioResourceManager.stopMediaStream(audioStreamRef.current)
+      audioStreamRef.current = null
       setAudioLevel(0)
       return
     }
 
-    let intervalId: any = null
     navigator.mediaDevices
       ?.getUserMedia({ audio: true })
       .then((stream) => {
         audioStreamRef.current = stream
-        try {
-          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-          const source = audioCtx.createMediaStreamSource(stream)
-          const analyser = audioCtx.createAnalyser()
-          analyser.fftSize = 64
-          source.connect(analyser)
-          audioContextRef.current = audioCtx
-
-          const dataArray = new Uint8Array(analyser.frequencyBinCount)
-          intervalId = setInterval(() => {
-            analyser.getByteFrequencyData(dataArray)
+        visualizerSessionRef.current = AudioResourceManager.createVoiceVisualizer(
+          stream,
+          (sampled) => {
             let sum = 0
-            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i]
-            const avg = sum / dataArray.length
-            setAudioLevel(Math.min(100, Math.round((avg / 255) * 100)))
-          }, 100)
-        } catch (_) {}
+            for (let i = 0; i < sampled.length; i++) sum += sampled[i]
+            setAudioLevel(Math.min(100, Math.round(sum / sampled.length)))
+          },
+          100
+        )
       })
       .catch((err) => {
         console.warn('[WebRTC] Microphone access denied:', err)
       })
 
     return () => {
-      if (intervalId) clearInterval(intervalId)
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach((t) => t.stop())
-        audioStreamRef.current = null
+      if (visualizerSessionRef.current) {
+        visualizerSessionRef.current.stop()
+        visualizerSessionRef.current = null
       }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {})
-        audioContextRef.current = null
-      }
+      AudioResourceManager.stopMediaStream(audioStreamRef.current)
+      audioStreamRef.current = null
     }
   }, [isOpen, isMuted])
 
   // Cleanup all streams on unmount
   useEffect(() => {
     return () => {
-      if (videoStreamRef.current) {
-        videoStreamRef.current.getTracks().forEach((t) => t.stop())
+      if (visualizerSessionRef.current) {
+        visualizerSessionRef.current.stop()
+        visualizerSessionRef.current = null
       }
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach((t) => t.stop())
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {})
-      }
+      AudioResourceManager.stopMediaStream(videoStreamRef.current)
+      videoStreamRef.current = null
+      AudioResourceManager.stopMediaStream(audioStreamRef.current)
+      audioStreamRef.current = null
     }
   }, [])
 
@@ -290,18 +276,14 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
 
   // Handle Leave
   const handleLeave = async () => {
-    if (videoStreamRef.current) {
-      videoStreamRef.current.getTracks().forEach((t) => t.stop())
-      videoStreamRef.current = null
+    if (visualizerSessionRef.current) {
+      visualizerSessionRef.current.stop()
+      visualizerSessionRef.current = null
     }
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach((t) => t.stop())
-      audioStreamRef.current = null
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(() => {})
-      audioContextRef.current = null
-    }
+    AudioResourceManager.stopMediaStream(videoStreamRef.current)
+    videoStreamRef.current = null
+    AudioResourceManager.stopMediaStream(audioStreamRef.current)
+    audioStreamRef.current = null
     if (callInfo && window.guidegram?.leaveGroupCall) {
       window.guidegram.leaveGroupCall(accountId, callInfo.id, callInfo.accessHash).catch(() => {})
     }

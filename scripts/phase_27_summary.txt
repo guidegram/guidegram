@@ -1,0 +1,6 @@
+Phase 27: AudioContext & Voice Waveform Resource Disposal (MM-211)
+- Created `src/utils/audioResourceManager.ts` (`AudioResourceManager`) centralizing Web Audio API lifecycle management and complete audio graph node teardown.
+- Implemented `createVoiceVisualizer` returning an idempotent session object that disconnects `MediaStreamAudioSourceNode` and `AnalyserNode`, closes the AudioContext, and halts frequency sampling intervals.
+- Refactored `ChatViewport.tsx` and `GroupCallModal.tsx` to utilize `AudioResourceManager` for live voice waveform visualization and microphone streams, eliminating dangling audio node references and browser AudioContext quota exhaustion.
+- Enhanced `src/utils/soundEffects.ts` with explicit oscillator/gain `onended` disconnection handlers and an auto-suspend timer after 15 seconds of idle inactivity.
+- Created `tests/audio_resource_hygiene_verification.mjs` verifying all 5 resource hygiene invariants; full project build (tsc + vite) passed cleanly with zero errors.
