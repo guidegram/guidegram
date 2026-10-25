@@ -23,6 +23,30 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
+    // v2.2.0: Telegram Parity Attachments, Centered Channels, Clipboard Paste & TitleBar Hub
+    if (cleanVer.startsWith('2.2') || cleanVer >= '2.2.0') {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: 'Telegram Premium Attachment Suite',
+          desc: 'Docked popover right above the paperclip with Photos, Documents, Checklists, Articles, Live Location, Polls, and Audio.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: 'Centered Channel Feed & Dynamic Widths',
+          desc: 'Channels now center posts beautifully with wide cards, while bot forms expand smoothly without horizontal compression.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: 'Clipboard Instant Paste & 60m Auto-Update',
+          desc: 'Paste screenshots directly with Ctrl+V, toggle Ghost Mode with a single click, and enjoy hands-free zero-data-loss background updates.',
+        },
+      ]
+    }
+
     // v2.1.0: Apple & Telegram iOS-Grade 50-Phase Visual & Fluid Motion Architecture
     if (cleanVer.startsWith('2.1') || cleanVer >= '2.1.0') {
       return [
