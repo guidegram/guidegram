@@ -1920,6 +1920,42 @@ textarea:focus-visible {
   line-height: 1.4;
 }
 
+/* Phase 159: Low-Power & Battery Saver Render Calibration Tokens */
+.battery-saver-active {
+  filter: contrast(1.05);
+}
+
+.battery-saver-active * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+.fps-calibration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.fps-calibration-badge.saver {
+  color: #eab308;
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+.fps-calibration-badge.critical {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+
 
 
 
