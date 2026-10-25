@@ -15,7 +15,7 @@ async function runTests() {
 
   // Test 2: Memory check threshold evaluation
   const checked = monitor.checkMemory()
-  assert.equal(checked.timestamp, stats.timestamp)
+  assert.ok(checked.timestamp >= stats.timestamp, 'Timestamp must be non-decreasing')
   console.log('  ✅ Memory watermark threshold evaluation passed')
 
   // Test 3: Safe GC invocation

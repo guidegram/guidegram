@@ -18,6 +18,7 @@ import { SecurityGuardrails } from './securityGuardrails'
 import { memoryMonitor } from './memoryMonitor'
 import { SafeDownloader } from './safeDownloader'
 import { crashRecoveryManager } from './crashRecovery'
+import { StorageGuardrails } from './storageGuardrails'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -559,6 +560,12 @@ app.whenReady().then(async () => {
       }
 
       decodedPath = path.normalize(decodedPath)
+
+      // StorageGuardrails (Layer 08): Deny access to files outside authorized storage roots
+      if (!StorageGuardrails.isPathWithinAuthorizedBounds(decodedPath)) {
+        Logger.warn(`[Protocol] Access denied: "${decodedPath}" is outside authorized storage bounds.`)
+        return new Response('Access Denied: Path outside authorized storage bounds', { status: 403 })
+      }
 
       if (!fs.existsSync(decodedPath)) {
         Logger.warn(`[Protocol] File not found: "${decodedPath}" from request "${request.url}"`)
@@ -1426,7 +1433,12 @@ function setupIpcHandlers() {
   ipcMain.handle('system:show-in-folder', async (_event, { filePath }: { filePath: string }) => {
     if (!filePath || typeof filePath !== 'string') return false
     try {
-      shell.showItemInFolder(path.normalize(filePath))
+      const normalized = path.normalize(filePath)
+      if (!StorageGuardrails.isPathWithinAuthorizedBounds(normalized)) {
+        Logger.warn(`[IPC] Access denied for system:show-in-folder: "${normalized}" outside authorized bounds.`)
+        return false
+      }
+      shell.showItemInFolder(normalized)
       return true
     } catch (err) {
       Logger.warn('[IPC] showItemInFolder error:', err)
@@ -3524,8 +3536,8 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:sync-from-portable', async (_event, { sourceDataPath }) => {
     try {
-      if (!sourceDataPath || !fs.existsSync(sourceDataPath)) {
-        return { success: false, error: 'Source directory does not exist' }
+      if (!sourceDataPath || !StorageGuardrails.isSafeDirectoryForSync(sourceDataPath)) {
+        return { success: false, error: 'Invalid or restricted source directory' }
       }
       const targetDir = sessionStore.getDataDirectory()
       if (path.resolve(sourceDataPath) === path.resolve(targetDir)) {
