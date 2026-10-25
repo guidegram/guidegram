@@ -26,6 +26,18 @@ export interface AutoHarvestStatus {
   isScanning: boolean
 }
 
+export interface ProxyHealthReport {
+  total: number
+  healthy: number
+  dead: number
+  avgLatencyMs: number
+  minLatencyMs: number
+  maxLatencyMs: number
+  isScanning: boolean
+  lastScanTime?: number
+  channels: string[]
+}
+
 export interface WarpStatus {
   enabled: boolean
   connected: boolean

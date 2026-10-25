@@ -45,6 +45,7 @@ import {
   SetEmojiStatusOptions,
   PrivacySecuritySettings,
   AutoHarvestStatus,
+  ProxyHealthReport,
   WarpStatus,
   SharedMediaFilterType,
   SharedMediaResponse,
@@ -1245,6 +1246,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('proxy:distribute-to-accounts', { accountIds }),
   getHarvestStatus: (): Promise<AutoHarvestStatus> =>
     ipcRenderer.invoke('proxy:get-harvest-status'),
+  getProxyHealthReport: (): Promise<ProxyHealthReport> =>
+    ipcRenderer.invoke('proxy:get-detailed-health'),
   toggleWarp: (enabled?: boolean): Promise<WarpStatus> =>
     ipcRenderer.invoke('proxy:toggle-warp', { enabled }),
   getWarpStatus: (): Promise<WarpStatus> =>

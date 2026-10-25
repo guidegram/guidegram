@@ -1,6 +1,6 @@
 import net from 'net'
 import { SocksProxyTcpTransport, HttpProxyTcpTransport, MtProxyTcpTransport } from '@mtcute/node'
-import { ProxyConfig, AutoHarvestStatus, WarpStatus } from './types'
+import { ProxyConfig, AutoHarvestStatus, WarpStatus, ProxyHealthReport } from './types'
 import { ProxyHarvester } from './proxyHarvester'
 import { WarpManager } from './warpManager'
 import { DohResolver } from './dohResolver'
@@ -79,6 +79,13 @@ export class ProxyManager {
    */
   public static getHarvestStatus(): AutoHarvestStatus {
     return ProxyHarvester.getStatus()
+  }
+
+  /**
+   * Get detailed proxy health report
+   */
+  public static getDetailedHealth(): ProxyHealthReport {
+    return ProxyHarvester.getDetailedHealth()
   }
 
   /**

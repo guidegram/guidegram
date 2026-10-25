@@ -1752,6 +1752,10 @@ function setupIpcHandlers() {
     return ProxyManager.getHarvestStatus()
   })
 
+  ipcMain.handle('proxy:get-detailed-health', async () => {
+    return ProxyManager.getDetailedHealth()
+  })
+
   ipcMain.handle('proxy:toggle-warp', async (_event, { enabled } = {}) => {
     return await ProxyManager.toggleWarp(enabled)
   })

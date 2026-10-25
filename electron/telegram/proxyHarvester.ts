@@ -1,7 +1,28 @@
 import net from 'net'
 import https from 'https'
-import { ProxyConfig, AutoHarvestStatus } from './types'
-import { Logger } from './logger'
+import type { ProxyConfig, AutoHarvestStatus, ProxyHealthReport } from './types'
+
+let Logger: any = {
+  info: (...args: any[]) => console.log('[INFO]', ...args),
+  warn: (...args: any[]) => console.warn('[WARN]', ...args),
+  debug: (...args: any[]) => console.debug('[DEBUG]', ...args),
+  error: (...args: any[]) => console.error('[ERROR]', ...args),
+}
+let DohResolver: any = null
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const loggerModule = require('./logger')
+  if (loggerModule?.Logger) Logger = loggerModule.Logger
+} catch {
+  // Fallback for ESM test runner
+}
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const dohMod = require('./dohResolver')
+  if (dohMod?.DohResolver) DohResolver = dohMod.DohResolver
+} catch {
+  // Fallback for ESM test runner
+}
 
 export interface RawProxyCandidate {
   server: string
@@ -217,27 +238,50 @@ export class ProxyHarvester {
    * Test live TCP socket latency (timeout: 2500ms)
    */
   public static async pingProxy(host: string, port: number, timeoutMs: number = 2500): Promise<number> {
+    let connectHost = host
+    if (DohResolver && typeof DohResolver.isIpAddress === 'function' && !DohResolver.isIpAddress(host)) {
+      try {
+        const resolvedIps = await DohResolver.resolve(host, 'A', 2000)
+        if (resolvedIps && resolvedIps.length > 0) {
+          connectHost = resolvedIps[0]
+        }
+      } catch {
+        // Fallback to raw host
+      }
+    }
+
     return new Promise((resolve) => {
       const startTime = Date.now()
+      let settled = false
       const socket = new net.Socket()
+
+      const finish = (latency: number) => {
+        if (settled) return
+        settled = true
+        try {
+          socket.destroy()
+        } catch {
+          // Ignore destruction errors
+        }
+        resolve(latency)
+      }
 
       socket.setTimeout(timeoutMs)
 
-      socket.connect(port, host, () => {
+      socket.once('connect', () => {
         const latency = Date.now() - startTime
-        socket.destroy()
-        resolve(latency)
+        finish(latency)
       })
 
-      socket.on('error', () => {
-        socket.destroy()
-        resolve(-1)
-      })
+      socket.once('error', () => finish(-1))
+      socket.once('timeout', () => finish(-1))
+      socket.once('close', () => finish(-1))
 
-      socket.on('timeout', () => {
-        socket.destroy()
-        resolve(-1)
-      })
+      try {
+        socket.connect(port, connectHost)
+      } catch {
+        finish(-1)
+      }
     })
   }
 
@@ -300,34 +344,38 @@ export class ProxyHarvester {
         }
       }
 
-      // 3. Health Check & Two-Strike Eviction: test all cached auto-harvested proxies
+      // 3. Health Check & Two-Strike Eviction: test all cached auto-harvested proxies in bounded batches
       const testEntries = Array.from(this.cachedProxies.values()).filter((p) => p.isAutoHarvested)
-      const testPromises = testEntries.map(async (proxy) => {
-        const ping = await this.pingProxy(proxy.host, proxy.port)
-        const current = this.cachedProxies.get(proxy.id)
-        if (!current) return
+      const CONCURRENCY_LIMIT = 10
+      for (let i = 0; i < testEntries.length; i += CONCURRENCY_LIMIT) {
+        const batch = testEntries.slice(i, i + CONCURRENCY_LIMIT)
+        await Promise.all(
+          batch.map(async (proxy) => {
+            const ping = await this.pingProxy(proxy.host, proxy.port)
+            const current = this.cachedProxies.get(proxy.id)
+            if (!current) return
 
-        if (ping > 0) {
-          // Healthy connection
-          current.pingMs = ping
-          current.lastChecked = Date.now()
-          current.failCount = 0
-          current.enabled = true
-        } else {
-          // Unreachable - increment strike count
-          current.failCount = (current.failCount || 0) + 1
-          current.lastChecked = Date.now()
-          current.pingMs = -1
+            if (ping > 0) {
+              // Healthy connection
+              current.pingMs = ping
+              current.lastChecked = Date.now()
+              current.failCount = 0
+              current.enabled = true
+            } else {
+              // Unreachable - increment strike count
+              current.failCount = (current.failCount || 0) + 1
+              current.lastChecked = Date.now()
+              current.pingMs = -1
 
-          // Two-Strike rule: purge if failed 2 consecutive scans
-          if (current.failCount >= 2) {
-            Logger.info(`[ProxyHarvester] Evicting dead proxy (2-strike failure): ${proxy.host}:${proxy.port}`)
-            this.cachedProxies.delete(proxy.id)
-          }
-        }
-      })
-
-      await Promise.all(testPromises)
+              // Two-Strike rule: purge if failed 2 consecutive scans
+              if (current.failCount >= 2) {
+                Logger.info(`[ProxyHarvester] Evicting dead proxy (2-strike failure): ${proxy.host}:${proxy.port}`)
+                this.cachedProxies.delete(proxy.id)
+              }
+            }
+          })
+        )
+      }
 
       this.lastScanTime = Date.now()
       const healthyList = Array.from(this.cachedProxies.values())
@@ -388,6 +436,32 @@ export class ProxyHarvester {
       healthyCount,
       totalHarvested: proxies.length,
       isScanning: this.isScanning
+    }
+  }
+
+  /**
+   * Get comprehensive proxy health & latency diagnostics (Layer 11)
+   */
+  public static getDetailedHealth(): ProxyHealthReport {
+    const proxies = Array.from(this.cachedProxies.values())
+    const healthy = proxies.filter((p) => (p.pingMs || -1) > 0)
+    const dead = proxies.filter((p) => (p.pingMs || -1) <= 0)
+    const latencies = healthy.map((p) => p.pingMs!).filter((l) => typeof l === 'number' && l > 0)
+
+    const avg = latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0
+    const min = latencies.length > 0 ? Math.min(...latencies) : 0
+    const max = latencies.length > 0 ? Math.max(...latencies) : 0
+
+    return {
+      total: proxies.length,
+      healthy: healthy.length,
+      dead: dead.length,
+      avgLatencyMs: avg,
+      minLatencyMs: min,
+      maxLatencyMs: max,
+      isScanning: this.isScanning,
+      lastScanTime: this.lastScanTime || undefined,
+      channels: this.DEFAULT_CHANNELS,
     }
   }
 
