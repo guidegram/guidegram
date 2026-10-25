@@ -592,3 +592,17 @@ textarea:focus-visible {
     transform: scale(1.15);
   }
 }
+
+/* ==========================================================================
+   Phase 106: Audio & Voice Message Waveform Scrubbing Elastic Physics
+   Continuous spring scrubbing, elastic waveform bars, and progress fill
+   ========================================================================== */
+.waveform-bar-elastic {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.12s ease;
+  will-change: transform;
+}
+
+.waveform-track-elastic {
+  transition: width 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+}

@@ -4294,8 +4294,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   }
                 }}
                 title={t('voice.seek') || 'Click to seek'}
-                className="flex items-center gap-0.5 h-6 cursor-pointer py-1 group/waveform"
+                className="relative flex items-center gap-0.5 h-6 cursor-pointer py-1 group/waveform select-none"
               >
+                {/* Continuous Elastic Progress Glow Track */}
+                <div
+                  className="absolute bottom-0 left-0 h-[2px] rounded-full bg-accent-emerald/40 waveform-track-elastic pointer-events-none"
+                  style={{ width: `${progressRatio * 100}%` }}
+                />
+
                 {bars.map((val, i) => {
                   const barProgress = i / bars.length
                   const isPassed = barProgress <= progressRatio
@@ -4305,8 +4311,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <div
                       key={i}
                       style={{ height: `${heightPercent}%` }}
-                      className={`w-1 rounded-full transition-all group-hover/waveform:scale-y-105 ${
-                        isPassed ? 'bg-accent-emerald' : 'bg-white/20 hover:bg-white/40'
+                      className={`w-1 rounded-full waveform-bar-elastic group-hover/waveform:scale-y-110 ${
+                        isPassed
+                          ? 'bg-accent-emerald shadow-[0_0_4px_rgba(16,185,129,0.35)]'
+                          : 'bg-white/20 hover:bg-white/40'
                       }`}
                     />
                   )
