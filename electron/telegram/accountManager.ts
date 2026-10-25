@@ -6310,22 +6310,94 @@ export class AccountManager {
     accountId: string,
     chatId: string,
     messageId: number,
-    reactionEmoji: string
+    reaction?: string | { emoji?: string; customEmojiId?: string } | Array<string | { emoji?: string; customEmojiId?: string }>,
+    options?: { big?: boolean; addToRecent?: boolean }
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
       const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const reactionItems: any[] = []
+
+      const rawList = Array.isArray(reaction) ? reaction : reaction ? [reaction] : []
+      for (const item of rawList) {
+        if (typeof item === 'string') {
+          if (item.trim()) {
+            reactionItems.push({ _: 'reactionEmoji', emoticon: item.trim() })
+          }
+        } else if (item && typeof item === 'object') {
+          if (item.customEmojiId) {
+            reactionItems.push({ _: 'reactionCustomEmoji', documentId: toLong(item.customEmojiId) })
+          } else if (item.emoji) {
+            reactionItems.push({ _: 'reactionEmoji', emoticon: item.emoji.trim() })
+          }
+        }
+      }
+
       await holder.client.call({
         _: 'messages.sendReaction',
         peer: inputPeer,
         msgId: messageId,
-        reaction: reactionEmoji ? [{ _: 'reactionEmoji', emoticon: reactionEmoji }] : [],
-      })
+        reaction: reactionItems,
+        big: Boolean(options?.big),
+        addToRecent: options?.addToRecent !== undefined ? Boolean(options.addToRecent) : true,
+      } as any)
       return true
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendReaction error:', err?.message || err)
       return false
+    }
+  }
+
+  public async getMessageReactionsList(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    options?: { reaction?: string | { emoji?: string; customEmojiId?: string }; offset?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      let reactionObj: any = undefined
+      if (typeof options?.reaction === 'string' && options.reaction.trim()) {
+        reactionObj = { _: 'reactionEmoji', emoticon: options.reaction.trim() }
+      } else if (options?.reaction && typeof options.reaction === 'object') {
+        if (options.reaction.customEmojiId) {
+          reactionObj = { _: 'reactionCustomEmoji', documentId: toLong(options.reaction.customEmojiId) }
+        } else if (options.reaction.emoji) {
+          reactionObj = { _: 'reactionEmoji', emoticon: options.reaction.emoji.trim() }
+        }
+      }
+
+      return await holder.client.call({
+        _: 'messages.getMessageReactionsList',
+        peer: inputPeer,
+        id: messageId,
+        reaction: reactionObj,
+        offset: options?.offset || '',
+        limit: options?.limit || 50,
+      } as any)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getMessageReactionsList error:', err?.message || err)
+      return { _: 'messages.messageReactionsList', count: 0, reactions: [], users: [] }
+    }
+  }
+
+  public async getAvailableReactions(accountId: string, hash = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      return await holder.client.call({
+        _: 'messages.getAvailableReactions',
+        hash: hash || 0,
+      } as any)
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getAvailableReactions error:', err?.message || err)
+      return { _: 'messages.availableReactionsNotModified' }
     }
   }
 

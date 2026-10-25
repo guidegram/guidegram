@@ -1834,15 +1834,34 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:send-reaction', async (_event, { accountId, chatId, messageId, reactionEmoji, idempotencyKey }) => {
+  ipcMain.handle('telegram:send-reaction', async (_event, { accountId, chatId, messageId, reactionEmoji, reaction, options, idempotencyKey }) => {
     try {
-      const key = idempotencyKey || idempotencyManager.generateKey('send-reaction', { accountId, chatId, messageId, reactionEmoji })
+      const activeReaction = reaction !== undefined ? reaction : reactionEmoji
+      const key = idempotencyKey || idempotencyManager.generateKey('send-reaction', { accountId, chatId, messageId, activeReaction })
       return await idempotencyManager.execute(key, () =>
-        accountManager.sendReaction(accountId, chatId, messageId, reactionEmoji)
+        accountManager.sendReaction(accountId, chatId, messageId, activeReaction, options)
       )
     } catch (err: any) {
       Logger.warn(`[IPC] sendReaction error:`, err)
       throw err
+    }
+  })
+
+  ipcMain.handle('telegram:get-message-reactions-list', async (_event, { accountId, chatId, messageId, options }) => {
+    try {
+      return await accountManager.getMessageReactionsList(accountId, chatId, messageId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getMessageReactionsList error:`, err)
+      return { _: 'messages.messageReactionsList', count: 0, reactions: [], users: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-available-reactions', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getAvailableReactions(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAvailableReactions error:`, err)
+      return { _: 'messages.availableReactionsNotModified' }
     }
   })
 

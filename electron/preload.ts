@@ -477,8 +477,26 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:send-scheduled-message-now', { accountId, chatId, messageId }),
   deleteScheduledMessages: (accountId: string, chatId: string, messageIds: number[]): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-scheduled-messages', { accountId, chatId, messageIds }),
-  sendReaction: (accountId: string, chatId: string, messageId: number, reactionEmoji: string): Promise<boolean> =>
-    ipcRenderer.invoke('telegram:send-reaction', { accountId, chatId, messageId, reactionEmoji }),
+  sendReaction: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    reaction?: string | { emoji?: string; customEmojiId?: string } | Array<string | { emoji?: string; customEmojiId?: string }>,
+    options?: { big?: boolean; addToRecent?: boolean }
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-reaction', { accountId, chatId, messageId, reaction, options }),
+  getMessageReactionsList: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    options?: { reaction?: string | { emoji?: string; customEmojiId?: string }; offset?: string; limit?: number }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-message-reactions-list', { accountId, chatId, messageId, options }),
+  getAvailableReactions: (
+    accountId: string,
+    hash?: number
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-available-reactions', { accountId, hash }),
   sendVote: (accountId: string, chatId: string, messageId: number, options: string[]): Promise<boolean> =>
     ipcRenderer.invoke('telegram:send-vote', { accountId, chatId, messageId, options }),
   createPoll: (
