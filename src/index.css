@@ -820,3 +820,19 @@ textarea:focus-visible {
   will-change: transform;
   transform: translateZ(0);
 }
+
+/* ==========================================================================
+   Phase 117: Real-Time Glassmorphism & Adaptive Blur Shaders
+   Frosted glass backdrop filters, graceful solid fallbacks, and refraction borders
+   ========================================================================== */
+.adaptive-frosted-glass {
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  background-color: rgba(18, 24, 38, 0.78);
+  contain: paint;
+}
+
+.glass-refraction-border {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
