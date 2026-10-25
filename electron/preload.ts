@@ -18,6 +18,7 @@ import {
   SendMessageOptions,
   WebPagePreview,
   InstantViewArticle,
+  DiscussionThreadInfo,
   BotCallbackResult,
   CustomEmojiPayload,
   ForumTopicItem,
@@ -450,6 +451,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('web:get-link-preview', { url }),
   getInstantView: (accountId: string, url: string, hash?: number): Promise<InstantViewArticle | null> =>
     ipcRenderer.invoke('telegram:get-instant-view', { accountId, url, hash }),
+  getDiscussionMessage: (accountId: string, peerId: string, msgId: number): Promise<DiscussionThreadInfo | null> =>
+    ipcRenderer.invoke('telegram:get-discussion-message', { accountId, peerId, msgId }),
+  setDiscussionGroup: (accountId: string, broadcastId: string, groupId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-discussion-group', { accountId, broadcastId, groupId }),
 
   // Global Telegram Search & Historical Messages
   searchPublicPeers: (accountId: string, query: string): Promise<DialogItem[]> =>

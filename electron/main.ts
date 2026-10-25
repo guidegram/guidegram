@@ -1712,6 +1712,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-discussion-message', async (_event, { accountId, peerId, msgId }: { accountId: string; peerId: string; msgId: number }) => {
+    try {
+      return await accountManager.getDiscussionMessage(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] telegram:get-discussion-message error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:set-discussion-group', async (_event, { accountId, broadcastId, groupId }: { accountId: string; broadcastId: string; groupId: string }) => {
+    try {
+      return await accountManager.setDiscussionGroup(accountId, broadcastId, groupId)
+    } catch (err: any) {
+      Logger.warn('[IPC] telegram:set-discussion-group error:', err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:test-proxy-ping', async (_event, { proxy }) => {
     return ProxyManager.testProxyPing(proxy)
   })

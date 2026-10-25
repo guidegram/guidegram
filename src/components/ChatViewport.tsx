@@ -4269,6 +4269,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </button>
           )}
 
+          {/* Linked Discussion Group Navigator (Telegram Desktop Parity) */}
+          {(chatDetails?.linkedChatId || chatDetails?.hasDiscussionGroup) && onSelectUserOrChat && (
+            <button
+              type="button"
+              onClick={() => onSelectUserOrChat(chatDetails.linkedChatId!)}
+              title={chatDetails.linkedChatTitle ? `Discussion: ${chatDetails.linkedChatTitle}` : 'Go to Discussion Group'}
+              className="p-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <MessageSquare className="w-4 h-4 text-cyan-400" />
+              <span className="hidden md:inline font-medium">Discussion</span>
+            </button>
+          )}
+
           {/* 1-on-1 Direct Voice Call Trigger */}
           {!chat.isGroup && !chat.isChannel && !chat.isBot && !chat.isSavedMessages && (
             <button

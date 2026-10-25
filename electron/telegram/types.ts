@@ -548,6 +548,21 @@ export interface ChatDetails {
   defaultRestrictions?: ChatRestrictionsPayload
   slowModeSeconds?: number
   joinRequestsEnabled?: boolean
+  linkedChatId?: string
+  linkedChatTitle?: string
+  hasDiscussionGroup?: boolean
+}
+
+export interface DiscussionThreadInfo {
+  channelId: string
+  channelPostId: number
+  discussionChatId: string
+  discussionChatTitle?: string
+  topMsgId?: number
+  readInboxMaxId?: number
+  readOutboxMaxId?: number
+  unreadCount?: number
+  messages?: MessageItem[]
 }
 
 export type ChatMemberStatus = 'creator' | 'admin' | 'member' | 'restricted' | 'banned' | 'left'

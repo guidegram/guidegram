@@ -61,6 +61,7 @@ import {
   ChatDetails,
   WebPagePreview,
   InstantViewArticle,
+  DiscussionThreadInfo,
   ReplyInfo,
   MessageEntityItem,
   PinnedMessageItem,
@@ -4613,6 +4614,12 @@ export class AccountManager {
           ? (isCreator || Boolean(adminRights?.postMessages))
           : !c?.defaultBannedRights?.sendMessages
 
+        const rawLinkedId = res.fullChat?.linkedChatId
+        const linkedChatId = rawLinkedId && rawLinkedId !== 0 ? `-100${rawLinkedId}` : undefined
+        const linkedChatObj = linkedChatId ? (res.chats || []).find((x: any) => x.id?.toString() === rawLinkedId?.toString()) : undefined
+        const linkedChatTitle = linkedChatObj?.title
+        const hasDiscussionGroup = Boolean(linkedChatId)
+
         details = {
           id: chatId,
           title: c?.title || 'Channel',
@@ -4662,6 +4669,9 @@ export class AccountManager {
             pinMessages: isCreator || Boolean(adminRights?.pinMessages) || !c?.defaultBannedRights?.pinMessages,
             changeInfo: isCreator || Boolean(adminRights?.changeInfo) || !c?.defaultBannedRights?.changeInfo,
           },
+          linkedChatId,
+          linkedChatTitle,
+          hasDiscussionGroup,
         }
       } else if (inputPeer._ === 'inputPeerChat') {
         const res: any = await holder.client.call({
@@ -11962,6 +11972,112 @@ export class AccountManager {
     } catch (err) {
       Logger.warn(`[AccountManager] getInstantView failed for ${url}:`, err)
       return buildReaderFallbackArticle(url, undefined, { title: url })
+    }
+  }
+
+  /**
+   * Telegram Channel Discussion Groups: messages.getDiscussionMessage
+   * Resolves linked discussion thread, comment thread messages and unread counters
+   */
+  public async getDiscussionMessage(
+    accountId: string,
+    peerId: string,
+    msgId: number
+  ): Promise<DiscussionThreadInfo | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'messages.getDiscussionMessage',
+        peer: inputPeer,
+        msgId,
+      } as any)
+
+      if (!res) return null
+
+      // Find discussion chat
+      let discussionChatId = ''
+      let discussionChatTitle: string | undefined
+      if (res.chats && res.chats.length > 0) {
+        const c = res.chats[0]
+        const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
+        discussionChatId = isChan ? `-100${c.id}` : `-${c.id}`
+        discussionChatTitle = c.title
+      }
+
+      const rawMessages = res.messages || []
+      const messages: MessageItem[] = []
+      for (const m of rawMessages) {
+        if (m._ === 'messageEmpty') continue
+        messages.push({
+          id: m.id,
+          chatId: discussionChatId || peerId,
+          accountId,
+          text: m.message || '',
+          date: m.date || 0,
+          isOutgoing: m.out || false,
+        })
+      }
+
+      return {
+        channelId: peerId,
+        channelPostId: msgId,
+        discussionChatId,
+        discussionChatTitle,
+        topMsgId: res.maxId,
+        readInboxMaxId: res.readInboxMaxId,
+        readOutboxMaxId: res.readOutboxMaxId,
+        unreadCount: res.unreadCount,
+        messages,
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getDiscussionMessage error for ${peerId}:${msgId}:`, err?.message || err)
+      return null
+    }
+  }
+
+  /**
+   * Telegram Channel Discussion Groups: channels.setDiscussionGroup
+   * Links or unlinks a discussion group to a broadcast channel
+   */
+  public async setDiscussionGroup(
+    accountId: string,
+    broadcastId: string,
+    groupId: string
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const channelPeer = await this.resolveInputPeer(accountId, broadcastId)
+      const inputChannel = {
+        _: 'inputChannel',
+        channelId: (channelPeer as any).channelId,
+        accessHash: (channelPeer as any).accessHash,
+      }
+
+      let broadcastGroup: any = { _: 'inputChannelEmpty' }
+      if (groupId && groupId !== '0' && groupId !== '') {
+        const groupPeer = await this.resolveInputPeer(accountId, groupId)
+        broadcastGroup = {
+          _: 'inputChannel',
+          channelId: (groupPeer as any).channelId,
+          accessHash: (groupPeer as any).accessHash,
+        }
+      }
+
+      const res: any = await holder.client.call({
+        _: 'channels.setDiscussionGroup',
+        channel: inputChannel,
+        broadcastGroup,
+      } as any)
+
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] setDiscussionGroup error for ${broadcastId}:`, err?.message || err)
+      throw err
     }
   }
 }
