@@ -54,6 +54,9 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
   const { t } = useI18n()
   const [isLoading, setIsLoading] = useState(true)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [biometryAccessGranted, setBiometryAccessGranted] = useState(true)
+  const [biometryToken, setBiometryToken] = useState('guidegram_secure_biometric_token_sample')
   const [copied, setCopied] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -92,13 +95,15 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
 
   // Sync current viewport metrics to iframe
   const syncViewport = useCallback(() => {
-    const currentHeight = containerRef.current?.clientHeight || (isExpanded ? 780 : 640)
+    const currentHeight = isFullscreen
+      ? window.innerHeight
+      : containerRef.current?.clientHeight || (isExpanded ? 780 : 640)
     postEventToWebApp('viewport_changed', {
       height: currentHeight,
       is_state_stable: true,
-      is_expanded: isExpanded,
+      is_expanded: isExpanded || isFullscreen,
     })
-  }, [isExpanded, postEventToWebApp])
+  }, [isExpanded, isFullscreen, postEventToWebApp])
 
   // Sync theme palette parameters to iframe
   const syncThemeParams = useCallback(() => {
@@ -240,6 +245,57 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
           }
           break
 
+        case 'web_app_request_fullscreen':
+          setIsFullscreen(true)
+          postEventToWebApp('fullscreen_changed', { is_fullscreen: true })
+          break
+
+        case 'web_app_exit_fullscreen':
+          setIsFullscreen(false)
+          postEventToWebApp('fullscreen_changed', { is_fullscreen: false })
+          break
+
+        case 'web_app_biometry_get_info':
+          postEventToWebApp('biometry_info_received', {
+            available: true,
+            type: 'finger',
+            access_requested: true,
+            access_granted: biometryAccessGranted,
+            token_saved: Boolean(biometryToken),
+            device_id: 'guidegram-desktop-secure-enclave',
+          })
+          break
+
+        case 'web_app_biometry_request_access':
+          setBiometryAccessGranted(true)
+          postEventToWebApp('biometry_info_received', {
+            available: true,
+            type: 'finger',
+            access_requested: true,
+            access_granted: true,
+            token_saved: Boolean(biometryToken),
+            device_id: 'guidegram-desktop-secure-enclave',
+          })
+          break
+
+        case 'web_app_biometry_request_auth':
+          postEventToWebApp('biometry_auth_requested', {
+            status: 'authorized',
+            token: biometryToken || 'guidegram-biometry-auth-token-valid',
+          })
+          break
+
+        case 'web_app_biometry_update_token':
+          if (eventData?.token) {
+            setBiometryToken(eventData.token)
+          }
+          postEventToWebApp('biometry_token_updated', { status: 'updated' })
+          break
+
+        case 'web_app_biometry_open_settings':
+          setSettingsButtonVisible(true)
+          break
+
         default:
           break
       }
@@ -301,6 +357,14 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
     postEventToWebApp('settings_button_pressed')
   }
 
+  const handleToggleFullscreen = () => {
+    setIsFullscreen((prev) => {
+      const next = !prev
+      postEventToWebApp('fullscreen_changed', { is_fullscreen: next })
+      return next
+    })
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md"
@@ -315,10 +379,12 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
         style={{
           backgroundColor: customBgColor || '#0f1117',
         }}
-        className={`relative flex flex-col border border-white/10 rounded-3xl shadow-2xl overflow-hidden transition-colors ${
-          isExpanded
-            ? 'w-full h-full max-w-5xl max-h-[94vh]'
-            : 'w-full max-w-md h-[760px] max-h-[90vh]'
+        className={`relative flex flex-col border border-white/10 shadow-2xl overflow-hidden transition-all ${
+          isFullscreen
+            ? 'fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none z-50'
+            : isExpanded
+            ? 'w-full h-full max-w-5xl max-h-[94vh] rounded-3xl'
+            : 'w-full max-w-md h-[760px] max-h-[90vh] rounded-3xl'
         } ${hapticTriggered ? 'ring-2 ring-primary-500/50' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -350,6 +416,9 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
               <div className="flex items-center gap-1.5 truncate">
                 <span className="text-xs font-bold text-white truncate">{title || botName || 'Mini App'}</span>
                 <ShieldCheck className="w-3 h-3 text-accent-cyan shrink-0" />
+                <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono">
+                  BioID
+                </span>
               </div>
               {botUsername && (
                 <span className="text-[10px] text-gray-400 font-mono truncate">@{botUsername}</span>
@@ -392,6 +461,16 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
               ) : (
                 <Maximize2 className="w-3.5 h-3.5" />
               )}
+            </button>
+
+            {/* Fullscreen toggle button (Telegram Bot API 8.0) */}
+            <button
+              type="button"
+              onClick={handleToggleFullscreen}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              className="p-2 rounded-xl text-gray-400 hover:text-primary-400 hover:bg-white/10 transition-colors"
+            >
+              <Smartphone className={`w-3.5 h-3.5 ${isFullscreen ? 'text-primary-400' : ''}`} />
             </button>
 
             {/* Pop-out into Electron Standalone Window */}

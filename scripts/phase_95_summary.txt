@@ -1,0 +1,15 @@
+Phase 95: Telegram Bot WebApp Fullscreen & Biometric Authentication Protocol
+
+- Implemented Telegram Mini Apps (TMA) Bot API 8.0 Fullscreen Protocol:
+  - Listened for `web_app_request_fullscreen` and `web_app_exit_fullscreen` postMessages from iframe.
+  - Dynamically updated modal container layout (`fixed inset-0 w-screen h-screen rounded-none z-50`).
+  - Dispatched `fullscreen_changed` with updated `is_fullscreen` state back to iframe.
+  - Added header Fullscreen toggle button.
+- Implemented Telegram Mini Apps BiometricManager Protocol:
+  - Handled `web_app_biometry_get_info` responding with `biometry_info_received` (available, type: finger, access_granted, token_saved, device_id).
+  - Handled `web_app_biometry_request_access` updating permissions and returning current status.
+  - Handled `web_app_biometry_request_auth` dispatching `biometry_auth_requested` with status authorized and security token.
+  - Handled `web_app_biometry_update_token` dispatching `biometry_token_updated`.
+  - Added BioID security badge in MiniAppModal header.
+- Created and passed test suite `tests/miniapp_fullscreen_biometrics_verification.mjs` (8/8 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.
