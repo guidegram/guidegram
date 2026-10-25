@@ -11999,6 +11999,39 @@ export class AccountManager {
     }
   }
 
+  public async accountResetPassword(accountId: string): Promise<{ status: 'ok' | 'wait' | 'failed'; retryDate?: number; untilDate?: number; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const res: any = await holder.client.call({ _: 'account.resetPassword' })
+      if (res?._ === 'account.resetPasswordOk') {
+        return { status: 'ok' }
+      } else if (res?._ === 'account.resetPasswordRequestedWait') {
+        return { status: 'wait', untilDate: res.untilDate }
+      } else if (res?._ === 'account.resetPasswordFailedWait') {
+        return { status: 'failed', retryDate: res.retryDate }
+      }
+      return { status: 'ok' }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] account.resetPassword error:', err)
+      return { status: 'failed', error: err?.message || String(err) }
+    }
+  }
+
+  public async accountDeclinePasswordReset(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({ _: 'account.declinePasswordReset' })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.declinePasswordReset error:', err)
+      return false
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

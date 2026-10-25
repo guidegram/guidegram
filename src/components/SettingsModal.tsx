@@ -388,6 +388,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [twoFactorPassword, setTwoFactorPassword] = useState('')
   const [twoFactorHint, setTwoFactorHint] = useState('')
   const [twoFactorEmail, setTwoFactorEmail] = useState('')
+  const [twoFactorResetStatus, setTwoFactorResetStatus] = useState<{
+    status?: 'ok' | 'wait' | 'failed'
+    untilDate?: number
+    message?: string
+  } | null>(null)
+  const [isResettingTwoFactor, setIsResettingTwoFactor] = useState(false)
   const [blockedSearchQuery, setBlockedSearchQuery] = useState('')
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null)
 
@@ -396,6 +402,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const showToast = (msg: string) => {
     setFeedbackToast(msg)
     setTimeout(() => setFeedbackToast(null), 2500)
+  }
+
+  const activeAccountId = accounts[0]?.id || ''
+
+  const handleResetTwoFactor = async () => {
+    if (!activeAccountId) return
+    setIsResettingTwoFactor(true)
+    try {
+      if ((window.guidegram as any).accountResetPassword) {
+        const res = await (window.guidegram as any).accountResetPassword(activeAccountId)
+        if (res.status === 'ok') {
+          showToast('2FA Cloud Password has been reset.')
+          setTwoFactorResetStatus(null)
+          setActiveSubModal(null)
+        } else if (res.status === 'wait') {
+          const dateStr = res.untilDate ? new Date(res.untilDate * 1000).toLocaleDateString() : '7 days'
+          setTwoFactorResetStatus({
+            status: 'wait',
+            untilDate: res.untilDate,
+            message: `Reset requested. Telegram security hold active until ${dateStr}.`,
+          })
+          showToast(`Password reset initiated. Security hold active.`)
+        } else {
+          showToast(res.error || 'Password reset failed')
+        }
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Error resetting password')
+    } finally {
+      setIsResettingTwoFactor(false)
+    }
+  }
+
+  const handleDeclineResetTwoFactor = async () => {
+    if (!activeAccountId) return
+    try {
+      if ((window.guidegram as any).accountDeclinePasswordReset) {
+        const ok = await (window.guidegram as any).accountDeclinePasswordReset(activeAccountId)
+        if (ok) {
+          setTwoFactorResetStatus(null)
+          showToast('Pending password reset cancelled.')
+        }
+      }
+    } catch {
+      showToast('Failed to cancel password reset.')
+    }
   }
 
   const openPrivacyRule = (
@@ -3295,6 +3347,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500"
                 />
               </div>
+            </div>
+
+            {/* 2FA Password Reset / Recovery Protocol */}
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-300">Forgot Cloud Password?</span>
+                {twoFactorResetStatus?.status === 'wait' ? (
+                  <button
+                    type="button"
+                    onClick={handleDeclineResetTwoFactor}
+                    className="text-xs text-rose-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Cancel Pending Reset
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResetTwoFactor}
+                    disabled={isResettingTwoFactor}
+                    className="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer"
+                  >
+                    {isResettingTwoFactor ? 'Initiating...' : 'Request 2FA Reset'}
+                  </button>
+                )}
+              </div>
+              {twoFactorResetStatus?.message ? (
+                <p className="text-[11px] text-amber-200">{twoFactorResetStatus.message}</p>
+              ) : (
+                <p className="text-[11px] text-gray-400">
+                  If you lost your cloud password and have no recovery email, Telegram initiates a 7-day security hold before resetting your 2FA password.
+                </p>
+              )}
             </div>
 
             <div className="pt-2 flex items-center justify-between border-t border-white/5">

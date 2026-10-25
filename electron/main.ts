@@ -4102,6 +4102,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:account-reset-password', async (_event, { accountId }) => {
+    try {
+      return await accountManager.accountResetPassword(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] accountResetPassword error:`, err)
+      return { status: 'failed', error: err?.message || String(err) }
+    }
+  })
+
+  ipcMain.handle('telegram:account-decline-password-reset', async (_event, { accountId }) => {
+    try {
+      return await accountManager.accountDeclinePasswordReset(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] accountDeclinePasswordReset error:`, err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

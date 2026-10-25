@@ -1607,6 +1607,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-channel-boosts', { accountId, channelId }),
   getTwoFactorStatus: (accountId: string): Promise<TwoFactorStatus | null> =>
     ipcRenderer.invoke('telegram:get-two-factor-status', { accountId }),
+  accountResetPassword: (
+    accountId: string
+  ): Promise<{ status: 'ok' | 'wait' | 'failed'; retryDate?: number; untilDate?: number; error?: string }> =>
+    ipcRenderer.invoke('telegram:account-reset-password', { accountId }),
+  accountDeclinePasswordReset: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:account-decline-password-reset', { accountId }),
   getMyFullProfile: (accountId: string): Promise<MyFullProfile | null> =>
     ipcRenderer.invoke('telegram:get-my-full-profile', { accountId }),
   getPrivacySettings: (accountId: string): Promise<PrivacySecuritySettings> =>

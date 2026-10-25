@@ -1,0 +1,13 @@
+Phase 98: Telegram Account Cloud Password 2FA Reset & Recovery Protocol
+
+- Verified MTProto `account.resetPassword` and `account.declinePasswordReset` methods:
+  - Supports `account.resetPasswordOk`, `account.resetPasswordRequestedWait` (with security hold `until_date`), and `account.resetPasswordFailedWait` (`retry_date`).
+- Implemented `accountResetPassword` and `accountDeclinePasswordReset` in `AccountManager`.
+- Wired IPC handlers in `electron/main.ts` (`telegram:account-reset-password`, `telegram:account-decline-password-reset`).
+- Exposed bridges in `electron/preload.ts`.
+- Integrated 2FA Password Reset & Recovery Protocol in `src/components/SettingsModal.tsx`:
+  - Added "Forgot Cloud Password?" recovery section inside Two-Step Verification submodal.
+  - Added "Request 2FA Reset" trigger with Telegram security hold feedback.
+  - Added "Cancel Pending Reset" trigger calling `accountDeclinePasswordReset`.
+- Created and passed test suite `tests/two_factor_cloud_password_reset_verification.mjs` (11/11 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.
