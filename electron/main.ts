@@ -20,6 +20,7 @@ import { SafeDownloader } from './safeDownloader'
 import { crashRecoveryManager } from './crashRecovery'
 import { StorageGuardrails } from './storageGuardrails'
 import { DeepLinkHandler } from './deepLinkHandler'
+import { WebrtcSecurityGuard } from './webrtcSecurityGuard'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -44,6 +45,9 @@ app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('enable-zero-copy')
 app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization')
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+
+// WebRTC Media & Calling IP Leak Prevention (MM-015 / Layer 08)
+WebrtcSecurityGuard.applyCommandLineSwitches(app, false)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

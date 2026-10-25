@@ -1,0 +1,6 @@
+Phase 26: Secure WebRTC Media Constraints & IP Leak Prevention (Layer 08 / Calling Guard)
+- Created `electron/webrtcSecurityGuard.ts` (`WebrtcSecurityGuard`) providing Chromium command-line switches and candidate sanitization.
+- Integrated `force-webrtc-ip-handling-policy` (`default_public_interface_only` and `disable_non_proxied_udp`) into `electron/main.ts` startup switches, preventing WebRTC UDP from leaking the user's real public/private IP addresses or bypassing active proxies.
+- Implemented `WebrtcSecurityGuard.sanitizeIceCandidate` filtering out private RFC1918 IPv4 ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`, `169.254.0.0/16`) and private IPv6 ranges (`fc00::/7`, `fe80::/10`, `::1`).
+- Implemented `WebrtcSecurityGuard.getRtcConfiguration` enforcing strict relay fallback (`iceTransportPolicy: 'relay'`) when P2P calling privacy is restricted to contacts or nobody, mirroring official Telegram Desktop security specifications.
+- Created `tests/webrtc_security_verification.mjs` verifying all 5 security invariants; full build passed cleanly with zero errors.
