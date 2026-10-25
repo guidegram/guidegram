@@ -7,17 +7,23 @@ import logoImg from '../assets/logo.png'
 interface TitleBarProps {
   activeAccount: AccountInfo | null
   ghostMode: boolean
+  onToggleGhostMode?: () => void
   onRequestClose?: () => void
   onToggleMainMenu?: () => void
   onOpenMcpHub?: () => void
+  onCheckUpdate?: () => void
+  isCheckingUpdate?: boolean
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
   activeAccount,
   ghostMode,
+  onToggleGhostMode,
   onRequestClose,
   onToggleMainMenu,
   onOpenMcpHub,
+  onCheckUpdate,
+  isCheckingUpdate = false,
 }) => {
   const [isMax, setIsMax] = useState(false)
 
@@ -60,9 +66,22 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </div>
           <span className="text-xs font-bold text-gray-200 group-hover:text-primary-300 tracking-wide transition-colors">Guidegram</span>
         </motion.button>
-        <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-primary-600/20 text-primary-300 border border-primary-500/30 rounded-md">
-          v{__APP_VERSION__}
-        </span>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          type="button"
+          disabled={isCheckingUpdate}
+          onClick={onCheckUpdate}
+          title="Click to check for Guidegram updates (GitHub Releases)"
+          className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 bg-primary-600/20 hover:bg-primary-600/35 text-primary-300 hover:text-white border border-primary-500/30 hover:border-primary-400/50 rounded-md transition-all cursor-pointer shadow-sm disabled:opacity-50"
+        >
+          {isCheckingUpdate ? (
+            <span className="w-2.5 h-2.5 border border-primary-300 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Sparkles className="w-2.5 h-2.5 text-primary-400" />
+          )}
+          <span>v{__APP_VERSION__}</span>
+        </motion.button>
         <span className="text-[10px] font-medium px-1.5 py-0.2 bg-white/5 text-gray-400 border border-white/10 rounded-md">
           Portable
         </span>
@@ -84,18 +103,23 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         )}
       </div>
 
-      {/* Middle Status / Drag Area */}
+      {/* Middle Status / Drag Area - Interactive Ghost Mode Toggle */}
       <div className="flex-1 h-full flex items-center justify-center titlebar-drag">
-        {ghostMode && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-1.5 text-[11px] text-accent-violet font-semibold bg-accent-violet/10 px-2.5 py-0.5 rounded-full border border-accent-violet/20 titlebar-no-drag shadow-sm shadow-accent-violet/20"
-          >
-            <Sparkles className="w-3 h-3 text-accent-violet animate-pulse" />
-            <span>Ghost Mode Active</span>
-          </motion.div>
-        )}
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          type="button"
+          onClick={onToggleGhostMode}
+          title={ghostMode ? 'Ghost Mode is ON (Invisible read/typing). Click to turn OFF' : 'Ghost Mode is OFF. Click to turn ON'}
+          className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border titlebar-no-drag transition-all cursor-pointer shadow-sm ${
+            ghostMode
+              ? 'text-accent-violet bg-accent-violet/15 border-accent-violet/30 hover:bg-accent-violet/25 shadow-accent-violet/20'
+              : 'text-gray-400 bg-white/5 border-white/10 hover:text-gray-200 hover:bg-white/10'
+          }`}
+        >
+          <Sparkles className={`w-3 h-3 ${ghostMode ? 'text-accent-violet animate-pulse' : 'text-gray-500'}`} />
+          <span>{ghostMode ? 'Ghost Mode Active' : 'Ghost Mode Off'}</span>
+        </motion.button>
       </div>
 
       {/* Right Window Controls */}
