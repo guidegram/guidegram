@@ -55,6 +55,10 @@ try {
   // ESM test runner fallback
 }
 
+import { IpcPayloadRedactor } from './ipcPayloadRedactor'
+
+let payloadRedactorInstance: any = IpcPayloadRedactor
+
 export interface IpcSenderValidationResult {
   valid: boolean
   reason?: string
@@ -69,12 +73,13 @@ export interface IpcSecurityTelemetry {
 }
 
 /**
- * IpcSecurityFilter (Layer 02 / Layer 08 / MM-015)
- * Strict IPC Sender Frame Verification & Privilege Boundary Guard.
+ * IpcSecurityFilter (Layer 02 / Layer 08 / MM-015 / MM-004)
+ * Strict IPC Sender Frame Verification, Privilege Boundary Guard & Return Value Redactor.
  *
  * Verifies that every IPC call originates from a legitimate, privileged top-level frame
  * (file:// or localhost dev server). Prevents subframe privilege escalation,
- * malicious WebView injection, and rogue third-party frame IPC spoofing.
+ * malicious WebView injection, rogue third-party frame IPC spoofing, and deeply redacts
+ * all return values and errors before they cross back to the Renderer.
  */
 export class IpcSecurityFilter {
   private static totalChecked: number = 0
@@ -136,12 +141,13 @@ export class IpcSecurityFilter {
   }
 
   /**
-   * Wraps an IPC handler with strict sender-frame verification and rate limiting.
+   * Wraps an IPC handler with strict sender-frame verification, rate limiting,
+   * error sanitization, and deep credential redaction.
    */
   public static wrapHandler(
     channel: string,
     handler: (event: any, ...args: any[]) => Promise<any> | any,
-    options: { allowSubFrames?: boolean; tier?: string } = {}
+    options: { allowSubFrames?: boolean; tier?: string; maskPhoneNumbers?: boolean } = {}
   ): (event: any, ...args: any[]) => Promise<any> {
     return async (event: any, ...args: any[]) => {
       // 1. Strict Sender Frame Verification
@@ -158,9 +164,33 @@ export class IpcSecurityFilter {
         throw new Error(`[RateLimitExceeded] Too many requests on channel '${channel}'`)
       }
 
-      // 3. Execute genuine handler
-      return await handler(event, ...args)
+      // 3. Execute genuine handler with deep return value redaction and error sanitization
+      try {
+        const rawResult = await handler(event, ...args)
+        return payloadRedactorInstance.deepRedact(rawResult, {
+          channel,
+          maskPhoneNumbers: options.maskPhoneNumbers,
+        })
+      } catch (err: any) {
+        const safeError = payloadRedactorInstance.sanitizeError(err, { channel })
+        const sanitizedErr = new Error(safeError.message)
+        if (safeError.code) {
+          ;(sanitizedErr as any).code = safeError.code
+        }
+        throw sanitizedErr
+      }
     }
+  }
+
+  /**
+   * Safe wrapper for webContents.send with deep credential redaction.
+   */
+  public static safeSend(
+    webContents: any,
+    channel: string,
+    ...args: any[]
+  ): void {
+    payloadRedactorInstance.safeSend(webContents, channel, ...args)
   }
 
   /**
@@ -170,7 +200,7 @@ export class IpcSecurityFilter {
     ipcMain: any,
     channel: string,
     handler: (event: any, ...args: any[]) => Promise<any> | any,
-    options: { allowSubFrames?: boolean; tier?: string } = {}
+    options: { allowSubFrames?: boolean; tier?: string; maskPhoneNumbers?: boolean } = {}
   ): void {
     if (!ipcMain || typeof ipcMain.handle !== 'function') return
     ipcMain.handle(channel, this.wrapHandler(channel, handler, options))

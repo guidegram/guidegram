@@ -37,6 +37,7 @@ import { sqliteDeadlockGuard } from './telegram/sqliteDeadlockGuard'
 import { dragDropSanitizer } from './dragDropSanitizer'
 import { memoryPressureManager } from './memoryPressureManager'
 import { swrCache } from './swrCache'
+import { IpcPayloadRedactor } from './ipcPayloadRedactor'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -3821,6 +3822,19 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:force-memory-cleanup', async () => {
     await memoryPressureManager.runCriticalEviction()
+    return { ok: true }
+  })
+
+  ipcMain.handle('system:get-ipc-redaction-telemetry', async () => {
+    return IpcPayloadRedactor.getTelemetry()
+  })
+
+  ipcMain.handle('system:redact-ipc-payload', async (_event, payload, options) => {
+    return IpcPayloadRedactor.deepRedact(payload, options)
+  })
+
+  ipcMain.handle('system:reset-ipc-redaction-telemetry', async () => {
+    IpcPayloadRedactor.resetTelemetry()
     return { ok: true }
   })
 

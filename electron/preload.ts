@@ -1388,6 +1388,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('system:get-memory-pressure-telemetry'),
   forceMemoryCleanup: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('system:force-memory-cleanup'),
+  getIpcRedactionTelemetry: (): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('system:get-ipc-redaction-telemetry'),
+  redactIpcPayload: (payload: any, options?: Record<string, any>): Promise<any> =>
+    ipcRenderer.invoke('system:redact-ipc-payload', payload, options),
+  resetIpcRedactionTelemetry: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('system:reset-ipc-redaction-telemetry'),
 
   // Master Local Passcode & Key Derivation (Layer 08 / MM-004)
   passcode: {
