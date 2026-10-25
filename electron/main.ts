@@ -1717,8 +1717,32 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('web:get-link-preview', async (_event, { url }: { url: string }) => {
+  ipcMain.handle('web:get-link-preview', async (_event, { url, accountId }: { url: string; accountId?: string }) => {
+    if (accountId) {
+      try {
+        const mtprotoPreview = await accountManager.getWebPagePreview(accountId, url)
+        if (mtprotoPreview) return mtprotoPreview
+      } catch (_) {}
+    }
     return scrapeLinkPreview(url)
+  })
+
+  ipcMain.handle('telegram:get-webpage-preview', async (_event, { accountId, message, entities }: { accountId: string; message: string; entities?: any }) => {
+    try {
+      return await accountManager.getWebPagePreview(accountId, message, entities)
+    } catch (err: any) {
+      Logger.warn('[IPC] telegram:get-webpage-preview error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-webpage', async (_event, { accountId, url, hash }: { accountId: string; url: string; hash?: number }) => {
+    try {
+      return await accountManager.getWebPage(accountId, url, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] telegram:get-webpage error:', err)
+      return null
+    }
   })
 
   ipcMain.handle('telegram:get-instant-view', async (_event, { accountId, url, hash }: { accountId: string; url: string; hash?: number }) => {

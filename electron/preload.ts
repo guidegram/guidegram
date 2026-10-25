@@ -462,8 +462,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:toggle-chat-notifications', { accountId, chatId, mute }),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('system:open-external', { url }),
-  getLinkPreview: (url: string): Promise<WebPagePreview | null> =>
-    ipcRenderer.invoke('web:get-link-preview', { url }),
+  getLinkPreview: (url: string, accountId?: string): Promise<WebPagePreview | null> =>
+    ipcRenderer.invoke('web:get-link-preview', { url, accountId }),
+  getWebPagePreview: (accountId: string, message: string, entities?: any): Promise<WebPagePreview | null> =>
+    ipcRenderer.invoke('telegram:get-webpage-preview', { accountId, message, entities }),
+  getWebPage: (accountId: string, url: string, hash?: number): Promise<WebPagePreview | null> =>
+    ipcRenderer.invoke('telegram:get-webpage', { accountId, url, hash }),
   getInstantView: (accountId: string, url: string, hash?: number): Promise<InstantViewArticle | null> =>
     ipcRenderer.invoke('telegram:get-instant-view', { accountId, url, hash }),
   getDiscussionMessage: (accountId: string, peerId: string, msgId: number): Promise<DiscussionThreadInfo | null> =>

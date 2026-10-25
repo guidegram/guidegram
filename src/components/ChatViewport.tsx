@@ -236,11 +236,12 @@ const rendererPreviewCache = new Map<string, WebPagePreview | null>()
 interface LinkPreviewCardProps {
   url: string
   existingPreview?: WebPagePreview
+  accountId?: string
   onSafeOpen: (url: string) => void
   onOpenInstantView?: (url: string, preview?: WebPagePreview) => void
 }
 
-const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview, onSafeOpen, onOpenInstantView }) => {
+const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview, accountId, onSafeOpen, onOpenInstantView }) => {
   const [preview, setPreview] = useState<WebPagePreview | null>(
     existingPreview || rendererPreviewCache.get(url) || null
   )
@@ -256,7 +257,7 @@ const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview,
     let isMounted = true
     if (window.guidegram?.getLinkPreview) {
       window.guidegram
-        .getLinkPreview(url)
+        .getLinkPreview(url, accountId)
         .then((res) => {
           if (!isMounted) return
           rendererPreviewCache.set(url, res)
@@ -5249,6 +5250,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         <LinkPreviewCard
                           url={url}
                           existingPreview={msg.webPage}
+                          accountId={chat?.accountId}
                           onSafeOpen={handleSafeOpenUrl}
                           onOpenInstantView={handleOpenInstantView}
                         />

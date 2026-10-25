@@ -12298,7 +12298,8 @@ export class AccountManager {
           hash: hash || 0,
         } as any)
         if (res) {
-          const parsed = parseMtprotoPageToArticle(url, res)
+          const wp = res.webpage || (res._ === 'webPage' ? res : null)
+          const parsed = parseMtprotoPageToArticle(url, wp || res)
           if (parsed) return parsed
         }
       }
@@ -12309,6 +12310,109 @@ export class AccountManager {
     } catch (err) {
       Logger.warn(`[AccountManager] getInstantView failed for ${url}:`, err)
       return buildReaderFallbackArticle(url, undefined, { title: url })
+    }
+  }
+
+  /**
+   * Telegram WebPage Preview: messages.getWebPagePreview
+   * Evaluates text/URL with server-side OG parsing and Instant View detection
+   */
+  public async getWebPagePreview(
+    accountId: string,
+    messageText: string,
+    entities?: any
+  ): Promise<WebPagePreview | null> {
+    try {
+      const holder = this.clients.get(accountId)
+      if (!holder?.client) return null
+
+      const res: any = await holder.client.call({
+        _: 'messages.getWebPagePreview',
+        message: messageText,
+        entities: entities,
+      } as any)
+
+      if (!res) return null
+
+      const wp = res.webpage || (res._ === 'webPage' ? res : (res.media?.webpage || null))
+      if (!wp || wp._ === 'webPageEmpty' || wp._ === 'webPagePending') {
+        return null
+      }
+
+      let siteName = wp.site_name
+      let domain = siteName
+      try {
+        if (wp.url) {
+          domain = new URL(wp.url).hostname.replace(/^www\./i, '')
+          if (!siteName) siteName = domain
+        }
+      } catch (_) {}
+
+      const hasInstantView = Boolean(wp.cached_page || wp.cachedPage)
+      const preview: WebPagePreview = {
+        url: wp.url || wp.display_url || messageText,
+        siteName: siteName || domain,
+        domain: domain || siteName,
+        title: wp.title || undefined,
+        description: wp.description || undefined,
+        hasInstantView,
+        instantViewArticle: hasInstantView ? parseMtprotoPageToArticle(wp.url, wp) || undefined : undefined,
+      }
+
+      return preview
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getWebPagePreview failed:`, err)
+      return null
+    }
+  }
+
+  /**
+   * Telegram WebPage Full Details: messages.getWebPage
+   */
+  public async getWebPage(
+    accountId: string,
+    url: string,
+    hash: number = 0
+  ): Promise<WebPagePreview | null> {
+    try {
+      const holder = this.clients.get(accountId)
+      if (!holder?.client) return null
+
+      const res: any = await holder.client.call({
+        _: 'messages.getWebPage',
+        url,
+        hash: hash || 0,
+      } as any)
+
+      if (!res) return null
+
+      const wp = res.webpage || (res._ === 'webPage' ? res : null)
+      if (!wp || wp._ === 'webPageEmpty' || wp._ === 'webPagePending') {
+        return null
+      }
+
+      let siteName = wp.site_name
+      let domain = siteName
+      try {
+        if (wp.url) {
+          domain = new URL(wp.url).hostname.replace(/^www\./i, '')
+          if (!siteName) siteName = domain
+        }
+      } catch (_) {}
+
+      const hasInstantView = Boolean(wp.cached_page || wp.cachedPage)
+      return {
+        url: wp.url || wp.display_url || url,
+        siteName: siteName || domain,
+        domain: domain || siteName,
+        title: wp.title || undefined,
+        description: wp.description || undefined,
+        hasInstantView,
+        instantViewArticle: hasInstantView ? parseMtprotoPageToArticle(wp.url, wp) || undefined : undefined,
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getWebPage failed for ${url}:`, err)
+      return null
     }
   }
 
