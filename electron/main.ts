@@ -3673,6 +3673,10 @@ function setupIpcHandlers() {
     return IntegrityGuard.detectTamperedEnvironment(app.isPackaged)
   })
 
+  ipcMain.handle('system:get-rate-limit-metrics', async () => {
+    return globalIpcRateLimiter.getMetrics()
+  })
+
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
     Logger.error(`[Renderer Crash/Error] ${message}`, stack)
   })

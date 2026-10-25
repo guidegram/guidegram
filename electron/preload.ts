@@ -279,6 +279,13 @@ const guidegramAPI = {
     detectedEnvThreats: string[]
     timestamp: number
   }> => ipcRenderer.invoke('system:get-integrity-report'),
+  getRateLimitMetrics: (): Promise<{
+    totalRequests: number
+    allowedRequests: number
+    throttledRequests: number
+    activeBuckets: number
+    violationsByMethod: Record<string, number>
+  }> => ipcRenderer.invoke('system:get-rate-limit-metrics'),
   forwardMessages: (
     accountId: string,
     toChatId: string | string[],
