@@ -3960,7 +3960,9 @@ export class AccountManager {
     accountId: string,
     query: string,
     filterType = 'all',
-    limit = 40
+    limit = 40,
+    minDate = 0,
+    maxDate = 0
   ): Promise<MessageItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
@@ -3987,8 +3989,8 @@ export class AccountManager {
         _: 'messages.searchGlobal',
         q: query,
         filter: mtFilter,
-        minDate: 0,
-        maxDate: 0,
+        minDate: minDate || 0,
+        maxDate: maxDate || 0,
         offsetRate: 0,
         offsetPeer: { _: 'inputPeerEmpty' },
         offsetId: 0,

@@ -60,6 +60,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   const [globalPeers, setGlobalPeers] = useState<DialogItem[]>([])
   const [globalMessages, setGlobalMessages] = useState<MessageItem[]>([])
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false)
+  const [searchDateFilter, setSearchDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
   const [viewingStoryPeer, setViewingStoryPeer] = useState<{ id: string; title: string } | null>(null)
   const [isStoryComposerOpen, setIsStoryComposerOpen] = useState(false)
   const [activeStoryPeers, setActiveStoryPeers] = useState<ActiveStoryPeer[]>([])
@@ -268,12 +269,24 @@ export const ChatList: React.FC<ChatListProps> = ({
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const query = searchQuery.trim()
+        let minDate = 0
+        const nowSec = Math.floor(Date.now() / 1000)
+        if (searchDateFilter === 'today') {
+          minDate = nowSec - 24 * 3600
+        } else if (searchDateFilter === 'week') {
+          minDate = nowSec - 7 * 24 * 3600
+        } else if (searchDateFilter === 'month') {
+          minDate = nowSec - 30 * 24 * 3600
+        }
+
         const [peersRes, msgsRes] = await Promise.all([
           window.guidegram?.searchPublicPeers?.(account.id, query),
           window.guidegram?.searchGlobal?.(
             account.id,
             query,
-            searchFilter === 'all' ? undefined : searchFilter
+            searchFilter === 'all' ? undefined : searchFilter,
+            40,
+            minDate
           ),
         ])
 
@@ -293,7 +306,7 @@ export const ChatList: React.FC<ChatListProps> = ({
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     }
-  }, [searchQuery, searchFilter, account?.id, dialogs])
+  }, [searchQuery, searchFilter, searchDateFilter, account?.id, dialogs])
 
   // Format time (e.g. 14:20 or Yesterday)
   const formatTime = (timestamp?: number) => {
@@ -434,6 +447,30 @@ export const ChatList: React.FC<ChatListProps> = ({
                 </button>
               )
             })}
+
+            {/* Quick Date Range Indexing Pills */}
+            <div className="h-4 w-[1px] bg-white/10 shrink-0 mx-1" />
+            {(
+              [
+                { key: 'all', label: 'Anytime' },
+                { key: 'today', label: '24h' },
+                { key: 'week', label: '7d' },
+                { key: 'month', label: '30d' },
+              ] as const
+            ).map((df) => (
+              <button
+                key={df.key}
+                type="button"
+                onClick={() => setSearchDateFilter(df.key)}
+                className={`px-2 py-0.5 rounded-md text-[10px] transition-colors whitespace-nowrap cursor-pointer ${
+                  searchDateFilter === df.key
+                    ? 'bg-accent-cyan/20 text-accent-cyan font-bold border border-accent-cyan/30'
+                    : 'bg-white/5 hover:bg-white/10 text-gray-400'
+                }`}
+              >
+                {df.label}
+              </button>
+            ))}
           </div>
         )}
 

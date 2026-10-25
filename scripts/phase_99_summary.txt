@@ -1,0 +1,13 @@
+Phase 99: Telegram Account Global Search Filters & Date/Media Indexing Protocol
+
+- Extended MTProto `messages.searchGlobal` in `AccountManager`:
+  - Added support for `minDate` and `maxDate` parameters for temporal query scoping.
+  - Implemented mapping of media filters to official TL types: `inputMessagesFilterPhotoVideo`, `inputMessagesFilterDocument`, `inputMessagesFilterUrl`, `inputMessagesFilterMusic`, `inputMessagesFilterRoundVoice`, `inputMessagesFilterPinned`.
+- Wired IPC handler in `electron/main.ts` (`telegram:search-global`) passing `minDate` and `maxDate`.
+- Exposed updated API in `electron/preload.ts` (`searchGlobal`).
+- Enhanced search UI in `src/components/ChatList.tsx`:
+  - Added `searchDateFilter` state (`all`, `today`, `week`, `month`).
+  - Added interactive Quick Date Range Indexing Pills (`Anytime`, `24h`, `7d`, `30d`).
+  - Automatically calculates unix timestamp `minDate` (24 hours, 7 days, 30 days) on search execution.
+- Created and passed test suite `tests/global_search_filters_date_indexing_verification.mjs` (7/7 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.
