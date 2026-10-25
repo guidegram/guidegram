@@ -111,6 +111,7 @@ import { ChannelBoostModal } from './chat/ChannelBoostModal'
 import { LiveLocationModal } from './chat/LiveLocationModal'
 import { StarSubscriptionsModal } from './chat/StarSubscriptionsModal'
 import { BotMenuButtonConfigModal } from './chat/BotMenuButtonConfigModal'
+import { PaidMediaComposerModal } from './chat/PaidMediaComposerModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
@@ -728,6 +729,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isLiveLocationModalOpen, setIsLiveLocationModalOpen] = useState(false)
   const [isStarSubscriptionsModalOpen, setIsStarSubscriptionsModalOpen] = useState(false)
   const [isBotMenuConfigModalOpen, setIsBotMenuConfigModalOpen] = useState(false)
+  const [isPaidMediaComposerModalOpen, setIsPaidMediaComposerModalOpen] = useState(false)
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -7645,6 +7647,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               )}
 
+              {/* Paid Media Composer Action Card */}
+              {(chat.isChannel || chat.isGroup) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsInfoOpen(false)
+                    setIsPaidMediaComposerModalOpen(true)
+                  }}
+                  className="w-full p-3.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <Lock className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="font-bold text-white">Post Paid Media</span>
+                      <span className="text-[10px] text-gray-400">Lock photos & videos behind Stars</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-amber-400" />
+                </button>
+              )}
+
               {/* 64Gram Power Feature: Chat Permissions Matrix (Groups only) */}
               {chat.isGroup && !chat.isChannel && !chatDetails?.isBroadcast && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
@@ -9076,6 +9101,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             }
           }}
           onClose={() => setIsBotMenuConfigModalOpen(false)}
+        />
+      )}
+
+      {/* 25. Telegram Star Reactions & Paid Media Composer Modal */}
+      {isPaidMediaComposerModalOpen && chat && (
+        <PaidMediaComposerModal
+          isOpen={isPaidMediaComposerModalOpen}
+          accountId={chat.accountId}
+          chatId={chat.id}
+          chatTitle={chatDetails?.title || chat.title}
+          onClose={() => setIsPaidMediaComposerModalOpen(false)}
         />
       )}
     </div>

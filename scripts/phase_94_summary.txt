@@ -1,0 +1,14 @@
+Phase 94: Telegram Star Reactions & Paid Media Messages Protocol
+
+- Verified and extended MTProto methods:
+  - `messages.sendPaidReaction`: Sending paid Star reactions with anonymity and preset star counts.
+  - `messages.togglePaidReactionPrivacy`: Toggling user privacy between default and anonymous for paid reactions.
+  - `messages.sendMedia` with `inputMediaPaidMedia`: Sending locked photo/video albums unlockable with Telegram Stars.
+- Wired IPC handlers and preload bridges across AccountManager, main.ts, and preload.ts.
+- Created `src/components/chat/PaidMediaComposerModal.tsx`:
+  - Interactive Star Price selector with presets (10 to 1,000 Stars).
+  - Media attachment list management (photo/video attachments).
+  - Teaser caption input and posting action with live feedback.
+- Integrated `PaidMediaComposerModal` and Info Drawer action card in `src/components/ChatViewport.tsx`.
+- Created and passed test suite `tests/star_reactions_paid_media_verification.mjs` (12/12 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.

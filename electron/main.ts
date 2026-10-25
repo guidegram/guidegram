@@ -2322,6 +2322,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:toggle-paid-reaction-privacy', async (_event, { accountId, chatId, messageId, isPrivate }) => {
+    try {
+      return await accountManager.togglePaidReactionPrivacy(accountId, chatId, messageId, isPrivate)
+    } catch (err: any) {
+      Logger.warn(`[IPC] togglePaidReactionPrivacy error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:send-paid-media', async (_event, { accountId, chatId, starsAmount, media, caption, payload }) => {
+    try {
+      return await accountManager.sendPaidMedia(accountId, chatId, starsAmount, media, caption, payload)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendPaidMedia error:`, err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  })
+
   ipcMain.handle('telegram:get-stars-status', async (_event, { accountId }) => {
     try {
       return await accountManager.getStarsStatus(accountId)

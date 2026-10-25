@@ -727,6 +727,22 @@ const guidegramAPI = {
     isPrivate?: boolean
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:send-paid-reaction', { accountId, chatId, messageId, count, isPrivate }),
+  togglePaidReactionPrivacy: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    isPrivate: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:toggle-paid-reaction-privacy', { accountId, chatId, messageId, isPrivate }),
+  sendPaidMedia: (
+    accountId: string,
+    chatId: string,
+    starsAmount: number,
+    media: any[],
+    caption?: string,
+    payload?: string
+  ): Promise<{ success: boolean; result?: any; error?: string }> =>
+    ipcRenderer.invoke('telegram:send-paid-media', { accountId, chatId, starsAmount, media, caption, payload }),
   getStarsStatus: (accountId: string): Promise<StarsStatusPayload> =>
     ipcRenderer.invoke('telegram:get-stars-status', { accountId }),
   getStarsTransactions: (

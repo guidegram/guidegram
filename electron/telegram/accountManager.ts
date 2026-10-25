@@ -6760,6 +6760,66 @@ export class AccountManager {
     }
   }
 
+  public async togglePaidReactionPrivacy(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    isPrivate = false
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const priv = isPrivate ? { _: 'paidReactionPrivacyAnonymous' } : { _: 'paidReactionPrivacyDefault' }
+      await holder.client.call({
+        _: 'messages.togglePaidReactionPrivacy',
+        peer: inputPeer,
+        msgId: messageId,
+        private: priv,
+      } as any)
+      return true
+    } catch (err) {
+      Logger.warn('[AccountManager] togglePaidReactionPrivacy error:', err)
+      return false
+    }
+  }
+
+  public async sendPaidMedia(
+    accountId: string,
+    chatId: string,
+    starsAmount: number,
+    media: any[] = [],
+    caption = '',
+    payload = ''
+  ): Promise<{ success: boolean; result?: any; error?: string }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const inputPaidMedia: any = {
+        _: 'inputMediaPaidMedia',
+        starsAmount: toLong(starsAmount),
+        extendedMedia: media || [],
+        payload: payload || undefined,
+      }
+
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const res: any = await holder.client.call({
+        _: 'messages.sendMedia',
+        peer: inputPeer,
+        media: inputPaidMedia,
+        message: caption || '',
+        randomId,
+      } as any)
+
+      return { success: true, result: res }
+    } catch (err: any) {
+      Logger.error('[AccountManager] sendPaidMedia error:', err?.message || err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+
   public async getStarsStatus(accountId: string): Promise<StarsStatusPayload> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return { balance: 0 }
