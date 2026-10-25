@@ -1244,3 +1244,25 @@ textarea:focus-visible {
   background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #10b981 100%);
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ==========================================================================
+   Phase 136: Google Jules Rolling Quota & 24h Reset Countdown Telemetry
+   Rolling countdown timer pills, quota availability badges, and reset indicators
+   ========================================================================== */
+.quota-countdown-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.rolling-reset-indicator {
+  color: #38bdf8;
+  font-weight: 600;
+}
