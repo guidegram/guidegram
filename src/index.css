@@ -1418,6 +1418,35 @@ textarea:focus-visible {
   pointer-events: none;
 }
 
+/* ==========================================================================
+   Phase 142: Shader Bloom Glow & High-Dynamic-Range Post-Processing
+   Luminance bloom canvas and pulsing HDR aura classes
+   ========================================================================== */
+.shader-bloom-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.hdr-bloom-aura {
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.45), 0 0 48px rgba(168, 85, 247, 0.25);
+  animation: hdr-aura-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes hdr-aura-pulse {
+  0% {
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.3), 0 0 32px rgba(168, 85, 247, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 28px rgba(56, 189, 248, 0.6), 0 0 56px rgba(168, 85, 247, 0.35);
+  }
+}
+
+
 
 
 
