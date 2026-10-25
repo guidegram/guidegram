@@ -1807,6 +1807,31 @@ textarea:focus-visible {
   pointer-events: none;
 }
 
+/* ==========================================================================
+   Phase 156: Desktop Keyboard Shortcut Matrix & Accessible Focus Trapping
+   Keyboard key cap kbd and high-contrast accessible focus ring tokens
+   ========================================================================== */
+.keyboard-shortcut-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.accessible-focus-ring:focus-visible {
+  outline: 2px solid #38bdf8 !important;
+  outline-offset: 2px !important;
+}
+
+
 
 
 
