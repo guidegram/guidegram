@@ -836,3 +836,22 @@ textarea:focus-visible {
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
+
+/* ==========================================================================
+   Phase 118: Dynamic Ambient Canvas Lighting & Reactive Vignette
+   Elliptical eye-comfort peripheral vignette and smooth focal lighting
+   ========================================================================== */
+.ambient-vignette-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  will-change: transform;
+}
+
+.focal-luminosity-glow {
+  background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
