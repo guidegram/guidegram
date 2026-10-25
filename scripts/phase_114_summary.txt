@@ -1,0 +1,14 @@
+Phase 114: Multi-Layer Parallax Tilt & Depth Micro-Interactions Protocol Summary
+===================================================================================
+1. Scope & Objective:
+   - Part of Cluster 4 (Advanced Shader & Visual Elevation Architecture).
+   - Implement 3D perspective tilt engine (`ParallaxTiltEngine`) with spring inertia for cards and media thumbnails.
+   - Zero external libraries, mathematical cubic damping, and clean event unbinding.
+
+2. Implemented Components & Tokens:
+   - Created `src/utils/parallaxTiltEngine.ts` calculating normalised cursor offsets, perspective rotation, micro-scale depth (`scale3d(1.02, 1.02, 1.02)`), and clean `destroy()` lifecycle.
+   - Added `.parallax-tilt-card` (`transform-style: preserve-3d`) and `.parallax-glare-overlay` CSS utilities in `src/index.css`.
+
+3. Verification & Build:
+   - Verification suite in `tests/parallax_tilt_depth_verification.mjs` (6/6 checks passed).
+   - Full TypeScript compilation and production bundle verified cleanly via `npm run build`.

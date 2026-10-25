@@ -757,3 +757,28 @@ textarea:focus-visible {
   background: radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.18) 0%, transparent 60%);
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Phase 114: Multi-Layer Parallax Tilt & Depth Micro-Interactions
+   Hardware-accelerated 3D perspective tilt, spring easing, and dynamic glare
+   ========================================================================== */
+.parallax-tilt-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: box-shadow 0.25s ease;
+}
+
+.parallax-glare-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+  border-radius: inherit;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.parallax-tilt-card:hover .parallax-glare-overlay {
+  opacity: 1;
+}
