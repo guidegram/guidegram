@@ -80,6 +80,7 @@ import {
   FolderDown,
   Palette,
   Briefcase,
+  Rocket,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -106,6 +107,7 @@ import { GameScoreModal } from './GameScoreModal'
 import { AutoDeleteModal } from './AutoDeleteModal'
 import { ChatThemeModal, OFFICIAL_CHAT_THEMES } from './chat/ChatThemeModal'
 import { BusinessSettingsModal } from './chat/BusinessSettingsModal'
+import { ChannelBoostModal } from './chat/ChannelBoostModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
 import { SavedMessagesBar } from './SavedMessagesBar'
@@ -719,6 +721,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isAutoDeleteModalOpen, setIsAutoDeleteModalOpen] = useState(false)
   const [isChatThemeModalOpen, setIsChatThemeModalOpen] = useState(false)
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false)
+  const [isChannelBoostModalOpen, setIsChannelBoostModalOpen] = useState(false)
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -7548,6 +7551,29 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               )}
 
+              {/* Channel Boost Card */}
+              {chat.isChannel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsInfoOpen(false)
+                    setIsChannelBoostModalOpen(true)
+                  }}
+                  className="w-full p-3.5 rounded-2xl bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 text-violet-300 font-semibold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                      <Rocket className="w-4 h-4 text-violet-400" />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="font-bold text-white">Channel Boosts</span>
+                      <span className="text-[10px] text-gray-400">View level perks & boost channel</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-violet-400" />
+                </button>
+              )}
+
               {/* 64Gram Power Feature: Chat Permissions Matrix (Groups only) */}
               {chat.isGroup && !chat.isChannel && !chatDetails?.isBroadcast && (
                 <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
@@ -8927,6 +8953,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           isOpen={isBusinessModalOpen}
           accountId={chat.accountId}
           onClose={() => setIsBusinessModalOpen(false)}
+        />
+      )}
+
+      {/* 21. Telegram Channel Boosts & Stories Archiving Modal */}
+      {isChannelBoostModalOpen && chat && (
+        <ChannelBoostModal
+          isOpen={isChannelBoostModalOpen}
+          accountId={chat.accountId}
+          channelId={chat.id}
+          channelTitle={chatDetails?.title || chat.title}
+          onClose={() => setIsChannelBoostModalOpen(false)}
         />
       )}
     </div>

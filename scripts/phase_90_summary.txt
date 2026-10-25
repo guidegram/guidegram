@@ -1,0 +1,14 @@
+Phase 90: Telegram Channel Boosts & Stories Archiving Protocol
+
+- Added `applyChannelBoost` and `getMyBoosts` methods to `AccountManager` targeting `premium.applyBoost` and `premium.getMyBoosts`.
+- Added `getStoriesArchive` and `getPinnedStories` to `AccountManager` targeting `stories.getStoriesArchive` and `stories.getPinnedStories`.
+- Wired IPC handlers in `electron/main.ts`: `telegram:get-channel-boost-status`, `telegram:apply-channel-boost`, `telegram:get-my-boosts`, `telegram:get-stories-archive`, `telegram:get-pinned-stories`, and `telegram:toggle-story-pinned`.
+- Exposed bridge methods in `electron/preload.ts`: `getChannelBoostStatus`, `applyChannelBoost`, `getMyBoosts`, `getStoriesArchive`, and `getPinnedStories`.
+- Created `src/components/chat/ChannelBoostModal.tsx`:
+  - Visual Level badge, progress bar towards next level with remaining boosts counter.
+  - List of 6 perks unlocked at each level (1 Daily Story, Custom Wallpaper, Channel Themes, Custom Emoji Status, 10 Reactions, Voice-to-Text).
+  - One-click "Boost Channel" action and "Copy Boost Link" action.
+- Added Channel Boost action card to Info Drawer and modal rendering in `src/components/ChatViewport.tsx`.
+- Enhanced `src/components/StoryViewerModal.tsx` with active, pinned, and archive mode tabs for viewing channel or personal story archives and pinning stories.
+- Created and passed test suite `tests/channel_boosts_stories_archiving_verification.mjs` (21/21 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.

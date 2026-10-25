@@ -11276,6 +11276,58 @@ export class AccountManager {
     }
   }
 
+  public async getStoriesArchive(
+    accountId: string,
+    peerId?: string,
+    offsetId: number = 0,
+    limit: number = 50
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { count: 0, stories: [] }
+    try {
+      const targetPeer =
+        !peerId || peerId === 'self' || peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.getStoriesArchive',
+        peer: targetPeer,
+        offset_id: Number(offsetId) || 0,
+        limit: Math.min(Number(limit) || 50, 100),
+      } as any)
+      return res || { count: 0, stories: [] }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getStoriesArchive error:`, err?.message || err)
+      return { count: 0, stories: [] }
+    }
+  }
+
+  public async getPinnedStories(
+    accountId: string,
+    peerId?: string,
+    offsetId: number = 0,
+    limit: number = 50
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { count: 0, stories: [] }
+    try {
+      const targetPeer =
+        !peerId || peerId === 'self' || peerId === accountId
+          ? { _: 'inputPeerSelf' }
+          : await this.resolveInputPeer(accountId, peerId)
+      const res: any = await holder.client.call({
+        _: 'stories.getPinnedStories',
+        peer: targetPeer,
+        offset_id: Number(offsetId) || 0,
+        limit: Math.min(Number(limit) || 50, 100),
+      } as any)
+      return res || { count: 0, stories: [] }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getPinnedStories error:`, err?.message || err)
+      return { count: 0, stories: [] }
+    }
+  }
+
   public async getStoryViewsList(
     accountId: string,
     storyId: number,
@@ -11823,6 +11875,42 @@ export class AccountManager {
       }
     } catch (_) {
       return null
+    }
+  }
+
+  public async applyChannelBoost(
+    accountId: string,
+    channelId: string,
+    slots?: number[]
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, channelId)
+      const res: any = await holder.client.call({
+        _: 'premium.applyBoost',
+        flags: slots && slots.length > 0 ? 1 : 0,
+        slots: slots && slots.length > 0 ? slots.map(Number) : undefined,
+        peer: inputPeer,
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] applyChannelBoost error:`, err?.message || err)
+      return null
+    }
+  }
+
+  public async getMyBoosts(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    try {
+      const res: any = await holder.client.call({
+        _: 'premium.getMyBoosts',
+      } as any)
+      return res?.my_boosts || []
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getMyBoosts error:`, err?.message || err)
+      return []
     }
   }
 

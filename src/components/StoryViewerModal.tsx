@@ -75,6 +75,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [localGhostMode, setLocalGhostMode] = useState(ghostMode)
   const [activeReaction, setActiveReaction] = useState<string | null>(null)
   const [reactionFeedback, setReactionFeedback] = useState<string | null>(null)
+  const [storyTab, setStoryTab] = useState<'active' | 'pinned' | 'archive'>('active')
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const pausedRef = useRef(false)
@@ -127,7 +128,15 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     setDeleting(false)
     setDeleteError(null)
 
-    const request = window.guidegram?.getPeerStories?.(accountId, peerId)
+    let request: Promise<any> | undefined
+    if (storyTab === 'pinned') {
+      request = window.guidegram?.getPinnedStories?.(accountId, peerId)
+    } else if (storyTab === 'archive') {
+      request = window.guidegram?.getStoriesArchive?.(accountId, peerId)
+    } else {
+      request = window.guidegram?.getPeerStories?.(accountId, peerId)
+    }
+
     if (!request) {
       setLoadError('Stories are unavailable.')
       setLoading(false)
@@ -138,24 +147,40 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       .then((data) => {
         if (!active) return
         if (!data) {
-          setLoadError('Unable to load stories for this contact.')
+          setLoadError(
+            storyTab === 'pinned'
+              ? 'No pinned stories found.'
+              : storyTab === 'archive'
+                ? 'No archived stories found.'
+                : 'Unable to load stories for this contact.'
+          )
           setLoading(false)
           return
         }
-        const sortedStories = [...(data.stories || [])].sort((a, b) => a.date - b.date)
-        setPeerStories({ ...data, stories: sortedStories })
+        const rawList = Array.isArray(data) ? data : data.stories || []
+        const sortedStories = [...rawList].sort((a, b) => a.date - b.date)
+        setPeerStories({
+          peer: data.peer || { _: 'peerUser', userId: peerId },
+          stories: sortedStories,
+        } as any)
         setLoading(false)
       })
       .catch(() => {
         if (!active) return
-        setLoadError('Unable to load stories for this contact.')
+        setLoadError(
+          storyTab === 'pinned'
+            ? 'No pinned stories found.'
+            : storyTab === 'archive'
+              ? 'No archived stories found.'
+              : 'Unable to load stories for this contact.'
+        )
         setLoading(false)
       })
 
     return () => {
       active = false
     }
-  }, [isOpen, accountId, peerId])
+  }, [isOpen, accountId, peerId, storyTab])
 
   useEffect(() => {
     if (!isOpen || !currentStoryId) {
@@ -475,6 +500,47 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               <X className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Story Mode Selector Pills */}
+          {isOwnStory && (
+            <div className="mt-2.5 flex items-center justify-center">
+              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md rounded-full p-0.5 border border-white/10 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setStoryTab('active')}
+                  className={`px-3 py-0.5 rounded-full font-semibold transition-all ${
+                    storyTab === 'active'
+                      ? 'bg-primary-500 text-white shadow'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStoryTab('pinned')}
+                  className={`px-3 py-0.5 rounded-full font-semibold transition-all ${
+                    storyTab === 'pinned'
+                      ? 'bg-primary-500 text-white shadow'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  Pinned
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStoryTab('archive')}
+                  className={`px-3 py-0.5 rounded-full font-semibold transition-all ${
+                    storyTab === 'archive'
+                      ? 'bg-primary-500 text-white shadow'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  Archive
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Story content */}

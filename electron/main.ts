@@ -3825,6 +3825,24 @@ function setupIpcHandlers() {
     return await accountManager.sendStoryReaction(accountId, peerId, Number(storyId), reaction)
   })
 
+  ipcMain.handle('telegram:get-stories-archive', async (_event, { accountId, peerId, offsetId, limit }) => {
+    try {
+      return await accountManager.getStoriesArchive(accountId, peerId, offsetId, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStoriesArchive error:`, err)
+      return { count: 0, stories: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-pinned-stories', async (_event, { accountId, peerId, offsetId, limit }) => {
+    try {
+      return await accountManager.getPinnedStories(accountId, peerId, offsetId, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getPinnedStories error:`, err)
+      return { count: 0, stories: [] }
+    }
+  })
+
   ipcMain.handle('telegram:check-chatlist-invite', async (_event, { accountId, slug }) => {
     try {
       return await accountManager.checkChatlistInvite(accountId, slug)
@@ -3858,6 +3876,33 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.warn(`[IPC] prolongWebView error:`, err)
       return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-channel-boost-status', async (_event, { accountId, channelId }) => {
+    try {
+      return await accountManager.getChannelBoostStatus(accountId, channelId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getChannelBoostStatus error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:apply-channel-boost', async (_event, { accountId, channelId, slots }) => {
+    try {
+      return await accountManager.applyChannelBoost(accountId, channelId, slots)
+    } catch (err: any) {
+      Logger.warn(`[IPC] applyChannelBoost error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-my-boosts', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getMyBoosts(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getMyBoosts error:`, err)
+      return []
     }
   })
 

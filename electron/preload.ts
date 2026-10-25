@@ -1452,6 +1452,28 @@ const guidegramAPI = {
     reaction: string
   ): Promise<{ success: boolean; result?: any; error?: string }> =>
     ipcRenderer.invoke('telegram:send-story-reaction', { accountId, peerId, storyId, reaction }),
+  getStoriesArchive: (
+    accountId: string,
+    peerId?: string,
+    offsetId?: number,
+    limit?: number
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-stories-archive', { accountId, peerId, offsetId, limit }),
+  getPinnedStories: (
+    accountId: string,
+    peerId?: string,
+    offsetId?: number,
+    limit?: number
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-pinned-stories', { accountId, peerId, offsetId, limit }),
+  applyChannelBoost: (
+    accountId: string,
+    channelId: string,
+    slots?: number[]
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:apply-channel-boost', { accountId, channelId, slots }),
+  getMyBoosts: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-my-boosts', { accountId }),
   checkChatlistInvite: (accountId: string, slug: string): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('telegram:check-chatlist-invite', { accountId, slug }),
   joinChatlistInvite: (accountId: string, slug: string, peerIds: string[]): Promise<boolean> =>
