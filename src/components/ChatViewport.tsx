@@ -4478,80 +4478,96 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         <div
           onClick={handleOpenInfo}
           title="Click to view channel/chat details"
-          className="flex items-center gap-3 hover:bg-white/5 p-1.5 -ml-1.5 rounded-2xl transition-colors cursor-pointer group max-w-lg"
+          className="flex items-center gap-3 hover:bg-white/5 p-1.5 -ml-1.5 rounded-2xl transition-colors cursor-pointer group max-w-lg chat-header-fluid"
         >
-          <Avatar
-            accountId={chat.accountId}
-            peerId={chat.id}
-            title={chat.title}
-            initials={chat.avatarInitials}
-            avatarUrl={chat.avatarUrl}
-            size="md"
-            className="ring-2 ring-transparent group-hover:ring-primary-500/50 transition-all"
-          />
+          <motion.div
+            key={`header-avatar-${chat.id}`}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+          >
+            <Avatar
+              accountId={chat.accountId}
+              peerId={chat.id}
+              title={chat.title}
+              initials={chat.avatarInitials}
+              avatarUrl={chat.avatarUrl}
+              size="md"
+              className="ring-2 ring-transparent group-hover:ring-primary-500/50 transition-all"
+            />
+          </motion.div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span
-                dir={isRTL(chat.title) ? 'rtl' : 'ltr'}
-                className="text-xs font-bold text-gray-100 group-hover:text-primary-300 transition-colors truncate"
-              >
-                {chat.title}
-              </span>
-              {(chat.isSecretChat || chatDetails?.isSecretChat) && (
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`header-meta-${chat.id}`}
+              initial={{ opacity: 0, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -3 }}
+              transition={{ type: 'spring', stiffness: 450, damping: 30, mass: 0.6 }}
+              className="min-w-0"
+            >
+              <div className="flex items-center gap-1.5">
                 <span
-                  title="End-to-End Encrypted Secret Chat"
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent-emerald/15 border border-accent-emerald/30 text-accent-emerald text-[10px] font-semibold tracking-wide"
+                  dir={isRTL(chat.title) ? 'rtl' : 'ltr'}
+                  className="text-xs font-bold text-gray-100 group-hover:text-primary-300 transition-colors truncate"
                 >
-                  <Lock className="w-2.5 h-2.5" />
-                  <span>E2EE</span>
+                  {chat.title}
                 </span>
-              )}
-              {(chatDetails?.customEmojiStatusId || chat.customEmojiStatusId) ? (
-                <CustomEmojiView
-                  accountId={chat.accountId}
-                  documentId={chatDetails?.customEmojiStatusId || chat.customEmojiStatusId!}
-                  fallback="⭐"
-                  className="inline-block w-4 h-4 align-middle shrink-0"
-                />
-              ) : (chatDetails?.isPremium || chat.isPremium) ? (
-                <Sparkles className="w-3.5 h-3.5 text-accent-cyan fill-accent-cyan shrink-0" />
-              ) : null}
-              <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-primary-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-            </div>
+                {(chat.isSecretChat || chatDetails?.isSecretChat) && (
+                  <span
+                    title="End-to-End Encrypted Secret Chat"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-accent-emerald/15 border border-accent-emerald/30 text-accent-emerald text-[10px] font-semibold tracking-wide"
+                  >
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>E2EE</span>
+                  </span>
+                )}
+                {(chatDetails?.customEmojiStatusId || chat.customEmojiStatusId) ? (
+                  <CustomEmojiView
+                    accountId={chat.accountId}
+                    documentId={chatDetails?.customEmojiStatusId || chat.customEmojiStatusId!}
+                    fallback="⭐"
+                    className="inline-block w-4 h-4 align-middle shrink-0"
+                  />
+                ) : (chatDetails?.isPremium || chat.isPremium) ? (
+                  <Sparkles className="w-3.5 h-3.5 text-accent-cyan fill-accent-cyan shrink-0" />
+                ) : null}
+                <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-primary-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </div>
 
-            <div className="text-[11px] text-gray-400 truncate">
-              {typingUsers.length > 0 ? (
-                <span className="text-accent-cyan flex items-center gap-1.5">
-                  <span className="flex items-end gap-0.5 shrink-0">
-                    <span className="w-1 h-1 rounded-full bg-accent-cyan animate-bounce" />
-                    <span className="w-1 h-1 rounded-full bg-accent-cyan animate-bounce [animation-delay:120ms]" />
-                    <span className="w-1 h-1 rounded-full bg-accent-cyan animate-bounce [animation-delay:240ms]" />
+              <div className="text-[11px] text-gray-400 truncate">
+                {typingUsers.length > 0 ? (
+                  <span className="text-accent-cyan flex items-center gap-1.5">
+                    <span className="flex items-end gap-0.5 shrink-0">
+                      <span className="w-1 h-1 rounded-full bg-accent-cyan typing-pulse-dot" />
+                      <span className="w-1 h-1 rounded-full bg-accent-cyan typing-pulse-dot [animation-delay:180ms]" />
+                      <span className="w-1 h-1 rounded-full bg-accent-cyan typing-pulse-dot [animation-delay:360ms]" />
+                    </span>
+                    <span className="truncate">
+                      {typingUsers.length === 1
+                        ? `${typingUsers[0].name} ${typingStatusLabel(typingUsers[0].status)}`
+                        : typingUsers.length === 2
+                        ? `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`
+                        : 'Several people are typing…'}
+                    </span>
                   </span>
-                  <span className="truncate">
-                    {typingUsers.length === 1
-                      ? `${typingUsers[0].name} ${typingStatusLabel(typingUsers[0].status)}`
-                      : typingUsers.length === 2
-                      ? `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`
-                      : 'Several people are typing…'}
+                ) : (chat.isSecretChat || chatDetails?.isSecretChat) ? (
+                  <span className="text-accent-emerald flex items-center gap-1 font-medium">
+                    <Lock className="w-2.5 h-2.5 inline" />
+                    <span>Secret Chat (End-to-End Encrypted)</span>
                   </span>
-                </span>
-              ) : (chat.isSecretChat || chatDetails?.isSecretChat) ? (
-                <span className="text-accent-emerald flex items-center gap-1 font-medium">
-                  <Lock className="w-2.5 h-2.5 inline" />
-                  <span>Secret Chat (End-to-End Encrypted)</span>
-                </span>
-              ) : isChannel ? (
-                'Broadcast Channel'
-              ) : isGroup ? (
-                'Group Chat'
-              ) : isBot ? (
-                'Bot'
-              ) : (
-                'Online'
-              )}
-            </div>
-          </div>
+                ) : isChannel ? (
+                  'Broadcast Channel'
+                ) : isGroup ? (
+                  'Group Chat'
+                ) : isBot ? (
+                  'Bot'
+                ) : (
+                  'Online'
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Quick Action Tools */}
