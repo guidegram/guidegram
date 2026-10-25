@@ -1446,6 +1446,32 @@ textarea:focus-visible {
   }
 }
 
+/* ==========================================================================
+   Phase 143: Glass Frosted Blur & Specular Sheen Lighting Shaders
+   Ultra-luxurious frosted aero glass surface with specular highlight borders
+   ========================================================================== */
+.glass-frosted-sheen-surface {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.specular-edge-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+
 
 
 
