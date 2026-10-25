@@ -296,6 +296,103 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
           setSettingsButtonVisible(true)
           break
 
+        case 'web_app_custom_method':
+          if (eventData?.req_id && eventData?.method) {
+            const reqId = eventData.req_id
+            const method = eventData.method
+            const params = eventData.params || {}
+            const botKey = botPeerId || botUsername || 'bot'
+
+            try {
+              if (
+                window.guidegram?.botInvokeWebViewCustomMethod &&
+                accountId &&
+                (botPeerId || botUsername)
+              ) {
+                const remoteRes = await window.guidegram.botInvokeWebViewCustomMethod(
+                  accountId,
+                  botPeerId || botUsername || '',
+                  method,
+                  params
+                )
+                postEventToWebApp('custom_method_invoked', {
+                  req_id: reqId,
+                  result: remoteRes || true,
+                })
+              } else {
+                // CloudStorage client fallback
+                if (method === 'saveStorageValue') {
+                  const k = params.key
+                  const v = params.value
+                  if (k) localStorage.setItem(`tg_cloud_${botKey}_${k}`, String(v))
+                  postEventToWebApp('custom_method_invoked', { req_id: reqId, result: true })
+                } else if (method === 'getStorageValues') {
+                  const keys = Array.isArray(params.keys) ? params.keys : []
+                  const res: Record<string, string> = {}
+                  for (const k of keys) {
+                    const item = localStorage.getItem(`tg_cloud_${botKey}_${k}`)
+                    if (item !== null) res[k] = item
+                  }
+                  postEventToWebApp('custom_method_invoked', { req_id: reqId, result: res })
+                } else if (method === 'getStorageKeys') {
+                  const prefix = `tg_cloud_${botKey}_`
+                  const matchingKeys: string[] = []
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i)
+                    if (key && key.startsWith(prefix)) {
+                      matchingKeys.push(key.slice(prefix.length))
+                    }
+                  }
+                  postEventToWebApp('custom_method_invoked', { req_id: reqId, result: matchingKeys })
+                } else if (method === 'deleteStorageValues') {
+                  const keys = Array.isArray(params.keys) ? params.keys : []
+                  for (const k of keys) {
+                    localStorage.removeItem(`tg_cloud_${botKey}_${k}`)
+                  }
+                  postEventToWebApp('custom_method_invoked', { req_id: reqId, result: true })
+                } else {
+                  postEventToWebApp('custom_method_invoked', { req_id: reqId, result: true })
+                }
+              }
+            } catch (err: any) {
+              postEventToWebApp('custom_method_invoked', {
+                req_id: reqId,
+                error: err?.message || 'Custom method failed',
+              })
+            }
+          }
+          break
+
+        case 'web_app_download_file':
+          if (eventData?.url) {
+            postEventToWebApp('file_download_started', { status: 'downloading' })
+            try {
+              const a = document.createElement('a')
+              a.href = eventData.url
+              a.download = eventData.file_name || 'download'
+              a.target = '_blank'
+              a.rel = 'noopener,noreferrer'
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+            } catch (err) {
+              console.warn('[MiniAppModal] file download failed:', err)
+            }
+          }
+          break
+
+        case 'web_app_read_text_from_clipboard':
+          if (eventData?.req_id) {
+            const reqId = eventData.req_id
+            try {
+              const text = await navigator.clipboard.readText()
+              postEventToWebApp('clipboard_text_received', { req_id: reqId, data: text })
+            } catch {
+              postEventToWebApp('clipboard_text_received', { req_id: reqId, data: '' })
+            }
+          }
+          break
+
         default:
           break
       }

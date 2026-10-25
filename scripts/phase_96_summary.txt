@@ -1,0 +1,17 @@
+Phase 96: Telegram Bot WebApp Cloud Storage & File Downloader Protocol
+
+- Implemented Telegram Mini Apps CloudStorage (Bot API 6.9+):
+  - Handled `web_app_custom_method` forwarding to `botInvokeWebViewCustomMethod` (`bots.invokeWebViewCustomMethod`).
+  - Added robust per-bot localStorage client fallback supporting:
+    - `saveStorageValue`: key-value persistence.
+    - `getStorageValues`: bulk key-value retrieval.
+    - `getStorageKeys`: listing stored keys for the active bot.
+    - `deleteStorageValues`: removing keys.
+  - Returned `custom_method_invoked` response with matching `req_id` to iframe.
+- Implemented Telegram Mini Apps File Downloader Protocol (Bot API 8.0):
+  - Handled `web_app_download_file` with `{ url, file_name }`.
+  - Dispatched `file_download_started` event to WebApp.
+  - Managed anchor download execution.
+- Handled `web_app_read_text_from_clipboard` dispatching `clipboard_text_received`.
+- Created and passed test suite `tests/miniapp_cloudstorage_downloader_verification.mjs` (7/7 checks passing).
+- Verified full production build (`tsc && vite build`) with zero errors.
