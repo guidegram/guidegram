@@ -566,6 +566,8 @@ const guidegramAPI = {
     replyToMsgId?: number
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:save-draft', { accountId, chatId, message, replyToMsgId }),
+  clearDraft: (accountId: string, chatId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:clear-draft', { accountId, chatId }),
   getAllDrafts: (accountId: string): Promise<Record<string, DraftItem>> =>
     ipcRenderer.invoke('telegram:get-all-drafts', { accountId }),
   requestWebView: (

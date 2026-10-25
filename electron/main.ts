@@ -1998,6 +1998,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:clear-draft', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.clearDraft(accountId, chatId)
+    } catch (err: any) {
+      Logger.error(`[IPC] clearDraft error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-all-drafts', async (_event, { accountId }) => {
     try {
       return await accountManager.getAllDrafts(accountId)

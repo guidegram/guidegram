@@ -9081,6 +9081,13 @@ export class AccountManager {
     }
   }
 
+  public async clearDraft(
+    accountId: string,
+    chatId: string
+  ): Promise<boolean> {
+    return this.saveDraft(accountId, chatId, '')
+  }
+
   public async getAllDrafts(accountId: string): Promise<Record<string, DraftItem>> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
