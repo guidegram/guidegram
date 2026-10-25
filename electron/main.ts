@@ -3566,6 +3566,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:enforce-media-quota', async (_event, { maxBytes }: { maxBytes?: number } = {}) => {
+    try {
+      return sessionStore.enforceMediaQuota(maxBytes)
+    } catch (err: any) {
+      Logger.warn('[IPC] enforceMediaQuota error:', err)
+      return { evictedFiles: 0, freedBytes: 0, remainingBytes: 0, totalFiles: 0 }
+    }
+  })
+
   ipcMain.handle('telegram:select-download-directory', async () => {
     try {
       const res = await dialog.showOpenDialog(mainWindow!, {

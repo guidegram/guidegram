@@ -1299,6 +1299,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-cache-stats'),
   clearCache: (): Promise<{ clearedBytes: number; clearedFiles: number }> =>
     ipcRenderer.invoke('telegram:clear-cache'),
+  enforceMediaQuota: (maxBytes?: number): Promise<{
+    evictedFiles: number
+    freedBytes: number
+    remainingBytes: number
+    totalFiles: number
+  }> => ipcRenderer.invoke('telegram:enforce-media-quota', { maxBytes }),
   selectDownloadDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke('telegram:select-download-directory'),
 

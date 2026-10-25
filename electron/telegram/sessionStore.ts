@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision, DialogItem } from './types'
 import { SecureStorage } from './secureStorage'
+import { MediaCacheManager, QuotaEnforcementResult } from '../mediaCacheManager'
 
 export class SessionStore {
   private dataDir: string
@@ -322,6 +323,11 @@ export class SessionStore {
       formattedSize,
       filesCount,
     }
+  }
+
+  public enforceMediaQuota(maxBytes?: number): QuotaEnforcementResult {
+    const mediaDir = path.join(this.dataDir, 'media')
+    return MediaCacheManager.enforceQuota(mediaDir, maxBytes)
   }
 
   public clearCache(): { clearedBytes: number; clearedFiles: number } {
