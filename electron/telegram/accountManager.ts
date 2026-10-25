@@ -8896,6 +8896,151 @@ export class AccountManager {
     }
   }
 
+  public async sendLocation(
+    accountId: string,
+    chatId: string,
+    params: {
+      lat: number
+      long: number
+      accuracyRadius?: number
+      livePeriod?: number
+      heading?: number
+      proximityNotificationRadius?: number
+      replyToMsgId?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const geoPoint = {
+        _: 'inputGeoPoint',
+        lat: Number(params.lat),
+        long: Number(params.long),
+        accuracyRadius: params.accuracyRadius ? Number(params.accuracyRadius) : undefined,
+      }
+
+      let media: any
+      if (params.livePeriod && params.livePeriod > 0) {
+        media = {
+          _: 'inputMediaGeoLive',
+          geoPoint,
+          period: Number(params.livePeriod),
+          heading: params.heading ? Number(params.heading) : undefined,
+          proximityNotificationRadius: params.proximityNotificationRadius ? Number(params.proximityNotificationRadius) : undefined,
+        }
+      } else {
+        media = {
+          _: 'inputMediaGeoPoint',
+          geoPoint,
+        }
+      }
+
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const res: any = await holder.client.call({
+        _: 'messages.sendMedia',
+        peer: inputPeer,
+        media,
+        message: '',
+        randomId,
+        replyTo: params.replyToMsgId ? { _: 'inputReplyToMessage', replyToMsgId: params.replyToMsgId } : undefined,
+      } as any)
+
+      return { success: true, result: res }
+    } catch (err: any) {
+      Logger.error('[AccountManager] sendLocation error:', err?.message || err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  }
+
+  public async editLiveLocation(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    params: {
+      lat?: number
+      long?: number
+      stopped?: boolean
+      heading?: number
+      proximityNotificationRadius?: number
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const isStopped = Boolean(params.stopped)
+
+      const media: any = {
+        _: 'inputMediaGeoLive',
+        stopped: isStopped,
+        geoPoint: params.lat !== undefined && params.long !== undefined
+          ? { _: 'inputGeoPoint', lat: Number(params.lat), long: Number(params.long) }
+          : { _: 'inputGeoPointEmpty' },
+        heading: params.heading ? Number(params.heading) : undefined,
+        proximityNotificationRadius: params.proximityNotificationRadius ? Number(params.proximityNotificationRadius) : undefined,
+      }
+
+      await holder.client.call({
+        _: 'messages.editMessage',
+        peer: inputPeer,
+        id: messageId,
+        media,
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn('[AccountManager] editLiveLocation error:', err?.message || err)
+      return false
+    }
+  }
+
+  public async getRecentLocations(
+    accountId: string,
+    chatId: string,
+    limit = 50
+  ): Promise<{ count: number; locations: any[] }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const res: any = await holder.client.call({
+        _: 'messages.getRecentLocations',
+        peer: inputPeer,
+        limit: Math.min(100, Math.max(1, limit)),
+        hash: Long.ZERO,
+      } as any)
+
+      const rawMessages = Array.isArray(res.messages) ? res.messages : []
+      const locations = rawMessages
+        .filter((m: any) => m?.media?._ === 'messageMediaGeoLive' || m?.media?._ === 'messageMediaGeo')
+        .map((m: any) => {
+          const geo = m.media.geo
+          return {
+            messageId: m.id,
+            senderId: m.fromId ? (m.fromId.userId ? String(m.fromId.userId) : String(m.fromId.channelId || '')) : chatId,
+            date: m.date,
+            lat: geo?.lat,
+            long: geo?.long,
+            period: m.media.period,
+            heading: m.media.heading,
+            proximityRadius: m.media.proximityNotificationRadius,
+            isLive: m.media._ === 'messageMediaGeoLive',
+          }
+        })
+
+      return {
+        count: res.count !== undefined ? res.count : locations.length,
+        locations,
+      }
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getRecentLocations error:', err?.message || err)
+      return { count: 0, locations: [] }
+    }
+  }
+
   public async saveDraft(
     accountId: string,
     chatId: string,

@@ -526,6 +526,39 @@ const guidegramAPI = {
     }
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:create-poll', { accountId, chatId, question, answers, options }),
+  sendLocation: (
+    accountId: string,
+    chatId: string,
+    params: {
+      lat: number
+      long: number
+      accuracyRadius?: number
+      livePeriod?: number
+      heading?: number
+      proximityNotificationRadius?: number
+      replyToMsgId?: number
+    }
+  ): Promise<{ success: boolean; result?: any; error?: string }> =>
+    ipcRenderer.invoke('telegram:send-location', { accountId, chatId, params }),
+  editLiveLocation: (
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    params: {
+      lat?: number
+      long?: number
+      stopped?: boolean
+      heading?: number
+      proximityNotificationRadius?: number
+    }
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:edit-live-location', { accountId, chatId, messageId, params }),
+  getRecentLocations: (
+    accountId: string,
+    chatId: string,
+    limit?: number
+  ): Promise<{ count: number; locations: any[] }> =>
+    ipcRenderer.invoke('telegram:get-recent-locations', { accountId, chatId, limit }),
   saveDraft: (
     accountId: string,
     chatId: string,

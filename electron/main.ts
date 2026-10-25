@@ -1901,6 +1901,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:send-location', async (_event, { accountId, chatId, params }) => {
+    try {
+      return await accountManager.sendLocation(accountId, chatId, params)
+    } catch (err: any) {
+      Logger.error(`[IPC] sendLocation error:`, err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  })
+
+  ipcMain.handle('telegram:edit-live-location', async (_event, { accountId, chatId, messageId, params }) => {
+    try {
+      return await accountManager.editLiveLocation(accountId, chatId, messageId, params)
+    } catch (err: any) {
+      Logger.warn(`[IPC] editLiveLocation error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-recent-locations', async (_event, { accountId, chatId, limit }) => {
+    try {
+      return await accountManager.getRecentLocations(accountId, chatId, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getRecentLocations error:`, err)
+      return { count: 0, locations: [] }
+    }
+  })
+
   // OfflineQueue and Dead-Letter Queue (DLQ) handlers (MM-019)
   offlineQueue.registerHandler('send-message', async (task) => {
     const { accountId, chatId, text, replyToMsgId, options } = task.payload
