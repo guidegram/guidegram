@@ -81,6 +81,8 @@ import {
   Palette,
   Briefcase,
   Rocket,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -706,6 +708,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Fullscreen image lightbox
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [lightboxScale, setLightboxScale] = useState(1)
 
   // Channel / User Info Drawer
   const [isInfoOpen, setIsInfoOpen] = useState(false)
@@ -8195,45 +8198,97 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )}
 
       {/* 5. Fullscreen Lightbox Modal */}
-      {lightboxUrl && (
-        <div
-          onClick={() => setLightboxUrl(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-150 select-none"
-        >
-          <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-            <button
-              type="button"
-              onClick={(e) => {
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setLightboxScale(1)
+              setLightboxUrl(null)
+            }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 select-none"
+          >
+            <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+              {/* Zoom Out Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setLightboxScale((prev) => Math.max(1, prev - 0.5))
+                }}
+                disabled={lightboxScale <= 1}
+                title="Zoom Out"
+                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ZoomOut className="w-5 h-5" />
+              </button>
+
+              {/* Zoom In Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setLightboxScale((prev) => Math.min(3, prev + 0.5))
+                }}
+                disabled={lightboxScale >= 3}
+                title="Zoom In"
+                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ZoomIn className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const a = document.createElement('a')
+                  a.href = lightboxUrl
+                  a.download = `photo_${Date.now()}.jpg`
+                  a.click()
+                }}
+                title="Download photo"
+                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxScale(1)
+                  setLightboxUrl(null)
+                }}
+                title="Close (Esc)"
+                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <motion.img
+              drag={lightboxScale > 1}
+              dragConstraints={{ left: -300, right: 300, top: -200, bottom: 200 }}
+              dragElastic={0.2}
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: lightboxScale, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 380, mass: 0.7 }}
+              onDoubleClick={(e) => {
                 e.stopPropagation()
-                const a = document.createElement('a')
-                a.href = lightboxUrl
-                a.download = `photo_${Date.now()}.jpg`
-                a.click()
+                setLightboxScale((prev) => (prev > 1 ? 1 : 2))
               }}
-              title="Download photo"
-              className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer"
-            >
-              <Download className="w-5 h-5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setLightboxUrl(null)}
-              title="Close (Esc)"
-              className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <img
-            src={lightboxUrl}
-            alt="Preview"
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
-          />
-        </div>
-      )}
+              src={lightboxUrl}
+              alt="Preview"
+              onClick={(e) => e.stopPropagation()}
+              className={`max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl ${
+                lightboxScale > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
+              } lightbox-image-pan`}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 6. Telegram Desktop Right-Click Context Menu */}
       <AnimatePresence>

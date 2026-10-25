@@ -606,3 +606,13 @@ textarea:focus-visible {
   transition: width 0.1s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: width;
 }
+
+/* ==========================================================================
+   Phase 107: Media Lightbox Pan-and-Zoom Spring Inertia & Momentum Pinch
+   Non-blocking touch manipulation, pan constraints, and drag elasticity
+   ========================================================================== */
+.lightbox-image-pan {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
