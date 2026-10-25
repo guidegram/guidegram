@@ -181,6 +181,19 @@ const guidegramAPI = {
     messageId: number
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:unpin-message', { accountId, chatId, messageId }),
+  getPinnedMessages: (
+    accountId: string,
+    chatId: string,
+    limit?: number,
+    offsetId?: number
+  ): Promise<{ count: number; messages: any[] }> =>
+    ipcRenderer.invoke('telegram:get-pinned-messages', { accountId, chatId, limit, offsetId }),
+  unpinAllMessages: (
+    accountId: string,
+    chatId: string,
+    topMsgId?: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:unpin-all-messages', { accountId, chatId, topMsgId }),
   sendTyping: (
     accountId: string,
     chatId: string,

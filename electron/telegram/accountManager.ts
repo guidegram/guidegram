@@ -5334,6 +5334,80 @@ export class AccountManager {
     }
   }
 
+  public async getPinnedMessages(
+    accountId: string,
+    chatId: string,
+    limit = 50,
+    offsetId = 0
+  ): Promise<{ count: number; messages: any[] }> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const res: any = await holder.client.call({
+        _: 'messages.search',
+        peer: inputPeer,
+        q: '',
+        filter: { _: 'inputMessagesFilterPinned' },
+        minDate: 0,
+        maxDate: 0,
+        offsetId: offsetId || 0,
+        addOffset: 0,
+        limit: Math.min(100, Math.max(1, limit)),
+        maxId: 0,
+        minId: 0,
+        hash: Long.ZERO,
+      } as any)
+
+      const rawMessages = Array.isArray(res.messages) ? res.messages : []
+      const items = rawMessages
+        .filter((m: any) => m && m._ !== 'messageEmpty')
+        .map((m: any) => ({
+          id: m.id,
+          chatId,
+          senderId: m.fromId ? (m.fromId.userId ? String(m.fromId.userId) : String(m.fromId.channelId || '')) : chatId,
+          text: m.message || '',
+          timestamp: m.date ? m.date * 1000 : Date.now(),
+          isOutgoing: Boolean(m.out),
+          replyToMsgId: m.replyTo?.replyToMsgId,
+          pinned: true,
+          views: m.views,
+          forwards: m.forwards,
+        }))
+
+      return {
+        count: res.count !== undefined ? res.count : items.length,
+        messages: items,
+      }
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getPinnedMessages error for ${chatId}:`, err?.message || err)
+      return { count: 0, messages: [] }
+    }
+  }
+
+  public async unpinAllMessages(
+    accountId: string,
+    chatId: string,
+    topMsgId?: number
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.call({
+        _: 'messages.unpinAllMessages',
+        peer: inputPeer,
+        topMsgId: topMsgId || 0,
+      } as any)
+      return true
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] unpinAllMessages error for ${chatId}:`, err?.message || err)
+      return false
+    }
+  }
+
   public async sendTyping(
     accountId: string,
     chatId: string,

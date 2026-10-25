@@ -1258,6 +1258,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-pinned-messages', async (_event, { accountId, chatId, limit, offsetId }) => {
+    try {
+      return await accountManager.getPinnedMessages(accountId, chatId, limit, offsetId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getPinnedMessages failed:`, err)
+      return { count: 0, messages: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:unpin-all-messages', async (_event, { accountId, chatId, topMsgId }) => {
+    try {
+      return await accountManager.unpinAllMessages(accountId, chatId, topMsgId)
+    } catch (err: any) {
+      Logger.error(`[IPC] unpinAllMessages failed:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:send-typing', async (_event, { accountId, chatId, status }) => {
     try {
       return await accountManager.sendTyping(accountId, chatId, status)
