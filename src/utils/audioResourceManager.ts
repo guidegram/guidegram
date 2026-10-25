@@ -5,6 +5,8 @@
  * Prevents browser "AudioContext was not allowed to start" limit errors and hardware thread exhaustion.
  */
 
+import { audioLifecycleGuard } from './audioLifecycleGuard'
+
 export interface VoiceVisualizerSession {
   stop: () => void
   getAudioContext: () => AudioContext | null
@@ -36,13 +38,7 @@ export class AudioResourceManager {
    */
   public static async closeAudioContext(ctx: AudioContext | null | undefined): Promise<void> {
     if (!ctx) return
-    try {
-      if (ctx.state !== 'closed') {
-        await ctx.close()
-      }
-    } catch {
-      // AudioContext already closed or closing
-    }
+    await audioLifecycleGuard.closeAudioContext(ctx)
   }
 
   /**
@@ -66,6 +62,7 @@ export class AudioResourceManager {
         window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       if (AudioCtxClass) {
         audioCtx = new AudioCtxClass()
+        audioLifecycleGuard.trackAudioContext(audioCtx)
         sourceNode = audioCtx.createMediaStreamSource(stream)
         analyserNode = audioCtx.createAnalyser()
         analyserNode.fftSize = 64

@@ -2,6 +2,8 @@
 // Synthesizes pleasant harmonic notification chimes without external audio assets
 // Enforces MM-211 AudioContext resource hygiene & idle hardware release
 
+import { audioLifecycleGuard } from './audioLifecycleGuard'
+
 let audioCtx: AudioContext | null = null
 let idleSuspendTimer: any = null
 
@@ -20,6 +22,7 @@ function getAudioContext(): AudioContext | null {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     if (AudioContextClass) {
       audioCtx = new AudioContextClass()
+      audioLifecycleGuard.trackAudioContext(audioCtx)
     }
   }
   if (audioCtx && audioCtx.state === 'suspended') {
@@ -38,12 +41,9 @@ export async function disposeNotificationAudioContext(): Promise<void> {
     idleSuspendTimer = null
   }
   if (audioCtx) {
-    try {
-      if (audioCtx.state !== 'closed') {
-        await audioCtx.close()
-      }
-    } catch {}
+    const ctx = audioCtx
     audioCtx = null
+    await audioLifecycleGuard.closeAudioContext(ctx)
   }
 }
 

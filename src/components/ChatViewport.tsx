@@ -99,6 +99,7 @@ import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
 import { GroupCallModal } from './GroupCallModal'
 import { AudioResourceManager, VoiceVisualizerSession } from '../utils/audioResourceManager'
+import { audioLifecycleGuard } from '../utils/audioLifecycleGuard'
 import { BotIntroCard } from './chat/BotIntroCard'
 import { BotMenuDrawer, BotMenuButtonType } from './chat/BotMenuDrawer'
 import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeyboardPanel'
@@ -1485,11 +1486,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setSavedTagFilter(null)
     setSavedSearchQuery('')
     setSavedMediaFilter('all')
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause()
-      audioPlayerRef.current = null
-    }
+    audioLifecycleGuard.stopCurrentVoice()
+    audioPlayerRef.current = null
     setPlayingVoiceId(null)
+    setPlayingVoiceMsg(null)
 
     if (chat && window.guidegram?.getChatDetails) {
       window.guidegram.getChatDetails(chat.accountId, chat.id).then((details) => {
@@ -1511,6 +1511,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     } else {
       setBotInfoState(null)
       setBotMenuButtonState(null)
+    }
+
+    return () => {
+      audioLifecycleGuard.stopCurrentVoice()
     }
   }, [chat?.id])
 
@@ -2102,10 +2106,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
 
     // Stop current playing audio if any
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause()
-      audioPlayerRef.current = null
-    }
+    audioLifecycleGuard.stopCurrentVoice()
+    audioPlayerRef.current = null
 
     let audioSrc = downloadedMedia[msg.id] || msg.mediaUrl
     if (!audioSrc && window.guidegram?.downloadMedia) {
@@ -2132,37 +2134,36 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       return
     }
 
-    const audio = new Audio(audioSrc)
-    audio.playbackRate = voicePlaybackSpeed
-    audio.ontimeupdate = () => {
-      setVoiceCurrentTime(audio.currentTime)
-    }
-    audio.onended = () => {
-      setPlayingVoiceId(null)
-      setPlayingVoiceMsg(null)
-      setVoiceCurrentTime(0)
-    }
-    audio.onerror = () => {
-      setPlayingVoiceId(null)
-      setPlayingVoiceMsg(null)
-      showToast('Error playing audio format')
-    }
+    const session = audioLifecycleGuard.playVoice({
+      id: msg.id,
+      src: audioSrc,
+      playbackRate: voicePlaybackSpeed,
+      onTimeUpdate: (currentTime) => {
+        setVoiceCurrentTime(currentTime)
+      },
+      onEnded: () => {
+        setPlayingVoiceId(null)
+        setPlayingVoiceMsg(null)
+        setVoiceCurrentTime(0)
+        audioPlayerRef.current = null
+      },
+      onError: () => {
+        setPlayingVoiceId(null)
+        setPlayingVoiceMsg(null)
+        audioPlayerRef.current = null
+        showToast('Error playing audio format')
+      },
+    })
 
-    audioPlayerRef.current = audio
+    audioPlayerRef.current = session.audio
     setPlayingVoiceId(msg.id)
     setPlayingVoiceMsg(msg)
     setVoiceCurrentTime(0)
-    audio.play().catch(() => {
-      setPlayingVoiceId(null)
-      setPlayingVoiceMsg(null)
-    })
   }
 
   const handleStopVoice = () => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause()
-      audioPlayerRef.current = null
-    }
+    audioLifecycleGuard.stopCurrentVoice()
+    audioPlayerRef.current = null
     setPlayingVoiceId(null)
     setPlayingVoiceMsg(null)
     setVoiceCurrentTime(0)

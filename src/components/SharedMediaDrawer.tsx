@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import type { SharedMediaItem, SharedMediaFilterType, DialogItem } from '../types/telegram'
+import { audioLifecycleGuard } from '../utils/audioLifecycleGuard'
 
 interface SharedMediaDrawerProps {
   isOpen: boolean
@@ -108,6 +109,21 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
   const [playingAudioId, setPlayingAudioId] = useState<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Enforce zero dangling audio playback when drawer is closed or unmounted (MM-211)
+  useEffect(() => {
+    if (!isOpen && playingAudioId) {
+      audioLifecycleGuard.stopCurrentVoice()
+      audioRef.current = null
+      setPlayingAudioId(null)
+    }
+  }, [isOpen, playingAudioId])
+
+  useEffect(() => {
+    return () => {
+      audioLifecycleGuard.stopCurrentVoice()
+    }
+  }, [])
 
   // Fetch items for a tab
   const fetchTabItems = useCallback(
@@ -206,17 +222,17 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
     }
   }
 
-  // Toggle audio playback
+  // Toggle audio playback with single active player mutual exclusion (MM-211)
   const handleToggleAudio = async (item: SharedMediaItem) => {
     if (playingAudioId === item.id) {
-      audioRef.current?.pause()
+      audioLifecycleGuard.stopCurrentVoice()
+      audioRef.current = null
       setPlayingAudioId(null)
       return
     }
 
-    if (audioRef.current) {
-      audioRef.current.pause()
-    }
+    audioLifecycleGuard.stopCurrentVoice()
+    audioRef.current = null
 
     // Try to get local cached file or download
     if (window.guidegram?.downloadMedia) {
@@ -224,11 +240,23 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
       const filePath = await window.guidegram.downloadMedia(chat.accountId, chat.id, item.id, false).catch(() => null)
       setDownloadingId(null)
       if (filePath) {
-        const audio = new Audio(`file://${filePath}`)
-        audioRef.current = audio
-        audio.play()
+        const mediaUrl = filePath.startsWith('http') || filePath.startsWith('guidegram-media://') || filePath.startsWith('blob:')
+          ? filePath
+          : `guidegram-media://${encodeURIComponent(filePath.replace(/\\/g, '/'))}`
+        const session = audioLifecycleGuard.playVoice({
+          id: String(item.id),
+          src: mediaUrl,
+          onEnded: () => {
+            setPlayingAudioId(null)
+            audioRef.current = null
+          },
+          onError: () => {
+            setPlayingAudioId(null)
+            audioRef.current = null
+          },
+        })
+        audioRef.current = session.audio
         setPlayingAudioId(item.id)
-        audio.onended = () => setPlayingAudioId(null)
       }
     }
   }
