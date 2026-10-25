@@ -23,6 +23,7 @@ const CloseConfirmModal = React.lazy(() => import('./components/CloseConfirmModa
 const WhatsNewModal = React.lazy(() => import('./components/WhatsNewModal').then((m) => ({ default: m.WhatsNewModal })))
 const SupportModal = React.lazy(() => import('./components/SupportModal').then((m) => ({ default: m.SupportModal })))
 const McpHubModal = React.lazy(() => import('./components/McpHubModal').then((m) => ({ default: m.McpHubModal })))
+const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then((m) => ({ default: m.KeyboardShortcutsModal })))
 import {
   AccountInfo,
   DialogItem,
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
   const [isContactsOpen, setIsContactsOpen] = useState(false)
   const [isCallsOpen, setIsCallsOpen] = useState(false)
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [createChatState, setCreateChatState] = useState<{ isOpen: boolean; mode: 'group' | 'channel' }>({
     isOpen: false,
     mode: 'group',
@@ -583,8 +585,52 @@ export const App: React.FC = () => {
         }
       }
 
-      // 3. Esc -> Close open modals
+      // 3. F1 / Ctrl + / -> Toggle Keyboard Shortcuts Cheat Sheet
+      if (e.key === 'F1' || ((e.ctrlKey || e.metaKey) && e.key === '/')) {
+        e.preventDefault()
+        setIsShortcutsModalOpen((prev) => !prev)
+        return
+      }
+
+      // 4. Alt + Up / Alt + Down -> Power Chat Navigation (Telegram Desktop Parity)
+      if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        const currentDialogs = activeAccountId ? dialogsByAccount[activeAccountId] || [] : []
+        if (currentDialogs.length > 0) {
+          e.preventDefault()
+          const currentIdx = currentDialogs.findIndex((d) => d.id === activeChatId)
+          let targetIdx = 0
+          if (e.key === 'ArrowUp') {
+            targetIdx = currentIdx > 0 ? currentIdx - 1 : currentDialogs.length - 1
+          } else {
+            targetIdx = currentIdx >= 0 && currentIdx < currentDialogs.length - 1 ? currentIdx + 1 : 0
+          }
+          const nextChat = currentDialogs[targetIdx]
+          if (nextChat) {
+            handleSelectChat(nextChat.id)
+            setA11yAnnouncement(`Navigated to chat ${nextChat.title}`)
+          }
+        }
+      }
+
+      // 5. Alt + Left / Alt + Right -> Folder Tab Navigation
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const folderIds = ['all', 'users', 'groups', 'channels', 'bots', 'unread', ...cloudFolders.map((f) => `folder:${f.id}`)]
+        const currFolderIdx = folderIds.indexOf(activeTab)
+        if (currFolderIdx !== -1) {
+          e.preventDefault()
+          let nextFolderIdx = 0
+          if (e.key === 'ArrowLeft') {
+            nextFolderIdx = currFolderIdx > 0 ? currFolderIdx - 1 : folderIds.length - 1
+          } else {
+            nextFolderIdx = currFolderIdx < folderIds.length - 1 ? currFolderIdx + 1 : 0
+          }
+          setActiveTab(folderIds[nextFolderIdx])
+        }
+      }
+
+      // 6. Esc -> Close open modals
       if (e.key === 'Escape') {
+        if (isShortcutsModalOpen) setIsShortcutsModalOpen(false)
         if (isSettingsOpen) setIsSettingsOpen(false)
         if (isProxyModalOpen) setIsProxyModalOpen(false)
         if (isAddAccountOpen) setIsAddAccountOpen(false)
@@ -596,7 +642,21 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [accounts, isSettingsOpen, isProxyModalOpen, isAddAccountOpen, isUnifiedInboxOpen, isMainMenuOpen, isCloseConfirmOpen])
+  }, [
+    accounts,
+    isSettingsOpen,
+    isProxyModalOpen,
+    isAddAccountOpen,
+    isUnifiedInboxOpen,
+    isMainMenuOpen,
+    isCloseConfirmOpen,
+    isShortcutsModalOpen,
+    activeAccountId,
+    dialogsByAccount,
+    activeChatId,
+    activeTab,
+    cloudFolders,
+  ])
 
   const loadCloudFoldersForAccount = async (accountId: string) => {
     if (!window.guidegram?.getCloudFolders) return
@@ -1655,6 +1715,13 @@ export const App: React.FC = () => {
             isOpen={!!whatsNewVersion}
             version={whatsNewVersion || '1.8.0'}
             onClose={() => setWhatsNewVersion(null)}
+          />
+        )}
+
+        {isShortcutsModalOpen && (
+          <KeyboardShortcutsModal
+            isOpen={isShortcutsModalOpen}
+            onClose={() => setIsShortcutsModalOpen(false)}
           />
         )}
       </React.Suspense>
