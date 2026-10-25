@@ -666,3 +666,43 @@ textarea:focus-visible {
     opacity: 1;
   }
 }
+
+/* ==========================================================================
+   Phase 110: 60fps Micro-Interactions, Tooltip Springs & Visual Polish Capstone
+   Online pulse indicator, bounce-to-bottom physics, and elastic tooltip springs
+   ========================================================================== */
+.online-badge-pulse {
+  animation: onlineDotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+@keyframes onlineDotPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.25);
+  }
+}
+
+.scroll-bottom-bounce {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.scroll-bottom-bounce:hover {
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.35);
+}
+
+.scroll-bottom-bounce:active {
+  transform: translateY(1px) scale(0.92);
+}
+
+.tooltip-spring {
+  transition: opacity 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center bottom;
+  will-change: transform, opacity;
+}

@@ -4574,7 +4574,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 ) : isBot ? (
                   'Bot'
                 ) : (
-                  'Online'
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 online-badge-pulse" />
+                    <span>Online</span>
+                  </span>
                 )}
               </div>
             </motion.div>
@@ -6098,21 +6101,34 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       </div>
 
       {/* Floating Scroll to Bottom Button (↓) with Unread Count (Pinned to Outer Wrapper) */}
-      {showScrollBottom && (
-        <button
-          type="button"
-          onClick={handleScrollToBottom}
-          className="absolute bottom-4 right-5 z-30 w-11 h-11 rounded-full bg-dark-800/95 hover:bg-dark-750 text-gray-200 hover:text-white border border-white/10 shadow-2xl backdrop-blur-md transition-all flex items-center justify-center group cursor-pointer animate-in fade-in zoom-in-90 duration-150 active:scale-95"
-          title="Scroll to bottom"
-        >
-          <ChevronDown className="w-5 h-5 group-hover:translate-y-0.5 transition-transform text-gray-300 group-hover:text-white" />
-          {unreadScrollCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shadow-glow border-2 border-dark-900">
-              {unreadScrollCount > 99 ? '99+' : unreadScrollCount}
-            </span>
-          )}
-        </button>
-      )}
+      <AnimatePresence>
+        {showScrollBottom && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, scale: 0.6, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.7, y: 12 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 24, mass: 0.7 }}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={handleScrollToBottom}
+            className="absolute bottom-4 right-5 z-30 w-11 h-11 rounded-full bg-dark-800/95 hover:bg-dark-750 text-gray-200 hover:text-white border border-white/10 shadow-2xl backdrop-blur-md flex items-center justify-center group cursor-pointer scroll-bottom-bounce select-none"
+            title="Scroll to bottom"
+          >
+            <ChevronDown className="w-5 h-5 group-hover:translate-y-0.5 transition-transform text-gray-300 group-hover:text-white" />
+            {unreadScrollCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shadow-glow border-2 border-dark-900"
+              >
+                {unreadScrollCount > 99 ? '99+' : unreadScrollCount}
+              </motion.span>
+            )}
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
 
       {/* 3. Input Box OR Broadcast Channel Bottom Action Bar */}
