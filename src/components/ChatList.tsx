@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic } from 'lucide-react'
+import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
@@ -851,7 +851,12 @@ export const DialogListItem = React.memo<DialogListItemProps>(
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                <span className="text-xs font-bold text-gray-100 truncate">{dialog.title}</span>
+                {dialog.isSecretChat && (
+                  <Lock className="w-3 h-3 text-accent-emerald shrink-0" />
+                )}
+                <span className={`text-xs font-bold truncate ${dialog.isSecretChat ? 'text-accent-emerald' : 'text-gray-100'}`}>
+                  {dialog.title}
+                </span>
                 {dialog.customEmojiStatusId ? (
                   <CustomEmojiView
                     accountId={dialog.accountId}

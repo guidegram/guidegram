@@ -7930,6 +7930,50 @@ export class AccountManager {
     }
   }
 
+  public async sendEncryptedFile(
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    dataHex: string,
+    fileInput: {
+      id: string | number
+      accessHash: string | number
+      size?: number
+      dcId?: number
+      keyFingerprint?: number
+      _?: string
+    },
+    silent = false
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const data = Buffer.from(dataHex, 'hex')
+      const randomId = toLong(Math.floor(Math.random() * 10000000000))
+      const encryptedFile = fileInput?._ ? fileInput : {
+        _: 'inputEncryptedFile',
+        id: toLong(fileInput.id),
+        accessHash: toLong(fileInput.accessHash),
+      }
+      const res: any = await holder.client.call({
+        _: 'messages.sendEncryptedFile',
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(chatId),
+          accessHash: toLong(accessHash),
+        },
+        randomId,
+        data,
+        file: encryptedFile,
+        silent: Boolean(silent),
+      } as any)
+      return res
+    } catch (err: any) {
+      Logger.warn('[AccountManager] sendEncryptedFile error:', err?.message || err)
+      throw err
+    }
+  }
+
   public async getSponsoredMessages(
     accountId: string,
     peerId: string,

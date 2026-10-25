@@ -144,6 +144,10 @@ export interface DialogItem {
   isSponsorChannel?: boolean
   accessHash?: string
   draft?: DraftItem
+  isSecretChat?: boolean
+  secretChatFingerprint?: string
+  secretChatVisualEmojis?: string[]
+  secretChatTtl?: number
 }
 
 export interface DraftItem {
@@ -556,6 +560,11 @@ export interface ChatDetails {
   antiSpamEnabled?: boolean
   canToggleAntiSpam?: boolean
   slowmodeNextSendDate?: number
+  isSecretChat?: boolean
+  secretChatFingerprint?: string
+  secretChatVisualEmojis?: string[]
+  secretChatTtl?: number
+  secretChatState?: 'waiting' | 'active' | 'discarded'
 }
 
 export interface DiscussionThreadInfo {

@@ -921,6 +921,29 @@ const guidegramAPI = {
       accessHash,
       dataHex,
     }),
+  sendEncryptedFile: (
+    accountId: string,
+    chatId: number,
+    accessHash: string,
+    dataHex: string,
+    fileInput: {
+      id: string | number
+      accessHash: string | number
+      size?: number
+      dcId?: number
+      keyFingerprint?: number
+      _?: string
+    },
+    silent = false
+  ): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('telegram:send-encrypted-file', {
+      accountId,
+      chatId,
+      accessHash,
+      dataHex,
+      fileInput,
+      silent,
+    }),
 
   // Telegram Ad Platform & Sponsored Messages
   getSponsoredMessages: (accountId: string, peerId: string, msgId?: number): Promise<Record<string, unknown>> =>

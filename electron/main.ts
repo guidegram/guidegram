@@ -2603,6 +2603,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:send-encrypted-file', async (_event, { accountId, chatId, accessHash, dataHex, fileInput, silent }) => {
+    try {
+      return await accountManager.sendEncryptedFile(accountId, chatId, accessHash, dataHex, fileInput, silent)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendEncryptedFile error:`, err)
+      throw err
+    }
+  })
+
   // Telegram Ad Platform & Sponsored Messages
   ipcMain.handle('telegram:get-sponsored-messages', async (_event, { accountId, peerId, msgId }) => {
     try {
