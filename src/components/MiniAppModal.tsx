@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
@@ -11,9 +11,22 @@ import {
   Sparkles,
   ShieldCheck,
   Check,
+  ArrowLeft,
+  Settings,
+  Smartphone,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
+
+export interface MainButtonState {
+  isVisible: boolean
+  isActive: boolean
+  text: string
+  color?: string
+  textColor?: string
+  isProgressVisible?: boolean
+  hasShineEffect?: boolean
+}
 
 export interface MiniAppModalProps {
   isOpen: boolean
@@ -21,6 +34,8 @@ export interface MiniAppModalProps {
   title: string
   botName?: string
   botUsername?: string
+  accountId?: string
+  botPeerId?: string
   onClose: () => void
   onOpenInNewWindow?: () => void
 }
@@ -31,6 +46,8 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
   title,
   botName,
   botUsername,
+  accountId,
+  botPeerId,
   onClose,
   onOpenInNewWindow,
 }) => {
@@ -39,7 +56,207 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+
+  // Bi-directional WebApp state
+  const [mainButton, setMainButton] = useState<MainButtonState>({
+    isVisible: false,
+    isActive: true,
+    text: '',
+    color: '#2563eb',
+    textColor: '#ffffff',
+    isProgressVisible: false,
+    hasShineEffect: false,
+  })
+  const [backButtonVisible, setBackButtonVisible] = useState(false)
+  const [settingsButtonVisible, setSettingsButtonVisible] = useState(false)
+  const [customHeaderColor, setCustomHeaderColor] = useState<string | null>(null)
+  const [customBgColor, setCustomBgColor] = useState<string | null>(null)
+  const [hapticTriggered, setHapticTriggered] = useState(false)
+
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Dispatch events from Guidegram (parent) to Mini App iframe
+  const postEventToWebApp = useCallback((eventType: string, eventData?: any) => {
+    if (!iframeRef.current?.contentWindow) return
+    try {
+      const payload = JSON.stringify({
+        eventType,
+        eventData: eventData ?? {},
+      })
+      iframeRef.current.contentWindow.postMessage(payload, '*')
+    } catch (err) {
+      console.warn('[MiniAppModal] Failed to post message to WebApp iframe:', err)
+    }
+  }, [])
+
+  // Sync current viewport metrics to iframe
+  const syncViewport = useCallback(() => {
+    const currentHeight = containerRef.current?.clientHeight || (isExpanded ? 780 : 640)
+    postEventToWebApp('viewport_changed', {
+      height: currentHeight,
+      is_state_stable: true,
+      is_expanded: isExpanded,
+    })
+  }, [isExpanded, postEventToWebApp])
+
+  // Sync theme palette parameters to iframe
+  const syncThemeParams = useCallback(() => {
+    postEventToWebApp('theme_changed', {
+      theme_params: {
+        bg_color: '#0f1117',
+        text_color: '#ffffff',
+        hint_color: '#9ca3af',
+        link_color: '#38bdf8',
+        button_color: '#2563eb',
+        button_text_color: '#ffffff',
+        secondary_bg_color: '#1a1f2c',
+        header_bg_color: '#12151e',
+        accent_text_color: '#06b6d4',
+        section_bg_color: '#161b26',
+        section_header_text_color: '#38bdf8',
+        subtitle_text_color: '#94a3b8',
+        destructive_text_color: '#f43f5e',
+      },
+    })
+  }, [postEventToWebApp])
+
+  // Handle incoming Telegram WebApp postMessage events from iframe
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleMessage = async (event: MessageEvent) => {
+      let data = event.data
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data)
+        } catch {
+          return
+        }
+      }
+
+      if (!data || typeof data !== 'object') return
+      const { eventType, eventData } = data
+
+      switch (eventType) {
+        case 'web_app_request_viewport':
+          syncViewport()
+          break
+
+        case 'web_app_request_theme':
+          syncThemeParams()
+          break
+
+        case 'web_app_setup_main_button':
+          if (eventData) {
+            setMainButton((prev) => ({
+              ...prev,
+              isVisible: typeof eventData.is_visible === 'boolean' ? eventData.is_visible : prev.isVisible,
+              isActive: typeof eventData.is_active === 'boolean' ? eventData.is_active : prev.isActive,
+              text: typeof eventData.text === 'string' ? eventData.text : prev.text,
+              color: eventData.color || prev.color,
+              textColor: eventData.text_color || prev.textColor,
+              isProgressVisible: Boolean(eventData.is_progress_visible),
+              hasShineEffect: Boolean(eventData.has_shine_effect),
+            }))
+          }
+          break
+
+        case 'web_app_setup_back_button':
+          setBackButtonVisible(Boolean(eventData?.is_visible))
+          break
+
+        case 'web_app_setup_settings_button':
+          setSettingsButtonVisible(Boolean(eventData?.is_visible))
+          break
+
+        case 'web_app_set_header_color':
+          if (eventData?.color) {
+            setCustomHeaderColor(eventData.color)
+          } else if (eventData?.color_key === 'secondary_bg_color') {
+            setCustomHeaderColor('#1a1f2c')
+          } else {
+            setCustomHeaderColor(null)
+          }
+          break
+
+        case 'web_app_set_background_color':
+          if (eventData?.color) {
+            setCustomBgColor(eventData.color)
+          } else {
+            setCustomBgColor(null)
+          }
+          break
+
+        case 'web_app_expand':
+          setIsExpanded(true)
+          break
+
+        case 'web_app_close':
+          onClose()
+          break
+
+        case 'web_app_trigger_haptic_feedback':
+          setHapticTriggered(true)
+          setTimeout(() => setHapticTriggered(false), 200)
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            const hapticType = eventData?.type
+            if (hapticType === 'impact') {
+              navigator.vibrate(eventData?.impact_style === 'heavy' ? 40 : 15)
+            } else if (hapticType === 'notification') {
+              navigator.vibrate([20, 50, 20])
+            } else {
+              navigator.vibrate(10)
+            }
+          }
+          break
+
+        case 'web_app_data_send':
+          if (eventData?.data) {
+            try {
+              if (window.guidegram?.sendWebViewData && accountId && (botPeerId || botUsername)) {
+                await window.guidegram.sendWebViewData(
+                  accountId,
+                  botPeerId || botUsername || '',
+                  mainButton.text || 'Mini App',
+                  eventData.data
+                )
+              }
+            } catch (err) {
+              console.warn('[MiniAppModal] sendWebViewData error:', err)
+            }
+          }
+          break
+
+        case 'web_app_open_link':
+          if (eventData?.url) {
+            window.open(eventData.url, '_blank')
+          }
+          break
+
+        case 'web_app_open_telegram_link':
+          if (eventData?.path_full) {
+            window.open(`https://t.me/${eventData.path_full.replace(/^\/+/, '')}`, '_blank')
+          }
+          break
+
+        default:
+          break
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => {
+      window.removeEventListener('message', handleMessage)
+    }
+  }, [isOpen, accountId, botPeerId, botUsername, mainButton.text, onClose, syncThemeParams, syncViewport])
+
+  // Trigger viewport synchronization whenever modal expansion state changes
+  useEffect(() => {
+    if (!isLoading) {
+      syncViewport()
+    }
+  }, [isExpanded, isLoading, syncViewport])
 
   if (!isOpen) return null
 
@@ -65,6 +282,25 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleIframeLoaded = () => {
+    setIsLoading(false)
+    syncThemeParams()
+    syncViewport()
+  }
+
+  const handleMainButtonClick = () => {
+    if (!mainButton.isActive || mainButton.isProgressVisible) return
+    postEventToWebApp('main_button_pressed')
+  }
+
+  const handleBackButtonClick = () => {
+    postEventToWebApp('back_button_pressed')
+  }
+
+  const handleSettingsButtonClick = () => {
+    postEventToWebApp('settings_button_pressed')
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md"
@@ -76,19 +312,40 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94, y: 16 }}
         transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-        className={`relative flex flex-col bg-dark-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden ${
+        style={{
+          backgroundColor: customBgColor || '#0f1117',
+        }}
+        className={`relative flex flex-col border border-white/10 rounded-3xl shadow-2xl overflow-hidden transition-colors ${
           isExpanded
-            ? 'w-full h-full max-w-5xl max-h-[92vh]'
-            : 'w-full max-w-md h-[740px] max-h-[90vh]'
-        }`}
+            ? 'w-full h-full max-w-5xl max-h-[94vh]'
+            : 'w-full max-w-md h-[760px] max-h-[90vh]'
+        } ${hapticTriggered ? 'ring-2 ring-primary-500/50' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
-        <div className="h-14 px-4 bg-dark-850/90 border-b border-white/10 flex items-center justify-between shrink-0 select-none">
+        <div
+          style={{
+            backgroundColor: customHeaderColor || '#141824',
+          }}
+          className="h-14 px-4 border-b border-white/10 flex items-center justify-between shrink-0 select-none transition-colors"
+        >
           <div className="flex items-center gap-2.5 min-w-0">
+            {/* Native Telegram WebApp Back Button */}
+            {backButtonVisible && (
+              <button
+                type="button"
+                onClick={handleBackButtonClick}
+                title="Back in Mini App"
+                className="p-1.5 -ml-1 text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition-all active:scale-95 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+
             <div className="w-8 h-8 rounded-full bg-primary-600/30 border border-primary-500/40 text-primary-400 flex items-center justify-center shrink-0 shadow-inner">
               <Bot className="w-4 h-4" />
             </div>
+
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 truncate">
                 <span className="text-xs font-bold text-white truncate">{title || botName || 'Mini App'}</span>
@@ -101,6 +358,18 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            {/* Native Telegram WebApp Settings Button */}
+            {settingsButtonVisible && (
+              <button
+                type="button"
+                onClick={handleSettingsButtonClick}
+                title="Settings"
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {/* Reload button */}
             <button
               type="button"
@@ -161,8 +430,14 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
           </div>
         </div>
 
-        {/* Webview / iframe Viewport */}
-        <div className="relative flex-1 min-h-0 bg-dark-950 flex items-center justify-center overflow-hidden">
+        {/* Webview / iframe Viewport Container */}
+        <div
+          ref={containerRef}
+          style={{
+            backgroundColor: customBgColor || '#0f1117',
+          }}
+          className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden transition-colors"
+        >
           {isLoading && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-dark-950/90 backdrop-blur-sm gap-3 animate-in fade-in">
               <div className="relative">
@@ -187,12 +462,48 @@ export const MiniAppModal: React.FC<MiniAppModalProps> = ({
             ref={iframeRef}
             src={url}
             title={title || 'Telegram Mini App'}
-            onLoad={() => setIsLoading(false)}
-            className="w-full h-full border-0 bg-[#0F1117]"
+            onLoad={handleIframeLoaded}
+            className="w-full h-full border-0"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
             allow="camera; microphone; geolocation; clipboard-write"
           />
         </div>
+
+        {/* Native Telegram WebApp MainButton */}
+        <AnimatePresence>
+          {mainButton.isVisible && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.18 }}
+              className="p-3 bg-dark-900/95 border-t border-white/10 shrink-0"
+            >
+              <button
+                type="button"
+                disabled={!mainButton.isActive || mainButton.isProgressVisible}
+                onClick={handleMainButtonClick}
+                style={{
+                  backgroundColor: mainButton.color || '#2563eb',
+                  color: mainButton.textColor || '#ffffff',
+                }}
+                className={`w-full py-3 px-4 rounded-2xl font-bold text-sm tracking-wide shadow-lg transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden select-none ${
+                  mainButton.isActive && !mainButton.isProgressVisible
+                    ? 'hover:brightness-110 active:scale-[0.98] cursor-pointer'
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+              >
+                {mainButton.isProgressVisible && (
+                  <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                )}
+                <span>{mainButton.text || 'Continue'}</span>
+                {mainButton.hasShineEffect && (
+                  <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-pulse pointer-events-none" />
+                )}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Safe Area Footer Indicator */}
         <div className="h-4 bg-dark-850/60 border-t border-white/5 flex items-center justify-center shrink-0">

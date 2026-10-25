@@ -3852,6 +3852,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:prolong-web-view', async (_event, { accountId, peerId, botId, queryId, silent }) => {
+    try {
+      return await accountManager.prolongWebView(accountId, peerId, botId, queryId, silent)
+    } catch (err: any) {
+      Logger.warn(`[IPC] prolongWebView error:`, err)
+      return false
+    }
+  })
+
   ipcMain.handle('telegram:get-inline-bot-results', async (_event, { accountId, botUsername, query, offset, peerId }) => {
     try {
       return await accountManager.getInlineBotResults(accountId, botUsername, query, offset, peerId)

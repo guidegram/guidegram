@@ -1463,6 +1463,14 @@ const guidegramAPI = {
     data: string
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:send-web-view-data', { accountId, botPeerId, buttonText, data }),
+  prolongWebView: (
+    accountId: string,
+    peerId: string,
+    botId: string,
+    queryId: string | number | bigint,
+    silent?: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:prolong-web-view', { accountId, peerId, botId, queryId, silent }),
   getInlineBotResults: (
     accountId: string,
     botUsername: string,

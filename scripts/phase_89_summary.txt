@@ -1,0 +1,12 @@
+Phase 89: Telegram Mini App & WebApp Viewport Bi-Directional State Synchronization Protocol
+
+- Added `prolongWebView` method to `AccountManager` targeting `messages.prolongWebView`.
+- Registered `telegram:prolong-web-view` in `electron/main.ts` and exposed it in `electron/preload.ts`.
+- Rewrote `src/components/MiniAppModal.tsx` to establish full Telegram WebApp 8.0 bi-directional protocol:
+  - Event listener for incoming iframe events: `web_app_request_viewport`, `web_app_request_theme`, `web_app_setup_main_button`, `web_app_setup_back_button`, `web_app_setup_settings_button`, `web_app_set_header_color`, `web_app_set_background_color`, `web_app_trigger_haptic_feedback`, `web_app_data_send`, `web_app_expand`, `web_app_close`.
+  - Dispatching outward events to iframe: `viewport_changed` (with dynamic height, stable state, and expanded status) and `theme_changed` (with 13 theme parameter keys).
+  - Native UI components: Bottom sticky MainButton with progress spinner and shine shimmer; Header BackButton with `back_button_pressed` dispatch; Header SettingsButton with `settings_button_pressed` dispatch; and haptic vibration feedback.
+  - Linked `web_app_data_send` to `window.guidegram.sendWebViewData` targeting `messages.sendWebViewData`.
+- Passed `accountId` and `botPeerId` to `MiniAppModal` in `src/components/ChatViewport.tsx`.
+- Created and passed test suite `tests/miniapp_viewport_bidirectional_sync_verification.mjs` (21/21 checks passing).
+- Verified full production build (`tsc && vite build`) without errors.

@@ -8709,6 +8709,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           title={activeMiniApp.title}
           botName={activeMiniApp.botName}
           botUsername={activeMiniApp.botUsername}
+          accountId={chat?.accountId}
+          botPeerId={chat?.id}
           onClose={() => setActiveMiniApp(null)}
           onOpenInNewWindow={() => {
             if (window.guidegram?.openMiniApp) {

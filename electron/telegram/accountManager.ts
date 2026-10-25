@@ -11415,6 +11415,36 @@ export class AccountManager {
     }
   }
 
+  public async prolongWebView(
+    accountId: string,
+    peerId: string,
+    botId: string,
+    queryId: string | number | bigint,
+    silent?: boolean
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, peerId)
+      const botPeer: any = await this.resolveInputPeer(accountId, botId)
+      const botUser =
+        botPeer._ === 'inputPeerUser'
+          ? { _: 'inputUser', userId: botPeer.userId, accessHash: botPeer.accessHash }
+          : { _: 'inputUserSelf' }
+      const res: any = await holder.client.call({
+        _: 'messages.prolongWebView',
+        silent: silent ?? false,
+        peer: inputPeer,
+        bot: botUser,
+        query_id: typeof queryId === 'string' ? BigInt(queryId) : queryId,
+      } as any)
+      return Boolean(res)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] prolongWebView error:`, err?.message || err)
+      return false
+    }
+  }
+
   public async getInlineBotResults(
     accountId: string,
     botUsername: string,
