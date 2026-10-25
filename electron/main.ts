@@ -31,6 +31,7 @@ import { passcodeGuard } from './passcodeGuard'
 import { IpcSecurityFilter } from './ipcSecurityFilter'
 import { privacyProtectionGuard } from './privacyProtectionGuard'
 import { accountVaultManager } from './telegram/accountVaultManager'
+import { MediaStreamValidator } from './mediaStreamValidator'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -630,63 +631,9 @@ app.whenReady().then(async () => {
         return new Response('Media file not found', { status: 404 })
       }
 
-      // Forward request to net.fetch with file:// URL to preserve Range headers for video streaming
-      try {
-        return await net.fetch(pathToFileURL(decodedPath).toString(), {
-          headers: request.headers,
-        })
-      } catch (fetchErr) {
-        // Fallback to direct reading with explicit Content-Type
-        const ext = path.extname(decodedPath).toLowerCase()
-        const mimeTypes: Record<string, string> = {
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.png': 'image/png',
-          '.webp': 'image/webp',
-          '.gif': 'image/gif',
-          '.mp4': 'video/mp4',
-          '.ogg': 'audio/ogg',
-          '.mp3': 'audio/mpeg',
-          '.pdf': 'application/pdf',
-        }
-        const contentType = mimeTypes[ext] || 'application/octet-stream'
-        const stats = await fs.promises.stat(decodedPath)
-        const totalSize = stats.size
-
-        // Handle HTTP Range header for media scrubbing/seeking without buffering whole file in RAM
-        const rangeHeader = request.headers.get('Range') || request.headers.get('range')
-        if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-          const parts = rangeHeader.replace('bytes=', '').split('-')
-          const start = parseInt(parts[0], 10) || 0
-          const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1
-          const boundedEnd = Math.min(end, totalSize - 1)
-          const chunkSize = boundedEnd - start + 1
-
-          const nodeStream = fs.createReadStream(decodedPath, { start, end: boundedEnd })
-          const webStream = (Readable as any).toWeb ? (Readable as any).toWeb(nodeStream) : (nodeStream as any)
-
-          return new Response(webStream, {
-            status: 206,
-            headers: {
-              'Content-Type': contentType,
-              'Content-Range': `bytes ${start}-${boundedEnd}/${totalSize}`,
-              'Accept-Ranges': 'bytes',
-              'Content-Length': chunkSize.toString(),
-            },
-          })
-        }
-
-        const fullStream = fs.createReadStream(decodedPath)
-        const fullWebStream = (Readable as any).toWeb ? (Readable as any).toWeb(fullStream) : (fullStream as any)
-
-        return new Response(fullWebStream, {
-          headers: {
-            'Content-Type': contentType,
-            'Content-Length': totalSize.toString(),
-            'Accept-Ranges': 'bytes',
-          },
-        })
-      }
+      // Stream media safely via RFC 9110 compliant MediaStreamValidator (Layer 08 / Layer 11)
+      const rangeHeader = request.headers.get('Range') || request.headers.get('range')
+      return await MediaStreamValidator.createMediaResponse(decodedPath, rangeHeader)
     } catch (err) {
       Logger.error('[Protocol] Failed to serve guidegram-media request:', err)
       return new Response('Media error', { status: 500 })
@@ -3822,6 +3769,10 @@ function setupIpcHandlers() {
 
   ipcMain.handle('system:get-account-vault-telemetry', async () => {
     return accountVaultManager.getTelemetry()
+  })
+
+  ipcMain.handle('system:get-media-stream-telemetry', async () => {
+    return MediaStreamValidator.getTelemetry()
   })
 
   ipcMain.handle('system:log-renderer-error', async (_event, { message, stack }) => {
