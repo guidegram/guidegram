@@ -42,6 +42,7 @@ import { PaymentsService } from './services/paymentsService'
 import { AccountSecurityService } from './services/accountSecurityService'
 import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
+import { AccountIsolationGuard } from './accountIsolationGuard'
 import {
   AccountInfo,
   DialogItem,
@@ -1601,7 +1602,8 @@ export class AccountManager {
 
 
   public async logoutAccount(accountId: string): Promise<void> {
-    const holder = this.clients.get(accountId)
+    const safeId = AccountIsolationGuard.assertSafeAccountId(accountId)
+    const holder = this.clients.get(safeId)
     if (holder?.client) {
       try {
         try { holder.client.stopUpdatesLoop() } catch (_) {}
@@ -1609,9 +1611,27 @@ export class AccountManager {
         await holder.client.disconnect().catch(() => {})
       } catch (_) {}
     }
-    this.clients.delete(accountId)
-    this.store.removeSession(accountId)
-    Logger.info(`[AccountManager] Account ${accountId} logged out successfully.`)
+
+    // Layer 10 Multi-Tenancy: Purge all cached data, peer hashes, and in-flight operations
+    AccountIsolationGuard.purgeAccountCaches(safeId, [
+      this.peerAccessHashes,
+      this.rawMessagesCache,
+      this.peerPhotos,
+      this.peerBigPhotos,
+      this.topMessageIds,
+      this.activeMediaDownloads,
+      this.inFlightDownloads,
+      this.avatarCache,
+      this.thumbCache,
+      this.mediaCache,
+    ])
+
+    this.pendingAuthClients.delete(safeId)
+    this.clients.delete(safeId)
+    this.store.removeSession(safeId)
+
+    this.onEventCallback?.('account:logged-out', { accountId: safeId })
+    Logger.info(`[AccountManager] Account ${safeId} logged out and tenant state completely purged.`)
   }
 
   public async resolveInputPeer(accountId: string, peerId: string | number): Promise<tl.TypeInputPeer> {
