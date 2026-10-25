@@ -1062,3 +1062,24 @@ textarea:focus-visible {
   contain: strict;
   will-change: transform;
 }
+
+/* ==========================================================================
+   Phase 128: Dynamic Soundwave Spectrum & Live Audio Visualizer Shaders
+   Spring-damped frequency bars and radial voice visualizer ring
+   ========================================================================== */
+.audio-spectrum-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  contain: strict;
+  will-change: transform;
+}
+
+.voice-spectrum-radial-ring {
+  position: relative;
+  border-radius: 9999px;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+  transition: box-shadow 0.15s ease-out;
+}
