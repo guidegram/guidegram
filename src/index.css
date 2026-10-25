@@ -1184,3 +1184,26 @@ textarea:focus-visible {
   color: #34d399;
   font-size: 11px;
 }
+
+/* ==========================================================================
+   Phase 133: Google Jules Multi-Account Pool & Automated Failover Load Balancer
+   Fleet pool quota indicators, healthy worker tags, and failover notifications
+   ========================================================================== */
+.account-pool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.pool-failover-indicator {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+}
