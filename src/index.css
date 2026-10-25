@@ -1341,4 +1341,36 @@ textarea:focus-visible {
   font-size: 11px;
 }
 
+/* ==========================================================================
+   Phase 139: Google Jules Fleet-Wide Broadcast & Parallel Directive Messaging
+   Top banner alert and ACK ratio badge for swarm fleet messaging
+   ========================================================================== */
+.fleet-broadcast-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  color: #f8fafc;
+  font-size: 13px;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+
+.directive-ack-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+
 
