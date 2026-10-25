@@ -1207,3 +1207,19 @@ textarea:focus-visible {
   border-color: rgba(245, 158, 11, 0.35);
   background: rgba(245, 158, 11, 0.12);
 }
+
+/* ==========================================================================
+   Phase 134: Google Jules Repoless Output Validation & Anti-Empty Gate
+   Completeness scores, anti-hollow badges, and validation pass/fail styling
+   ========================================================================== */
+.quality-gate-pass {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.quality-gate-rejected {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
