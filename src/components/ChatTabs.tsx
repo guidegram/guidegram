@@ -210,15 +210,18 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
   }
 
   return (
-    <div className="w-full shrink-0 flex items-center gap-1 px-2.5 py-2 border-b border-white/5 overflow-x-auto scrollbar-none titlebar-no-drag relative">
-      <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-none">
+    <div className="w-full shrink-0 flex items-center gap-1 px-2.5 py-2 border-b border-white/5 overflow-x-auto scrollbar-none titlebar-no-drag relative kinetic-tab-rail">
+      <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-none kinetic-tab-rail">
         {allTabs.map((tab) => {
           const isActive = activeTab === tab.id
           const count = unreadCounts[tab.id] || 0
 
           return (
-            <button
+            <motion.button
               key={tab.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
               onClick={() => onTabChange(tab.id)}
               onContextMenu={(e) => {
                 e.preventDefault()
@@ -236,26 +239,37 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
               }`}
             >
               {isActive && (
-                <motion.span
-                  layoutId="activeChatTabIndicator"
-                  transition={{ type: 'spring', damping: 25, stiffness: 400 }}
-                  className="absolute inset-0 rounded-xl bg-primary-600/20 border border-primary-500/30 shadow-sm"
-                />
+                <>
+                  <motion.span
+                    layoutId="activeChatTabIndicator"
+                    transition={{ type: 'spring', damping: 28, stiffness: 420, mass: 0.7 }}
+                    className="absolute inset-0 rounded-xl bg-primary-600/20 border border-primary-500/30 shadow-sm"
+                  />
+                  <motion.span
+                    layoutId="activeChatTabUnderline"
+                    transition={{ type: 'spring', damping: 26, stiffness: 400, mass: 0.6 }}
+                    className="absolute bottom-0 left-2.5 right-2.5 h-[2px] rounded-full bg-primary-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]"
+                  />
+                </>
               )}
               <span className="relative z-10 flex items-center gap-1.5">
                 {tab.icon}
                 <span>{tab.label}</span>
                 {count > 0 && (
-                  <span
-                    className={`${isRTL ? 'mr-1' : 'ml-1'} px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  <motion.span
+                    layout
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                    className={`tab-badge-pop ${isRTL ? 'mr-1' : 'ml-1'} px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                       isActive ? 'bg-primary-500 text-white' : 'bg-dark-750 text-gray-400'
                     }`}
                   >
                     {formatNumber(count)}
-                  </span>
+                  </motion.span>
                 )}
               </span>
-            </button>
+            </motion.button>
           )
         })}
       </div>
