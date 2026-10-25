@@ -155,13 +155,24 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
         onClick={onClose}
       />
 
-      {/* Drawer Panel - Spring Slide Physics */}
+      {/* Drawer Panel - Spring Slide Physics & Drag-to-Dismiss */}
       <motion.div
+        drag="x"
+        dragConstraints={{ left: isRTL ? 0 : -320, right: isRTL ? 320 : 0 }}
+        dragElastic={{ left: isRTL ? 0.05 : 0.6, right: isRTL ? 0.6 : 0.05 }}
+        onDragEnd={(_, info) => {
+          const threshold = isRTL
+            ? (info.offset.x > 80 || info.velocity.x > 400)
+            : (info.offset.x < -80 || info.velocity.x < -400)
+          if (threshold) {
+            onClose()
+          }
+        }}
         initial={{ x: isRTL ? 320 : -320 }}
         animate={{ x: 0 }}
         exit={{ x: isRTL ? 320 : -320 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-        className="relative w-72 md:w-80 h-full bg-[#0e1621] border-r border-white/10 shadow-2xl z-10 flex flex-col overflow-hidden text-gray-200"
+        transition={{ type: 'spring', damping: 26, stiffness: 400, mass: 0.8 }}
+        className="drawer-pan-rail relative w-72 md:w-80 h-full bg-[#0e1621] border-r border-white/10 shadow-2xl z-10 flex flex-col overflow-hidden text-gray-200"
       >
         {/* Profile Card Header */}
         <div className="p-4 bg-[#17212b] border-b border-white/5 relative">
@@ -304,7 +315,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
         )}
 
         {/* Navigation Menu Options */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 scrollbar-thin scrollbar-thumb-white/10">
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 scrollbar-thin scrollbar-thumb-white/10 drawer-overscroll-elastic">
           {activeAccount ? (
             <>
               {/* Archived chats */}

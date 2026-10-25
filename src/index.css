@@ -616,3 +616,20 @@ textarea:focus-visible {
   user-select: none;
   -webkit-user-drag: none;
 }
+
+/* ==========================================================================
+   Phase 108: Settings & Drawer Pan-Down Physics & Elastic Rubberband Damping
+   Horizontal/vertical swipe dismissal, rubberband overscroll, and momentum
+   ========================================================================== */
+.drawer-pan-rail {
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.drawer-overscroll-elastic {
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  will-change: transform;
+}
