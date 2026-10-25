@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, protocol, net, dialog, session, clipboard } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import { Readable } from 'node:stream'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { SessionStore } from './telegram/sessionStore'
 import { AccountManager } from './telegram/accountManager'
@@ -584,35 +585,40 @@ app.whenReady().then(async () => {
           '.pdf': 'application/pdf',
         }
         const contentType = mimeTypes[ext] || 'application/octet-stream'
-        const fileBuf = await fs.promises.readFile(decodedPath)
-        const totalSize = fileBuf.length
+        const stats = await fs.promises.stat(decodedPath)
+        const totalSize = stats.size
 
-        // Handle HTTP Range header for media scrubbing/seeking
+        // Handle HTTP Range header for media scrubbing/seeking without buffering whole file in RAM
         const rangeHeader = request.headers.get('Range') || request.headers.get('range')
         if (rangeHeader && rangeHeader.startsWith('bytes=')) {
           const parts = rangeHeader.replace('bytes=', '').split('-')
           const start = parseInt(parts[0], 10) || 0
           const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1
-          const chunk = fileBuf.subarray(start, Math.min(end + 1, totalSize))
+          const boundedEnd = Math.min(end, totalSize - 1)
+          const chunkSize = boundedEnd - start + 1
 
-          return new Response(chunk, {
+          const nodeStream = fs.createReadStream(decodedPath, { start, end: boundedEnd })
+          const webStream = (Readable as any).toWeb ? (Readable as any).toWeb(nodeStream) : (nodeStream as any)
+
+          return new Response(webStream, {
             status: 206,
             headers: {
               'Content-Type': contentType,
-              'Content-Range': `bytes ${start}-${Math.min(end, totalSize - 1)}/${totalSize}`,
+              'Content-Range': `bytes ${start}-${boundedEnd}/${totalSize}`,
               'Accept-Ranges': 'bytes',
-              'Content-Length': chunk.length.toString(),
-              'Access-Control-Allow-Origin': '*',
+              'Content-Length': chunkSize.toString(),
             },
           })
         }
 
-        return new Response(fileBuf, {
+        const fullStream = fs.createReadStream(decodedPath)
+        const fullWebStream = (Readable as any).toWeb ? (Readable as any).toWeb(fullStream) : (fullStream as any)
+
+        return new Response(fullWebStream, {
           headers: {
             'Content-Type': contentType,
-            'Content-Length': fileBuf.length.toString(),
+            'Content-Length': totalSize.toString(),
             'Accept-Ranges': 'bytes',
-            'Access-Control-Allow-Origin': '*',
           },
         })
       }
