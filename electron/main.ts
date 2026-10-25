@@ -29,6 +29,7 @@ import { EphemeralMediaManager } from './ephemeralMediaManager'
 import { SecretChatCrypto } from './telegram/secretChatCrypto'
 import { passcodeGuard } from './passcodeGuard'
 import { IpcSecurityFilter } from './ipcSecurityFilter'
+import { privacyProtectionGuard } from './privacyProtectionGuard'
 
 // Anti-Tampering: Sanitize hostile environment variables before runtime initialization (Layer 08)
 IntegrityGuard.sanitizeEnvironment()
@@ -373,6 +374,9 @@ function createWindow() {
 
   // Enforce secure window opening and prevent open-redirect hijacking (MM-015)
   SecurityGuardrails.attachSecureWindowHandlers(mainWindow, true)
+
+  // Attach OS-level anti-screen capture & window sharing privacy guard (Layer 08)
+  privacyProtectionGuard.attachWindow(mainWindow)
 
   // Window lifecycle events
   mainWindow.once('ready-to-show', () => {
@@ -3781,17 +3785,34 @@ function setupIpcHandlers() {
   ipcMain.handle(
     'passcode:unlock',
     IpcSecurityFilter.wrapHandler('passcode:unlock', async (_event, payload: { passcode: string }) => {
-      return passcodeGuard.unlock(payload.passcode)
+      const res = passcodeGuard.unlock(payload.passcode)
+      if (res.success) {
+        privacyProtectionGuard.setProtection('passcode_lock', false)
+      }
+      return res
     })
   )
 
   ipcMain.handle('passcode:lock', async () => {
     passcodeGuard.lockSession()
+    privacyProtectionGuard.setProtection('passcode_lock', true)
     return true
   })
 
   ipcMain.handle('passcode:set-autolock-minutes', async (_event, payload: { minutes: number }) => {
     return passcodeGuard.setAutoLockMinutes(payload.minutes)
+  })
+
+  // OS-level Content Protection (Anti-Screen Capture / Window Sharing Privacy)
+  ipcMain.handle(
+    'privacy:set-content-protection',
+    IpcSecurityFilter.wrapHandler('privacy:set-content-protection', async (_event, payload: { reason: string; enable: boolean }) => {
+      return privacyProtectionGuard.setProtection(payload.reason, payload.enable)
+    })
+  )
+
+  ipcMain.handle('privacy:get-content-protection-status', async () => {
+    return privacyProtectionGuard.getStatus()
   })
 
   ipcMain.handle('system:get-ipc-security-telemetry', async () => {

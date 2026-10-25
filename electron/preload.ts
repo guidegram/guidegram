@@ -1389,6 +1389,17 @@ const guidegramAPI = {
       ipcRenderer.invoke('passcode:set-autolock-minutes', { minutes }),
   },
 
+  // Privacy & Anti-Screen Capture Protection (Layer 08)
+  privacy: {
+    setContentProtection: (reason: string, enable: boolean): Promise<boolean> =>
+      ipcRenderer.invoke('privacy:set-content-protection', { reason, enable }),
+    getContentProtectionStatus: (): Promise<{
+      isProtected: boolean
+      activeReasons: string[]
+      platformSupported: boolean
+    }> => ipcRenderer.invoke('privacy:get-content-protection-status'),
+  },
+
   // Events
   on: (channel: string, callback: (...args: any[]) => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, ...args: any[]) => callback(...args)
