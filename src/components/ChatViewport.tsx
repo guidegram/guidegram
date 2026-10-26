@@ -130,7 +130,7 @@ import { BotMenuDrawer, BotMenuButtonType } from './chat/BotMenuDrawer'
 import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeyboardPanel'
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
-import { isRTL, formatFileSize, formatDuration } from '../utils/textUtils'
+import { isRTL, formatFileSize, formatDuration, formatUserStatus } from '../utils/textUtils'
 import { parseTelegramUrl } from '../utils/telegramLink'
 import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
 
@@ -1494,6 +1494,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     const target = incoming[Math.max(0, incoming.length - chat.unreadCount)]
     return target?.id || null
   }, [chat?.id, chat?.unreadCount, chat?.readInboxMaxId, messages])
+
+  // Automatically mark visible messages as read when viewing chat
+  useEffect(() => {
+    if (!chat || ghostMode || !window.guidegram?.markAsRead || messages.length === 0) return
+    const unread = chat.unreadCount || 0
+    if (unread <= 0) return
+
+    const timer = setTimeout(() => {
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg && lastMsg.id > lastMarkedReadIdRef.current) {
+        lastMarkedReadIdRef.current = lastMsg.id
+        window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
+        onUpdateUnreadCount?.(chat.id, 0)
+      }
+    }, 600)
+
+    return () => clearTimeout(timer)
+  }, [chat?.id, chat?.unreadCount, messages, ghostMode, onUpdateUnreadCount])
 
   // Throttled scroll listener detecting > 300px from bottom (Feature 19) & Infinite scroll to top
   const handleScroll = useCallback(() => {
@@ -4703,12 +4721,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   'Group Chat'
                 ) : isBot ? (
                   'Bot'
-                ) : (
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 online-badge-pulse" />
-                    <span>Online</span>
-                  </span>
-                )}
+                ) : (() => {
+                  const presence = formatUserStatus(
+                    chatDetails?.userStatus || chat?.userStatus,
+                    t,
+                    { isBot, isGroup, isChannel }
+                  )
+                  return presence.isOnline ? (
+                    <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 online-badge-pulse" />
+                      <span>{presence.text}</span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 font-normal">
+                      {presence.text}
+                    </span>
+                  )
+                })()}
               </div>
             </motion.div>
           </AnimatePresence>
@@ -5293,10 +5322,33 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <React.Fragment key={msg.id}>
                 {isFirstUnread && (
                   <div className="flex items-center justify-center my-3 select-none sticky top-2 z-20">
-                    <div className="px-4 py-1 rounded-full bg-primary-600/30 text-primary-300 border border-primary-500/40 text-xs font-semibold shadow-md backdrop-blur-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (chat && messages.length > 0) {
+                          const lastMsg = messages[messages.length - 1]
+                          lastMarkedReadIdRef.current = lastMsg.id
+                          if (!ghostMode && window.guidegram?.markAsRead) {
+                            window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
+                          }
+                          onUpdateUnreadCount?.(chat.id, 0)
+                        }
+                      }}
+                      title={
+                        ghostMode
+                          ? t('chat.ghost_mode_notice') || 'Ghost Mode Active (Read receipts not sent)'
+                          : t('chat.mark_all_read') || 'Click to mark as read'
+                      }
+                      className="px-4 py-1 rounded-full bg-primary-600/30 hover:bg-primary-600/50 text-primary-300 border border-primary-500/40 text-xs font-semibold shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all cursor-pointer animate-in fade-in zoom-in-95 duration-200 group"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse" />
                       <span>{t('chat.unread_separator')}</span>
-                    </div>
+                      {ghostMode ? (
+                        <Sparkles className="w-3 h-3 text-accent-violet ml-1 animate-pulse" />
+                      ) : (
+                        <CheckCheck className="w-3 h-3 text-primary-300 ml-1 opacity-70 group-hover:opacity-100" />
+                      )}
+                    </button>
                   </div>
                 )}
                 <div
@@ -7512,8 +7564,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-gray-300">
-                      <User className="w-3 h-3" />
-                      <span>{t('info.personal_contact')}</span>
+                      {(() => {
+                        const presence = formatUserStatus(
+                          chatDetails?.userStatus || chat?.userStatus,
+                          t,
+                          { isBot, isGroup, isChannel }
+                        )
+                        return presence.isOnline ? (
+                          <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 online-badge-pulse" />
+                            <span>{presence.text}</span>
+                          </span>
+                        ) : (
+                          <span>{presence.text}</span>
+                        )
+                      })()}
                     </span>
                   )}
                 </div>

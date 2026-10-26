@@ -3,7 +3,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { app, BrowserWindow, dialog } from 'electron'
 import { TelegramClient, MemoryStorage } from '@mtcute/node'
-import { tl, Long, InputMedia } from '@mtcute/core'
+import { tl, Long, InputMedia, User } from '@mtcute/core'
 import {
   getChatMembers as mtcuteGetChatMembers,
   addChatMembers as mtcuteAddChatMembers,
@@ -43,6 +43,7 @@ import { PaymentsService } from './services/paymentsService'
 import { AccountSecurityService } from './services/accountSecurityService'
 import { MessagingService } from './services/messagingService'
 import { SystemService } from './services/systemService'
+import { ActivityTrackerService } from './activityTrackerService'
 import { AccountIsolationGuard } from './accountIsolationGuard'
 import { accountVaultManager } from './accountVaultManager'
 import { networkReconnectManager } from './reconnectManager'
@@ -158,7 +159,28 @@ import {
   ExportChatHistoryOptions,
   ExportChatHistoryResult,
   QuickReplyShortcutItem,
+  UserStatusInfo,
 } from './types'
+
+function extractUserStatus(rawStatus: any, isBot: boolean = false): UserStatusInfo {
+  if (isBot) {
+    return { status: 'bot' }
+  }
+  if (!rawStatus) {
+    return { status: 'long_time_ago' }
+  }
+  try {
+    const parsed = User.parseStatus(rawStatus, false)
+    return {
+      status: parsed.status as any,
+      lastOnline: parsed.lastOnline ? parsed.lastOnline.getTime() : undefined,
+      nextOffline: parsed.nextOffline ? parsed.nextOffline.getTime() : undefined,
+      byMe: parsed.byMe,
+    }
+  } catch (_) {
+    return { status: 'long_time_ago' }
+  }
+}
 
 export interface ClientHolder {
   client?: TelegramClient
@@ -961,6 +983,7 @@ export class AccountManager {
   public readonly securityService: AccountSecurityService
   public readonly messagingService: MessagingService
   public readonly systemService: SystemService
+  public readonly activityTrackerService: ActivityTrackerService
 
   constructor(store: SessionStore, onEvent?: (event: string, payload: any) => void) {
     this.store = store
@@ -972,6 +995,11 @@ export class AccountManager {
     this.securityService = new AccountSecurityService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.messagingService = new MessagingService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
     this.systemService = new SystemService((accountId, peerId) => this.resolveInputPeer(accountId, peerId))
+    this.activityTrackerService = new ActivityTrackerService(
+      this.store.getDataDirectory(),
+      (event, payload) => this.onEventCallback?.(event, payload),
+      () => this.store.getConfig()
+    )
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
     try {
@@ -2241,6 +2269,14 @@ export class AccountManager {
           }
         }
 
+        let userStatus: UserStatusInfo | undefined = undefined
+        if (isUser && !isBot) {
+          const rawStatus = (peer as any).raw?.status || (peer as any).status
+          if (rawStatus) {
+            userStatus = extractUserStatus(rawStatus, false)
+          }
+        }
+
         const item: DialogItem = {
           id: peerId,
           accountId,
@@ -2279,6 +2315,7 @@ export class AccountManager {
           isSponsorChannel: Boolean((d as any).isSponsored || (d as any).sponsored || (peer as any).isSponsored),
           accessHash: rawAccessHash ? rawAccessHash.toString() : undefined,
           draft,
+          userStatus,
         }
         dialogs.push(item)
       }
@@ -2413,6 +2450,22 @@ export class AccountManager {
             this.avatarCache.set(avatarCacheKey, avatarUrl)
           } catch (_) {}
         }
+        try {
+          const isMutual = Boolean(c.isMutualContact || c.raw?.mutualContact || c.mutualContact)
+          const isContact = Boolean(c.isContact || c.raw?.contact || c.contact ?? true)
+          if (c.status) {
+            this.activityTrackerService.recordUserStatus(accountId, id, c.status, {
+              title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.username,
+              avatarUrl,
+              username: c.username,
+            })
+          }
+          this.activityTrackerService.inspectUserSnapshot(accountId, c, undefined, {
+            isMutual,
+            isContact,
+          })
+        } catch (_) {}
+
         return {
           id,
           firstName: c.firstName || '',
@@ -4559,6 +4612,11 @@ export class AccountManager {
           }
         }
 
+        let userStatus: UserStatusInfo | undefined = undefined
+        if (u) {
+          userStatus = extractUserStatus(u.status, Boolean(u.bot))
+        }
+
         details = {
           id: chatId,
           title: formatEntityName(u),
@@ -4580,6 +4638,23 @@ export class AccountManager {
           birthday,
           personalChannelId,
           personalChannelTitle,
+          userStatus,
+        }
+
+        if (u) {
+          try {
+            if (u.status) {
+              this.activityTrackerService.recordUserStatus(accountId, chatId, u.status, {
+                title: formatEntityName(u),
+                avatarUrl: details.avatarUrl,
+                username: u.username,
+              })
+            }
+            this.activityTrackerService.inspectUserSnapshot(accountId, u, res.fullUser, {
+              isMutual: Boolean(u.mutualContact),
+              isContact: Boolean(u.contact),
+            })
+          } catch (_) {}
         }
       } else if (inputPeer._ === 'inputPeerChannel') {
         const res: any = await holder.client.call({
@@ -12889,6 +12964,18 @@ export class AccountManager {
           return cleanD === cleanP
         }
 
+        if (update._ === 'updateUserStatus') {
+          const userId = (update.userId ?? update.user_id)?.toString()
+          if (userId && update.status) {
+            const userStatus = extractUserStatus(update.status, false)
+            this.onEventCallback?.('telegram:user-status', {
+              accountId,
+              userId,
+              userStatus,
+            })
+          }
+        }
+
         if (
           update._ === 'updateReadHistoryInbox' ||
           update._ === 'updateReadChannelInbox' ||
@@ -13008,6 +13095,35 @@ export class AccountManager {
                 }
               }
             } catch (_) {}
+          }
+        } else if (update._ === 'updateUserStatus') {
+          const uId = String(update.userId ?? update.user_id)
+          this.activityTrackerService.recordUserStatus(accountId, uId, update.status)
+        } else if (update._ === 'updateUserName') {
+          const uId = String(update.userId ?? update.user_id)
+          const first = update.firstName ?? update.first_name
+          const last = update.lastName ?? update.last_name
+          const uname = Array.isArray(update.usernames) ? update.usernames[0]?.username : undefined
+          this.activityTrackerService.inspectUserSnapshot(accountId, {
+            id: uId,
+            firstName: first,
+            lastName: last,
+            username: uname,
+          })
+        } else if (update._ === 'updateUserPhoto') {
+          const uId = String(update.userId ?? update.user_id)
+          this.activityTrackerService.inspectUserSnapshot(accountId, {
+            id: uId,
+            photo: update.photo,
+          })
+        } else if (update._ === 'updateUser') {
+          const u = update.user
+          if (u) {
+            const uId = String(u.id)
+            if (u.status) {
+              this.activityTrackerService.recordUserStatus(accountId, uId, u.status)
+            }
+            this.activityTrackerService.inspectUserSnapshot(accountId, u)
           }
         }
       } catch (_) {}

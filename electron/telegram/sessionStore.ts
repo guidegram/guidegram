@@ -150,6 +150,10 @@ export class SessionStore {
       chatFontSize: 14,
       bubbleRadius: 16,
       bubblePadding: 10,
+      activityTrackerEnabled: true,
+      profileChangeAuditorEnabled: true,
+      activityRetentionPeriod: '30d',
+      ignoredUserTrackingIds: [],
       mcp: {
         enabled: true,
         port: 39527,

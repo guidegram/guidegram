@@ -70,3 +70,95 @@ export function formatNumber(num?: number): string {
   }
   return num.toLocaleString()
 }
+
+export interface FormattedPresence {
+  text: string
+  isOnline: boolean
+}
+
+/**
+ * Format user presence status (online, last seen recently, today at, etc.)
+ */
+export function formatUserStatus(
+  statusInfo?: { status: string; lastOnline?: number; nextOffline?: number; byMe?: boolean } | null,
+  t?: (key: string, params?: any) => string,
+  options?: { isBot?: boolean; isGroup?: boolean; isChannel?: boolean }
+): FormattedPresence {
+  const translate = t || ((k: string, p?: any) => k)
+
+  if (options?.isBot) {
+    return { text: translate('info.bot') || 'Bot', isOnline: false }
+  }
+  if (options?.isChannel) {
+    return { text: translate('info.broadcast_channel') || 'Broadcast Channel', isOnline: false }
+  }
+  if (options?.isGroup) {
+    return { text: translate('info.group_chat') || 'Group Chat', isOnline: false }
+  }
+
+  if (!statusInfo || !statusInfo.status || statusInfo.status === 'long_time_ago') {
+    return { text: translate('chat.status_long_time_ago') || 'last seen a long time ago', isOnline: false }
+  }
+
+  if (statusInfo.status === 'online') {
+    if (statusInfo.nextOffline && statusInfo.nextOffline < Date.now()) {
+      return { text: translate('chat.status_recently') || 'last seen recently', isOnline: false }
+    }
+    return { text: translate('chat.online') || 'online', isOnline: true }
+  }
+
+  if (statusInfo.status === 'recently') {
+    return { text: translate('chat.status_recently') || 'last seen recently', isOnline: false }
+  }
+
+  if (statusInfo.status === 'within_week') {
+    return { text: translate('chat.status_within_week') || 'last seen within a week', isOnline: false }
+  }
+
+  if (statusInfo.status === 'within_month') {
+    return { text: translate('chat.status_within_month') || 'last seen within a month', isOnline: false }
+  }
+
+  if (statusInfo.status === 'offline' && statusInfo.lastOnline) {
+    const d = new Date(statusInfo.lastOnline)
+    const now = new Date()
+    const hours = d.getHours().toString().padStart(2, '0')
+    const minutes = d.getMinutes().toString().padStart(2, '0')
+    const timeStr = `${hours}:${minutes}`
+
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+
+    if (isToday) {
+      return {
+        text: translate('chat.status_today_at', { time: timeStr }) || `last seen today at ${timeStr}`,
+        isOnline: false,
+      }
+    }
+
+    const yesterday = new Date(now)
+    yesterday.setDate(now.getDate() - 1)
+    const isYesterday =
+      d.getDate() === yesterday.getDate() &&
+      d.getMonth() === yesterday.getMonth() &&
+      d.getFullYear() === yesterday.getFullYear()
+
+    if (isYesterday) {
+      return {
+        text: translate('chat.status_yesterday_at', { time: timeStr }) || `last seen yesterday at ${timeStr}`,
+        isOnline: false,
+      }
+    }
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const dateStr = `${d.getDate()} ${months[d.getMonth()]}`
+    return {
+      text: translate('chat.status_date_at', { date: dateStr, time: timeStr }) || `last seen ${dateStr} at ${timeStr}`,
+      isOnline: false,
+    }
+  }
+
+  return { text: translate('chat.status_recently') || 'last seen recently', isOnline: false }
+}

@@ -107,6 +107,13 @@ export interface UserExtras {
   birthday?: string
 }
 
+export interface UserStatusInfo {
+  status: 'online' | 'offline' | 'recently' | 'within_week' | 'within_month' | 'long_time_ago' | 'bot'
+  lastOnline?: number
+  nextOffline?: number
+  byMe?: boolean
+}
+
 export interface DialogItem {
   id: string
   accountId: string
@@ -151,6 +158,7 @@ export interface DialogItem {
   historyTtlPeriod?: number
   chatTheme?: string
   chatWallpaper?: string
+  userStatus?: UserStatusInfo
 }
 
 export interface DraftItem {
@@ -575,6 +583,7 @@ export interface ChatDetails {
   defaultHistoryTtl?: number
   chatTheme?: string
   chatWallpaper?: string
+  userStatus?: UserStatusInfo
 }
 
 export interface DiscussionThreadInfo {
@@ -776,6 +785,7 @@ export interface ContactItem {
   phone?: string
   username?: string
   avatarUrl?: string
+  userStatus?: UserStatusInfo
 }
 
 export type CallDiscardReason = 'missed' | 'busy' | 'hangup' | 'disconnect' | 'unknown'
@@ -986,6 +996,11 @@ export interface AppConfig {
   chatFontSize?: number
   bubbleRadius?: number
   bubblePadding?: number
+  // Online Activity & Contact Changes Tracking
+  activityTrackerEnabled?: boolean
+  profileChangeAuditorEnabled?: boolean
+  activityRetentionPeriod?: ActivityLogRetentionPeriod
+  ignoredUserTrackingIds?: string[]
   // Model Context Protocol (MCP) Server for AI Agents
   mcp?: McpServerConfig
 }
@@ -1638,3 +1653,73 @@ export interface BusinessAwayConfig {
   schedule?: 'always' | 'outsideHours' | 'custom'
   offlineOnly?: boolean
 }
+
+// ==========================================
+// Guidegram User Activity & Contact Changes Tracking
+// ==========================================
+
+export type UserOnlineStatusType =
+  | 'online'
+  | 'offline'
+  | 'recently'
+  | 'within_week'
+  | 'within_month'
+  | 'long_time_ago'
+  | 'empty'
+  | 'blocked'
+
+export interface UserActivitySession {
+  id: string
+  startTime: number
+  endTime: number
+  durationSeconds: number
+  isApproximate?: boolean
+}
+
+export interface UserActivityStats {
+  userId: string
+  currentStatus: UserOnlineStatusType
+  lastSeenTimestamp?: number
+  totalOnlineSecondsToday: number
+  totalOnlineSecondsWeek: number
+  totalSessionsToday: number
+  sessions: UserActivitySession[]
+  hourlyDistribution: number[] // 24 hours 0-23
+  trackingEnabled: boolean
+}
+
+export type ContactChangeType =
+  | 'name_change'
+  | 'photo_change'
+  | 'photo_delete'
+  | 'bio_change'
+  | 'username_change'
+  | 'personal_channel_change'
+  | 'phone_change'
+
+export interface ContactChangeEvent {
+  id: string
+  accountId: string
+  userId: string
+  timestamp: number
+  changeType: ContactChangeType
+  title: string
+  oldValue?: string
+  newValue?: string
+  oldPhotoUrl?: string
+  newPhotoUrl?: string
+  isMutualContact?: boolean
+  isMyContact?: boolean
+  userName?: string
+  userUsername?: string
+  userAvatarUrl?: string
+}
+
+export type ActivityLogRetentionPeriod = '1d' | '7d' | '30d' | '90d' | '180d' | '365d' | 'forever'
+
+export interface ContactChangeFilter {
+  relation?: 'all' | 'mutual' | 'my_contacts' | 'saved'
+  changeType?: ContactChangeType | 'all'
+  query?: string
+}
+

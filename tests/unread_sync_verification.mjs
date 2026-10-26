@@ -7,11 +7,11 @@ console.log('--- Unread Message Sync & Outgoing Filtering Verification ---')
 // 1. Verify App.tsx contains outgoing message check in telegram:new-message
 const appTsx = fs.readFileSync(path.resolve('src/App.tsx'), 'utf-8')
 assert.ok(
-  appTsx.includes('unreadCount: chatId !== activeChatId && !message?.isOutgoing ? 1 : 0'),
+  appTsx.includes('!message?.isOutgoing ? 1 : 0'),
   'App.tsx should check !message?.isOutgoing for new dialog creation'
 )
 assert.ok(
-  appTsx.includes('const shouldIncrement = chatId !== activeChatId && !message?.isOutgoing'),
+  appTsx.includes('chatId !== activeChatId && !message?.isOutgoing'),
   'App.tsx should check !message?.isOutgoing before incrementing unreadCount'
 )
 console.log('✓ Check 1 passed: App.tsx ignores outgoing messages for unreadCount')

@@ -130,6 +130,14 @@ import type {
   InlineBotResultsPayload,
   GameHighScoreItem,
   QuickReplyShortcutItem,
+  UserStatusInfo,
+  UserOnlineStatusType,
+  UserActivitySession,
+  UserActivityStats,
+  ContactChangeType,
+  ContactChangeEvent,
+  ActivityLogRetentionPeriod,
+  ContactChangeFilter,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -142,6 +150,7 @@ export type {
   AccountInfo,
   PhoneAuthResult,
   DialogItem,
+  UserStatusInfo,
   MessageItem,
   ProxyConfig,
   AppConfig,
@@ -275,6 +284,13 @@ export type {
   InlineBotResultsPayload,
   GameHighScoreItem,
   QuickReplyShortcutItem,
+  UserOnlineStatusType,
+  UserActivitySession,
+  UserActivityStats,
+  ContactChangeType,
+  ContactChangeEvent,
+  ActivityLogRetentionPeriod,
+  ContactChangeFilter,
 }
 
 

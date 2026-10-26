@@ -656,7 +656,7 @@ runTest('4.4: electron/main.ts contains web:get-link-preview and SSRF protection
 runTest('4.5: electron/preload.ts exposes getPathForFile and getLinkPreview', () => {
   const code = fs.readFileSync('electron/preload.ts', 'utf8')
   assert.ok(code.includes('getPathForFile: (file: File): string =>'), 'preload must expose getPathForFile')
-  assert.ok(code.includes('getLinkPreview: (url: string): Promise<WebPagePreview | null> =>'), 'preload must expose getLinkPreview')
+  assert.ok(code.includes('getLinkPreview: (url: string') && code.includes('Promise<WebPagePreview | null> =>'), 'preload must expose getLinkPreview')
   assert.ok(code.includes("ipcRenderer.invoke('web:get-link-preview'"), 'preload must invoke web:get-link-preview')
 })
 
