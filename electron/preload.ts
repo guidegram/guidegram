@@ -87,6 +87,10 @@ import {
   ExportChatHistoryOptions,
   ExportChatHistoryResult,
   QuickReplyShortcutItem,
+  UserActivityStats,
+  ContactChangeEvent,
+  ContactChangeFilter,
+  ActivityLogRetentionPeriod,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -262,6 +266,43 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:hide-all-chat-join-requests', { accountId, chatId, action, link }),
   blockUser: (accountId: string, userId: string, blocked: boolean): Promise<boolean> =>
     ipcRenderer.invoke('telegram:block-user', { accountId, userId, blocked }),
+
+  // User Activity & Online Status Tracking
+  getUserActivity: (accountId: string, userId: string): Promise<UserActivityStats | null> =>
+    ipcRenderer.invoke('telegram:get-user-activity', { accountId, userId }),
+
+  getContactChanges: (
+    accountId: string,
+    filter?: ContactChangeFilter
+  ): Promise<ContactChangeEvent[]> =>
+    ipcRenderer.invoke('telegram:get-contact-changes', { accountId, filter }),
+
+  getUserChangeHistory: (accountId: string, userId: string): Promise<ContactChangeEvent[]> =>
+    ipcRenderer.invoke('telegram:get-user-change-history', { accountId, userId }),
+
+  setUserTracking: (userId: string, enabled: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-user-tracking', { userId, enabled }),
+
+  getUserTracking: (accountId: string, userId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:get-user-tracking', { accountId, userId }),
+
+  clearActivityData: (accountId: string, type?: 'all' | 'status' | 'changes'): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:clear-activity-data', { accountId, type }),
+
+  getActivityStats: (
+    accountId: string
+  ): Promise<{
+    totalEvents: number
+    totalSessions: number
+    totalUsersTracked: number
+    dataSizeBytes: number
+  }> => ipcRenderer.invoke('telegram:get-activity-stats', { accountId }),
+
+  pruneActivityData: (
+    accountId: string,
+    retentionPeriod?: ActivityLogRetentionPeriod
+  ): Promise<{ prunedStatusCount: number; prunedChangesCount: number }> =>
+    ipcRenderer.invoke('telegram:prune-activity-data', { accountId, retentionPeriod }),
   sendMedia: (
     accountId: string,
     chatId: string,

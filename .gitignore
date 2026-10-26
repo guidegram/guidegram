@@ -42,3 +42,4 @@ ORIGINAL_REQUEST.md
 # Perpetual Engine local cache & state
 .perpetual/
 .tmp_story_build/
+scratch/

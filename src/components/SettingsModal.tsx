@@ -15,6 +15,8 @@ import {
   RefreshCw,
   Hash,
   Clock,
+  Activity,
+  History,
   Users,
   Bookmark,
   Trash2,
@@ -94,6 +96,7 @@ import {
   BusinessLocation,
   BusinessIntro,
   SavedRingtoneItem,
+  ActivityLogRetentionPeriod,
 } from '../types/telegram'
 import { playNotificationSound, AVAILABLE_NOTIFICATION_TONES } from '../utils/soundEffects'
 import { useI18n } from '../i18n'
@@ -109,6 +112,7 @@ interface SettingsModalProps {
   onConfigUpdated?: (config: AppConfig) => void
   onUpdateFound?: (info: UpdateInfo) => void
   onOpenSupport?: () => void
+  onOpenContactChanges?: () => void
 }
 
 const DEFAULT_NETWORK_PROFILES: NetworkProfilesConfig = {
@@ -195,7 +199,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </motion.div>
 )
 
-type SettingsTab = 'profile' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
+type SettingsTab = 'profile' | 'features' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -206,11 +210,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onConfigUpdated,
   onUpdateFound,
   onOpenSupport,
+  onOpenContactChanges,
 }) => {
   const { t, language, setLanguage } = useI18n()
   const isPersian = language === 'fa'
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general')
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'features')
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -224,6 +229,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ghostMode, setGhostMode] = useState(false)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Guidegram Activity Tracker & Contact Changes
+  const [activityTrackerEnabled, setActivityTrackerEnabled] = useState(true)
+  const [profileChangeAuditorEnabled, setProfileChangeAuditorEnabled] = useState(true)
+  const [activityRetentionPeriod, setActivityRetentionPeriod] = useState<ActivityLogRetentionPeriod>('30d')
+  const [activityStats, setActivityStats] = useState<{ totalEvents: number; totalSessions: number; totalUsersTracked: number; dataSizeBytes: number } | null>(null)
+  const [isPurgingData, setIsPurgingData] = useState(false)
+  const [purgeToast, setPurgeToast] = useState<string | null>(null)
 
   // 64Gram Fork Power Features
   const [showChatId, setShowChatId] = useState(true)
@@ -704,6 +717,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setChatFontSize(cfg.chatFontSize || 14)
         setBubbleRadius(cfg.bubbleRadius ?? 16)
         setBubblePadding(cfg.bubblePadding ?? 10)
+        setActivityTrackerEnabled(cfg.activityTrackerEnabled ?? true)
+        setProfileChangeAuditorEnabled(cfg.profileChangeAuditorEnabled ?? true)
+        setActivityRetentionPeriod(cfg.activityRetentionPeriod || '30d')
         if (cfg.autoDownload) {
           setAutoDownload({
             ...cfg.autoDownload,
@@ -878,6 +894,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       chatFontSize,
       bubbleRadius,
       bubblePadding,
+      activityTrackerEnabled,
+      profileChangeAuditorEnabled,
+      activityRetentionPeriod,
     })
     setConfig(updated)
     onConfigUpdated?.(updated)
@@ -906,6 +925,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setSyncMessage(t('settings.portable_sync_failed', { error: err?.message || 'Error' }))
     } finally {
       setIsSyncingPortable(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'features' && activeAccountId && window.guidegram?.getActivityStats) {
+      window.guidegram.getActivityStats(activeAccountId).then((st) => {
+        if (st) setActivityStats(st)
+      }).catch(() => {})
+    }
+  }, [isOpen, activeTab, activeAccountId])
+
+  const handlePurgeActivityData = async () => {
+    if (!activeAccountId || !window.guidegram?.clearActivityData) return
+    setIsPurgingData(true)
+    setPurgeToast(null)
+    try {
+      await window.guidegram.clearActivityData(activeAccountId, 'all')
+      setPurgeToast(isPersian ? 'تمام داده‌های رادار آنلاین و تغییرات پاکسازی شد.' : 'Activity data purged successfully.')
+      if (window.guidegram.getActivityStats) {
+        const refreshed = await window.guidegram.getActivityStats(activeAccountId)
+        setActivityStats(refreshed)
+      }
+    } catch {
+      setPurgeToast(isPersian ? 'خطا در پاکسازی داده‌ها' : 'Failed to purge data')
+    } finally {
+      setIsPurgingData(false)
+      setTimeout(() => setPurgeToast(null), 3000)
     }
   }
 
@@ -950,6 +996,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
               { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
               { id: 'chat' as SettingsTab, label: t('settings.chat_settings'), icon: <MessageSquare className="w-4 h-4" /> },
+              { id: 'features' as SettingsTab, label: isPersian ? 'قابلیت‌های گایدگرام' : 'Guidegram Features', icon: <Sparkles className="w-4 h-4 text-accent-cyan" /> },
               { id: 'mcp' as SettingsTab, label: 'AI & MCP Agents', icon: <Zap className="w-4 h-4 text-amber-400" /> },
               { id: 'advanced' as SettingsTab, label: t('settings.advanced'), icon: <HardDrive className="w-4 h-4" /> },
             ].map((tab) => {
@@ -3262,6 +3309,418 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: GUIDEGRAM FEATURES & POWER MODULES */}
+            {activeTab === 'features' && (
+              <div className="space-y-6 animate-in fade-in duration-100">
+                {/* Header Banner */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-accent-cyan/15 via-primary-600/10 to-transparent border border-accent-cyan/25 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center border border-accent-cyan/30">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-gray-100 flex items-center gap-2">
+                        <span>{isPersian ? 'قابلیت‌های اختصاصی گایدگرام' : 'Guidegram Exclusive Power Suite'}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30">
+                          PRO
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {isPersian
+                          ? 'رادار آنلاین، تایم‌لاین تغییرات مخاطبین، حفظ پیام‌های پاک‌شده، حالت روح و ابزارهای پیشرفته'
+                          : 'Online activity radar, contact change auditing, local message vault & power utilities'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GROUP 1: Online & Activity Radar */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <Activity className="w-4 h-4 text-accent-cyan" />
+                    <span className="text-xs font-bold text-accent-cyan">
+                      {isPersian ? '۱. رادار آنلاین و تحلیل زمان‌بندی حضور' : '1. Online Activity Radar & Attendance Graph'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                    {/* Master Switch */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'فعال‌سازی رادار آنلاین و آفلاین' : 'Enable Online/Offline Radar'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'محاسبه سشن‌های آنلاین، توزیع ساعات شبانه‌روز و رسم نمودار در پروفایل کاربران'
+                            : 'Logs user presence sessions, builds 24h hourly distribution graphs and profiles'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={activityTrackerEnabled}
+                          onChange={(e) => setActivityTrackerEnabled(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-cyan"></div>
+                      </label>
+                    </div>
+
+                    {/* MTProto Transparency Note */}
+                    <div className="p-3 rounded-xl bg-dark-900/80 border border-white/5 text-[11px] text-gray-300 leading-relaxed flex items-start gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-accent-cyan shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold text-gray-200">
+                          {isPersian ? 'نحوه کارکرد با حفظ حریم خصوصی تلگرام:' : 'Telegram MTProto Privacy Handling:'}
+                        </span>{' '}
+                        {isPersian
+                          ? 'تلگرام آخرین بازدید افرادی که شما را بلاک کرده‌اند یا وضعیت خود را روی «اخیراً» (Recently) یا «هیچ‌کس» گذاشته‌اند مخفی می‌کند. رادار گایدگرام با پایش رویدادهای زنده سشن، هر زمان کاربر پیامی ارسال کند یا آنلاین شود، آن لحظه را ثبت کرده و روی نمودار ۲۴ ساعته نمایش می‌دهد.'
+                          : 'Telegram masks exact timestamps for users with hidden last seen or blocked states. Guidegram tracks real-time update pulses to record sessions whenever activity is detected.'}
+                      </div>
+                    </div>
+
+                    {/* Retention Policy Selector */}
+                    <div className="pt-2 border-t border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-gray-400" />
+                          <span>{isPersian ? 'دوره نگهداری تاریخچه فعالیت‌ها' : 'Data Retention Policy'}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400">
+                          {isPersian ? 'حذف خودکار داده‌های قدیمی‌تر' : 'Auto-purge older entries'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+                        {[
+                          { id: '1d' as ActivityLogRetentionPeriod, label: isPersian ? '۱ روز' : '1 Day' },
+                          { id: '7d' as ActivityLogRetentionPeriod, label: isPersian ? '۷ روز' : '7 Days' },
+                          { id: '30d' as ActivityLogRetentionPeriod, label: isPersian ? '۳۰ روز (پیش‌فرض)' : '30 Days' },
+                          { id: '90d' as ActivityLogRetentionPeriod, label: isPersian ? '۳ ماه' : '3 Months' },
+                          { id: '180d' as ActivityLogRetentionPeriod, label: isPersian ? '۶ ماه' : '6 Months' },
+                          { id: '365d' as ActivityLogRetentionPeriod, label: isPersian ? '۱ سال' : '1 Year' },
+                          { id: 'forever' as ActivityLogRetentionPeriod, label: isPersian ? 'همیشه نگه‌دار' : 'Forever' },
+                        ].map((option) => {
+                          const isSelected = activityRetentionPeriod === option.id
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => setActivityRetentionPeriod(option.id)}
+                              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer text-center ${
+                                isSelected
+                                  ? 'bg-accent-cyan/15 border-accent-cyan/40 text-accent-cyan font-bold shadow-sm'
+                                  : 'bg-dark-900/60 border-white/5 text-gray-300 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Storage Stats & Purge Button */}
+                    <div className="pt-2 border-t border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
+                          <Database className="w-3.5 h-3.5 text-gray-400" />
+                          <span>{isPersian ? 'وضعیت حافظه و داده‌های رادار' : 'Activity Radar Storage Telemetry'}</span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isPurgingData}
+                          onClick={handlePurgeActivityData}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>{isPurgingData ? (isPersian ? 'در حال پاکسازی...' : 'Purging...') : (isPersian ? 'پاکسازی کامل دیتای رادار' : 'Purge Activity Data')}</span>
+                        </button>
+                      </div>
+
+                      {purgeToast && (
+                        <div className="p-2 rounded-xl bg-accent-cyan/15 border border-accent-cyan/30 text-accent-cyan text-xs text-center font-medium">
+                          {purgeToast}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                        <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
+                          <div className="text-[10px] text-gray-400">{isPersian ? 'رویدادهای ثبت‌شده' : 'Events Logged'}</div>
+                          <div className="text-xs font-bold text-accent-cyan font-mono mt-0.5">
+                            {activityStats?.totalEvents?.toLocaleString() ?? '0'}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
+                          <div className="text-[10px] text-gray-400">{isPersian ? 'سشن‌های آنلاین' : 'Online Sessions'}</div>
+                          <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
+                            {activityStats?.totalSessions?.toLocaleString() ?? '0'}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
+                          <div className="text-[10px] text-gray-400">{isPersian ? 'کاربران پایش‌شده' : 'Users Tracked'}</div>
+                          <div className="text-xs font-bold text-amber-400 font-mono mt-0.5">
+                            {activityStats?.totalUsersTracked?.toLocaleString() ?? '0'}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
+                          <div className="text-[10px] text-gray-400">{isPersian ? 'حجم دیتابیس' : 'Disk Storage'}</div>
+                          <div className="text-xs font-bold text-purple-400 font-mono mt-0.5">
+                            {activityStats
+                              ? activityStats.dataSizeBytes < 1024 * 1024
+                                ? `${(activityStats.dataSizeBytes / 1024).toFixed(1)} KB`
+                                : `${(activityStats.dataSizeBytes / (1024 * 1024)).toFixed(2)} MB`
+                              : '0 KB'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GROUP 2: Contact Changes Auditor */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <History className="w-4 h-4 text-primary-400" />
+                    <span className="text-xs font-bold text-primary-400">
+                      {isPersian ? '۲. حسابرس تغییرات پروفایل مخاطبین' : '2. Contact Changes Auditor & Timeline'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                    {/* Auditor Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'ثبت هوشمند تغییرات مخاطبین' : 'Audit Contact Profile Changes'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'پایش تغییر نام، نام کاربری، عکس، بیوگرافی و کانال متصل به بیو'
+                            : 'Tracks edits to name, username, bio, photo additions/deletions, and linked personal channels'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={profileChangeAuditorEnabled}
+                          onChange={(e) => setProfileChangeAuditorEnabled(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Open Timeline Button */}
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div className="text-[11px] text-gray-400">
+                        {isPersian
+                          ? 'مشاهده گزارش کامل با فیلتر مخاطبین متقابل، جستجو و تفکیک رویدادها'
+                          : 'Inspect all historical changes with mutual contact filters and search'}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose()
+                          onOpenContactChanges?.()
+                        }}
+                        className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 flex items-center gap-2 transition-colors cursor-pointer group"
+                      >
+                        <History className="w-3.5 h-3.5 group-hover:rotate-[-20deg] transition-transform" />
+                        <span>{isPersian ? 'مشاهده تایم‌لاین جامع تغییرات' : 'Open Changes Timeline'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GROUP 3: Ghost Mode & Stealth Guard */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <EyeOff className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-amber-400">
+                      {isPersian ? '۳. حالت روح و امنیت نشست' : '3. Ghost Mode & Stealth Guard'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'حالت روح (Ghost Mode)' : 'Ghost Mode'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'خواندن پیام‌ها بدون ارسال تیک دوم (سین) و جلوگیری از آنلاین شدن'
+                            : 'Read messages without sending read receipts and suppress typing status'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={ghostMode}
+                          onChange={(e) => setGhostMode(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                      </label>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'محافظت از فینگرپرینت دسکتاپ' : 'Anti-Fingerprinting Guard'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'خنثی‌سازی مشخصات سخت‌افزاری و سیستم‌عامل در درخواست‌های تلگرام'
+                            : 'Anonymizes device hardware IDs and desktop parameters'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={antiFingerprinting}
+                          onChange={(e) => setAntiFingerprinting(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GROUP 4: Message Shield & Local Vault */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-emerald-400">
+                      {isPersian ? '۴. سپر پیام‌ها و نگهداری بومی' : '4. Message Shield & Local Vault'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'حفظ پیام‌های حذف‌شده طرف مقابل' : 'Keep Deleted Messages Locally'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'اگر فردی پیامی را برای هر دو نفر پاک کند، پیام با نشان قرمز در چت شما باقی می‌ماند'
+                            : 'Retains messages deleted for everyone locally in SQLite cache with a visual badge'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={keepDeletedMessagesLocally}
+                          onChange={(e) => setKeepDeletedMessagesLocally(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'پیش‌فرض حذف دوطرفه پیام‌ها' : 'Always Delete for Both by Default'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'تیک «حذف برای طرف مقابل» در دیالوگ‌های حذف همیشه به‌طور خودکار فعال باشد'
+                            : 'Pre-checks the delete for both parties checkbox automatically in dialogs'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={alwaysDeleteBoth}
+                          onChange={(e) => setAlwaysDeleteBoth(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GROUP 5: Chat UI & Productivity Enhancements */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-bold text-purple-400">
+                      {isPersian ? '۵. بهینه‌سازهای چت و تجربه کاربری' : '5. Chat Enhancements & Power Utilities'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                    {[
+                      {
+                        id: 'showChatId',
+                        label: isPersian ? 'نمایش شناسه‌عددی چت (Chat ID)' : 'Show Chat ID in header',
+                        desc: isPersian ? 'نمایش شناسه تلگرامی در هدر چت برای فوروارد و بات‌ها' : 'Displays peer ID in conversation header',
+                        val: showChatId,
+                        set: setShowChatId,
+                      },
+                      {
+                        id: 'showMessageId',
+                        label: isPersian ? 'نمایش شناسه پیام (Message ID)' : 'Show Message ID in bubbles',
+                        desc: isPersian ? 'نمایش شماره دقیق پیام کنار تایم‌استمپ' : 'Renders message sequence number in message card',
+                        val: showMessageId,
+                        set: setShowMessageId,
+                      },
+                      {
+                        id: 'showSeconds',
+                        label: isPersian ? 'نمایش ثانیه‌شمار دقیق در زمان پیام‌ها' : 'Show seconds in message timestamps',
+                        desc: isPersian ? 'فرمت زمان به‌صورت HH:MM:SS' : 'Precise timestamps including seconds',
+                        val: showSeconds,
+                        set: setShowSeconds,
+                      },
+                      {
+                        id: 'showSenderAvatar',
+                        label: isPersian ? 'نمایش آواتار فرستنده در گروه‌ها' : 'Show sender avatars in group chats',
+                        desc: isPersian ? 'تصویر پروفایل کوچک کنار پیام‌های گروه' : 'Visual avatar thumbnail next to group messages',
+                        val: showSenderAvatar,
+                        set: setShowSenderAvatar,
+                      },
+                      {
+                        id: 'quickForwardToSaved',
+                        label: isPersian ? 'فوروارد سریع به پیام‌های ذخیره‌شده (Saved Messages)' : 'Quick forward to Saved Messages',
+                        desc: isPersian ? 'دکمه تک‌کلیک نشانه‌گذاری مستقیم به Saved Messages' : 'Single-click bookmark button on message hover',
+                        val: quickForwardToSaved,
+                        set: setQuickForwardToSaved,
+                      },
+                      {
+                        id: 'markAllReadEnabled',
+                        label: isPersian ? 'کلید میانبر و دکمه خواندن همه چت‌ها' : 'Mark all chats as read shortcut',
+                        desc: isPersian ? 'پاکسازی یکجای نشانگر پیام‌های خوانده‌نشده' : 'One-click badge dismiss for all dialogs',
+                        val: markAllReadEnabled,
+                        set: setMarkAllReadEnabled,
+                      },
+                    ].map((item) => (
+                      <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                        <div>
+                          <div className="text-xs font-medium text-gray-200">{item.label}</div>
+                          <div className="text-[10px] text-gray-400">{item.desc}</div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={item.val}
+                            onChange={(e) => item.set(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-8 h-4 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-500"></div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

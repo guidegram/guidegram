@@ -751,6 +751,9 @@ app.on('before-quit', () => {
   } catch {}
   Logger.info('[App] Application quitting. Flushing pending audit logs...')
   sessionStore?.flushAllAuditsSync()
+  try {
+    accountManager?.activityTrackerService.flushSync()
+  } catch (_) {}
 })
 
 // =========================================================================
@@ -1387,6 +1390,92 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.error(`[IPC] blockUser failed:`, err)
       throw err
+    }
+  })
+
+  // ==========================================
+  // Guidegram User Activity & Contact Changes Tracking IPC
+  // ==========================================
+
+  ipcMain.handle('telegram:get-user-activity', async (_event, { accountId, userId }) => {
+    try {
+      return accountManager.activityTrackerService.getUserActivityStats(accountId, userId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getUserActivity failed:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-contact-changes', async (_event, { accountId, filter }) => {
+    try {
+      return accountManager.activityTrackerService.getContactChanges(accountId, filter)
+    } catch (err: any) {
+      Logger.error(`[IPC] getContactChanges failed:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-user-change-history', async (_event, { accountId, userId }) => {
+    try {
+      return accountManager.activityTrackerService.getUserChangeHistory(accountId, userId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getUserChangeHistory failed:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:set-user-tracking', async (_event, { userId, enabled }) => {
+    try {
+      const cfg = sessionStore.getConfig()
+      const current = cfg.ignoredUserTrackingIds || []
+      let next: string[]
+      if (enabled) {
+        next = current.filter((id) => id !== userId)
+      } else {
+        next = Array.from(new Set([...current, userId]))
+      }
+      sessionStore.updateConfig({ ignoredUserTrackingIds: next })
+      return true
+    } catch (err: any) {
+      Logger.error(`[IPC] setUserTracking failed:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-user-tracking', async (_event, { accountId, userId }) => {
+    try {
+      return accountManager.activityTrackerService.isUserTrackingEnabled(accountId, userId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getUserTracking failed:`, err)
+      return true
+    }
+  })
+
+  ipcMain.handle('telegram:clear-activity-data', async (_event, { accountId, type }) => {
+    try {
+      accountManager.activityTrackerService.clearData(accountId, type || 'all')
+      return true
+    } catch (err: any) {
+      Logger.error(`[IPC] clearActivityData failed:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-activity-stats', async (_event, { accountId }) => {
+    try {
+      return accountManager.activityTrackerService.getStorageStats(accountId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getActivityStats failed:`, err)
+      return { totalEvents: 0, totalSessions: 0, totalUsersTracked: 0, dataSizeBytes: 0 }
+    }
+  })
+
+  ipcMain.handle('telegram:prune-activity-data', async (_event, { accountId, retentionPeriod }) => {
+    try {
+      return accountManager.activityTrackerService.pruneOldRecords(accountId, retentionPeriod)
+    } catch (err: any) {
+      Logger.error(`[IPC] pruneActivityData failed:`, err)
+      return { prunedStatusCount: 0, prunedChangesCount: 0 }
     }
   })
 

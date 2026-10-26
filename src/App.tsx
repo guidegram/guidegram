@@ -24,6 +24,7 @@ const WhatsNewModal = React.lazy(() => import('./components/WhatsNewModal').then
 const SupportModal = React.lazy(() => import('./components/SupportModal').then((m) => ({ default: m.SupportModal })))
 const McpHubModal = React.lazy(() => import('./components/McpHubModal').then((m) => ({ default: m.McpHubModal })))
 const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then((m) => ({ default: m.KeyboardShortcutsModal })))
+const ContactChangesModal = React.lazy(() => import('./components/ContactChangesModal').then((m) => ({ default: m.ContactChangesModal })))
 import {
   AccountInfo,
   DialogItem,
@@ -70,7 +71,8 @@ export const App: React.FC = () => {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [isProxyModalOpen, setIsProxyModalOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'mcp' | 'business' | 'profile' | 'notifications' | 'privacy' | 'chat' | 'advanced'>('general')
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'mcp' | 'business' | 'profile' | 'notifications' | 'privacy' | 'chat' | 'advanced' | 'features'>('general')
+  const [isContactChangesOpen, setIsContactChangesOpen] = useState(false)
   const [isMcpHubOpen, setIsMcpHubOpen] = useState(false)
   const [isUnifiedInboxOpen, setIsUnifiedInboxOpen] = useState(false)
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false)
@@ -1693,6 +1695,10 @@ export const App: React.FC = () => {
               setIsMainMenuOpen(false)
               setIsContactsOpen(true)
             }}
+            onOpenContactChanges={() => {
+              setIsMainMenuOpen(false)
+              setIsContactChangesOpen(true)
+            }}
             onOpenCalls={() => {
               setIsMainMenuOpen(false)
               setIsCallsOpen(true)
@@ -1799,6 +1805,26 @@ export const App: React.FC = () => {
             onConfigUpdated={(newCfg) => setConfig(newCfg)}
             onUpdateFound={(info) => setUpdateInfo(info)}
             onOpenSupport={() => setIsSupportModalOpen(true)}
+            onOpenContactChanges={() => {
+              setIsSettingsOpen(false)
+              setIsContactChangesOpen(true)
+            }}
+          />
+        )}
+
+        {isContactChangesOpen && (
+          <ContactChangesModal
+            isOpen={isContactChangesOpen}
+            accountId={currentAccount?.id || ''}
+            onClose={() => setIsContactChangesOpen(false)}
+            onOpenChat={(chatId) => {
+              setIsContactChangesOpen(false)
+              handleSelectChat(chatId)
+            }}
+            onOpenUserProfile={(peerId) => {
+              setIsContactChangesOpen(false)
+              handleSelectUserOrChat(peerId)
+            }}
           />
         )}
 

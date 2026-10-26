@@ -22,6 +22,7 @@ import {
   Link2,
   Loader2,
   Bot,
+  History,
 } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -49,6 +50,7 @@ interface MainMenuDrawerProps {
   onOpenNewGroup?: () => void
   onOpenNewChannel?: () => void
   onOpenContacts?: () => void
+  onOpenContactChanges?: () => void
   onOpenCalls?: () => void
   onJoinedChat?: (chatId: string) => void
   archivedUnreadCount?: number
@@ -76,6 +78,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   onOpenNewGroup,
   onOpenNewChannel,
   onOpenContacts,
+  onOpenContactChanges,
   onOpenCalls,
   onJoinedChat,
   archivedUnreadCount = 0,
@@ -403,6 +406,22 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <User className="w-4 h-4 text-gray-400" />
                 <span>{t('app.contacts')}</span>
+              </button>
+
+              {/* Contact Changes Timeline */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenContactChanges?.()
+                }}
+                className="w-full flex items-center gap-4 px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <History className="w-4 h-4 text-accent-cyan group-hover:rotate-[-20deg] transition-transform" />
+                <div className="flex items-center justify-between flex-1">
+                  <span>{isRTL ? 'تایم‌لاین تغییرات مخاطبین' : 'Contact Changes Timeline'}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/20 font-bold">NEW</span>
+                </div>
               </button>
 
               {/* Calls */}
