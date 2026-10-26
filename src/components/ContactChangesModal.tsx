@@ -54,13 +54,26 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   const [relationFilter, setRelationFilter] = useState<RelationFilterType>('all')
   const [typeFilter, setTypeFilter] = useState<ContactChangeType | 'all'>('all')
 
-  const fetchChanges = async () => {
+  const fetchChanges = async (forceSync = false) => {
     if (!window.guidegram?.getContactChanges) return
     setIsLoading(true)
     try {
+      if (forceSync && window.guidegram?.syncContactsAudit) {
+        await window.guidegram.syncContactsAudit(accountId)
+      }
       const res = await window.guidegram.getContactChanges(accountId)
       if (res) {
         setEvents(res)
+        // If there are 0 events and we haven't synced yet, do a quick audit in the background
+        if (res.length === 0 && !forceSync && window.guidegram?.syncContactsAudit) {
+          window.guidegram.syncContactsAudit(accountId).then((auditRes) => {
+            if (auditRes && auditRes.newEventsCount > 0) {
+              window.guidegram.getContactChanges(accountId).then((updated) => {
+                if (updated) setEvents(updated)
+              })
+            }
+          }).catch(() => {})
+        }
       }
     } catch (err) {
       console.warn('[ContactChangesModal] Failed to fetch contact changes:', err)
@@ -223,8 +236,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={fetchChanges}
-              title="بارگذاری مجدد"
+              onClick={() => fetchChanges(true)}
+              title="اسکن و استعلام زنده تغییرات مخاطبین"
               className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-accent-cyan' : ''}`} />

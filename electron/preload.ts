@@ -277,6 +277,11 @@ const guidegramAPI = {
   ): Promise<ContactChangeEvent[]> =>
     ipcRenderer.invoke('telegram:get-contact-changes', { accountId, filter }),
 
+  syncContactsAudit: (
+    accountId: string
+  ): Promise<{ totalContacts: number; newEventsCount: number }> =>
+    ipcRenderer.invoke('telegram:sync-contacts-audit', { accountId }),
+
   getUserChangeHistory: (accountId: string, userId: string): Promise<ContactChangeEvent[]> =>
     ipcRenderer.invoke('telegram:get-user-change-history', { accountId, userId }),
 

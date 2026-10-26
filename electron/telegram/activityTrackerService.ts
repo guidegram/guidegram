@@ -385,20 +385,51 @@ export class ActivityTrackerService {
     const prev = snapshots[userId]
     const now = Math.floor(Date.now() / 1000)
 
-    // Extract current fields
-    const nameParts = [user.firstName, user.lastName].filter(Boolean).map((s: any) => String(s).trim())
-    const currentName = nameParts.length > 0 ? nameParts.join(' ') : (user.title || user.username || 'User')
-    const currentUsername = user.username ? String(user.username).replace(/^@/, '') : undefined
-    const currentPhone = user.phone || user.phoneNumber || undefined
-    const currentBio = fullUser?.about || undefined
-    const currentPersonalChannelId = fullUser?.personalChannelId ? String(fullUser.personalChannelId) : undefined
-    const currentPersonalChannelTitle = fullUser?.personalChannelTitle || undefined
-    const isMutual = relation?.isMutual ?? Boolean(user.mutualContact)
-    const isContact = relation?.isContact ?? Boolean(user.contact)
+    // Extract current fields safely, respecting partial updates
+    const hasNameInfo = user.firstName !== undefined || user.lastName !== undefined || user.title !== undefined
+    const nameParts = hasNameInfo
+      ? [user.firstName, user.lastName].filter(Boolean).map((s: any) => String(s).trim())
+      : []
+    const currentName = hasNameInfo
+      ? (nameParts.length > 0 ? nameParts.join(' ') : (user.title || user.username || 'User'))
+      : (prev?.name || 'User')
 
-    let photoId: string | undefined = undefined
-    if (user.photo) {
-      photoId = user.photo.photoId ? String(user.photo.photoId) : user.photo.id ? String(user.photo.id) : undefined
+    const hasUsernameInfo = user.username !== undefined || user.usernames !== undefined
+    const currentUsername = hasUsernameInfo
+      ? (user.username
+          ? String(user.username).replace(/^@/, '')
+          : (Array.isArray(user.usernames) && user.usernames[0]?.username
+              ? String(user.usernames[0].username).replace(/^@/, '')
+              : undefined))
+      : prev?.username
+
+    const hasPhoneInfo = user.phone !== undefined || user.phoneNumber !== undefined
+    const currentPhone = hasPhoneInfo ? (user.phone || user.phoneNumber || undefined) : prev?.phone
+
+    const currentBio = fullUser?.about !== undefined ? fullUser.about : undefined
+    const currentPersonalChannelId = fullUser?.personalChannelId !== undefined ? String(fullUser.personalChannelId) : undefined
+    const currentPersonalChannelTitle = fullUser?.personalChannelTitle !== undefined ? fullUser.personalChannelTitle : undefined
+
+    const isMutual = relation?.isMutual ?? (user.mutualContact !== undefined ? Boolean(user.mutualContact) : prev?.isMutualContact)
+    const isContact = relation?.isContact ?? (user.contact !== undefined ? Boolean(user.contact) : prev?.isContact)
+
+    // Robust Photo Extraction
+    const hasPhotoInfo = user.photo !== undefined || user.raw?.photo !== undefined
+    let photoId: string | null | undefined = undefined // undefined = not checked, null = explicitly empty/deleted, string = photoId
+
+    if (hasPhotoInfo) {
+      const p = user.photo ?? user.raw?.photo
+      if (!p || p._ === 'userProfilePhotoEmpty' || p._ === 'chatPhotoEmpty') {
+        photoId = null
+      } else {
+        const idVal =
+          p.photoId ??
+          p.id ??
+          (user.raw?.photo as any)?.photoId ??
+          (p.big as any)?.fileId ??
+          (p.small as any)?.fileId
+        photoId = idVal ? String(idVal) : null
+      }
     }
 
     // If this is the very first time we see this user, just record baseline snapshot
@@ -411,7 +442,7 @@ export class ActivityTrackerService {
         bio: currentBio,
         personalChannelId: currentPersonalChannelId,
         personalChannelTitle: currentPersonalChannelTitle,
-        photoId,
+        photoId: typeof photoId === 'string' ? photoId : undefined,
         isMutualContact: isMutual,
         isContact,
         updatedAt: now,
@@ -421,8 +452,8 @@ export class ActivityTrackerService {
     }
 
     // Diff inspection
-    // 1. Name change
-    if (prev.name && currentName && prev.name !== currentName) {
+    // 1. Name change (only if name was provided in this inspection)
+    if (hasNameInfo && prev.name && currentName && prev.name !== currentName) {
       this.recordContactChange(accountId, {
         userId,
         changeType: 'name_change',
@@ -437,8 +468,8 @@ export class ActivityTrackerService {
       prev.name = currentName
     }
 
-    // 2. Username change
-    if (prev.username !== currentUsername) {
+    // 2. Username change (only if username was provided in this inspection)
+    if (hasUsernameInfo && prev.username !== currentUsername) {
       this.recordContactChange(accountId, {
         userId,
         changeType: 'username_change',
@@ -489,38 +520,41 @@ export class ActivityTrackerService {
       prev.personalChannelTitle = currentPersonalChannelTitle
     }
 
-    // 5. Profile photo change / removal
-    if (prev.photoId && !photoId) {
-      this.recordContactChange(accountId, {
-        userId,
-        changeType: 'photo_delete',
-        title: 'Profile Photo Deleted',
-        oldValue: 'Existing photo',
-        newValue: 'Photo removed',
-        isMutualContact: isMutual,
-        isMyContact: isContact,
-        userName: currentName,
-        userUsername: currentUsername,
-      })
-      prev.photoId = undefined
-    } else if (photoId && prev.photoId !== photoId) {
-      this.recordContactChange(accountId, {
-        userId,
-        changeType: 'photo_change',
-        title: 'Profile Photo Changed',
-        oldValue: prev.photoId ? 'Previous photo' : 'None',
-        newValue: 'New profile photo set',
-        isMutualContact: isMutual,
-        isMyContact: isContact,
-        userName: currentName,
-        userUsername: currentUsername,
-      })
-      prev.photoId = photoId
+    // 5. Profile photo change / removal (only if photo was provided in this inspection)
+    if (hasPhotoInfo) {
+      if (prev.photoId && photoId === null) {
+        this.recordContactChange(accountId, {
+          userId,
+          changeType: 'photo_delete',
+          title: 'Profile Photo Deleted',
+          oldValue: 'Existing photo',
+          newValue: 'Photo removed',
+          isMutualContact: isMutual,
+          isMyContact: isContact,
+          userName: currentName,
+          userUsername: currentUsername,
+        })
+        prev.photoId = undefined
+      } else if (typeof photoId === 'string' && prev.photoId !== photoId) {
+        this.recordContactChange(accountId, {
+          userId,
+          changeType: 'photo_change',
+          title: 'Profile Photo Changed',
+          oldValue: prev.photoId ? 'Previous photo' : 'None',
+          newValue: 'New profile photo set',
+          isMutualContact: isMutual,
+          isMyContact: isContact,
+          userName: currentName,
+          userUsername: currentUsername,
+        })
+        prev.photoId = photoId
+      }
     }
 
     // Update contacts status
-    prev.isMutualContact = isMutual
-    prev.isContact = isContact
+    if (isMutual !== undefined) prev.isMutualContact = isMutual
+    if (isContact !== undefined) prev.isContact = isContact
+    if (hasPhoneInfo && currentPhone) prev.phone = currentPhone
     prev.updatedAt = now
     this.scheduleSaveSnapshots(accountId)
   }

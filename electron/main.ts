@@ -1415,6 +1415,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:sync-contacts-audit', async (_event, { accountId }) => {
+    try {
+      return await accountManager.syncAndAuditContacts(accountId)
+    } catch (err: any) {
+      Logger.error(`[IPC] syncContactsAudit failed for ${accountId}:`, err)
+      return { totalContacts: 0, newEventsCount: 0 }
+    }
+  })
+
   ipcMain.handle('telegram:get-user-change-history', async (_event, { accountId, userId }) => {
     try {
       return accountManager.activityTrackerService.getUserChangeHistory(accountId, userId)

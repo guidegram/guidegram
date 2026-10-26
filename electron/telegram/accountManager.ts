@@ -976,6 +976,7 @@ export class AccountManager {
   private rawMessagesCache = new Map<string, any>()
   private savePeerHashesTimer?: NodeJS.Timeout
   private topMessageIds = new Map<string, number>()
+  private contactAuditInterval?: NodeJS.Timeout
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
@@ -1025,6 +1026,15 @@ export class AccountManager {
         },
       })
     }
+
+    // Start periodic background contact changes auditor (every 15 minutes)
+    this.contactAuditInterval = setInterval(() => {
+      for (const [accId, holder] of this.clients.entries()) {
+        if (holder?.info?.status === 'connected') {
+          this.syncAndAuditContacts(accId).catch(() => {})
+        }
+      }
+    }, 15 * 60 * 1000)
   }
 
   public setPeerAccessHash(accountId: string, key: string, hash: Long | string): void {
@@ -1179,6 +1189,12 @@ export class AccountManager {
         Logger.info(`[AccountManager] Account ${updatedInfo.id} connected successfully!`)
         networkReconnectManager.onAccountConnected(updatedInfo.id)
         this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
+
+        // Proactively audit contacts in background 4 seconds after connection
+        setTimeout(() => {
+          this.syncAndAuditContacts(updatedInfo.id).catch(() => {})
+        }, 4000)
+
         return updatedInfo
       } else {
         Logger.warn(`[AccountManager] Account ${savedAcc.id} is not authorized (session expired).`)
@@ -2286,7 +2302,20 @@ export class AccountManager {
           const rawStatus = (peer as any).raw?.status || (peer as any).status
           if (rawStatus) {
             userStatus = extractUserStatus(rawStatus, false)
+            try {
+              this.activityTrackerService.recordUserStatus(accountId, peerId, rawStatus, {
+                title,
+                avatarUrl,
+                username: peer.username,
+              })
+            } catch (_) {}
           }
+          try {
+            this.activityTrackerService.inspectUserSnapshot(accountId, peer, undefined, {
+              isMutual: Boolean(peer.isMutualContact || (peer as any).raw?.mutualContact || (peer as any).mutualContact),
+              isContact: Boolean(peer.isContact || (peer as any).raw?.contact || (peer as any).contact),
+            })
+          } catch (_) {}
         }
 
         const item: DialogItem = {
@@ -2490,6 +2519,28 @@ export class AccountManager {
     } catch (err: any) {
       Logger.error(`[AccountManager] getContacts error for ${accountId}:`, err)
       return []
+    }
+  }
+
+  public async syncAndAuditContacts(
+    accountId: string
+  ): Promise<{ totalContacts: number; newEventsCount: number }> {
+    try {
+      const holder = this.clients.get(accountId)
+      if (!holder?.client) return { totalContacts: 0, newEventsCount: 0 }
+
+      const beforeCount = this.activityTrackerService.getContactChanges(accountId).length
+      const contacts = await this.getContacts(accountId)
+      const afterCount = this.activityTrackerService.getContactChanges(accountId).length
+      const newEventsCount = Math.max(0, afterCount - beforeCount)
+
+      Logger.info(
+        `[ActivityTracker] Audited ${contacts.length} contacts for account ${accountId}. New events: ${newEventsCount}`
+      )
+      return { totalContacts: contacts.length, newEventsCount }
+    } catch (err: any) {
+      Logger.warn(`[ActivityTracker] syncAndAuditContacts error for ${accountId}:`, err)
+      return { totalContacts: 0, newEventsCount: 0 }
     }
   }
 
