@@ -1236,6 +1236,18 @@ export class AccountManager {
     return loadedAccounts
   }
 
+  public getClientHolder(accountId: string): ClientHolder | undefined {
+    return this.clients.get(accountId)
+  }
+
+  public getConnectedClient(accountId: string): TelegramClient {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) {
+      throw new Error(`Telegram account ${accountId} is not connected.`)
+    }
+    return holder.client
+  }
+
 
   public async startPhoneAuth(phone: string, proxy?: ProxyConfig): Promise<{ phoneCodeHash: string }> {
     Logger.info(`[AccountManager] Starting phone auth for ${phone}, proxy=${proxy?.type || 'none'}`)

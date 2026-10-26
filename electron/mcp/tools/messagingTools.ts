@@ -232,6 +232,264 @@ export async function markAsReadHandler(
   }
 }
 
+export async function sendMediaHandler(
+  accountManager: AccountManager,
+  args: {
+    accountId?: string
+    chatId: string
+    filePath: string
+    mediaType?: 'photo' | 'video' | 'document' | 'audio' | 'voice'
+    caption?: string
+    silent?: boolean
+    replyToMsgId?: number
+  },
+  security?: MessagingToolsSecurityConfig
+): Promise<{ success: boolean; messageId?: number; chatId: string; filePath: string; error?: string }> {
+  const targetAccountId = resolveAccount(accountManager, args.accountId)
+  checkChatWhitelist(args.chatId, security)
+
+  if (!args.filePath || !args.filePath.trim()) {
+    throw new Error('filePath argument is required to send media.')
+  }
+
+  try {
+    const isVoice = args.mediaType === 'voice'
+    const forceDocument = args.mediaType === 'document'
+
+    const res = await accountManager.sendMedia(
+      targetAccountId,
+      args.chatId,
+      args.filePath.trim(),
+      {
+        caption: args.caption,
+        isVoice,
+        forceDocument,
+        silent: args.silent,
+        replyToMsgId: args.replyToMsgId,
+      }
+    )
+
+    return {
+      success: true,
+      messageId: res?.id,
+      chatId: args.chatId,
+      filePath: args.filePath,
+    }
+  } catch (err: any) {
+    Logger.error(`[MCP] sendMediaHandler error:`, err)
+    return {
+      success: false,
+      chatId: args.chatId,
+      filePath: args.filePath,
+      error: formatTelegramError(err),
+    }
+  }
+}
+
+export async function forwardMessagesHandler(
+  accountManager: AccountManager,
+  args: {
+    accountId?: string
+    fromChatId: string
+    toChatId: string
+    messageIds: number[]
+    dropAuthor?: boolean
+    silent?: boolean
+  },
+  security?: MessagingToolsSecurityConfig
+): Promise<{ success: boolean; fromChatId: string; toChatId: string; count: number; error?: string }> {
+  const targetAccountId = resolveAccount(accountManager, args.accountId)
+  checkChatWhitelist(args.toChatId, security)
+
+  if (!args.messageIds || args.messageIds.length === 0) {
+    throw new Error('messageIds array cannot be empty.')
+  }
+
+  try {
+    await accountManager.forwardMessages(
+      targetAccountId,
+      args.fromChatId,
+      args.toChatId,
+      args.messageIds,
+      {
+        withoutQuote: args.dropAuthor ?? false,
+        silent: args.silent ?? false,
+      }
+    )
+
+    return {
+      success: true,
+      fromChatId: args.fromChatId,
+      toChatId: args.toChatId,
+      count: args.messageIds.length,
+    }
+  } catch (err: any) {
+    Logger.error(`[MCP] forwardMessagesHandler error:`, err)
+    return {
+      success: false,
+      fromChatId: args.fromChatId,
+      toChatId: args.toChatId,
+      count: 0,
+      error: formatTelegramError(err),
+    }
+  }
+}
+
+export async function sendReactionHandler(
+  accountManager: AccountManager,
+  args: {
+    accountId?: string
+    chatId: string
+    messageId: number
+    reaction: string
+    big?: boolean
+  }
+): Promise<{ success: boolean; chatId: string; messageId: number; reaction: string; error?: string }> {
+  const targetAccountId = resolveAccount(accountManager, args.accountId)
+
+  if (!args.reaction || !args.reaction.trim()) {
+    throw new Error('Reaction emoji or custom emoji ID cannot be empty.')
+  }
+
+  try {
+    const success = await accountManager.sendReaction(
+      targetAccountId,
+      args.chatId,
+      args.messageId,
+      args.reaction.trim(),
+      { big: args.big ?? false }
+    )
+
+    return {
+      success: Boolean(success),
+      chatId: args.chatId,
+      messageId: args.messageId,
+      reaction: args.reaction,
+    }
+  } catch (err: any) {
+    Logger.error(`[MCP] sendReactionHandler error:`, err)
+    return {
+      success: false,
+      chatId: args.chatId,
+      messageId: args.messageId,
+      reaction: args.reaction,
+      error: formatTelegramError(err),
+    }
+  }
+}
+
+export async function manageMessageHandler(
+  accountManager: AccountManager,
+  args: {
+    accountId?: string
+    chatId: string
+    messageId: number
+    action: 'edit' | 'pin' | 'unpin' | 'delete'
+    text?: string
+    notify?: boolean
+    bothSides?: boolean
+  },
+  security?: MessagingToolsSecurityConfig
+): Promise<{ success: boolean; chatId: string; messageId: number; action: string; error?: string }> {
+  const targetAccountId = resolveAccount(accountManager, args.accountId)
+  checkChatWhitelist(args.chatId, security)
+
+  try {
+    switch (args.action) {
+      case 'edit': {
+        if (!args.text || !args.text.trim()) {
+          throw new Error('text is required for edit action.')
+        }
+        await accountManager.editMessage(targetAccountId, args.chatId, args.messageId, args.text)
+        return { success: true, chatId: args.chatId, messageId: args.messageId, action: 'edit' }
+      }
+      case 'pin': {
+        await accountManager.pinMessage(
+          targetAccountId,
+          args.chatId,
+          args.messageId,
+          args.notify ?? true,
+          args.bothSides ?? false
+        )
+        return { success: true, chatId: args.chatId, messageId: args.messageId, action: 'pin' }
+      }
+      case 'unpin': {
+        await accountManager.unpinMessage(targetAccountId, args.chatId, args.messageId)
+        return { success: true, chatId: args.chatId, messageId: args.messageId, action: 'unpin' }
+      }
+      case 'delete': {
+        await accountManager.deleteMessages(targetAccountId, args.chatId, [args.messageId], args.bothSides ?? true)
+        return { success: true, chatId: args.chatId, messageId: args.messageId, action: 'delete' }
+      }
+      default:
+        throw new Error(`Unsupported action '${args.action}'. Must be 'edit', 'pin', 'unpin', or 'delete'.`)
+    }
+  } catch (err: any) {
+    Logger.error(`[MCP] manageMessageHandler error:`, err)
+    return {
+      success: false,
+      chatId: args.chatId,
+      messageId: args.messageId,
+      action: args.action,
+      error: formatTelegramError(err),
+    }
+  }
+}
+
+export async function createPollHandler(
+  accountManager: AccountManager,
+  args: {
+    accountId?: string
+    chatId: string
+    question: string
+    options: string[]
+    isQuiz?: boolean
+    correctOptionId?: number
+    multipleChoice?: boolean
+    isAnonymous?: boolean
+  },
+  security?: MessagingToolsSecurityConfig
+): Promise<{ success: boolean; chatId: string; question: string; error?: string }> {
+  const targetAccountId = resolveAccount(accountManager, args.accountId)
+  checkChatWhitelist(args.chatId, security)
+
+  if (!args.question?.trim()) {
+    throw new Error('question cannot be empty.')
+  }
+  if (!args.options || args.options.length < 2) {
+    throw new Error('A poll requires at least 2 options.')
+  }
+
+  try {
+    const success = await accountManager.createPoll(
+      targetAccountId,
+      args.chatId,
+      args.question.trim(),
+      args.options.map((o) => o.trim()),
+      {
+        quiz: args.isQuiz ?? false,
+        correctOptionIndex: args.correctOptionId,
+        multipleChoice: args.multipleChoice ?? false,
+        anonymous: args.isAnonymous ?? true,
+      }
+    )
+
+    return {
+      success: Boolean(success),
+      chatId: args.chatId,
+      question: args.question,
+    }
+  } catch (err: any) {
+    Logger.error(`[MCP] createPollHandler error:`, err)
+    return {
+      success: false,
+      chatId: args.chatId,
+      question: args.question,
+      error: formatTelegramError(err),
+    }
+  }
+}
+
 export const messagingToolsDefinitions = [
   {
     name: 'telegram_get_dialogs',
@@ -355,6 +613,192 @@ export const messagingToolsDefinitions = [
         },
       },
       required: ['chatId'],
+    },
+  },
+  {
+    name: 'telegram_send_media',
+    description: 'Sends a photo, video, document, voice message, or audio file from local disk to a Telegram chat with optional caption.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: {
+          type: 'string',
+          description: 'Optional Telegram account ID.',
+        },
+        chatId: {
+          type: 'string',
+          description: 'Target chat or channel ID.',
+        },
+        filePath: {
+          type: 'string',
+          description: 'Absolute local file path to the media file to upload.',
+        },
+        mediaType: {
+          type: 'string',
+          enum: ['photo', 'video', 'document', 'audio', 'voice'],
+          description: 'Optional media type override.',
+        },
+        caption: {
+          type: 'string',
+          description: 'Optional text caption for the media.',
+        },
+        silent: {
+          type: 'boolean',
+          description: 'Send silently without sound.',
+        },
+        replyToMsgId: {
+          type: 'number',
+          description: 'Optional message ID to reply to.',
+        },
+      },
+      required: ['chatId', 'filePath'],
+    },
+  },
+  {
+    name: 'telegram_forward_messages',
+    description: 'Forwards one or more messages from one chat to another, with option to hide author (dropAuthor).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: {
+          type: 'string',
+          description: 'Optional Telegram account ID.',
+        },
+        fromChatId: {
+          type: 'string',
+          description: 'Source chat ID where messages currently reside.',
+        },
+        toChatId: {
+          type: 'string',
+          description: 'Destination chat ID to forward messages to.',
+        },
+        messageIds: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'List of message IDs to forward.',
+        },
+        dropAuthor: {
+          type: 'boolean',
+          description: 'If true, forwards without the "Forwarded from" header.',
+        },
+        silent: {
+          type: 'boolean',
+          description: 'Send silently without notification sound.',
+        },
+      },
+      required: ['fromChatId', 'toChatId', 'messageIds'],
+    },
+  },
+  {
+    name: 'telegram_send_reaction',
+    description: 'Sends an emoji or custom emoji reaction to a specific message in a chat or channel.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: {
+          type: 'string',
+          description: 'Optional Telegram account ID.',
+        },
+        chatId: {
+          type: 'string',
+          description: 'Target chat ID.',
+        },
+        messageId: {
+          type: 'number',
+          description: 'Target message ID to react to.',
+        },
+        reaction: {
+          type: 'string',
+          description: 'Emoji reaction (e.g. "👍", "❤️", "🔥") or custom emoji ID.',
+        },
+        big: {
+          type: 'boolean',
+          description: 'Send with large animated reaction effect.',
+        },
+      },
+      required: ['chatId', 'messageId', 'reaction'],
+    },
+  },
+  {
+    name: 'telegram_manage_message',
+    description: 'Performs administrative message actions: edit text, pin message, unpin message, or delete message.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: {
+          type: 'string',
+          description: 'Optional Telegram account ID.',
+        },
+        chatId: {
+          type: 'string',
+          description: 'Target chat ID.',
+        },
+        messageId: {
+          type: 'number',
+          description: 'Target message ID.',
+        },
+        action: {
+          type: 'string',
+          enum: ['edit', 'pin', 'unpin', 'delete'],
+          description: 'Action to perform on the message.',
+        },
+        text: {
+          type: 'string',
+          description: 'New text for the message (required when action is "edit").',
+        },
+        notify: {
+          type: 'boolean',
+          description: 'Notify chat members (for "pin" action, default true).',
+        },
+        bothSides: {
+          type: 'boolean',
+          description: 'Pin or delete for both sides in private chats (default true).',
+        },
+      },
+      required: ['chatId', 'messageId', 'action'],
+    },
+  },
+  {
+    name: 'telegram_create_poll',
+    description: 'Creates a poll or educational quiz in a Telegram group or channel.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: {
+          type: 'string',
+          description: 'Optional Telegram account ID.',
+        },
+        chatId: {
+          type: 'string',
+          description: 'Target chat or channel ID.',
+        },
+        question: {
+          type: 'string',
+          description: 'Poll question text.',
+        },
+        options: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of answer options (minimum 2 options).',
+        },
+        isQuiz: {
+          type: 'boolean',
+          description: 'True if this is a quiz with a correct answer.',
+        },
+        correctOptionId: {
+          type: 'number',
+          description: 'Zero-based index of the correct option for quiz mode.',
+        },
+        multipleChoice: {
+          type: 'boolean',
+          description: 'Allow multiple answer options (regular polls only).',
+        },
+        isAnonymous: {
+          type: 'boolean',
+          description: 'Whether votes are anonymous (default true).',
+        },
+      },
+      required: ['chatId', 'question', 'options'],
     },
   },
 ]

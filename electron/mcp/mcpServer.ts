@@ -16,6 +16,11 @@ import {
   sendTypingHandler,
   sendMessageHandler,
   markAsReadHandler,
+  sendMediaHandler,
+  forwardMessagesHandler,
+  sendReactionHandler,
+  manageMessageHandler,
+  createPollHandler,
 } from './tools/messagingTools.js'
 import {
   fileToolsDefinitions,
@@ -23,6 +28,22 @@ import {
   listChannelMediaHandler,
   downloadFileHandler,
 } from './tools/fileTools.js'
+import {
+  searchToolsDefinitions,
+  searchMessagesHandler,
+  searchContactsHandler,
+  searchDialogsHandler,
+} from './tools/searchTools.js'
+import {
+  channelToolsDefinitions,
+  manageChannelHandler,
+} from './tools/channelTools.js'
+import {
+  universalRpcToolsDefinitions,
+  discoverMethodsHandler,
+  invokeRawMethodHandler,
+} from './tools/universalRpcTools.js'
+import { safeJsonStringify } from './utils/safeJson.js'
 
 export class GuidegramMcpServer {
   private server: http.Server | null = null
@@ -151,6 +172,9 @@ export class GuidegramMcpServer {
       ...accountToolsDefinitions,
       ...messagingToolsDefinitions,
       ...fileToolsDefinitions,
+      ...searchToolsDefinitions,
+      ...channelToolsDefinitions,
+      ...universalRpcToolsDefinitions,
     ]
   }
 
@@ -242,7 +266,7 @@ export class GuidegramMcpServer {
               res.end()
             } else {
               res.writeHead(200, { 'Content-Type': 'application/json' })
-              res.end(JSON.stringify(filtered))
+              res.end(safeJsonStringify(filtered))
             }
           } else {
             const response = await this.handleJsonRpcMessage(payload)
@@ -251,7 +275,7 @@ export class GuidegramMcpServer {
               res.end()
             } else {
               res.writeHead(200, { 'Content-Type': 'application/json' })
-              res.end(JSON.stringify(response))
+              res.end(safeJsonStringify(response))
             }
           }
         } catch (err: any) {
@@ -340,7 +364,7 @@ export class GuidegramMcpServer {
               content: [
                 {
                   type: 'text',
-                  text: typeof callResult === 'string' ? callResult : JSON.stringify(callResult, null, 2),
+                  text: typeof callResult === 'string' ? callResult : safeJsonStringify(callResult, 2),
                 },
               ],
               isError,
@@ -403,6 +427,50 @@ export class GuidegramMcpServer {
 
       case 'telegram_mark_as_read':
         return await markAsReadHandler(this.accountManager, args)
+
+      case 'telegram_send_media':
+        return await sendMediaHandler(this.accountManager, args, {
+          allowedChatIds: this.config.allowedChatIds,
+        })
+
+      case 'telegram_forward_messages':
+        return await forwardMessagesHandler(this.accountManager, args, {
+          allowedChatIds: this.config.allowedChatIds,
+        })
+
+      case 'telegram_send_reaction':
+        return await sendReactionHandler(this.accountManager, args)
+
+      case 'telegram_manage_message':
+        return await manageMessageHandler(this.accountManager, args, {
+          allowedChatIds: this.config.allowedChatIds,
+        })
+
+      case 'telegram_create_poll':
+        return await createPollHandler(this.accountManager, args, {
+          allowedChatIds: this.config.allowedChatIds,
+        })
+
+      // Search Tools
+      case 'telegram_search_messages':
+        return await searchMessagesHandler(this.accountManager, args)
+
+      case 'telegram_search_contacts':
+        return await searchContactsHandler(this.accountManager, args)
+
+      case 'telegram_search_dialogs':
+        return await searchDialogsHandler(this.accountManager, args)
+
+      // Channel Tools
+      case 'telegram_manage_channel':
+        return await manageChannelHandler(this.accountManager, args)
+
+      // Universal Dynamic MTProto Tools
+      case 'telegram_discover_methods':
+        return await discoverMethodsHandler(args)
+
+      case 'telegram_invoke_raw_method':
+        return await invokeRawMethodHandler(this.accountManager, args)
 
       // File Tools
       case 'telegram_resolve_peer':

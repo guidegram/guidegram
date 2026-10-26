@@ -6,6 +6,7 @@ import type { SharedMediaFilterType } from '../../telegram/types'
 import type { McpPeerDetails, McpSharedMediaSummary, McpDownloadResult } from '../types'
 import { getActiveAccountId, resolveAccountId } from './accountTools.js'
 import { Logger } from '../../telegram/logger'
+import { fuzzyTokenMatch } from '../utils/persianNormalizer.js'
 
 export interface FileToolsConfig {
   defaultDownloadDir?: string
@@ -23,36 +24,139 @@ export async function resolvePeerHandler(
   }
 ): Promise<{ peer: McpPeerDetails; accountId: string }> {
   const targetAccountId = resolveAccount(accountManager, args.accountId)
-  const cleanTarget = String(args.target || '').trim()
+  const rawTarget = String(args.target || '').trim()
 
-  try {
-    const rawPeer: any = await accountManager.resolvePeer(targetAccountId, cleanTarget)
-    if (!rawPeer) {
-      throw new Error(`Peer not found for target: '${cleanTarget}'`)
-    }
+  if (!rawTarget) {
+    throw new Error('target is required for resolving peer.')
+  }
 
-    let peerType: 'user' | 'group' | 'channel' | 'unknown' = 'unknown'
-    if (rawPeer.isChannel || rawPeer.type === 'channel') peerType = 'channel'
-    else if (rawPeer.isGroup || rawPeer.type === 'group') peerType = 'group'
-    else if (rawPeer.isUser || rawPeer.type === 'user') peerType = 'user'
-
-    const details: McpPeerDetails = {
-      id: String(rawPeer.id || rawPeer.chatId || ''),
-      title: rawPeer.title || rawPeer.firstName || cleanTarget,
-      type: peerType,
-      username: rawPeer.username || (cleanTarget.startsWith('@') ? cleanTarget.slice(1) : undefined),
-      accessHash: rawPeer.accessHash ? String(rawPeer.accessHash) : undefined,
-      membersCount: rawPeer.membersCount,
-      about: rawPeer.about,
-    }
-
+  // Stage 1: 'me' / 'self'
+  if (rawTarget.toLowerCase() === 'me' || rawTarget.toLowerCase() === 'self') {
+    const acc = accountManager.getAccounts().find((a) => a.id === targetAccountId)
     return {
-      peer: details,
+      peer: {
+        id: targetAccountId,
+        title: `${acc?.firstName || 'Me'} ${acc?.lastName || ''}`.trim(),
+        type: 'user',
+        username: acc?.username,
+      },
       accountId: targetAccountId,
     }
-  } catch (err: any) {
-    throw new Error(`Failed to resolve peer '${cleanTarget}': ${err?.message || err}`)
   }
+
+  // Stage 2: Direct numeric ID (-100... or numeric user ID)
+  // or Stage 3: @username or clean alphanumeric username
+  try {
+    const rawPeer: any = await accountManager.resolvePeer(targetAccountId, rawTarget)
+    if (rawPeer && rawPeer.id) {
+      let peerType: 'user' | 'group' | 'channel' | 'unknown' = 'unknown'
+      if (rawPeer.isChannel || rawPeer.type === 'channel') peerType = 'channel'
+      else if (rawPeer.isGroup || rawPeer.type === 'group') peerType = 'group'
+      else if (rawPeer.isUser || rawPeer.type === 'user') peerType = 'user'
+
+      return {
+        peer: {
+          id: String(rawPeer.id || rawPeer.chatId || ''),
+          title: rawPeer.title || rawPeer.firstName || rawTarget,
+          type: peerType,
+          username: rawPeer.username || (rawTarget.startsWith('@') ? rawTarget.slice(1) : undefined),
+          accessHash: rawPeer.accessHash ? String(rawPeer.accessHash) : undefined,
+          membersCount: rawPeer.membersCount,
+          about: rawPeer.about,
+        },
+        accountId: targetAccountId,
+      }
+    }
+  } catch (_directErr) {
+    // Proceed to next fallback stages
+  }
+
+  const holder = accountManager.getClientHolder(targetAccountId)
+
+  // Stage 4: Phone number resolution
+  const isPhoneCandidate = /^(\+?\d{8,16})$/.test(rawTarget.replace(/[\s-]/g, ''))
+  if (isPhoneCandidate && holder?.client) {
+    const cleanPhone = rawTarget.replace(/[\s-]/g, '')
+    try {
+      const res = await accountManager.contactsService.resolvePhone(holder as any, cleanPhone)
+      const u = res?.users?.[0]
+      if (u) {
+        return {
+          peer: {
+            id: String(u.id),
+            title: `${u.firstName || ''} ${u.lastName || ''}`.trim() || cleanPhone,
+            type: 'user',
+            username: u.username,
+            accessHash: u.accessHash ? String(u.accessHash) : undefined,
+          },
+          accountId: targetAccountId,
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Stage 5: Persian and Fuzzy Matching across cached dialogs and contacts
+  const cachedDialogs = accountManager.getCachedDialogs(targetAccountId) || []
+  let bestDialogMatch: { dialog: any; score: number } | null = null
+
+  for (const d of cachedDialogs) {
+    const score = fuzzyTokenMatch(rawTarget, d.title || '').score
+    if (!bestDialogMatch || score > bestDialogMatch.score) {
+      bestDialogMatch = { dialog: d, score }
+    }
+  }
+
+  let bestContactMatch: { contact: any; score: number } | null = null
+  if (holder?.client) {
+    try {
+      const contactsRes: any = await accountManager.contactsService.getContacts(holder as any, 0n)
+      const users: any[] = Array.isArray(contactsRes?.users) ? contactsRes.users : []
+      for (const u of users) {
+        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim()
+        const score = fuzzyTokenMatch(rawTarget, fullName).score
+        if (!bestContactMatch || score > bestContactMatch.score) {
+          bestContactMatch = { contact: u, score }
+        }
+      }
+    } catch (_) {}
+  }
+
+  const dialogScore = bestDialogMatch?.score || 0
+  const contactScore = bestContactMatch?.score || 0
+
+  if (dialogScore >= 0.55 && dialogScore >= contactScore && bestDialogMatch?.dialog) {
+    const d = bestDialogMatch.dialog
+    let peerType: 'user' | 'group' | 'channel' | 'unknown' = 'unknown'
+    if (d.isChannel) peerType = 'channel'
+    else if (d.isGroup) peerType = 'group'
+    else if (d.isUser) peerType = 'user'
+
+    return {
+      peer: {
+        id: String(d.id),
+        title: d.title || rawTarget,
+        type: peerType,
+        username: d.username,
+      },
+      accountId: targetAccountId,
+    }
+  }
+
+  if (contactScore >= 0.55 && bestContactMatch?.contact) {
+    const u = bestContactMatch.contact
+    return {
+      peer: {
+        id: String(u.id),
+        title: `${u.firstName || ''} ${u.lastName || ''}`.trim() || rawTarget,
+        type: 'user',
+        username: u.username,
+        accessHash: u.accessHash ? String(u.accessHash) : undefined,
+      },
+      accountId: targetAccountId,
+    }
+  }
+
+  throw new Error(`Failed to resolve peer '${rawTarget}'. No matching user, username, phone, contact, or chat dialog found.`)
 }
 
 export async function listChannelMediaHandler(
