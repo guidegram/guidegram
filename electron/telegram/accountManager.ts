@@ -13242,13 +13242,33 @@ export class AccountManager {
         } as any)
         if (res) {
           const wp = res.webpage || (res._ === 'webPage' ? res : null)
-          const parsed = parseMtprotoPageToArticle(url, wp || res)
-          if (parsed) return parsed
+          if (wp) {
+            const parsed = parseMtprotoPageToArticle(wp.url || url, wp)
+            if (parsed) return parsed
+
+            if (wp.title || wp.description) {
+              let domain = wp.site_name || wp.siteName
+              try {
+                domain = domain || new URL(url).hostname.replace(/^www\./i, '')
+              } catch (_) {}
+              return buildReaderFallbackArticle(url, undefined, {
+                title: wp.title || url,
+                siteName: domain,
+                description: wp.description,
+                author: wp.author,
+                image: extractStrippedThumb(wp.photo),
+              })
+            }
+          }
         }
       }
+      let fallbackDomain = ''
+      try {
+        fallbackDomain = new URL(url).hostname.replace(/^www\./i, '')
+      } catch (_) {}
       return buildReaderFallbackArticle(url, undefined, {
         title: url,
-        siteName: new URL(url).hostname.replace(/^www\./i, ''),
+        siteName: fallbackDomain,
       })
     } catch (err) {
       Logger.warn(`[AccountManager] getInstantView failed for ${url}:`, err)

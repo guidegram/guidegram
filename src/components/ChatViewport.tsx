@@ -365,22 +365,49 @@ const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview,
         </div>
       )}
 
-      {/* Instant View Action Button (Official Telegram Desktop Parity) */}
-      {(preview.hasInstantView || (preview.title && preview.description) || url.includes('telegra.ph') || url.includes('/iv?')) && (
-        <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenInstantView?.(preview.url || url, preview)
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wide transition-all duration-150 border border-cyan-500/30 shadow-sm"
-          >
-            <span>⚡ Instant View</span>
-          </button>
-          <span className="text-[10px] text-gray-400 opacity-60">Clean reader</span>
-        </div>
-      )}
+      {/* Instant View / Telegram Message Action Button (Official Telegram Desktop Parity) */}
+      {(() => {
+        const targetUrl = preview.url || url
+        const tgLink = parseTelegramUrl(targetUrl)
+        if (tgLink.isTelegram && tgLink.messageId) {
+          return (
+            <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSafeOpen(targetUrl)
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wide transition-all duration-150 border border-cyan-500/30 shadow-sm"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>مشاهده پیام</span>
+              </button>
+              <span className="text-[10px] text-gray-400 opacity-60">Telegram Message</span>
+            </div>
+          )
+        }
+
+        if (preview.hasInstantView || (!tgLink.isTelegram && ((preview.title && preview.description) || url.includes('telegra.ph') || url.includes('/iv?')))) {
+          return (
+            <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOpenInstantView?.(targetUrl, preview)
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wide transition-all duration-150 border border-cyan-500/30 shadow-sm"
+              >
+                <span>⚡ Instant View</span>
+              </button>
+              <span className="text-[10px] text-gray-400 opacity-60">Clean reader</span>
+            </div>
+          )
+        }
+
+        return null
+      })()}
     </div>
   )
 }
@@ -1140,32 +1167,58 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isInstantViewLoading, setIsInstantViewLoading] = useState(false)
 
   const handleOpenInstantView = async (url: string, preview?: WebPagePreview) => {
+    const parsedTg = parseTelegramUrl(url)
+    if (parsedTg.isTelegram && parsedTg.messageId) {
+      handleSafeOpenUrl(url)
+      return
+    }
+
     setIsInstantViewOpen(true)
     setIsInstantViewLoading(true)
     try {
-      if (preview?.instantViewArticle) {
+      if (preview?.instantViewArticle && preview.instantViewArticle.blocks && preview.instantViewArticle.blocks.length > 0) {
         setInstantViewArticle(preview.instantViewArticle)
         setIsInstantViewLoading(false)
         return
       }
       if (window.guidegram?.getInstantView && chat?.accountId) {
         const res = await window.guidegram.getInstantView(chat.accountId, url)
-        if (res) {
+        if (
+          res &&
+          res.blocks &&
+          res.blocks.some(
+            (b) => b.type === 'paragraph' || b.type === 'photo' || (b.type === 'title' && b.text !== url)
+          )
+        ) {
           setInstantViewArticle(res)
           setIsInstantViewLoading(false)
           return
         }
       }
       // Fallback reader article
+      let articleTitle = preview?.title
+      if (!articleTitle) {
+        try {
+          articleTitle = new URL(url).hostname.replace(/^www\./i, '')
+        } catch (_) {
+          articleTitle = url
+        }
+      }
+      const articleDesc = preview?.description || ''
+      const descParagraphs = articleDesc
+        ? articleDesc.split('\n\n').map((p) => p.trim()).filter(Boolean)
+        : []
       setInstantViewArticle({
         url,
-        title: preview?.title || url,
+        title: articleTitle,
         description: preview?.description,
         siteName: preview?.siteName || preview?.domain,
         blocks: [
-          { type: 'title', text: preview?.title || 'Article View' },
+          { type: 'title', text: articleTitle },
           ...(preview?.image ? [{ type: 'photo' as const, url: preview.image }] : []),
-          ...(preview?.description ? [{ type: 'paragraph' as const, text: preview.description }] : []),
+          ...(descParagraphs.length > 0
+            ? descParagraphs.map((p) => ({ type: 'paragraph' as const, text: p }))
+            : (preview?.description ? [{ type: 'paragraph' as const, text: preview.description }] : [])),
         ],
       })
     } catch (err) {

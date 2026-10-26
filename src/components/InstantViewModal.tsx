@@ -336,7 +336,12 @@ export const InstantViewModal: React.FC<InstantViewModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in"
+    >
       <div
         className={`relative w-full max-w-3xl h-[92vh] max-h-[900px] rounded-2xl shadow-2xl flex flex-col overflow-hidden border ${currentTheme.border} ${currentTheme.bg} ${currentTheme.text} transition-colors duration-200`}
         style={{ fontFamily: fontFamily === 'serif' ? 'Georgia, Cambria, serif' : 'Inter, system-ui, sans-serif' }}
@@ -459,7 +464,17 @@ export const InstantViewModal: React.FC<InstantViewModalProps> = ({
             <article className="max-w-2xl mx-auto">
               {/* If no blocks were returned, show basic fallback */}
               {article.blocks && article.blocks.length > 0 ? (
-                article.blocks.map((block, idx) => renderBlock(block, idx))
+                <>
+                  {article.blocks.map((block, idx) => renderBlock(block, idx))}
+                  {article.description && !article.blocks.some((b) => b.type === 'paragraph') && (
+                    <p
+                      className="mb-4 leading-relaxed font-normal opacity-90"
+                      style={{ fontSize: `${fontSize}px`, lineHeight: 1.68 }}
+                    >
+                      {article.description}
+                    </p>
+                  )}
+                </>
               ) : (
                 <div>
                   <h1 className="text-2xl font-bold mb-4">{article.title || 'Instant View'}</h1>
