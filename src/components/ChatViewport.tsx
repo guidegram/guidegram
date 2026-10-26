@@ -108,6 +108,7 @@ import { ChatMembersModal } from './ChatMembersModal'
 import { ChatSettingsModal } from './ChatSettingsModal'
 import { ChatInviteLinksModal } from './ChatInviteLinksModal'
 import { PaidReactionModal } from './PaidReactionModal'
+import { StarGiftsModal } from './StarGiftsModal'
 import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
 import { GameScoreModal } from './GameScoreModal'
 import { AutoDeleteModal } from './AutoDeleteModal'
@@ -117,6 +118,7 @@ import { ChannelBoostModal } from './chat/ChannelBoostModal'
 import { LiveLocationModal } from './chat/LiveLocationModal'
 import { StarSubscriptionsModal } from './chat/StarSubscriptionsModal'
 import { BotMenuButtonConfigModal } from './chat/BotMenuButtonConfigModal'
+import { UserActivityRadar } from './UserActivityRadar'
 import { PaidMediaComposerModal } from './chat/PaidMediaComposerModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
@@ -737,6 +739,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isStarSubscriptionsModalOpen, setIsStarSubscriptionsModalOpen] = useState(false)
   const [isBotMenuConfigModalOpen, setIsBotMenuConfigModalOpen] = useState(false)
   const [isPaidMediaComposerModalOpen, setIsPaidMediaComposerModalOpen] = useState(false)
+  const [isStarGiftsModalOpen, setIsStarGiftsModalOpen] = useState(false)
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -7500,32 +7503,67 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               {/* Avatar & Title Hero */}
               <div className="flex flex-col items-center text-center">
-                <Avatar
-                  accountId={chat.accountId}
-                  peerId={chat.id}
-                  title={chatDetails?.title || chat.title}
-                  initials={chat.avatarInitials}
-                  avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
-                  size="xl"
-                  isChannel={chat.isChannel}
-                  isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
-                  className="mb-3 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={async () => {
-                    const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
-                    if (currentPhoto) {
-                      setLightboxUrl(currentPhoto)
-                    } else if (window.guidegram?.getProfilePhoto) {
-                      try {
-                        showToast('Loading full profile photo...')
-                        const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
-                        if (big) setLightboxUrl(big)
-                        else showToast('No profile photo available')
-                      } catch {
-                        showToast('Could not load profile photo')
+                <div className="relative mb-3 flex items-center justify-center">
+                  {/* Star Gifts Orbital Ring & Floating Badges */}
+                  {(chatDetails?.stargiftsCount ?? 0) > 0 && (
+                    <div
+                      onClick={() => setIsStarGiftsModalOpen(true)}
+                      className="absolute -inset-3 z-10 cursor-pointer pointer-events-auto group/orbit"
+                      title={`${chatDetails?.stargiftsCount} Star Gifts (Click to open gifts shelf)`}
+                    >
+                      {/* Outer subtle glowing dashed orbit */}
+                      <div className="absolute inset-0 rounded-full border border-amber-400/35 border-dashed star-gifts-orbit pointer-events-none shadow-[0_0_15px_rgba(245,158,11,0.25)]" />
+                      {/* Orbiting items container */}
+                      <div className="absolute inset-0 star-gifts-orbit pointer-events-none">
+                        {/* Top-right floating Gift badge */}
+                        <div className="absolute -top-1.5 right-1 pointer-events-auto">
+                          <div className="star-gifts-counter-orbit w-6 h-6 rounded-full bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-400 shadow-md shadow-amber-500/40 flex items-center justify-center text-white border-2 border-dark-900 group-hover/orbit:scale-125 transition-transform">
+                            <Gift className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                        {/* Bottom-left floating Star badge */}
+                        <div className="absolute -bottom-1.5 left-1 pointer-events-auto">
+                          <div className="star-gifts-counter-orbit w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-500 to-amber-300 shadow-md shadow-yellow-500/30 flex items-center justify-center text-dark-900 border-2 border-dark-900 group-hover/orbit:scale-125 transition-transform">
+                            <Star className="w-2.5 h-2.5 text-dark-900 fill-current" />
+                          </div>
+                        </div>
+                        {/* Left-center floating sparkles badge */}
+                        <div className="absolute top-1/2 -left-2 -translate-y-1/2 pointer-events-auto">
+                          <div className="star-gifts-counter-orbit w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 shadow-md flex items-center justify-center text-white border-2 border-dark-900 group-hover/orbit:scale-125 transition-transform">
+                            <Sparkles className="w-2.5 h-2.5 text-white" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Avatar
+                    accountId={chat.accountId}
+                    peerId={chat.id}
+                    title={chatDetails?.title || chat.title}
+                    initials={chat.avatarInitials}
+                    avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
+                    size="xl"
+                    isChannel={chat.isChannel}
+                    isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
+                    className="cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={async () => {
+                      const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
+                      if (currentPhoto) {
+                        setLightboxUrl(currentPhoto)
+                      } else if (window.guidegram?.getProfilePhoto) {
+                        try {
+                          showToast('Loading full profile photo...')
+                          const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
+                          if (big) setLightboxUrl(big)
+                          else showToast('No profile photo available')
+                        } catch {
+                          showToast('Could not load profile photo')
+                        }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
 
                 <div className="flex items-center justify-center gap-1.5 mb-1 px-2">
                   <h3
@@ -7613,13 +7651,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {(chatDetails?.stargiftsCount != null && chatDetails.stargiftsCount > 0 || chatDetails?.birthday) && (
                 <div className="grid grid-cols-2 gap-2">
                   {chatDetails?.stargiftsCount != null && chatDetails.stargiftsCount > 0 && (
-                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <div
+                      onClick={() => setIsStarGiftsModalOpen(true)}
+                      className="p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 cursor-pointer transition-all flex items-center gap-2.5 group"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 group-hover:scale-110 transition-transform flex items-center justify-center shrink-0">
                         <Gift className="w-4 h-4" />
                       </div>
                       <div className="text-left min-w-0">
                         <div className="text-[9px] uppercase font-bold text-amber-400">Gifts</div>
-                        <div className="text-xs font-bold text-white truncate">
+                        <div className="text-xs font-bold text-white truncate group-hover:text-amber-300 transition-colors">
                           {chatDetails.stargiftsCount} Gifts
                         </div>
                       </div>
@@ -8172,6 +8213,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </button>
               </div>
 
+              {/* User Activity & Online Status Radar */}
+              {chat.isUser && (
+                <UserActivityRadar
+                  accountId={chat.accountId}
+                  userId={chat.id}
+                  userName={chatDetails?.title || chat.title}
+                  avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
+                  currentStatus={chatDetails?.userStatus?.status}
+                  lastSeen={chatDetails?.userStatus?.lastOnline}
+                />
+              )}
+
               {/* External Navigation CTA */}
               <div className="pt-2">
                 <button
@@ -8479,6 +8532,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     {userProfileDetails.personalChannelTitle || `Channel #${userProfileDetails.personalChannelId}`}
                   </div>
                 </div>
+              )}
+
+              {/* User Activity & Online Status Radar Component */}
+              {userProfilePeerId && (
+                <UserActivityRadar
+                  accountId={chat.accountId}
+                  userId={userProfilePeerId}
+                  userName={userProfileDetails?.title || 'User'}
+                  avatarUrl={userProfileDetails?.avatarUrl}
+                  currentStatus={userProfileDetails?.userStatus?.status}
+                  lastSeen={userProfileDetails?.userStatus?.lastOnline}
+                />
               )}
             </div>
           </div>
@@ -9495,6 +9560,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chatId={chat.id}
           chatTitle={chatDetails?.title || chat.title}
           onClose={() => setIsPaidMediaComposerModalOpen(false)}
+        />
+      )}
+
+      {/* 26. Telegram Star Gifts Shelf Modal */}
+      {isStarGiftsModalOpen && chat && (
+        <StarGiftsModal
+          isOpen={isStarGiftsModalOpen}
+          accountId={chat.accountId}
+          peerId={chat.id}
+          userName={chatDetails?.title || chat.title}
+          onClose={() => setIsStarGiftsModalOpen(false)}
         />
       )}
     </div>

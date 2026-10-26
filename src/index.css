@@ -1997,6 +1997,34 @@ textarea:focus-visible {
   }
 }
 
+/* Telegram Star Gifts Orbital Ring Animation */
+@keyframes starGiftOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes starGiftCounterOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.star-gifts-orbit {
+  animation: starGiftOrbit 16s linear infinite;
+}
+
+.star-gifts-counter-orbit {
+  animation: starGiftCounterOrbit 16s linear infinite;
+}
+
+
 
 
 

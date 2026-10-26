@@ -300,8 +300,11 @@ export const App: React.FC = () => {
           ...prev,
           [chatId]: [...(prev[chatId] || []), message],
         }))
-        const targetDialog = dialogsByAccountRef.current[accountId]?.find((d) => d.id === chatId)
-        const isChatMuted = targetDialog?.isMuted ?? false
+        const targetDialog = dialogsByAccountRef.current[accountId]?.find(
+          (d) => d.id === String(chatId) || isPeerMatch(d.id, String(chatId))
+        )
+        const isChannel = Boolean(targetDialog?.isChannel || (payload as any)?.chatInfo?.isChannel)
+        const isChatMuted = targetDialog ? Boolean(targetDialog.isMuted) : (isChannel ? true : false)
         if (!message?.isOutgoing && !isChatMuted && configRef.current?.soundEnabled !== false) {
           playNotificationSound(configRef.current?.notificationTone || 'classic')
         }

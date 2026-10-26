@@ -1667,6 +1667,7 @@ export type UserOnlineStatusType =
   | 'long_time_ago'
   | 'empty'
   | 'blocked'
+  | 'bot'
 
 export interface UserActivitySession {
   id: string

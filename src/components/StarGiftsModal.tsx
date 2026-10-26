@@ -10,6 +10,7 @@ interface StarGiftsModalProps {
   onClose: () => void
   accountId: string
   userName?: string
+  peerId?: string
 }
 
 export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
@@ -17,6 +18,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   onClose,
   accountId,
   userName,
+  peerId,
 }) => {
   const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<'saved' | 'catalog'>('saved')
@@ -33,7 +35,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
 
     if (window.guidegram?.getSavedStarGifts) {
       window.guidegram
-        .getSavedStarGifts(accountId)
+        .getSavedStarGifts(accountId, peerId)
         .then((res) => {
           if (isMounted) {
             setSavedGifts(res || [])
@@ -54,7 +56,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
     return () => {
       isMounted = false
     }
-  }, [isOpen, accountId])
+  }, [isOpen, accountId, peerId])
 
   // 2. Fetch Catalog Gifts
   useEffect(() => {

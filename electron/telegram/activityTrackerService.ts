@@ -326,7 +326,7 @@ export class ActivityTrackerService {
 
   public recordContactChange(
     accountId: string,
-    change: Omit<ContactChangeEvent, 'id' | 'timestamp'>
+    change: Omit<ContactChangeEvent, 'id' | 'timestamp' | 'accountId'>
   ): void {
     const cfg = this.getConfig()
     if (cfg.profileChangeAuditorEnabled === false) return

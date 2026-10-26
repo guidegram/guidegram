@@ -2452,7 +2452,7 @@ export class AccountManager {
         }
         try {
           const isMutual = Boolean(c.isMutualContact || c.raw?.mutualContact || c.mutualContact)
-          const isContact = Boolean(c.isContact || c.raw?.contact || c.contact ?? true)
+          const isContact = Boolean(c.isContact || c.raw?.contact || (c.contact ?? true))
           if (c.status) {
             this.activityTrackerService.recordUserStatus(accountId, id, c.status, {
               title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.username,
