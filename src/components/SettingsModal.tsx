@@ -113,6 +113,7 @@ interface SettingsModalProps {
   onUpdateFound?: (info: UpdateInfo) => void
   onOpenSupport?: () => void
   onOpenContactChanges?: () => void
+  onOpenProxy?: () => void
 }
 
 const DEFAULT_NETWORK_PROFILES: NetworkProfilesConfig = {
@@ -211,6 +212,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateFound,
   onOpenSupport,
   onOpenContactChanges,
+  onOpenProxy,
 }) => {
   const { t, language, setLanguage } = useI18n()
   const isPersian = language === 'fa'
@@ -2789,7 +2791,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="text-xs font-bold text-accent-cyan px-1 py-1">Data and storage</div>
 
                   {/* Connection type */}
-                  <div className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors">
+                  <div
+                    onClick={onOpenProxy}
+                    title="Configure Proxy & Connection"
+                    className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Radio className="w-4 h-4 text-gray-400" />
                       <span className="text-xs text-gray-200">Connection type</span>

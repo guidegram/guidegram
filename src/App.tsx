@@ -1809,6 +1809,10 @@ export const App: React.FC = () => {
               setIsSettingsOpen(false)
               setIsContactChangesOpen(true)
             }}
+            onOpenProxy={() => {
+              setIsSettingsOpen(false)
+              setIsProxyModalOpen(true)
+            }}
           />
         )}
 

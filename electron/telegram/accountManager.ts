@@ -12298,21 +12298,43 @@ export class AccountManager {
     let activeSessionsCount = 1
     let twoStepVerification = false
 
+    let lastSeenPrivacy: 'everybody' | 'contacts' | 'nobody' = 'everybody'
+    let phoneNumberPrivacy: 'everybody' | 'contacts' | 'nobody' = 'contacts'
+
+    const mapRuleToPrivacy = (rulesRes: any, fallback: 'everybody' | 'contacts' | 'nobody'): 'everybody' | 'contacts' | 'nobody' => {
+      if (!rulesRes?.rules || !Array.isArray(rulesRes.rules)) return fallback
+      for (const r of rulesRes.rules) {
+        if (r._ === 'privacyValueDisallowAll') return 'nobody'
+        if (r._ === 'privacyValueAllowContacts') return 'contacts'
+        if (r._ === 'privacyValueAllowAll') return 'everybody'
+      }
+      return fallback
+    }
+
     if (holder?.client) {
       try {
-        const [blockedRes, sessionsRes, pwdRes] = await Promise.allSettled([
+        const [blockedRes, sessionsRes, pwdRes, lastSeenRes, phoneRes] = await Promise.allSettled([
           holder.client.call({ _: 'contacts.getBlocked', offset: 0, limit: 1 }),
           holder.client.call({ _: 'account.getAuthorizations' }),
           holder.client.call({ _: 'account.getPassword' }),
+          holder.client.call({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyStatusTimestamp' } }),
+          holder.client.call({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyPhoneNumber' } }),
         ])
         if (blockedRes.status === 'fulfilled' && blockedRes.value) {
-          blockedUsersCount = Number(blockedRes.value.count || (Array.isArray(blockedRes.value.blocked) ? blockedRes.value.blocked.length : 0))
+          const bVal: any = blockedRes.value
+          blockedUsersCount = Number(bVal.count || (Array.isArray(bVal.blocked) ? bVal.blocked.length : 0))
         }
         if (sessionsRes.status === 'fulfilled' && sessionsRes.value?.authorizations) {
           activeSessionsCount = sessionsRes.value.authorizations.length
         }
         if (pwdRes.status === 'fulfilled' && pwdRes.value) {
           twoStepVerification = Boolean(pwdRes.value.hasPassword)
+        }
+        if (lastSeenRes.status === 'fulfilled') {
+          lastSeenPrivacy = mapRuleToPrivacy(lastSeenRes.value, 'everybody')
+        }
+        if (phoneRes.status === 'fulfilled') {
+          phoneNumberPrivacy = mapRuleToPrivacy(phoneRes.value, 'contacts')
         }
       } catch (err: any) {
         Logger.warn('[AccountManager] getPrivacySettings fetch error:', err?.message || err)
@@ -12327,8 +12349,8 @@ export class AccountManager {
       blockedUsersCount,
       connectedWebsitesCount: 0,
       activeSessionsCount,
-      phoneNumberPrivacy: 'contacts',
-      lastSeenPrivacy: 'everybody',
+      phoneNumberPrivacy,
+      lastSeenPrivacy,
       profilePhotosPrivacy: 'everybody',
       forwardedMessagesPrivacy: 'everybody',
       callsPrivacy: 'everybody',

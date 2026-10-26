@@ -29,7 +29,11 @@ export const AccountDock: React.FC<AccountDockProps> = ({
   return (
     <aside className="w-[72px] shrink-0 h-full bg-dark-900 border-r border-white/5 flex flex-col items-center py-3 select-none z-20 titlebar-no-drag">
       {/* Brand Icon */}
-      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary-600 to-accent-cyan flex items-center justify-center shadow-glow mb-4 cursor-pointer hover:scale-105 transition-transform">
+      <div
+        onClick={onOpenSettings}
+        title="Settings & Guidegram"
+        className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary-600 to-accent-cyan flex items-center justify-center shadow-glow mb-4 cursor-pointer hover:scale-105 transition-transform"
+      >
         <span className="text-white font-black text-xl tracking-tighter">G</span>
       </div>
 

@@ -100,9 +100,20 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
   const usernameText = profile?.username || account.username
   const phoneText = profile?.phone || account.phone
   const bioText = profile?.bio || 'No bio specified'
-  const channelTitle = profile?.personalChannelTitle || (profile?.personalChannelUsername ? `@${profile.personalChannelUsername}` : 'Channel')
-  const botUsername = profile?.chatAutomationBot || '@DrGuidanceBot'
+  const channelTitle = profile?.personalChannelTitle || (profile?.personalChannelUsername ? `@${profile.personalChannelUsername}` : undefined)
+  const botUsername = profile?.chatAutomationBot
   const giftsCount = profile?.stargiftsCount ?? 0
+
+  const peerColorMap: Record<number, [string, string]> = {
+    0: ['#e17076', '#faa774'],
+    1: ['#faa774', '#e5a922'],
+    2: ['#a695e7', '#ee7aae'],
+    3: ['#7bc862', '#6ec9cb'],
+    4: ['#6ec9cb', '#65aadd'],
+    5: ['#65aadd', '#a695e7'],
+    6: ['#ee7aae', '#e17076'],
+  }
+  const activeColorPalette = peerColorMap[profile?.nameColor ?? 4] || peerColorMap[4]
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end select-none">
@@ -157,7 +168,15 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
 
             {/* Liquid Floating Gift Orbit with Center Avatar */}
             <LiquidGiftOrbit>
-                <div className="relative group cursor-pointer">
+              <div
+                onClick={async () => {
+                  if (window.guidegram?.openFileDialog) {
+                    await window.guidegram.openFileDialog({ type: 'media' })
+                  }
+                }}
+                title="Change profile photo"
+                className="relative group cursor-pointer"
+              >
                 <Avatar
                   accountId={account.id}
                   peerId={account.id}
@@ -272,44 +291,55 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
           {/* Social, Automation & Personalization Section */}
           <div className="py-2 bg-[#17212b]">
             {/* Personal Channel */}
-            <div
-              onClick={() => {
-                if (profile?.personalChannelUsername && onOpenChatByUsername) {
-                  onOpenChatByUsername(profile.personalChannelUsername)
-                  onClose()
-                }
-              }}
-              className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-4 min-w-0">
-                <Megaphone className="w-5 h-5 text-gray-400 shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-[11px] text-gray-400">Personal channel</div>
-                  <div className="text-sm text-accent-cyan font-medium flex items-center gap-1 truncate">
-                    <span>❤️</span>
-                    <span>{channelTitle}</span>
+            {channelTitle && (
+              <div
+                onClick={() => {
+                  if (profile?.personalChannelUsername && onOpenChatByUsername) {
+                    onOpenChatByUsername(profile.personalChannelUsername)
+                    onClose()
+                  }
+                }}
+                className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-4 min-w-0">
+                  <Megaphone className="w-5 h-5 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-gray-400">Personal channel</div>
+                    <div className="text-sm text-accent-cyan font-medium truncate">
+                      {channelTitle}
+                    </div>
                   </div>
                 </div>
+                <ExternalLink className="w-4 h-4 text-gray-500" />
               </div>
-              <ExternalLink className="w-4 h-4 text-gray-500" />
-            </div>
+            )}
 
             {/* Chat Automation Bot */}
-            <div className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4 min-w-0">
-                <Bot className="w-5 h-5 text-gray-400 shrink-0" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-gray-400">Chat automation</span>
-                    <span className="px-1.5 py-0.2 rounded bg-primary-500/20 text-primary-300 text-[9px] font-bold">
-                      NEW
-                    </span>
+            {botUsername && (
+              <div
+                onClick={() => {
+                  if (botUsername && onOpenChatByUsername) {
+                    onOpenChatByUsername(botUsername.replace(/^@/, ''))
+                    onClose()
+                  }
+                }}
+                className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-4 min-w-0">
+                  <Bot className="w-5 h-5 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-gray-400">Chat automation</span>
+                      <span className="px-1.5 py-0.2 rounded bg-primary-500/20 text-primary-300 text-[9px] font-bold">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-sm text-accent-cyan font-medium truncate">{botUsername}</div>
                   </div>
-                  <div className="text-sm text-accent-cyan font-medium truncate">{botUsername}</div>
                 </div>
+                <ExternalLink className="w-4 h-4 text-gray-500" />
               </div>
-              <ExternalLink className="w-4 h-4 text-gray-500" />
-            </div>
+            )}
 
             {/* Your Name Color */}
             <div className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors">
@@ -321,8 +351,14 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
                 </div>
               </div>
               <div className="flex items-center -space-x-1">
-                <div className="w-5 h-5 rounded-full bg-cyan-400 ring-2 ring-[#17212b]" />
-                <div className="w-5 h-5 rounded-full bg-teal-500 ring-2 ring-[#17212b]" />
+                <div
+                  className="w-5 h-5 rounded-full ring-2 ring-[#17212b]"
+                  style={{ backgroundColor: activeColorPalette[0] }}
+                />
+                <div
+                  className="w-5 h-5 rounded-full ring-2 ring-[#17212b]"
+                  style={{ backgroundColor: activeColorPalette[1] }}
+                />
               </div>
             </div>
 
@@ -337,15 +373,15 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
               </div>
               <button
                 type="button"
+                onClick={() => handleCopy('birthday', profile?.birthday || 'Birthday not set')}
                 className="text-xs font-semibold text-accent-cyan hover:underline cursor-pointer"
               >
-                {profile?.birthday ? 'Edit' : 'Add'}
+                {copiedField === 'birthday' ? 'Copied' : profile?.birthday ? 'Copy' : 'Not set'}
               </button>
             </div>
 
             <div className="px-5 py-1 text-[11px] text-gray-400 leading-tight">
-              Only your contacts can see your birthday.{' '}
-              <span className="text-accent-cyan hover:underline cursor-pointer">Change &gt;</span>
+              Only your contacts can see your birthday.
             </div>
           </div>
         </div>

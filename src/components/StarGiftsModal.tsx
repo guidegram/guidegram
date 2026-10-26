@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 import { isRTL, formatNumber } from '../utils/textUtils'
+import { copyTextToClipboard } from '../utils/clipboard'
 
 interface StarGiftsModalProps {
   isOpen: boolean
@@ -327,7 +328,20 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
 
                     <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-white/5">
                       <span>Convertible: {gift.convertStars || gift.stars} ⭐</span>
-                      <span className="text-amber-400 font-medium">MTProto payments</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (gift.isSoldOut) return
+                          await copyTextToClipboard(`https://t.me/nft/${gift.id}`)
+                        }}
+                        className={`font-medium transition-colors ${
+                          gift.isSoldOut
+                            ? 'text-gray-500 cursor-not-allowed'
+                            : 'text-amber-400 hover:text-amber-300 cursor-pointer hover:underline'
+                        }`}
+                      >
+                        {gift.isSoldOut ? 'Sold Out' : 'Copy Gift Link'}
+                      </button>
                     </div>
                   </div>
                 ))}
