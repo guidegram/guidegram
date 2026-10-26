@@ -983,6 +983,8 @@ export interface AppConfig {
   suppressLinkWarning?: boolean
   // Device & Privacy Spoofing
   antiFingerprinting?: boolean
+  // Auto-Connect on VPN Disconnect / Network Failure
+  autoConnectOnVpnDrop?: boolean
   // Automatic Media & Data Download (Telegram Desktop Parity)
   autoDownload?: AutoDownloadConfig
   // Notifications & Sound

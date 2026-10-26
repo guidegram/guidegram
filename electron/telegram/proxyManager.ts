@@ -82,6 +82,37 @@ export class ProxyManager {
   }
 
   /**
+   * Get all currently harvested and cached proxies
+   */
+  public static getHarvestedProxies(): ProxyConfig[] {
+    return ProxyHarvester.getCachedProxies()
+  }
+
+  /**
+   * Find a distinct healthy proxy not currently used by other accounts
+   */
+  public static getDistinctProxyForAccount(
+    targetAccountId: string,
+    currentAccounts: Array<{ id: string; proxyConfig?: ProxyConfig }>
+  ): ProxyConfig | null {
+    const cached = ProxyHarvester.getCachedProxies()
+    const healthy = cached
+      .filter((p) => (p.pingMs || -1) > 0)
+      .sort((a, b) => (a.pingMs || 9999) - (b.pingMs || 9999))
+
+    if (healthy.length === 0) return null
+
+    const otherAccountProxyKeys = new Set(
+      currentAccounts
+        .filter((a) => a.id !== targetAccountId && a.proxyConfig?.enabled)
+        .map((a) => `${a.proxyConfig?.host}:${a.proxyConfig?.port}`)
+    )
+
+    const distinct = healthy.find((p) => !otherAccountProxyKeys.has(`${p.host}:${p.port}`))
+    return distinct || healthy[0] || null
+  }
+
+  /**
    * Get detailed proxy health report
    */
   public static getDetailedHealth(): ProxyHealthReport {

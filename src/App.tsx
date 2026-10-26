@@ -129,6 +129,7 @@ export const App: React.FC = () => {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [appToast, setAppToast] = useState<string | null>(null)
   const lastUpdateCheckRef = useRef<number>(0)
+  const isAutoConnectingVpnRef = useRef<boolean>(false)
 
   // Periodic 60-Minute Background Update Scanner (Zero-Data-Loss Invariant)
   useEffect(() => {
@@ -432,6 +433,42 @@ export const App: React.FC = () => {
           }
           return currentActive
         })
+
+        // Auto-Recovery on VPN Disconnect / Network Drop
+        if (updated.status === 'disconnected') {
+          const autoConnect = configRef.current?.autoConnectOnVpnDrop !== false
+          if (autoConnect) {
+            if (!isAutoConnectingVpnRef.current) {
+              isAutoConnectingVpnRef.current = true
+              setAppToast('VPN/اینترنت قطع شد — در حال اتصال خودکار به بهترین پروکسی‌های تفکیک‌شده...')
+              if ((window.guidegram as any).distributeProxiesToAccounts) {
+                (window.guidegram as any).distributeProxiesToAccounts().then((map: any) => {
+                  if (map && typeof map === 'object') {
+                    for (const [accId, prx] of Object.entries(map)) {
+                      handleUpdateAccountProxy(accId, prx as ProxyConfig)
+                    }
+                  }
+                  setAppToast('اتصال با موفقیت به پروکسی‌های اختصاصی و پرسرعت برقرار شد.')
+                  setTimeout(() => setAppToast(null), 4000)
+                }).catch((err: any) => {
+                  console.warn('Auto-connect on VPN drop failed:', err)
+                  setIsProxyModalOpen(true)
+                }).finally(() => {
+                  setTimeout(() => {
+                    isAutoConnectingVpnRef.current = false
+                  }, 5000)
+                })
+              } else {
+                isAutoConnectingVpnRef.current = false
+              }
+            }
+          } else {
+            // Auto-connect disabled: pop up proxy window with options
+            setIsProxyModalOpen(true)
+            setAppToast('ارتباط قطع شد — پنجره پروکسی جهت انتخاب سرور باز شد.')
+            setTimeout(() => setAppToast(null), 4000)
+          }
+        }
       })
 
       // Accounts loaded initial batch
@@ -678,8 +715,7 @@ export const App: React.FC = () => {
           const targetAcc = accounts[keyNum - 1]
           if (targetAcc) {
             e.preventDefault()
-            setActiveAccountId(targetAcc.id)
-            loadDialogsForAccount(targetAcc.id)
+            handleSelectAccount(targetAcc.id)
           }
         }
       }
@@ -906,10 +942,28 @@ export const App: React.FC = () => {
     })
   }
 
-  const handleSelectAccount = (accountId: string) => {
+  const handleSelectAccount = async (accountId: string) => {
     setActiveAccountId(accountId)
     setIsUnifiedInboxOpen(false)
     setActiveChatId(null)
+
+    // Distinct Proxy Switching on Account Change:
+    // If proxy mode is active or account is disconnected, switch to a healthy proxy
+    // that is NOT assigned to other accounts (preventing IP reuse/conflict across accounts)
+    const targetAcc = accounts.find((a) => a.id === accountId)
+    const hasProxyActive = Boolean(targetAcc?.proxyConfig?.enabled || accounts.some((a) => a.proxyConfig?.enabled))
+    if (hasProxyActive && (window.guidegram as any).getDistinctProxy) {
+      try {
+        const allIds = accounts.map((a) => a.id)
+        const distinctProxy = await (window.guidegram as any).getDistinctProxy(accountId, allIds)
+        if (distinctProxy) {
+          handleUpdateAccountProxy(accountId, distinctProxy)
+        }
+      } catch (err) {
+        console.warn('Failed to assign distinct proxy on account switch:', err)
+      }
+    }
+
     loadDialogsForAccount(accountId)
   }
 

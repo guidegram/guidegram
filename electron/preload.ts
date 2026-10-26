@@ -1694,6 +1694,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('proxy:stop-auto-harvest'),
   harvestNow: (channels?: string[]): Promise<ProxyConfig[]> =>
     ipcRenderer.invoke('proxy:harvest-now', { channels }),
+  getHarvestedProxies: (): Promise<ProxyConfig[]> =>
+    ipcRenderer.invoke('proxy:get-harvested-proxies'),
+  getDistinctProxy: (accountId: string): Promise<ProxyConfig | null> =>
+    ipcRenderer.invoke('proxy:get-distinct-proxy', { accountId }),
+  onHarvestedProxiesUpdated: (callback: (data: { proxies: ProxyConfig[] }) => void): (() => void) => {
+    const handler = (_event: any, data: { proxies: ProxyConfig[] }) => callback(data)
+    ipcRenderer.on('proxy:harvested-updated', handler)
+    return () => ipcRenderer.removeListener('proxy:harvested-updated', handler)
+  },
   distributeProxiesToAccounts: (accountIds?: string[]): Promise<AccountInfo[]> =>
     ipcRenderer.invoke('proxy:distribute-to-accounts', { accountIds }),
   getHarvestStatus: (): Promise<AutoHarvestStatus> =>

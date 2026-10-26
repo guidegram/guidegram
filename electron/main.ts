@@ -1879,6 +1879,15 @@ function setupIpcHandlers() {
     return await ProxyManager.harvestNow(channels)
   })
 
+  ipcMain.handle('proxy:get-harvested-proxies', async () => {
+    return ProxyManager.getHarvestedProxies()
+  })
+
+  ipcMain.handle('proxy:get-distinct-proxy', async (_event, { accountId }: { accountId: string }) => {
+    const config = sessionStore.getConfig()
+    return ProxyManager.getDistinctProxyForAccount(accountId, config.accounts)
+  })
+
   ipcMain.handle('proxy:distribute-to-accounts', async (_event, { accountIds }: { accountIds?: string[] } = {}) => {
     const config = sessionStore.getConfig()
     const targetIds = accountIds && accountIds.length > 0 ? accountIds : config.accounts.map((a) => a.id)
@@ -1894,6 +1903,13 @@ function setupIpcHandlers() {
       return acc
     })
     sessionStore.updateConfig({ accounts: updatedAccounts })
+    for (const acc of updatedAccounts) {
+      if (distributionMap.has(acc.id)) {
+        accountManager.reconnectAccount(acc.id).catch((err) => {
+          Logger.warn(`[ProxyManager] Reconnect after distribute failed for ${acc.id}:`, err)
+        })
+      }
+    }
     return updatedAccounts
   })
 
@@ -1928,6 +1944,9 @@ function setupIpcHandlers() {
         return acc
       })
       sessionStore.updateConfig({ accounts: updatedAccounts })
+      accountManager.reconnectAccount(accountId).catch((err) => {
+        Logger.warn(`[ProxyManager] Reconnect after rotate failed for ${accountId}:`, err)
+      })
     }
     return best
   })

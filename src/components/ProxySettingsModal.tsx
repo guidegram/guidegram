@@ -58,10 +58,27 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || '')
   const [isBenchmarking, setIsBenchmarking] = useState(false)
   const [isRotating, setIsRotating] = useState(false)
+  const [autoConnectOnVpnDrop, setAutoConnectOnVpnDrop] = useState<boolean>(true)
 
-  // Load initial status on mount
+  // Load initial status and cached proxies on mount
   useEffect(() => {
     if (!isOpen) return
+
+    // 1. Fetch cached harvested proxies immediately
+    if ((window.guidegram as any).getHarvestedProxies) {
+      (window.guidegram as any).getHarvestedProxies().then((list: ProxyConfig[]) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setHarvestedProxies(list)
+        } else {
+          // If empty, auto-trigger scan immediately so user never sees an empty screen
+          handleScanNow()
+        }
+      }).catch(() => {
+        handleScanNow()
+      })
+    } else {
+      handleScanNow()
+    }
 
     if (window.guidegram.getHarvestStatus) {
       window.guidegram.getHarvestStatus().then((st) => {
@@ -74,9 +91,43 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
         if (w) setWarpStatus(w)
       })
     }
+
+    if (window.guidegram.getConfig) {
+      window.guidegram.getConfig().then((cfg) => {
+        if (cfg && typeof (cfg as any).autoConnectOnVpnDrop === 'boolean') {
+          setAutoConnectOnVpnDrop((cfg as any).autoConnectOnVpnDrop)
+        }
+      })
+    }
+
+    // Subscribe to live harvested proxy updates
+    let unsubHarvest: (() => void) | undefined
+    if ((window.guidegram as any).onHarvestedProxiesUpdated) {
+      unsubHarvest = (window.guidegram as any).onHarvestedProxiesUpdated((updatedList: ProxyConfig[]) => {
+        if (Array.isArray(updatedList) && updatedList.length > 0) {
+          setHarvestedProxies(updatedList)
+        }
+      })
+    }
+
+    return () => {
+      unsubHarvest?.()
+    }
   }, [isOpen])
 
   if (!isOpen) return null
+
+  const handleToggleAutoConnectOnVpnDrop = async () => {
+    const nextVal = !autoConnectOnVpnDrop
+    setAutoConnectOnVpnDrop(nextVal)
+    try {
+      if (window.guidegram?.updateConfig) {
+        await window.guidegram.updateConfig({ autoConnectOnVpnDrop: nextVal } as any)
+      }
+    } catch (err) {
+      console.warn('Failed to update autoConnectOnVpnDrop config:', err)
+    }
+  }
 
   const handleScanNow = async () => {
     setIsScanningNow(true)
@@ -130,7 +181,12 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     setDistributionSuccess(null)
     try {
       if ((window.guidegram as any).distributeProxiesToAccounts) {
-        await (window.guidegram as any).distributeProxiesToAccounts()
+        const map = await (window.guidegram as any).distributeProxiesToAccounts()
+        if (map && typeof map === 'object') {
+          for (const [accId, prx] of Object.entries(map)) {
+            onUpdateAccountProxy(accId, prx as ProxyConfig)
+          }
+        }
         setDistributionSuccess(`Round-robin proxies distributed across ${accounts.length} account(s)!`)
         setTimeout(() => setDistributionSuccess(null), 4000)
       }
@@ -427,6 +483,26 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                     </select>
                   </div>
                 )}
+
+                {/* Auto Connect on VPN Drop Switch */}
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-gray-200">
+                    <Shield className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
+                    <div>
+                      <div className="font-semibold text-gray-200">Auto-connect if VPN disconnects</div>
+                      <div className="text-[10px] text-gray-400">اتصال خودکار به بهترین پروکسی مجزا در صورت قطع شدن VPN</div>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={autoConnectOnVpnDrop}
+                      onChange={handleToggleAutoConnectOnVpnDrop}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-dark-750 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-emerald"></div>
+                  </label>
+                </div>
 
                 {/* Distribution Success Toast */}
                 {distributionSuccess && (
