@@ -1565,13 +1565,9 @@ export const App: React.FC = () => {
             />
           </nav>
 
-          {/* Resizable Chat List Column with Telegram Tabs */}
-          <aside
-            role="complementary"
-            aria-label="Conversations sidebar"
-            style={{ width: `${sidebarWidth}px` }}
-            className="shrink-0 flex flex-col h-full bg-dark-850 overflow-hidden"
-          >
+          {/* Active Account Workspace with Full-Width Folder Tabs Header */}
+          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+            {/* Full-width Folder Tabs Header spanning across the entire window */}
             <ChatTabs
               accountId={currentAccount?.id}
               activeTab={activeTab}
@@ -1582,68 +1578,80 @@ export const App: React.FC = () => {
               onCloudFoldersLoaded={setCloudFolders}
               cloudFolders={cloudFolders}
             />
-            <ChatList
-              account={currentAccount}
-              dialogs={currentDialogs}
-              activeChatId={activeChatId}
-              activeTab={activeTab}
-              searchQuery={searchQuery}
-              showChatId={config?.showChatId ?? true}
-              ghostMode={ghostMode}
-              cloudFolders={cloudFolders}
-              onSearchChange={setSearchQuery}
-              onSelectChat={handleSelectChat}
-              onSelectPeer={handleSelectUserOrChat}
-              isLoadingMoreDialogs={isLoadingMoreDialogs}
-              onLoadMoreDialogs={handleLoadMoreDialogs}
-            />
-          </aside>
 
-          {/* Draggable Divider / Splitter between ChatList and ChatViewport */}
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize sidebar"
-            tabIndex={0}
-            onMouseDown={() => setIsResizingSidebar(true)}
-            title="Drag to resize sidebar"
-            className="w-1.5 hover:w-2 bg-white/5 hover:bg-primary-500/50 active:bg-primary-500 cursor-col-resize shrink-0 transition-all z-20 group relative flex items-center justify-center"
-          >
-            <div className="w-0.5 h-6 bg-white/20 group-hover:bg-white rounded-full transition-colors" />
+            {/* Split View: Chat List Sidebar & Active Conversation */}
+            <div className="flex flex-1 min-h-0 overflow-hidden">
+              {/* Resizable Chat List Column */}
+              <aside
+                role="complementary"
+                aria-label="Conversations sidebar"
+                style={{ width: `${sidebarWidth}px` }}
+                className="shrink-0 flex flex-col h-full bg-dark-850 overflow-hidden"
+              >
+                <ChatList
+                  account={currentAccount}
+                  dialogs={currentDialogs}
+                  activeChatId={activeChatId}
+                  activeTab={activeTab}
+                  searchQuery={searchQuery}
+                  showChatId={config?.showChatId ?? true}
+                  ghostMode={ghostMode}
+                  cloudFolders={cloudFolders}
+                  onSearchChange={setSearchQuery}
+                  onSelectChat={handleSelectChat}
+                  onSelectPeer={handleSelectUserOrChat}
+                  isLoadingMoreDialogs={isLoadingMoreDialogs}
+                  onLoadMoreDialogs={handleLoadMoreDialogs}
+                />
+              </aside>
+
+              {/* Draggable Divider / Splitter between ChatList and ChatViewport */}
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize sidebar"
+                tabIndex={0}
+                onMouseDown={() => setIsResizingSidebar(true)}
+                title="Drag to resize sidebar"
+                className="w-1.5 hover:w-2 bg-white/5 hover:bg-primary-500/50 active:bg-primary-500 cursor-col-resize shrink-0 transition-all z-20 group relative flex items-center justify-center"
+              >
+                <div className="w-0.5 h-6 bg-white/20 group-hover:bg-white rounded-full transition-colors" />
+              </div>
+
+              {/* Active Conversation Viewport with 64Gram Fork Enhancements */}
+              <main role="main" aria-label="Active conversation" className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+                <ChatViewport
+                  chat={currentChat}
+                  messages={currentMessages}
+                  ghostMode={ghostMode}
+                  showChatId={config?.showChatId ?? true}
+                  showMessageId={config?.showMessageId ?? true}
+                  showSeconds={config?.showSeconds ?? true}
+                  showSenderAvatar={config?.showSenderAvatar ?? true}
+                  quickForwardToSaved={config?.quickForwardToSaved ?? true}
+                  alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
+                  copyCallbackData={config?.copyCallbackData ?? true}
+                  suppressLinkWarning={config?.suppressLinkWarning ?? false}
+                  autoDownload={config?.autoDownload}
+                  chatFontSize={config?.chatFontSize || 14}
+                  bubbleRadius={config?.bubbleRadius ?? 16}
+                  bubblePadding={config?.bubblePadding ?? 10}
+                  onSendMessage={handleSendMessage}
+                  onSendMedia={handleSendMedia}
+                  onOpenDirectForward={(msg) => setForwardMessage(msg)}
+                  onQuickForwardToSaved={handleQuickForwardToSaved}
+                  onDeleteMessage={handleDeleteMessage}
+                  onEditMessage={handleEditMessage}
+                  onToggleGhostMode={handleToggleGhostMode}
+                  onSelectUserOrChat={handleSelectUserOrChat}
+                  initialScrollMsgId={initialScrollMsgId}
+                  onClearInitialScroll={() => setInitialScrollMsgId(null)}
+                  onMergeHistoricalMessages={handleMergeHistoricalMessages}
+                  onUpdateUnreadCount={handleUpdateUnreadCount}
+                />
+              </main>
+            </div>
           </div>
-
-          {/* Active Conversation Viewport with 64Gram Fork Enhancements */}
-          <main role="main" aria-label="Active conversation" className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-            <ChatViewport
-              chat={currentChat}
-              messages={currentMessages}
-              ghostMode={ghostMode}
-              showChatId={config?.showChatId ?? true}
-              showMessageId={config?.showMessageId ?? true}
-              showSeconds={config?.showSeconds ?? true}
-              showSenderAvatar={config?.showSenderAvatar ?? true}
-              quickForwardToSaved={config?.quickForwardToSaved ?? true}
-              alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
-              copyCallbackData={config?.copyCallbackData ?? true}
-              suppressLinkWarning={config?.suppressLinkWarning ?? false}
-              autoDownload={config?.autoDownload}
-              chatFontSize={config?.chatFontSize || 14}
-              bubbleRadius={config?.bubbleRadius ?? 16}
-              bubblePadding={config?.bubblePadding ?? 10}
-              onSendMessage={handleSendMessage}
-              onSendMedia={handleSendMedia}
-              onOpenDirectForward={(msg) => setForwardMessage(msg)}
-              onQuickForwardToSaved={handleQuickForwardToSaved}
-              onDeleteMessage={handleDeleteMessage}
-              onEditMessage={handleEditMessage}
-              onToggleGhostMode={handleToggleGhostMode}
-              onSelectUserOrChat={handleSelectUserOrChat}
-              initialScrollMsgId={initialScrollMsgId}
-              onClearInitialScroll={() => setInitialScrollMsgId(null)}
-              onMergeHistoricalMessages={handleMergeHistoricalMessages}
-              onUpdateUnreadCount={handleUpdateUnreadCount}
-            />
-          </main>
         </div>
       )}
 

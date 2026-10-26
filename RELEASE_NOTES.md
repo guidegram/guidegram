@@ -1,3 +1,37 @@
+# 🚀 Guidegram v2.4.1 — Full-Width Kinetic Header & Zero-Fake MTProto Edition
+
+> **Ergonomic Desktop Parity & Zero-Mock Architecture** featuring full-window kinetic folder tabs header, bidirectional mouse-wheel horizontal rail navigation, 100% purged mock data, deterministic transaction IDs, live MTProto privacy settings, real channel boost telemetry, and wired UI actions.
+
+---
+
+<div align="center">
+  <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
+  <h3>Guidegram v2.4.1 Kinetic Header & Zero-Fake Parity</h3>
+  <p><strong>Full-Width Header Rail • Mouse-Wheel Horizontal Scroll • Zero-Fake MTProto • Wired Interactive UI • Official Peer Colors</strong></p>
+</div>
+
+---
+
+## 🌟 Release v2.4.1 Highlights
+
+1. **Full-Width Kinetic Tabs & Mouse-Wheel Horizontal Navigation:**
+   - **Full-Width Header Rail:** Moved folder tabs from being cramped inside the sidebar to spanning the entire workspace header, providing ample breathing room for all standard and custom cloud folders.
+   - **Mouse-Wheel Horizontal Scroll:** Rotating the mouse wheel vertically over the tabs rail smoothly scrolls tabs horizontally, with direction-aware acceleration and seamless RTL/LTR alignment.
+   - **Elimination of Vertical Scrollbars:** Added strict `overflow-y: hidden` and custom scrollbar suppression to completely eliminate vertical clipping and unwanted scroll tracks.
+
+2. **Zero-Fake MTProto Hardening (Comprehensive 13-Point Audit):**
+   - **Stars & Gifts Parity:** Replaced `Math.random()` fallbacks with deterministic transaction IDs across Stars transactions and catalog gifts.
+   - **Real Channel Boost Telemetry:** Resolved invalid channel accessHash bugs (`CHANNEL_INVALID`) by integrating live `resolveInputPeer`. Removed synthetic boost counters.
+   - **Live Account Privacy:** Replaced dummy privacy response with live MTProto queries (`contacts.getBlocked`, `account.getAuthorizations`, `account.getPassword`, and `account.getPrivacy`).
+   - **Clean Subscriptions Empty State:** Purged fictitious subscription tier and mock monetization revenue figures.
+
+3. **Wired Interactive UI & Profile Color Parity:**
+   - **Avatar Change Dialog:** Clicking on the profile avatar now triggers the native file selection dialog for photo updates.
+   - **Settings & Proxy Shortcuts:** Wired brand dock icon to Settings and connection indicator to Proxy settings.
+   - **Official Telegram Peer Color Palette:** Integrated Telegram's 7 official name and folder tag colors.
+
+---
+
 # 🚀 Guidegram v2.4.0 — Universal MCP & Real-Time Radar Edition
 
 > **Next-Generation Telegram Client & AI Agentic Workspace** featuring Universal 2-Tier MCP Server Architecture (859 MTProto Methods), Persian Natural Language & Fuzzy Entity Resolution, Online Activity Radar, Contact Changes Timeline, 3D Orbit Star Gifts Shelf, and Zero-Ghost Read Sync.

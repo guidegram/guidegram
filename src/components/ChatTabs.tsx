@@ -91,6 +91,29 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
     }
   }, [])
 
+  // Mouse-wheel horizontal scroll handler (translates vertical mouse wheel rotation to horizontal scroll)
+  const railRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    const el = railRef.current
+    if (!el) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollWidth > el.clientWidth) {
+        e.preventDefault()
+        // In RTL, rolling wheel down advances towards the end (leftward)
+        el.scrollBy({
+          left: isRTL ? -e.deltaY : e.deltaY,
+          behavior: 'auto',
+        })
+      }
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', handleWheel)
+    }
+  }, [isRTL])
+
   const standardTabs: { id: TabCategory; label: string; icon: React.ReactNode }[] = [
     { id: 'all', label: t('tab.all'), icon: <Layers className="w-3.5 h-3.5" /> },
     { id: 'users', label: t('tab.personal'), icon: <MessageSquare className="w-3.5 h-3.5" /> },
@@ -210,8 +233,11 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
   }
 
   return (
-    <div className="w-full shrink-0 flex items-center gap-1 px-2.5 py-2 border-b border-white/5 overflow-x-auto scrollbar-none titlebar-no-drag relative kinetic-tab-rail">
-      <div className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-none kinetic-tab-rail">
+    <div className="w-full shrink-0 h-11 bg-dark-900/80 backdrop-blur-md flex items-center justify-between gap-2 px-3 border-b border-white/5 overflow-hidden titlebar-no-drag relative select-none">
+      <div
+        ref={railRef}
+        className="flex items-center gap-1.5 flex-1 min-w-0 h-full overflow-x-auto overflow-y-hidden scrollbar-none kinetic-tab-rail py-1"
+      >
         {allTabs.map((tab) => {
           const isActive = activeTab === tab.id
           const count = unreadCounts[tab.id] || 0
@@ -232,7 +258,7 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
                   tabLabel: tab.label,
                 })
               }}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer touch-hit-slop min-h-[36px] ${
+              className={`relative flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer touch-hit-slop min-h-[32px] ${
                 isActive
                   ? 'text-primary-400'
                   : 'text-gray-400 hover:text-gray-200'

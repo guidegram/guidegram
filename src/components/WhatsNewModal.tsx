@@ -23,6 +23,30 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
+    // v2.4.1: Full-Width Kinetic Tabs, Mouse-Wheel Horizontal Scroll & Zero-Fake MTProto Parity
+    if (cleanVer >= '2.4.1') {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: 'Full-Width Kinetic Tabs & Mouse-Wheel Scroll',
+          desc: 'Tabs now span the entire top header with seamless mouse-wheel horizontal navigation, zero vertical clipping, and instant folder switching.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: 'Zero-Fake & MTProto Layer 229 Hardening',
+          desc: '100% purged mock data, deterministic transaction IDs, live MTProto privacy querying, and real channel boost statistics.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: 'Wired Interactive UI & Profile Color Parity',
+          desc: 'Avatar change dialog, proxy navigation shortcut, official Telegram peer color palettes, and automated chat navigation.',
+        },
+      ]
+    }
+
     // v2.4.0: Universal Guidegram MCP Architecture, Online Radar, Star Gifts & Persian AI Search
     if (cleanVer.startsWith('2.4') || cleanVer >= '2.4.0') {
       return [

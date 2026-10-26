@@ -561,7 +561,16 @@ textarea:focus-visible {
   overscroll-behavior-x: contain;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overflow-y: hidden !important;
   will-change: transform;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.kinetic-tab-rail::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .tab-badge-pop {
