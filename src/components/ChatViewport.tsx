@@ -2035,6 +2035,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       (m) => !(m.isDeletedLocally && (!m.text || m.text === '[Message deleted]') && !m.mediaType)
     )
 
+    // Defensive Deduplication: Guarantee uniqueness by message ID (prevents duplicate bubbles / key collisions)
+    const seenIds = new Set<number>()
+    result = result.filter((m) => {
+      if (seenIds.has(m.id)) return false
+      seenIds.add(m.id)
+      return true
+    })
+
     // 1. Filter by specific user if sender filter is active
     if (searchSenderFilter) {
       result = result.filter((m) => {

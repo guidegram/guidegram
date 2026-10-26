@@ -299,10 +299,21 @@ export const App: React.FC = () => {
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
         const { accountId, chatId, message } = payload
-        setMessagesByChat((prev) => ({
-          ...prev,
-          [chatId]: [...(prev[chatId] || []), message],
-        }))
+        setMessagesByChat((prev) => {
+          const list = prev[chatId] || []
+          const existingIdx = list.findIndex((m) => m.id === message?.id)
+          let nextList: MessageItem[]
+          if (existingIdx !== -1) {
+            nextList = [...list]
+            nextList[existingIdx] = { ...nextList[existingIdx], ...message }
+          } else {
+            nextList = [...list, message]
+          }
+          return {
+            ...prev,
+            [chatId]: nextList,
+          }
+        })
         const targetDialog = dialogsByAccountRef.current[accountId]?.find(
           (d) => d.id === String(chatId) || isPeerMatch(d.id, String(chatId))
         )
@@ -1014,10 +1025,21 @@ export const App: React.FC = () => {
           : undefined,
       }
 
-      setMessagesByChat((prev) => ({
-        ...prev,
-        [activeChatId]: [...(prev[activeChatId] || []), enrichedSent],
-      }))
+      setMessagesByChat((prev) => {
+        const list = prev[activeChatId] || []
+        const existingIdx = list.findIndex((m) => m.id === enrichedSent.id)
+        let nextList: MessageItem[]
+        if (existingIdx !== -1) {
+          nextList = [...list]
+          nextList[existingIdx] = { ...nextList[existingIdx], ...enrichedSent }
+        } else {
+          nextList = [...list, enrichedSent]
+        }
+        return {
+          ...prev,
+          [activeChatId]: nextList,
+        }
+      })
 
       setDialogsByAccount((prev) => {
         const list = prev[activeAccountId] || []
@@ -1098,10 +1120,21 @@ export const App: React.FC = () => {
           : undefined,
       }
 
-      setMessagesByChat((prev) => ({
-        ...prev,
-        [activeChatId]: [...(prev[activeChatId] || []), enrichedSent],
-      }))
+      setMessagesByChat((prev) => {
+        const list = prev[activeChatId] || []
+        const existingIdx = list.findIndex((m) => m.id === enrichedSent.id)
+        let nextList: MessageItem[]
+        if (existingIdx !== -1) {
+          nextList = [...list]
+          nextList[existingIdx] = { ...nextList[existingIdx], ...enrichedSent }
+        } else {
+          nextList = [...list, enrichedSent]
+        }
+        return {
+          ...prev,
+          [activeChatId]: nextList,
+        }
+      })
 
       const mediaLabel = options?.caption || (options?.isVoice ? '[Voice message]' : '[Photo]')
       setDialogsByAccount((prev) => {
