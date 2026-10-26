@@ -881,7 +881,6 @@ export const translations: Record<Language, TranslationDictionary> = {
     'info.perm_change_info': 'Change Info',
     'info.allowed': 'Allowed',
     'info.restricted': 'Restricted',
-    'info.open_telegram_official': 'Open in Telegram Official',
     'common.cancel': 'Cancel',
   },
   fa: {
@@ -1761,7 +1760,6 @@ export const translations: Record<Language, TranslationDictionary> = {
     'info.perm_change_info': 'تغییر اطلاعات',
     'info.allowed': 'مجاز',
     'info.restricted': 'محدود',
-    'info.open_telegram_official': 'باز کردن در تلگرام رسمی',
     'common.cancel': 'انصراف',
   },
 }
