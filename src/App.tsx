@@ -39,7 +39,7 @@ import {
 import { playNotificationSound } from './utils/soundEffects'
 import logoImg from './assets/logo.png'
 
-export const isPeerMatch = (a?: string, b?: string): boolean => {
+export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
   if (!a || !b) return false
   if (a === b) return true
   const cleanA = a.replace(/^-100/, '').replace(/^-/, '')
@@ -571,6 +571,18 @@ export const App: React.FC = () => {
               ),
             }
           })
+          setMessagesByChat((prev) => {
+            const matchingKey = Object.keys(prev).find((k) => k === chatId || isPeerMatch(k, chatId))
+            if (!matchingKey || !prev[matchingKey]) return prev
+            return {
+              ...prev,
+              [matchingKey]: prev[matchingKey].map((m) =>
+                m.isOutgoing && m.id <= maxId && !m.isRead
+                  ? { ...m, isRead: true }
+                  : m
+              ),
+            }
+          })
         }
       )
 
@@ -1014,6 +1026,8 @@ export const App: React.FC = () => {
 
       const enrichedSent: MessageItem = {
         ...sent,
+        isOutgoing: true,
+        isRead: false,
         replyToMsgId: actualReplyTo,
         isSilent: options?.silent,
         replyTo: actualReplyTo
@@ -1109,6 +1123,8 @@ export const App: React.FC = () => {
 
       const enrichedSent: MessageItem = {
         ...sent,
+        isOutgoing: true,
+        isRead: false,
         replyToMsgId: options?.replyToMsgId,
         isSilent: options?.silent,
         replyTo: options?.replyToMsgId
@@ -1396,7 +1412,7 @@ export const App: React.FC = () => {
 
   const currentAccount = accounts.find((a) => a.id === activeAccountId) || null
   const currentDialogs = (activeAccountId && dialogsByAccount[activeAccountId]) || []
-  const currentChat = currentDialogs.find((d) => d.id === activeChatId) || null
+  const currentChat = currentDialogs.find((d) => d.id === activeChatId || isPeerMatch(d.id, activeChatId)) || null
   const currentMessages = (activeChatId && messagesByChat[activeChatId]) || []
 
   // Compute archived unread count

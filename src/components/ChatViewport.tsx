@@ -6027,7 +6027,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       ) : null}
 
                       <span>{formatMessageTime(msg.date)}</span>
-                      {msg.isOutgoing && <CheckCheck className="w-3 h-3 inline" />}
+                      {msg.isOutgoing && (() => {
+                        const isRead = Boolean(
+                          chat?.isSavedMessages ||
+                          chat?.id === 'me' ||
+                          msg.isRead === true ||
+                          (chat?.readOutboxMaxId !== undefined && chat.readOutboxMaxId > 0 && msg.id <= chat.readOutboxMaxId)
+                        )
+
+                        return isRead ? (
+                          <span title={t('chat.message_read') || 'Read'} className="inline-flex items-center">
+                            <CheckCheck className="w-3 h-3 inline text-accent-cyan" />
+                          </span>
+                        ) : (
+                          <span title={t('chat.message_sent') || 'Sent'} className="inline-flex items-center">
+                            <Check className="w-3 h-3 inline text-gray-400 opacity-80" />
+                          </span>
+                        )
+                      })()}
                     </div>
                   </div>
 
@@ -8285,23 +8302,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   lastSeen={chatDetails?.userStatus?.lastOnline}
                 />
               )}
-
-              {/* External Navigation CTA */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = chatDetails?.username
-                      ? `https://t.me/${chatDetails.username}`
-                      : `tg://resolve?domain=${chat.id}`
-                    window.guidegram?.openExternal?.(target)
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all shadow-glow flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>{t('info.open_telegram_official')}</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>

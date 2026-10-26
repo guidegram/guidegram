@@ -384,6 +384,7 @@ export interface MessageItem {
   text: string
   date: number
   isOutgoing: boolean
+  isRead?: boolean
   isForwarded?: boolean
   forwardFromName?: string
   forwardFromId?: string

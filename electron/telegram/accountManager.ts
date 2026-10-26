@@ -976,6 +976,7 @@ export class AccountManager {
   private rawMessagesCache = new Map<string, any>()
   private savePeerHashesTimer?: NodeJS.Timeout
   private topMessageIds = new Map<string, number>()
+  private readOutboxMaxIds = new Map<string, number>()
   private contactAuditInterval?: NodeJS.Timeout
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
@@ -2163,8 +2164,11 @@ export class AccountManager {
         const isBroadcast = isChannel && !isGroup
 
         const title = formatEntityName(peer, 'Unknown Chat')
-        const readInboxMaxId = (d.raw as any)?.readInboxMaxId || 0
-        const readOutboxMaxId = (d.raw as any)?.readOutboxMaxId || 0
+        const readInboxMaxId = (d as any).readInboxMaxId ?? (d.raw as any)?.readInboxMaxId ?? (d.raw as any)?.read_inbox_max_id ?? 0
+        const readOutboxMaxId = (d as any).readOutboxMaxId ?? (d.raw as any)?.readOutboxMaxId ?? (d.raw as any)?.read_outbox_max_id ?? 0
+        if (readOutboxMaxId > 0) {
+          this.readOutboxMaxIds.set(`${accountId}_${peerId}`, readOutboxMaxId)
+        }
         const unreadMentionsCount = d.unreadMentionsCount || 0
         const isPinned = Boolean(d.isPinned)
 
@@ -2732,12 +2736,27 @@ export class AccountManager {
         }
       }
 
+      // Resolve readOutboxMaxId for outgoing messages read receipt calculation
+      let chatReadOutboxMaxId = this.readOutboxMaxIds.get(`${accountId}_${chatId}`) || 0
+      const isSelf = chatId === 'me' || (holder.info?.id && (chatId === String(holder.info.id) || chatId === holder.info.id))
+      if (!chatReadOutboxMaxId && !isSelf) {
+        const cached = this.store.loadDialogsCache(accountId)
+        const d = cached.find((item) => item.id === chatId || item.id.replace(/^-100/, '').replace(/^-/, '') === chatId.replace(/^-100/, '').replace(/^-/, ''))
+        if (d?.readOutboxMaxId) {
+          chatReadOutboxMaxId = d.readOutboxMaxId
+          this.readOutboxMaxIds.set(`${accountId}_${chatId}`, chatReadOutboxMaxId)
+        }
+      }
+
       const items: MessageItem[] = []
       for (const m of rawMessages) {
         if (m._ === 'messageEmpty') continue
         const id = m.id
         const date = m.date || 0
         const isOutgoing = m.out || false
+        const isRead = isOutgoing
+          ? Boolean(isSelf || (chatReadOutboxMaxId > 0 && id <= chatReadOutboxMaxId))
+          : true
         let text = m.message || ''
 
         let senderId = ''
@@ -3064,6 +3083,7 @@ export class AccountManager {
           text,
           date,
           isOutgoing,
+          isRead,
           isForwarded,
           forwardFromName,
           forwardFromId,
@@ -13214,6 +13234,7 @@ export class AccountManager {
 
           if (peerId) {
             const maxId = update.maxId ?? update.max_id ?? 0
+            this.readOutboxMaxIds.set(`${accountId}_${peerId}`, maxId)
             this.onEventCallback?.('telegram:read-outbox', {
               accountId,
               chatId: peerId,
