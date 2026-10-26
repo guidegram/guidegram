@@ -6957,8 +6957,8 @@ export class AccountManager {
 
       if (!res || !Array.isArray(res.history)) return []
 
-      return res.history.map((tx: any) => ({
-        id: tx.id?.toString() || Math.random().toString(),
+      return res.history.map((tx: any, idx: number) => ({
+        id: tx.id?.toString() || `tx_${tx.date || Date.now()}_${tx.stars ? (tx.stars.amount || tx.stars) : 0}_${idx}`,
         stars: tx.stars ? Number(tx.stars.amount || tx.stars) : 0,
         date: tx.date ? tx.date * 1000 : Date.now(),
         title: tx.title || 'Telegram Stars Transaction',
@@ -10040,10 +10040,10 @@ export class AccountManager {
     if (!holder?.client) return []
 
     try {
-      const targetUser = userId ? toRawPeer(userId) : { _: 'inputUserSelf' as const }
+      const targetPeer = userId ? await this.resolveInputPeer(accountId, userId) : { _: 'inputPeerSelf' }
       const res: any = await holder.client.call({
         _: 'payments.getSavedStarGifts',
-        peer: targetUser as any,
+        peer: targetPeer as any,
         offset: '',
         limit: 50,
       })
@@ -10055,7 +10055,7 @@ export class AccountManager {
         }
       }
 
-      return (res.gifts || []).map((g: any) => {
+      return (res.gifts || []).map((g: any, idx: number) => {
         let fromId = ''
         if (g.fromId?._ === 'peerUser') fromId = g.fromId.userId?.toString()
         else if (g.fromId?._ === 'peerChannel') fromId = `-${g.fromId.channelId}`
@@ -10065,7 +10065,7 @@ export class AccountManager {
         const fromName = fromUser ? formatEntityName(fromUser) : undefined
 
         return {
-          id: g.gift?.id?.toString() || Math.random().toString(),
+          id: g.gift?.id?.toString() || `saved_gift_${g.date || Date.now()}_${idx}`,
           stars: Number(g.gift?.stars || 0),
           convertStars: Number(g.convertStars || 0),
           title: g.gift?.title,
@@ -10095,8 +10095,8 @@ export class AccountManager {
         hash: 0,
       })
 
-      return (res.gifts || []).map((g: any) => ({
-        id: g.id?.toString() || Math.random().toString(),
+      return (res.gifts || []).map((g: any, idx: number) => ({
+        id: g.id?.toString() || `catalog_gift_${idx}`,
         stars: Number(g.stars || 0),
         convertStars: Number(g.convertStars || 0),
         title: g.title,
@@ -12023,8 +12023,8 @@ export class AccountManager {
     if (!holder?.client) return null
 
     try {
-      const inputPeer = toRawPeer(channelId)
-      if (inputPeer._ !== 'inputPeerChannel') return null
+      const inputPeer = await this.resolveInputPeer(accountId, channelId)
+      if (!inputPeer || (inputPeer._ !== 'inputPeerChannel' && inputPeer._ !== 'inputPeerChat')) return null
 
       const res: any = await holder.client.call({
         _: 'premium.getBoostsStatus',
@@ -12039,7 +12039,8 @@ export class AccountManager {
         boostUrl: res.boostUrl || `https://t.me/boost?c=${channelId.replace(/^-100/, '')}`,
         myBoost: res.myBoost,
       }
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getChannelBoostStatus error:', err?.message || err)
       return null
     }
   }
@@ -12242,6 +12243,30 @@ export class AccountManager {
       const u = res.users?.[0] || me
       const full = res.fullUser
 
+      let personalChannelTitle: string | undefined
+      let personalChannelUsername: string | undefined
+      if (full?.personalChannelId && Array.isArray(res.chats)) {
+        const chan = res.chats.find((c: any) => c.id?.toString() === full.personalChannelId?.toString())
+        if (chan) {
+          personalChannelTitle = chan.title
+          personalChannelUsername = chan.username
+        }
+      }
+
+      let chatAutomationBot: string | undefined
+      if (full?.botManagerId && Array.isArray(res.users)) {
+        const bot = res.users.find((user: any) => user.id?.toString() === full.botManagerId?.toString())
+        if (bot?.username) {
+          chatAutomationBot = `@${bot.username}`
+        }
+      }
+
+      let birthdayStr: string | undefined
+      if (full?.birthday) {
+        const { day, month, year } = full.birthday
+        birthdayStr = year ? `${day}.${month}.${year}` : `${day}.${month}`
+      }
+
       return {
         id: me.id.toString(),
         firstName: u.firstName || '',
@@ -12251,22 +12276,57 @@ export class AccountManager {
         bio: full?.about,
         isPremium: u.premium || u.isPremium,
         customEmojiStatusId: u.emojiStatus?.documentId?.toString(),
-        hasTwoStepAuth: full?.hasScheduled,
+        hasTwoStepAuth: Boolean(full?.hasScheduled),
+        personalChannelId: full?.personalChannelId?.toString(),
+        personalChannelTitle,
+        personalChannelUsername,
+        chatAutomationBot,
+        stargiftsCount: full?.stargiftsCount || full?.starGiftsCount || 0,
+        birthday: birthdayStr,
+        nameColor: u.color?.color ?? u.color,
       }
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn('[AccountManager] getMyFullProfile error:', err?.message || err)
       return null
     }
   }
 
   public async getPrivacySettings(accountId: string): Promise<PrivacySecuritySettings> {
+    const holder = this.clients.get(accountId)
+    const localPasscode = passcodeGuard.isPasscodeSet()
+    let blockedUsersCount = 0
+    let activeSessionsCount = 1
+    let twoStepVerification = false
+
+    if (holder?.client) {
+      try {
+        const [blockedRes, sessionsRes, pwdRes] = await Promise.allSettled([
+          holder.client.call({ _: 'contacts.getBlocked', offset: 0, limit: 1 }),
+          holder.client.call({ _: 'account.getAuthorizations' }),
+          holder.client.call({ _: 'account.getPassword' }),
+        ])
+        if (blockedRes.status === 'fulfilled' && blockedRes.value) {
+          blockedUsersCount = Number(blockedRes.value.count || (Array.isArray(blockedRes.value.blocked) ? blockedRes.value.blocked.length : 0))
+        }
+        if (sessionsRes.status === 'fulfilled' && sessionsRes.value?.authorizations) {
+          activeSessionsCount = sessionsRes.value.authorizations.length
+        }
+        if (pwdRes.status === 'fulfilled' && pwdRes.value) {
+          twoStepVerification = Boolean(pwdRes.value.hasPassword)
+        }
+      } catch (err: any) {
+        Logger.warn('[AccountManager] getPrivacySettings fetch error:', err?.message || err)
+      }
+    }
+
     return {
-      twoStepVerification: true,
+      twoStepVerification,
       autoDeleteMessages: 'off',
-      localPasscode: passcodeGuard.isPasscodeSet(),
+      localPasscode,
       passkeys: false,
-      blockedUsersCount: 0,
+      blockedUsersCount,
       connectedWebsitesCount: 0,
-      activeSessionsCount: 1,
+      activeSessionsCount,
       phoneNumberPrivacy: 'contacts',
       lastSeenPrivacy: 'everybody',
       profilePhotosPrivacy: 'everybody',

@@ -77,52 +77,19 @@ export const StarSubscriptionsModal: React.FC<StarSubscriptionsModalProps> = ({
         if (res && Array.isArray(res.subscriptions)) {
           setSubscriptions(res.subscriptions)
         } else {
-          // Provide sample fallback subscription tiers for preview
-          setSubscriptions([
-            {
-              id: 'sub_sample_1',
-              canceled: false,
-              canRefulfill: false,
-              missingBalance: false,
-              chatId: peerId || 'sample_channel',
-              untilDate: Date.now() + 24 * 86400 * 1000,
-              title: `${chatTitle} VIP Tier`,
-              pricing: { period: 2592000, amount: 250 },
-            },
-          ])
+          setSubscriptions([])
         }
       }
 
       // If viewing monetization tab or is admin, fetch revenue stats
       if (peerId && window.guidegram?.paymentGetStarsRevenueStats) {
         const stats: any = await window.guidegram.paymentGetStarsRevenueStats(accountId, peerId, true, true)
-        if (stats) {
-          setRevenueStats(stats)
-        } else {
-          setRevenueStats({
-            balances: {
-              currentBalance: 1250,
-              availableBalance: 850,
-              overallRevenue: 3400,
-            },
-            usdRate: 0.019,
-          })
-        }
+        setRevenueStats(stats || null)
       }
     } catch (err) {
       console.warn('[StarSubscriptionsModal] fetch error:', err)
-      setSubscriptions([
-        {
-          id: 'sub_sample_1',
-          canceled: false,
-          canRefulfill: false,
-          missingBalance: false,
-          chatId: peerId || 'sample_channel',
-          untilDate: Date.now() + 20 * 86400 * 1000,
-          title: `${chatTitle} Premium Pass`,
-          pricing: { period: 2592000, amount: 500 },
-        },
-      ])
+      setSubscriptions([])
+      setRevenueStats(null)
     } finally {
       setLoading(false)
     }

@@ -97,29 +97,12 @@ export const ChannelBoostModal: React.FC<ChannelBoostModalProps> = ({
       ?.getChannelBoostStatus?.(accountId, channelId)
       .then((status) => {
         if (!active) return
-        if (status) {
-          setBoostStatus(status)
-        } else {
-          setBoostStatus({
-            level: 1,
-            boosts: 3,
-            currentLevelBoosts: 0,
-            nextLevelBoosts: 6,
-            boostUrl: `https://t.me/boost?c=${channelId.replace(/^-100/, '')}`,
-            myBoost: false,
-          })
-        }
+        setBoostStatus(status || null)
       })
-      .catch(() => {
+      .catch((err) => {
         if (!active) return
-        setBoostStatus({
-          level: 1,
-          boosts: 2,
-          currentLevelBoosts: 0,
-          nextLevelBoosts: 5,
-          boostUrl: `https://t.me/boost?c=${channelId.replace(/^-100/, '')}`,
-          myBoost: false,
-        })
+        console.warn('[ChannelBoostModal] Failed to load boost status:', err)
+        setBoostStatus(null)
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -168,10 +151,10 @@ export const ChannelBoostModal: React.FC<ChannelBoostModalProps> = ({
     }
   }
 
-  const currentLevel = boostStatus?.level || 1
-  const boosts = boostStatus?.boosts || 0
-  const nextBoosts = boostStatus?.nextLevelBoosts || Math.max(boosts + 3, 5)
-  const progressPercent = Math.min(100, Math.round((boosts / Math.max(nextBoosts, 1)) * 100))
+  const currentLevel = boostStatus?.level ?? 0
+  const boosts = boostStatus?.boosts ?? 0
+  const nextBoosts = boostStatus?.nextLevelBoosts ?? 0
+  const progressPercent = nextBoosts > 0 ? Math.min(100, Math.round((boosts / nextBoosts) * 100)) : 0
 
   return (
     <div

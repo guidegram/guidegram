@@ -23,6 +23,30 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
+    // v2.4.0: Universal Guidegram MCP Architecture, Online Radar, Star Gifts & Persian AI Search
+    if (cleanVer.startsWith('2.4') || cleanVer >= '2.4.0') {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: 'Universal MCP Server & Persian AI Engine',
+          desc: '2-tier hybrid architecture with 21 high-level tools, full MTProto Layer 229 parity (859 methods), and fuzzy Persian name/message search.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: 'Online Radar & Contact Audit Timeline',
+          desc: 'Track exact user status, live online transitions, contact profile/name change histories, and Star Gifts with 3D orbit visuals.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: 'Hardened Media Streaming & Audio Fixes',
+          desc: 'Muted audio leak protection, BigInt-safe MCP serialization, and unread counter bi-directional sync across all Telegram sessions.',
+        },
+      ]
+    }
+
     // v2.2.0: Telegram Parity Attachments, Centered Channels, Clipboard Paste & TitleBar Hub
     if (cleanVer.startsWith('2.2') || cleanVer >= '2.2.0') {
       return [
