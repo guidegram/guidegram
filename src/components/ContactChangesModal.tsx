@@ -104,6 +104,24 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
 
   // Lightbox preview for photos
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null)
+  const [loadingPreviewHd, setLoadingPreviewHd] = useState(false)
+
+  const handleOpenPhotoPreview = async (userId: string, currentUrl?: string) => {
+    if (currentUrl) {
+      setPreviewPhotoUrl(currentUrl)
+    }
+    if (window.guidegram?.getProfilePhoto && accountId && userId) {
+      setLoadingPreviewHd(true)
+      try {
+        const hdUrl = await window.guidegram.getProfilePhoto(accountId, userId, true, false)
+        if (hdUrl) {
+          setPreviewPhotoUrl(hdUrl)
+        }
+      } catch (_) {} finally {
+        setLoadingPreviewHd(false)
+      }
+    }
+  }
 
   // Online Timeline State
   const [timelineData, setTimelineData] = useState<AccountOnlineTimelineData | null>(null)
@@ -1315,59 +1333,71 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
 
                         {/* Photo Comparison Display (Side-by-Side Before & After) */}
                         {isPhotoEvent && (evt.oldPhotoUrl || evt.newPhotoUrl) ? (
-                          <div className="p-3 rounded-xl bg-dark-900/90 border border-white/5 space-y-2 text-xs">
-                            <div className="flex items-center justify-around gap-4 pt-1">
-                              {/* Before Photo */}
-                              <div className="flex flex-col items-center gap-1.5">
-                                <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">
-                                  عکس قبلی
-                                </span>
-                                {evt.oldPhotoUrl ? (
+                          <div className="p-3.5 rounded-2xl bg-dark-900/90 border border-white/5 space-y-2 text-xs">
+                            {evt.changeType === 'photo_delete' ? (
+                              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                                <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400">
+                                  <Camera className="w-5 h-5" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-xs">عکس پروفایل حذف شد</span>
+                                  <span className="text-[10px] text-rose-400/80">کاربر تصویر پروفایل خود را حذف کرد</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between gap-4 py-1">
+                                {/* Left/Main: New Profile Photo (High Quality) */}
+                                <div className="flex items-center gap-3.5">
                                   <div
-                                    onClick={() => setPreviewPhotoUrl(evt.oldPhotoUrl || null)}
-                                    className="w-20 h-20 rounded-2xl overflow-hidden border border-rose-500/30 shadow-md cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={() => handleOpenPhotoPreview(evt.userId, evt.newPhotoUrl || evt.userAvatarUrl)}
+                                    className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-lg cursor-pointer hover:scale-105 hover:border-emerald-400 transition-all group bg-dark-800 shrink-0"
                                   >
-                                    <img
-                                      src={evt.oldPhotoUrl}
-                                      alt="عکس قبلی"
-                                      className="w-full h-full object-cover"
-                                    />
+                                    {evt.newPhotoUrl || evt.userAvatarUrl ? (
+                                      <img
+                                        src={evt.newPhotoUrl || evt.userAvatarUrl}
+                                        alt="عکس جدید"
+                                        className="w-full h-full object-cover group-hover:brightness-110 transition-all"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                                        بدون عکس
+                                      </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
+                                      بزرگنمایی
+                                    </div>
                                   </div>
-                                ) : (
-                                  <div className="w-20 h-20 rounded-2xl bg-dark-800 border border-white/10 flex items-center justify-center text-gray-500 text-[10px]">
-                                    نداشت
+
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold text-[10px]">
+                                        عکس جدید با کیفیت
+                                      </span>
+                                    </div>
+                                    <span className="text-gray-400 text-[11px]">
+                                      برای مشاهده سایز کامل و HD کلیک کنید
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Right: Old photo (if recorded and different from new) */}
+                                {evt.oldPhotoUrl && evt.oldPhotoUrl !== evt.newPhotoUrl && (
+                                  <div className="flex flex-col items-center gap-1 opacity-75 hover:opacity-100 transition-opacity shrink-0">
+                                    <span className="text-[9px] text-gray-400">عکس قبلی</span>
+                                    <div
+                                      onClick={() => handleOpenPhotoPreview(evt.userId, evt.oldPhotoUrl)}
+                                      className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow cursor-pointer hover:scale-105 transition-transform"
+                                    >
+                                      <img
+                                        src={evt.oldPhotoUrl}
+                                        alt="عکس قبلی"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
                                   </div>
                                 )}
                               </div>
-
-                              <ArrowLeft className="w-5 h-5 text-gray-500 shrink-0" />
-
-                              {/* After Photo */}
-                              <div className="flex flex-col items-center gap-1.5">
-                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                                  {evt.changeType === 'photo_delete' ? 'وضعیت جدید' : 'عکس جدید'}
-                                </span>
-                                {evt.newPhotoUrl ? (
-                                  <div
-                                    onClick={() => setPreviewPhotoUrl(evt.newPhotoUrl || null)}
-                                    className="w-20 h-20 rounded-2xl overflow-hidden border border-emerald-500/40 shadow-md cursor-pointer hover:scale-105 transition-transform"
-                                  >
-                                    <img
-                                      src={evt.newPhotoUrl}
-                                      alt="عکس جدید"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-20 h-20 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-300 font-bold text-[10px]">
-                                    حذف شد
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-center text-[10px] text-gray-400 pt-1">
-                              برای مشاهده عکس در اندازه بزرگ کلیک کنید
-                            </div>
+                            )}
                           </div>
                         ) : (
                           /* Text Diff Body (Before & After) */
@@ -1464,26 +1494,44 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setPreviewPhotoUrl(null)}
-            className="fixed inset-0 z-60 bg-black/90 backdrop-blur-lg flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => {
+              setPreviewPhotoUrl(null)
+              setLoadingPreviewHd(false)
+            }}
+            className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 cursor-pointer"
           >
-            <div
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-lg max-h-[85vh] rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-dark-900"
+              className="relative min-w-[320px] sm:min-w-[440px] max-w-2xl min-h-[320px] max-h-[85vh] rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-dark-900 flex flex-col items-center justify-center p-4 cursor-default"
             >
               <button
                 type="button"
-                onClick={() => setPreviewPhotoUrl(null)}
-                className="absolute top-3 right-3 p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white border border-white/20 transition-colors cursor-pointer z-10"
+                onClick={() => {
+                  setPreviewPhotoUrl(null)
+                  setLoadingPreviewHd(false)
+                }}
+                className="absolute top-4 right-4 p-2.5 rounded-2xl bg-black/70 hover:bg-black/90 text-white border border-white/20 transition-colors cursor-pointer z-20 shadow-lg"
               >
                 <X className="w-4 h-4" />
               </button>
+
+              {loadingPreviewHd && (
+                <div className="absolute top-4 left-4 px-2.5 py-1 rounded-xl bg-primary-500/20 text-primary-300 border border-primary-500/30 text-[10px] flex items-center gap-1.5 z-20">
+                  <div className="w-2.5 h-2.5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                  <span>در حال دریافت کیفیت بالا...</span>
+                </div>
+              )}
+
               <img
                 src={previewPhotoUrl}
-                alt="عکس بزرگنمایی شده"
-                className="w-full h-full object-contain max-h-[80vh]"
+                alt="عکس پروفایل"
+                className="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-2xl shadow-xl select-none"
               />
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

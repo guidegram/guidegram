@@ -445,6 +445,36 @@ export class ActivityTrackerService {
   }
 
   /**
+   * Updates the photo URL of the most recent photo_change event for a user
+   * once the high-resolution photo has finished downloading asynchronously.
+   */
+  public updateLatestPhotoChangeUrl(
+    accountId: string,
+    userId: string,
+    newPhotoUrl: string
+  ): void {
+    if (!accountId || !userId || !newPhotoUrl) return
+    const changes = this.loadChanges(accountId)
+    const target = changes.find(
+      (c) => c.userId === userId && c.changeType === 'photo_change'
+    )
+    if (target) {
+      target.newPhotoUrl = newPhotoUrl
+      target.userAvatarUrl = newPhotoUrl
+      this.scheduleSaveChanges(accountId)
+      this.onEventCallback?.('telegram:contact-change-detected', {
+        accountId,
+        event: target,
+      })
+    }
+    const snapshots = this.loadSnapshots(accountId)
+    if (snapshots[userId]) {
+      snapshots[userId].avatarUrl = newPhotoUrl
+      this.scheduleSaveSnapshots(accountId)
+    }
+  }
+
+  /**
    * Mark a contact as locally renamed so that subsequent snapshot diffing
    * does not trigger a fake public name_change event.
    */
@@ -675,7 +705,8 @@ export class ActivityTrackerService {
         prev.photoId = undefined
         prev.avatarUrl = undefined
       } else if (typeof photoId === 'string' && prev.photoId !== photoId) {
-        const nextAvatarUrl = currentAvatarUrl || prev.avatarUrl
+        // Priority: High-res new photo. Do not fall back to old thumbnail!
+        const nextAvatarUrl = currentAvatarUrl || undefined
         this.recordContactChange(accountId, {
           userId,
           changeType: 'photo_change',
@@ -688,7 +719,7 @@ export class ActivityTrackerService {
           isMyContact: isContact,
           userName: currentName,
           userUsername: currentUsername,
-          userAvatarUrl: nextAvatarUrl,
+          userAvatarUrl: nextAvatarUrl || prev.avatarUrl,
         })
         prev.photoId = photoId
         if (nextAvatarUrl) {

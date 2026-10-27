@@ -981,6 +981,7 @@ export class AccountManager {
   private auditQueue = new Map<string, Set<string>>()
   private lastAuditedTime = new Map<string, number>()
   private auditQueueInterval?: NodeJS.Timeout
+  private auditQueueFloodWaitUntil = new Map<string, number>()
   private manualDirectAccounts = new Set<string>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
@@ -2623,7 +2624,7 @@ export class AccountManager {
         } else if (c.photo?.thumb) {
           try {
             avatarUrl = `data:image/jpeg;base64,${Buffer.from(c.photo.thumb).toString('base64')}`
-            this.avatarCache.set(avatarCacheKey, avatarUrl)
+            // Note: DO NOT set into this.avatarCache so getProfilePhoto can fetch the crystal-clear photo
           } catch (_) {}
         }
         try {
@@ -2736,6 +2737,14 @@ export class AccountManager {
 
       for (const [accId, holder] of this.clients.entries()) {
         if (holder?.info?.status !== 'connected' || !holder.client) continue
+
+        // Check if account is in FloodWait cooldown
+        const now = Math.floor(Date.now() / 1000)
+        const floodWaitUntil = this.auditQueueFloodWaitUntil.get(accId) || 0
+        if (now < floodWaitUntil) {
+          continue
+        }
+
         const q = this.auditQueue.get(accId)
         if (!q || q.size === 0) continue
 
@@ -2747,7 +2756,6 @@ export class AccountManager {
         // 12-hour cooldown check
         const auditKey = `${accId}:${nextUserId}`
         const lastAudit = this.lastAuditedTime.get(auditKey) || 0
-        const now = Math.floor(Date.now() / 1000)
         if (now - lastAudit < 12 * 3600) {
           continue
         }
@@ -2761,7 +2769,14 @@ export class AccountManager {
             })
             const u = res?.users?.find((x: any) => String(x.id) === nextUserId) || res?.users?.[0]
             if (u) {
-              const avatarUrl = this.avatarCache.get(`avatar_${accId}_${nextUserId}`)
+              if (u.photo?.small) this.peerPhotos.set(`${accId}_${nextUserId}`, u.photo.small)
+              if (u.photo?.big) this.peerBigPhotos.set(`${accId}_${nextUserId}`, u.photo.big)
+
+              let avatarUrl = this.avatarCache.get(`${accId}_${nextUserId}`)
+              if (!avatarUrl && u.photo && u.photo._ !== 'userProfilePhotoEmpty') {
+                avatarUrl = (await this.getProfilePhoto(accId, nextUserId, false, false).catch(() => null)) || undefined
+              }
+
               this.activityTrackerService.inspectUserSnapshot(
                 accId,
                 u,
@@ -2776,10 +2791,17 @@ export class AccountManager {
             this.lastAuditedTime.set(auditKey, now)
           }
         } catch (err: any) {
+          const errMsg = String(err?.message || err)
+          const floodMatch = errMsg.match(/FLOOD_WAIT_(\d+)/i)
+          if (floodMatch) {
+            const waitSec = parseInt(floodMatch[1], 10) || 60
+            Logger.warn(`[ActivityTracker] FloodWait hit in audit queue for ${accId}: pausing for ${waitSec}s`)
+            this.auditQueueFloodWaitUntil.set(accId, now + waitSec + 5)
+          }
           this.lastAuditedTime.set(auditKey, now)
         }
       }
-    }, 3500)
+    }, 15000)
 
     if (this.auditQueueInterval.unref) {
       this.auditQueueInterval.unref()
@@ -14079,10 +14101,31 @@ export class AccountManager {
         } else if (update._ === 'updateUserPhoto') {
           const uId = String(update.userId ?? update.user_id)
           if (uId && uId !== accountId) {
+            // Invalidate cached avatar for this user
+            this.avatarCache.delete(`${accountId}_${uId}`)
+            this.avatarCache.delete(`${accountId}_${uId}_big`)
+
+            if (update.photo?.small) this.peerPhotos.set(`${accountId}_${uId}`, update.photo.small)
+            if (update.photo?.big) this.peerBigPhotos.set(`${accountId}_${uId}`, update.photo.big)
+
             this.activityTrackerService.inspectUserSnapshot(accountId, {
               id: uId,
               photo: update.photo,
             })
+
+            // Immediately trigger asynchronous high-resolution photo download
+            this.getProfilePhoto(accountId, uId, true, true)
+              .then((hdAvatarUrl) => {
+                if (hdAvatarUrl) {
+                  this.activityTrackerService.updateLatestPhotoChangeUrl(accountId, uId, hdAvatarUrl)
+                  this.onEventCallback?.('telegram:user-avatar-updated', {
+                    accountId,
+                    userId: uId,
+                    avatarUrl: hdAvatarUrl,
+                  })
+                }
+              })
+              .catch(() => {})
           }
         } else if (update._ === 'updateUser') {
           const u = update.user
