@@ -114,6 +114,9 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   const [timelineSearch, setTimelineSearch] = useState('')
   const [onlyOnlineFilter, setOnlyOnlineFilter] = useState(false)
   const [hoveredSession, setHoveredSession] = useState<ContactOnlineSessionItem | null>(null)
+  const [isPanning, setIsPanning] = useState(false)
+  const [panStartX, setPanStartX] = useState(0)
+  const [panScrollLeft, setPanScrollLeft] = useState(0)
 
   const timelineContainerRef = useRef<HTMLDivElement>(null)
 
@@ -270,6 +273,47 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
     return sessions
   }, [timelineData?.sessions, viewStartSec, viewEndSec, selectedUserId, filteredUsers])
 
+  // Map sessions per user for Swimlane Gantt
+  const userSessionsMap = useMemo(() => {
+    const map = new Map<string, ContactOnlineSessionItem[]>()
+    for (const sess of filteredSessions) {
+      const list = map.get(sess.userId) || []
+      list.push(sess)
+      map.set(sess.userId, list)
+    }
+    return map
+  }, [filteredSessions])
+
+  // Calculate user total duration in current view
+  const userDurationMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const sess of filteredSessions) {
+      const s = Math.max(sess.startTime, viewStartSec)
+      const e = Math.min(sess.endTime, viewEndSec)
+      if (e > s) {
+        map.set(sess.userId, (map.get(sess.userId) || 0) + (e - s))
+      }
+    }
+    return map
+  }, [filteredSessions, viewStartSec, viewEndSec])
+
+  // Sort users for swimlane: Online now first, then by total time descending, then name
+  const sortedSwimlaneUsers = useMemo(() => {
+    let users = [...filteredUsers]
+    if (selectedUserId) {
+      users = users.filter((u) => u.userId === selectedUserId)
+    }
+    return users.sort((a, b) => {
+      const aOnline = a.currentStatus === 'online' ? 1 : 0
+      const bOnline = b.currentStatus === 'online' ? 1 : 0
+      if (aOnline !== bOnline) return bOnline - aOnline
+      const aTime = userDurationMap.get(a.userId) || 0
+      const bTime = userDurationMap.get(b.userId) || 0
+      if (aTime !== bTime) return bTime - aTime
+      return a.userName.localeCompare(b.userName)
+    })
+  }, [filteredUsers, selectedUserId, userDurationMap])
+
   // Selected User Object (if any)
   const selectedUserObj = useMemo(() => {
     if (!selectedUserId || !timelineData?.users) return null
@@ -323,7 +367,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   const handleZoomOut = () => setZoomLevel((z) => Math.max(1, Number((z - 0.5).toFixed(1))))
   const handleResetZoom = () => setZoomLevel(1)
 
-  // Wheel zoom handler
+  // Wheel zoom & horizontal pan handler
   const handleTimelineWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey) {
       e.preventDefault()
@@ -332,7 +376,33 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
       } else {
         handleZoomOut()
       }
+    } else if (timelineContainerRef.current) {
+      // Natural horizontal wheel scroll
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault()
+        timelineContainerRef.current.scrollLeft += e.deltaY
+      }
     }
+  }
+
+  // Drag to pan handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!timelineContainerRef.current) return
+    if ((e.target as HTMLElement).closest('button, .interactive-session')) return
+    setIsPanning(true)
+    setPanStartX(e.clientX)
+    setPanScrollLeft(timelineContainerRef.current.scrollLeft)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning || !timelineContainerRef.current) return
+    e.preventDefault()
+    const deltaX = e.clientX - panStartX
+    timelineContainerRef.current.scrollLeft = panScrollLeft - deltaX
+  }
+
+  const handleMouseUp = () => {
+    setIsPanning(false)
   }
 
   // =========================================================================
@@ -746,164 +816,212 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               </div>
             )}
 
-            {/* Horizontal Contacts Selector Strip */}
-            {!selectedUserId && filteredUsers.length > 0 && (
-              <div className="px-4 py-2 bg-dark-900/90 border-b border-white/5 flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
-                <span className="text-[10px] text-gray-400 whitespace-nowrap pl-1">مخاطبان فعال:</span>
-                {filteredUsers.slice(0, 30).map((u) => {
-                  const isOnline = u.currentStatus === 'online'
-                  return (
-                    <button
-                      key={u.userId}
-                      type="button"
-                      onClick={() => setSelectedUserId(u.userId)}
-                      title={`کلیک برای فیلتر و تمرکز روی تایم‌لاین ${u.userName}`}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5 hover:border-accent-cyan/40 transition-all cursor-pointer whitespace-nowrap shrink-0 group"
-                    >
-                      <div className="relative">
-                        <Avatar
-                          accountId={accountId}
-                          peerId={u.userId}
-                          title={u.userName}
-                          avatarUrl={u.avatarUrl}
-                          size="xs"
-                        />
-                        {isOnline && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-dark-900 animate-pulse" />
-                        )}
-                      </div>
-                      <span className="text-xs truncate max-w-[100px]">{u.userName}</span>
-                      {u.totalOnlineToday > 0 && (
-                        <span className="text-[9px] font-mono text-accent-cyan/80 bg-accent-cyan/10 px-1 py-0.2 rounded-xs">
-                          {formatDurationHuman(u.totalOnlineToday)}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Main Interactive Timeline Canvas */}
+            {/* Main Interactive Swimlane Gantt Canvas */}
             <div
               ref={timelineContainerRef}
               onWheel={handleTimelineWheel}
-              className="flex-1 overflow-x-auto overflow-y-auto p-4 select-none relative scrollbar-thin scrollbar-thumb-white/10 flex flex-col justify-between"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{ cursor: isPanning ? 'grabbing' : 'default' }}
+              className="flex-1 overflow-x-auto overflow-y-auto select-none relative scrollbar-thin scrollbar-thumb-white/10 flex flex-col justify-between"
             >
               {isTimelineLoading ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2 p-12">
                   <RefreshCw className="w-7 h-7 animate-spin text-accent-cyan" />
                   <span className="text-xs">در حال بارگذاری نقشه فعالیت و تایم‌لاین آنلاین...</span>
                 </div>
-              ) : filteredSessions.length === 0 ? (
+              ) : sortedSwimlaneUsers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-6 space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-dark-800 border border-white/10 flex items-center justify-center text-gray-500">
                     <Clock className="w-6 h-6" />
                   </div>
                   <div className="text-sm font-bold text-gray-200">
-                    نشست آنلاینی در این بازه زمانی ثبت نشده است
+                    مخاطب یا نشستی در این بازه زمانی یافت نشد
                   </div>
                   <p className="text-xs text-gray-400 max-w-sm">
-                    گایدگرام حضور و آنلاین شدن مخاطبان را با دقت ثانیه‌ای ثبت می‌کند. به محض آنلاین شدن
-                    هر کاربر، بلافاصله کپسول فعالیت او روی این خط زمانی قرار می‌گیرد.
+                    گایدگرام حضور و آنلاین شدن مخاطبان را با دقت ثانیه‌ای ثبت می‌کند. فیلترها را بررسی کنید
+                    یا بازه زمانی را تغییر دهید.
                   </p>
                 </div>
               ) : (
                 <div
                   dir="ltr"
-                  style={{ width: `${zoomLevel * 100}%`, minWidth: '100%' }}
-                  className="space-y-6 pt-2 pb-8 transition-[width] duration-200 relative"
+                  style={{ width: `${Math.max(100, zoomLevel * 100)}%`, minWidth: '950px' }}
+                  className="flex flex-col relative transition-[width] duration-200 pb-12"
                 >
-                  {/* Time Axis Ruler */}
-                  <div className="relative h-8 border-b border-white/15">
-                    {hourMarkers.map((hm) => (
-                      <div
-                        key={hm.markerSec}
-                        style={{ left: `${hm.posPercent}%` }}
-                        className="absolute top-0 bottom-0 flex flex-col items-center -translate-x-1/2"
-                      >
-                        <span className="text-[10px] text-gray-400 font-mono select-none font-semibold">
-                          {hm.hourStr}
-                        </span>
-                        <div className="w-px h-2 bg-white/20 mt-1" />
-                      </div>
-                    ))}
-
-                    {/* Live "Now" Indicator Line */}
-                    {nowPercent !== null && (
-                      <div
-                        style={{ left: `${nowPercent}%` }}
-                        className="absolute -top-1 bottom-0 z-30 flex flex-col items-center pointer-events-none -translate-x-1/2"
-                      >
-                        <span className="text-[9px] bg-accent-cyan text-dark-950 font-bold px-1.5 py-0.2 rounded-xs shadow-md">
-                          اکنون ({formatClockTime(nowSec)})
-                        </span>
-                        <div className="w-0.5 h-full bg-accent-cyan shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Sessions Stream Lanes */}
-                  <div className="relative min-h-[220px] space-y-3 pt-2">
-                    {/* Background Hour Gridlines */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      {hourMarkers.map((hm) => (
-                        <div
-                          key={`grid_${hm.markerSec}`}
-                          style={{ left: `${hm.posPercent}%` }}
-                          className="absolute top-0 bottom-0 w-px border-r border-dashed border-white/5"
-                        />
-                      ))}
+                  {/* STICKY TOP TIME RULER (Never disappears on vertical scroll!) */}
+                  <div className="sticky top-0 z-40 flex items-stretch bg-dark-900/98 backdrop-blur-md border-b border-white/15 h-11 shadow-sm">
+                    {/* Fixed Left Header for User Info */}
+                    <div className="w-60 shrink-0 sticky left-0 z-50 bg-dark-900 border-r border-white/15 px-3.5 flex items-center justify-between text-xs font-bold text-gray-300 shadow-md">
+                      <span className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-accent-cyan" />
+                        <span>مخاطبان ({toPersianDigits(sortedSwimlaneUsers.length)})</span>
+                      </span>
+                      {selectedUserId && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserId(null)}
+                          className="text-[10px] text-accent-cyan hover:underline cursor-pointer font-normal"
+                        >
+                          نمایش همه
+                        </button>
+                      )}
                     </div>
 
-                    {/* Render Sessions Capsules */}
-                    {filteredSessions.map((sess) => {
-                      const sessStart = Math.max(sess.startTime, viewStartSec)
-                      const sessEnd = Math.min(sess.endTime, viewEndSec)
-                      if (sessEnd <= sessStart) return null
+                    {/* Time Ruler Axis */}
+                    <div className="flex-1 relative h-full flex items-center">
+                      {hourMarkers.map((hm) => (
+                        <div
+                          key={hm.markerSec}
+                          style={{ left: `${hm.posPercent}%` }}
+                          className="absolute top-0 bottom-0 flex flex-col items-center -translate-x-1/2 pointer-events-none"
+                        >
+                          <span className="text-[10px] text-gray-300 font-mono font-semibold pt-1">
+                            {hm.hourStr}
+                          </span>
+                          <div className="w-px h-2 bg-white/25 mt-auto mb-1" />
+                        </div>
+                      ))}
 
-                      const leftPercent = ((sessStart - viewStartSec) / viewDurationSec) * 100
-                      const rawWidthPercent = ((sessEnd - sessStart) / viewDurationSec) * 100
-                      // Ensure a minimum clickable interactive width
-                      const widthPercent = Math.max(1.2, rawWidthPercent)
+                      {/* Live "Now" Indicator Marker */}
+                      {nowPercent !== null && (
+                        <div
+                          style={{ left: `${nowPercent}%` }}
+                          className="absolute top-0 bottom-0 z-30 flex flex-col items-center pointer-events-none -translate-x-1/2"
+                        >
+                          <span className="text-[9px] bg-accent-cyan text-dark-950 font-bold px-1.5 py-0.5 rounded-xs shadow-md">
+                            اکنون ({formatClockTime(nowSec)})
+                          </span>
+                          <div className="w-0.5 h-full bg-accent-cyan shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                      const isLive = sess.isCurrentSession
-                      const isHovered = hoveredSession?.id === sess.id
+                  {/* SWIMLANE ROWS (One row per user, zero empty vertical gaps!) */}
+                  <div className="flex flex-col relative divide-y divide-white/5">
+                    {sortedSwimlaneUsers.map((user) => {
+                      const sessions = userSessionsMap.get(user.userId) || []
+                      const totalSecs = userDurationMap.get(user.userId) || 0
+                      const isOnline = user.currentStatus === 'online'
+                      const isSelected = selectedUserId === user.userId
 
                       return (
                         <div
-                          key={sess.id}
-                          style={{
-                            left: `${leftPercent}%`,
-                            width: `${widthPercent}%`,
-                          }}
-                          onMouseEnter={() => setHoveredSession(sess)}
-                          onMouseLeave={() => setHoveredSession(null)}
-                          onClick={() => setSelectedUserId(sess.userId)}
-                          className={`relative h-10 rounded-xl cursor-pointer transition-all flex items-center px-1.5 shadow-md group ${
-                            isLive
-                              ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-accent-cyan ring-2 ring-accent-cyan/80 shadow-[0_0_12px_rgba(34,211,238,0.6)]'
-                              : isHovered
-                              ? 'bg-gradient-to-r from-emerald-400 to-teal-300 ring-2 ring-white scale-102 z-20 shadow-lg'
-                              : 'bg-gradient-to-r from-emerald-600/90 to-teal-500/90 hover:from-emerald-500 hover:to-teal-400 hover:ring-1 hover:ring-white/50'
+                          key={user.userId}
+                          className={`flex items-stretch h-14 group transition-colors relative ${
+                            isSelected ? 'bg-accent-cyan/10 ring-1 ring-accent-cyan/30' : 'hover:bg-white/[0.02]'
                           }`}
                         >
-                          <div className="flex items-center gap-1.5 min-w-0 select-none">
-                            <Avatar
-                              accountId={accountId}
-                              peerId={sess.userId}
-                              title={sess.userName}
-                              avatarUrl={sess.avatarUrl}
-                              size="xs"
-                            />
-                            <div className="min-w-0 flex items-center gap-1">
-                              <span className="text-[11px] font-bold text-dark-950 truncate max-w-[85px] leading-tight">
-                                {sess.userName}
-                              </span>
-                              {isLive && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping shrink-0" />
+                          {/* Sticky Left Column: User Profile Card (Sticky on horizontal scroll!) */}
+                          <div
+                            onClick={() => setSelectedUserId(isSelected ? null : user.userId)}
+                            className="w-60 shrink-0 sticky left-0 z-20 bg-dark-900 group-hover:bg-dark-850 px-3.5 h-full border-r border-white/10 flex items-center gap-2.5 cursor-pointer shadow-sm transition-colors"
+                          >
+                            <div className="relative shrink-0">
+                              <Avatar
+                                accountId={accountId}
+                                peerId={user.userId}
+                                title={user.userName}
+                                avatarUrl={user.avatarUrl}
+                                size="sm"
+                              />
+                              {isOnline && (
+                                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-dark-900 animate-pulse" />
                               )}
                             </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div
+                                className="text-xs font-bold text-gray-200 truncate group-hover:text-white"
+                                title={user.userName}
+                              >
+                                {user.userName}
+                              </div>
+                              <div className="text-[10px] flex items-center gap-1.5 mt-0.5">
+                                {isOnline ? (
+                                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                    <span>هم‌اکنون آنلاین</span>
+                                  </span>
+                                ) : totalSecs > 0 ? (
+                                  <span className="text-accent-cyan font-mono font-medium">
+                                    {formatDurationHuman(totalSecs)} آنلاین
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500">نشستی ثبت نشده</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Lane: 24h Timeline for this user */}
+                          <div className="flex-1 relative h-full flex items-center overflow-hidden">
+                            {/* Background Hour Gridlines */}
+                            {hourMarkers.map((hm) => (
+                              <div
+                                key={`grid_${hm.markerSec}`}
+                                style={{ left: `${hm.posPercent}%` }}
+                                className="absolute top-0 bottom-0 w-px border-r border-dashed border-white/5 pointer-events-none"
+                              />
+                            ))}
+
+                            {/* Live Now Vertical Guideline */}
+                            {nowPercent !== null && (
+                              <div
+                                style={{ left: `${nowPercent}%` }}
+                                className="absolute top-0 bottom-0 w-0.5 bg-accent-cyan/20 pointer-events-none -translate-x-1/2"
+                              />
+                            )}
+
+                            {/* User's Session Bars on this Lane */}
+                            {sessions.map((sess) => {
+                              const sessStart = Math.max(sess.startTime, viewStartSec)
+                              const sessEnd = Math.min(sess.endTime, viewEndSec)
+                              if (sessEnd <= sessStart) return null
+
+                              const leftPercent = ((sessStart - viewStartSec) / viewDurationSec) * 100
+                              const rawWidthPercent = ((sessEnd - sessStart) / viewDurationSec) * 100
+                              // Minimum width of 0.8% (or ~10px) so even 30-sec sessions are visible and clickable
+                              const widthPercent = Math.max(0.8, rawWidthPercent)
+
+                              const isLive = sess.isCurrentSession
+                              const isHovered = hoveredSession?.id === sess.id
+
+                              return (
+                                <div
+                                  key={sess.id}
+                                  style={{
+                                    left: `${leftPercent}%`,
+                                    width: `${widthPercent}%`,
+                                  }}
+                                  onMouseEnter={() => setHoveredSession(sess)}
+                                  onMouseLeave={() => setHoveredSession(null)}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedUserId(sess.userId)
+                                  }}
+                                  title={`${sess.userName}: ${formatClockTime(sess.startTime)} تا ${
+                                    isLive ? 'اکنون' : formatClockTime(sess.endTime)
+                                  } (${formatDurationHuman(sess.durationSeconds)})`}
+                                  className={`interactive-session absolute h-7 rounded-lg cursor-pointer transition-all flex items-center px-1.5 shadow-sm overflow-hidden z-10 ${
+                                    isLive
+                                      ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-accent-cyan ring-2 ring-accent-cyan shadow-[0_0_10px_rgba(34,211,238,0.7)] animate-pulse'
+                                      : isHovered
+                                      ? 'bg-gradient-to-r from-emerald-400 to-teal-300 ring-2 ring-white scale-105 z-30 shadow-lg'
+                                      : 'bg-gradient-to-r from-emerald-600/90 to-teal-500/90 hover:from-emerald-500 hover:to-teal-400 hover:ring-1 hover:ring-white/60'
+                                  }`}
+                                >
+                                  {widthPercent > 3.5 && (
+                                    <span className="text-[10px] font-bold text-dark-950 font-mono select-none truncate">
+                                      {formatClockTime(sess.startTime)}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )
