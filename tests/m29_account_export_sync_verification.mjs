@@ -1,6 +1,6 @@
 import assert from 'assert'
 import crypto from 'node:crypto'
-import { AccountExportService } from '../dist-electron/telegram/accountExportService.js'
+import { AccountExportService } from '../electron/telegram/accountExportService.ts'
 
 console.log('🧪 Starting Military-Grade Account Export & Air-Gapped Optical Sync Verification...')
 
