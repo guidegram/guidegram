@@ -9,6 +9,9 @@ import {
   ActivityLogRetentionPeriod,
   ContactChangeFilter,
   AppConfig,
+  ContactOnlineSessionItem,
+  AccountOnlineTimelineData,
+  AccountOnlineTimelineUser,
 } from './types'
 import { Logger } from './logger'
 
@@ -57,6 +60,9 @@ export class ActivityTrackerService {
   private saveSnapshotsTimers = new Map<string, NodeJS.Timeout>()
   private uptimeHeartbeatInterval?: NodeJS.Timeout
   private appUptimeIntervals: Array<{ start: number; end: number }> = []
+
+  // Local contact renames suppression map: `${accountId}:${userId}` -> timestamp
+  private recentlyRenamedLocally = new Map<string, number>()
 
   constructor(
     baseDataDir: string,
@@ -163,6 +169,11 @@ export class ActivityTrackerService {
         Logger.warn(`[ActivityTracker] Error loading status file for ${accountId}:`, err)
       }
     }
+    // Universal self-exclusion migration cleanup: never keep account's own status in tracking
+    if (data[accountId]) {
+      delete data[accountId]
+      this.scheduleSaveStatus(accountId)
+    }
     this.statusCache.set(accountId, data)
     return data
   }
@@ -181,6 +192,12 @@ export class ActivityTrackerService {
         Logger.warn(`[ActivityTracker] Error loading changes file for ${accountId}:`, err)
       }
     }
+    // Universal self-exclusion migration cleanup: never keep account's own changes
+    const initialLen = data.length
+    data = data.filter((c) => c.userId !== accountId)
+    if (data.length !== initialLen) {
+      this.scheduleSaveChanges(accountId)
+    }
     this.changesCache.set(accountId, data)
     return data
   }
@@ -198,6 +215,11 @@ export class ActivityTrackerService {
       } catch (err) {
         Logger.warn(`[ActivityTracker] Error loading snapshots file for ${accountId}:`, err)
       }
+    }
+    // Universal self-exclusion migration cleanup: never keep account's own snapshot
+    if (data[accountId]) {
+      delete data[accountId]
+      this.scheduleSaveSnapshots(accountId)
     }
     this.snapshotsCache.set(accountId, data)
     return data
@@ -309,6 +331,7 @@ export class ActivityTrackerService {
     rawStatus: any,
     meta?: { title?: string; avatarUrl?: string; username?: string }
   ): void {
+    if (userId === accountId) return // Universal self-exclusion: never track self
     const cfg = this.getConfig()
     if (cfg.activityTrackerEnabled === false) return
     if (cfg.ignoredUserTrackingIds?.includes(userId)) return
@@ -379,6 +402,7 @@ export class ActivityTrackerService {
     accountId: string,
     change: Omit<ContactChangeEvent, 'id' | 'timestamp' | 'accountId'>
   ): void {
+    if (change.userId === accountId) return // Universal self-exclusion: never record changes for self
     const cfg = this.getConfig()
     if (cfg.profileChangeAuditorEnabled === false) return
     if (cfg.ignoredUserTrackingIds?.includes(change.userId)) return
@@ -420,14 +444,38 @@ export class ActivityTrackerService {
     })
   }
 
+  /**
+   * Mark a contact as locally renamed so that subsequent snapshot diffing
+   * does not trigger a fake public name_change event.
+   */
+  public markContactRenamedLocally(accountId: string, userId: string): void {
+    this.recentlyRenamedLocally.set(`${accountId}:${userId}`, Math.floor(Date.now() / 1000))
+  }
+
+  /**
+   * Silently update a contact snapshot's name when renamed locally by user in phonebook.
+   */
+  public updateSnapshotNameSilently(accountId: string, userId: string, newName: string): void {
+    this.markContactRenamedLocally(accountId, userId)
+    const snapshots = this.loadSnapshots(accountId)
+    if (snapshots[userId]) {
+      snapshots[userId].name = newName
+      snapshots[userId].updatedAt = Math.floor(Date.now() / 1000)
+      this.scheduleSaveSnapshots(accountId)
+    }
+  }
+
   public inspectUserSnapshot(
     accountId: string,
     user: any,
     fullUser?: any,
-    relation?: { isMutual?: boolean; isContact?: boolean }
+    relation?: { isMutual?: boolean; isContact?: boolean },
+    meta?: { avatarUrl?: string }
   ): void {
     if (!user || !user.id) return
     const userId = String(user.id)
+    if (userId === accountId || user.self) return // Universal self-exclusion: never audit self
+
     const cfg = this.getConfig()
     if (cfg.profileChangeAuditorEnabled === false) return
     if (cfg.ignoredUserTrackingIds?.includes(userId)) return
@@ -457,12 +505,18 @@ export class ActivityTrackerService {
     const hasPhoneInfo = user.phone !== undefined || user.phoneNumber !== undefined
     const currentPhone = hasPhoneInfo ? (user.phone || user.phoneNumber || undefined) : prev?.phone
 
-    const currentBio = fullUser?.about !== undefined ? fullUser.about : undefined
-    const currentPersonalChannelId = fullUser?.personalChannelId !== undefined ? String(fullUser.personalChannelId) : undefined
-    const currentPersonalChannelTitle = fullUser?.personalChannelTitle !== undefined ? fullUser.personalChannelTitle : undefined
+    const hasFullUserInfo = fullUser !== undefined
+    const currentBio = hasFullUserInfo ? (fullUser.about ? String(fullUser.about).trim() : '') : undefined
+    const currentPersonalChannelId = hasFullUserInfo
+      ? (fullUser.personalChannelId ? String(fullUser.personalChannelId) : '')
+      : undefined
+    const currentPersonalChannelTitle = hasFullUserInfo
+      ? (fullUser.personalChannelTitle ? String(fullUser.personalChannelTitle) : '')
+      : undefined
 
     const isMutual = relation?.isMutual ?? (user.mutualContact !== undefined ? Boolean(user.mutualContact) : prev?.isMutualContact)
     const isContact = relation?.isContact ?? (user.contact !== undefined ? Boolean(user.contact) : prev?.isContact)
+    const currentAvatarUrl = meta?.avatarUrl || user.avatarUrl
 
     // Robust Photo Extraction
     const hasPhotoInfo = user.photo !== undefined || user.raw?.photo !== undefined
@@ -490,10 +544,11 @@ export class ActivityTrackerService {
         name: currentName,
         username: currentUsername,
         phone: currentPhone,
-        bio: currentBio,
-        personalChannelId: currentPersonalChannelId,
-        personalChannelTitle: currentPersonalChannelTitle,
+        bio: currentBio !== undefined ? currentBio : undefined,
+        personalChannelId: currentPersonalChannelId !== undefined ? currentPersonalChannelId : undefined,
+        personalChannelTitle: currentPersonalChannelTitle !== undefined ? currentPersonalChannelTitle : undefined,
         photoId: typeof photoId === 'string' ? photoId : undefined,
+        avatarUrl: currentAvatarUrl,
         isMutualContact: isMutual,
         isContact,
         updatedAt: now,
@@ -503,20 +558,34 @@ export class ActivityTrackerService {
     }
 
     // Diff inspection
-    // 1. Name change (only if name was provided in this inspection)
+    // 1. Name change:
+    // In Telegram MTProto, for any saved contact (isContact: true), first_name/last_name are ALWAYS
+    // the user's local phonebook name, overridden by Telegram. Any change is user's own phonebook edit,
+    // whether done in Guidegram, mobile, or desktop. Only non-contacts show real public profile name changes.
+    const localRenameKey = `${accountId}:${userId}`
+    const localRenameTime = this.recentlyRenamedLocally.get(localRenameKey)
+    const isLocalRename = Boolean(localRenameTime && now - localRenameTime < 120)
+    const isPhonebookContact = Boolean(isContact || prev.isContact || isLocalRename)
+
     if (hasNameInfo && prev.name && currentName && prev.name !== currentName) {
-      this.recordContactChange(accountId, {
-        userId,
-        changeType: 'name_change',
-        title: 'Name Changed',
-        oldValue: prev.name,
-        newValue: currentName,
-        isMutualContact: isMutual,
-        isMyContact: isContact,
-        userName: currentName,
-        userUsername: currentUsername,
-      })
-      prev.name = currentName
+      if (isPhonebookContact) {
+        // Silently update local snapshot to reflect user's phonebook name edit without cluttering timeline
+        prev.name = currentName
+      } else {
+        this.recordContactChange(accountId, {
+          userId,
+          changeType: 'name_change',
+          title: 'Name Changed',
+          oldValue: prev.name,
+          newValue: currentName,
+          isMutualContact: isMutual,
+          isMyContact: isContact,
+          userName: currentName,
+          userUsername: currentUsername,
+          userAvatarUrl: currentAvatarUrl || prev.avatarUrl,
+        })
+        prev.name = currentName
+      }
     }
 
     // 2. Username change (only if username was provided in this inspection)
@@ -531,44 +600,59 @@ export class ActivityTrackerService {
         isMyContact: isContact,
         userName: currentName,
         userUsername: currentUsername,
+        userAvatarUrl: currentAvatarUrl || prev.avatarUrl,
       })
       prev.username = currentUsername
     }
 
-    // 3. Bio change
-    if (currentBio !== undefined && prev.bio !== currentBio) {
-      this.recordContactChange(accountId, {
-        userId,
-        changeType: 'bio_change',
-        title: 'Bio Changed',
-        oldValue: prev.bio || 'Empty Bio',
-        newValue: currentBio || 'Bio Cleared',
-        isMutualContact: isMutual,
-        isMyContact: isContact,
-        userName: currentName,
-        userUsername: currentUsername,
-      })
-      prev.bio = currentBio
+    // 3. Bio change (tri-state handling and baseline seeding on first inspection)
+    if (currentBio !== undefined) {
+      if (prev.bio === undefined) {
+        // Initial baseline seed on first inspection with fullUser
+        prev.bio = currentBio
+      } else if (prev.bio !== currentBio) {
+        this.recordContactChange(accountId, {
+          userId,
+          changeType: 'bio_change',
+          title: 'Bio Changed',
+          oldValue: prev.bio || 'بیوگرافی خالی',
+          newValue: currentBio || 'بیوگرافی پاک شد',
+          isMutualContact: isMutual,
+          isMyContact: isContact,
+          userName: currentName,
+          userUsername: currentUsername,
+          userAvatarUrl: currentAvatarUrl || prev.avatarUrl,
+        })
+        prev.bio = currentBio
+      }
     }
 
-    // 4. Personal channel change
-    if (
-      currentPersonalChannelId !== undefined &&
-      prev.personalChannelId !== currentPersonalChannelId
-    ) {
-      this.recordContactChange(accountId, {
-        userId,
-        changeType: 'personal_channel_change',
-        title: 'Personal Channel Changed',
-        oldValue: prev.personalChannelTitle || prev.personalChannelId ? `Channel: ${prev.personalChannelTitle || prev.personalChannelId}` : 'None',
-        newValue: currentPersonalChannelId ? `Channel: ${currentPersonalChannelTitle || currentPersonalChannelId}` : 'Removed',
-        isMutualContact: isMutual,
-        isMyContact: isContact,
-        userName: currentName,
-        userUsername: currentUsername,
-      })
-      prev.personalChannelId = currentPersonalChannelId
-      prev.personalChannelTitle = currentPersonalChannelTitle
+    // 4. Personal channel change (tri-state handling and baseline seeding)
+    if (currentPersonalChannelId !== undefined) {
+      if (prev.personalChannelId === undefined) {
+        prev.personalChannelId = currentPersonalChannelId
+        prev.personalChannelTitle = currentPersonalChannelTitle
+      } else if (prev.personalChannelId !== currentPersonalChannelId) {
+        this.recordContactChange(accountId, {
+          userId,
+          changeType: 'personal_channel_change',
+          title: 'Personal Channel Changed',
+          oldValue:
+            prev.personalChannelTitle || prev.personalChannelId
+              ? `کانال: ${prev.personalChannelTitle || prev.personalChannelId}`
+              : 'ندارد',
+          newValue: currentPersonalChannelId
+            ? `کانال: ${currentPersonalChannelTitle || currentPersonalChannelId}`
+            : 'حذف شد',
+          isMutualContact: isMutual,
+          isMyContact: isContact,
+          userName: currentName,
+          userUsername: currentUsername,
+          userAvatarUrl: currentAvatarUrl || prev.avatarUrl,
+        })
+        prev.personalChannelId = currentPersonalChannelId
+        prev.personalChannelTitle = currentPersonalChannelTitle
+      }
     }
 
     // 5. Profile photo change / removal (only if photo was provided in this inspection)
@@ -578,28 +662,43 @@ export class ActivityTrackerService {
           userId,
           changeType: 'photo_delete',
           title: 'Profile Photo Deleted',
-          oldValue: 'Existing photo',
-          newValue: 'Photo removed',
+          oldValue: 'عکس قبلی',
+          newValue: 'عکس پروفایل حذف شد',
+          oldPhotoUrl: prev.avatarUrl,
+          newPhotoUrl: undefined,
           isMutualContact: isMutual,
           isMyContact: isContact,
           userName: currentName,
           userUsername: currentUsername,
+          userAvatarUrl: undefined,
         })
         prev.photoId = undefined
+        prev.avatarUrl = undefined
       } else if (typeof photoId === 'string' && prev.photoId !== photoId) {
+        const nextAvatarUrl = currentAvatarUrl || prev.avatarUrl
         this.recordContactChange(accountId, {
           userId,
           changeType: 'photo_change',
           title: 'Profile Photo Changed',
-          oldValue: prev.photoId ? 'Previous photo' : 'None',
-          newValue: 'New profile photo set',
+          oldValue: prev.photoId ? 'عکس قبلی' : 'نداشت',
+          newValue: 'عکس پروفایل جدید ثبت شد',
+          oldPhotoUrl: prev.avatarUrl,
+          newPhotoUrl: nextAvatarUrl,
           isMutualContact: isMutual,
           isMyContact: isContact,
           userName: currentName,
           userUsername: currentUsername,
+          userAvatarUrl: nextAvatarUrl,
         })
         prev.photoId = photoId
+        if (nextAvatarUrl) {
+          prev.avatarUrl = nextAvatarUrl
+        }
       }
+    }
+
+    if (currentAvatarUrl && !prev.avatarUrl) {
+      prev.avatarUrl = currentAvatarUrl
     }
 
     // Update contacts status
@@ -906,4 +1005,156 @@ export class ActivityTrackerService {
       dataSizeBytes,
     }
   }
+
+  // =========================================================================
+  // Queries: Multi-User Online Activity Timeline Map
+  // =========================================================================
+
+  public getOnlineTimeline(accountId: string): AccountOnlineTimelineData {
+    const allStatus = this.loadStatus(accountId)
+    const snapshots = this.loadSnapshots(accountId)
+    const activeSessions = this.activeSessions.get(accountId) || {}
+    const now = Math.floor(Date.now() / 1000)
+    const dayStartSec = new Date().setHours(0, 0, 0, 0) / 1000
+    // Time range: last 48 hours to now
+    const rangeStart = dayStartSec - 86400
+    const rangeEnd = now
+
+    const allSessions: ContactOnlineSessionItem[] = []
+    const usersMap = new Map<string, AccountOnlineTimelineUser>()
+
+    for (const [userId, history] of Object.entries(allStatus)) {
+      if (userId === accountId) continue
+      const snap = snapshots[userId]
+      const userName = snap?.name || 'کاربر تلگرام'
+      const userUsername = snap?.username
+      const avatarUrl = snap?.avatarUrl
+      const isMutual = snap?.isMutualContact
+      const isContact = snap?.isContact
+
+      let currentStatus: UserOnlineStatusType = 'empty'
+      let lastSeenTimestamp: number | undefined = undefined
+      let currentSessionStart: number | null = null
+      let totalOnlineToday = 0
+      let sessionCountToday = 0
+      let lastOnlineTimestamp: number | undefined = undefined
+
+      for (let i = 0; i < history.length; i++) {
+        const rec = history[i]
+        if (rec.status === 'online') {
+          currentSessionStart = rec.timestamp
+          currentStatus = 'online'
+          lastOnlineTimestamp = rec.timestamp
+        } else if (rec.status === 'offline') {
+          currentStatus = 'offline'
+          const offlineTime = rec.wasOnline || rec.timestamp
+          lastSeenTimestamp = offlineTime
+          lastOnlineTimestamp = offlineTime
+
+          if (currentSessionStart != null) {
+            const dur = Math.max(15, offlineTime - currentSessionStart)
+            if (offlineTime >= rangeStart) {
+              allSessions.push({
+                id: `sess_${userId}_${currentSessionStart}`,
+                userId,
+                userName,
+                userUsername,
+                avatarUrl,
+                isMutualContact: isMutual,
+                isContact,
+                startTime: currentSessionStart,
+                endTime: offlineTime,
+                durationSeconds: dur,
+                isCurrentSession: false,
+              })
+            }
+            if (offlineTime >= dayStartSec) {
+              totalOnlineToday += dur
+              sessionCountToday++
+            }
+            currentSessionStart = null
+          } else if (rec.wasOnline && rec.wasOnline >= rangeStart) {
+            const start = Math.max(rec.wasOnline - 180, rangeStart)
+            const dur = rec.wasOnline - start
+            allSessions.push({
+              id: `sess_${userId}_${start}`,
+              userId,
+              userName,
+              userUsername,
+              avatarUrl,
+              isMutualContact: isMutual,
+              isContact,
+              startTime: start,
+              endTime: rec.wasOnline,
+              durationSeconds: dur,
+              isCurrentSession: false,
+            })
+            if (rec.wasOnline >= dayStartSec) {
+              totalOnlineToday += dur
+              sessionCountToday++
+            }
+          }
+        } else {
+          currentStatus = rec.status
+        }
+      }
+
+      // If active session is open right now
+      if (currentSessionStart != null || activeSessions[userId]) {
+        const start = currentSessionStart || activeSessions[userId]?.startTime || (now - 30)
+        const dur = Math.max(15, now - start)
+        allSessions.push({
+          id: `sess_${userId}_${start}_live`,
+          userId,
+          userName,
+          userUsername,
+          avatarUrl,
+          isMutualContact: isMutual,
+          isContact,
+          startTime: start,
+          endTime: now,
+          durationSeconds: dur,
+          isCurrentSession: true,
+        })
+        currentStatus = 'online'
+        lastOnlineTimestamp = now
+        totalOnlineToday += dur
+        sessionCountToday++
+      }
+
+      usersMap.set(userId, {
+        userId,
+        userName,
+        userUsername,
+        avatarUrl,
+        isMutualContact: isMutual,
+        isContact,
+        lastSeen: lastSeenTimestamp,
+        currentStatus,
+        totalOnlineToday,
+        sessionCountToday,
+        lastOnlineTimestamp,
+      })
+    }
+
+    // Sort sessions chronologically (ascending for timeline rendering)
+    allSessions.sort((a, b) => a.startTime - b.startTime)
+
+    // Sort users: currently online first, then by lastOnlineTimestamp desc
+    const userList = Array.from(usersMap.values()).sort((a, b) => {
+      if (a.currentStatus === 'online' && b.currentStatus !== 'online') return -1
+      if (b.currentStatus === 'online' && a.currentStatus !== 'online') return 1
+      return (b.lastOnlineTimestamp || 0) - (a.lastOnlineTimestamp || 0)
+    })
+
+    return {
+      sessions: allSessions,
+      users: userList,
+      timeRange: {
+        start: rangeStart,
+        end: rangeEnd,
+      },
+    }
+  }
 }
+

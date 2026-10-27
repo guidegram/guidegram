@@ -236,6 +236,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activityTrackerEnabled, setActivityTrackerEnabled] = useState(true)
   const [profileChangeAuditorEnabled, setProfileChangeAuditorEnabled] = useState(true)
   const [activityRetentionPeriod, setActivityRetentionPeriod] = useState<ActivityLogRetentionPeriod>('30d')
+  const [profileAuditInteractionRange, setProfileAuditInteractionRange] = useState<'24h' | '7d' | '30d' | '90d' | '180d' | 'all'>('180d')
+  const [profileAuditScanOnOnline, setProfileAuditScanOnOnline] = useState(true)
   const [activityStats, setActivityStats] = useState<{ totalEvents: number; totalSessions: number; totalUsersTracked: number; dataSizeBytes: number } | null>(null)
   const [isPurgingData, setIsPurgingData] = useState(false)
   const [purgeToast, setPurgeToast] = useState<string | null>(null)
@@ -722,6 +724,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setActivityTrackerEnabled(cfg.activityTrackerEnabled ?? true)
         setProfileChangeAuditorEnabled(cfg.profileChangeAuditorEnabled ?? true)
         setActivityRetentionPeriod(cfg.activityRetentionPeriod || '30d')
+        setProfileAuditInteractionRange(cfg.profileAuditInteractionRange || '180d')
+        setProfileAuditScanOnOnline(cfg.profileAuditScanOnOnline ?? true)
         if (cfg.autoDownload) {
           setAutoDownload({
             ...cfg.autoDownload,
@@ -899,6 +903,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       activityTrackerEnabled,
       profileChangeAuditorEnabled,
       activityRetentionPeriod,
+      profileAuditInteractionRange,
+      profileAuditScanOnOnline,
     })
     setConfig(updated)
     onConfigUpdated?.(updated)
@@ -3526,12 +3532,75 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                     </div>
 
+                    {/* Auto-Scan on Online Toggle */}
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'اسکن و استعلام فوری هنگام آنلاین شدن کاربر' : 'Auto-Audit on Online Event'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'به محض آنلاین شدن هر مخاطب، بیوگرافی و کانال شخصی او با صف ایمن ۳.۵ ثانیه‌ای استعلام می‌شود'
+                            : 'Safely queries user full profile & bio into the throttled queue the moment they come online'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={profileAuditScanOnOnline}
+                          onChange={(e) => setProfileAuditScanOnOnline(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-cyan"></div>
+                      </label>
+                    </div>
+
+                    {/* Interaction Range Selector for Background Audit */}
+                    <div className="pt-2 border-t border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-accent-cyan" />
+                          <span>{isPersian ? 'بازه تعامل چت‌ها برای صف استعلام پس‌زمینه' : 'Active Interaction Range for Profile Audit'}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400">
+                          {isPersian ? 'سپر ضد بن تلگرام (فاصله ۳.۵ ثانیه)' : 'Anti-Flood Rate Limiter'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
+                        {[
+                          { id: '24h', label: isPersian ? '۲۴ ساعت اخیر' : 'Last 24 Hours' },
+                          { id: '7d', label: isPersian ? '۷ روز اخیر' : 'Last 7 Days' },
+                          { id: '30d', label: isPersian ? '۳۰ روز اخیر' : 'Last 30 Days' },
+                          { id: '90d', label: isPersian ? '۳ ماه اخیر' : 'Last 3 Months' },
+                          { id: '180d', label: isPersian ? '۶ ماه اخیر (پیش‌فرض)' : 'Last 6 Months (Default)' },
+                          { id: 'all', label: isPersian ? 'همه مخاطبان و چت‌ها' : 'All Contacts & Chats' },
+                        ].map((option) => {
+                          const isSelected = profileAuditInteractionRange === option.id
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => setProfileAuditInteractionRange(option.id as any)}
+                              className={`px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer text-center ${
+                                isSelected
+                                  ? 'bg-primary-600/20 border-primary-500/40 text-primary-300 font-bold shadow-sm'
+                                  : 'bg-dark-900/60 border-white/5 text-gray-300 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
                     {/* Open Timeline Button */}
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div className="text-[11px] text-gray-400">
                         {isPersian
-                          ? 'مشاهده گزارش کامل با فیلتر مخاطبین متقابل، جستجو و تفکیک رویدادها'
-                          : 'Inspect all historical changes with mutual contact filters and search'}
+                          ? 'مشاهده گزارش کامل با نقشه تعاملی آنلاین، فیلتر مخاطبین، جستجو و تفکیک رویدادها'
+                          : 'Inspect all historical changes and interactive online map with mutual filters and search'}
                       </div>
                       <button
                         type="button"
@@ -3542,7 +3611,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 flex items-center gap-2 transition-colors cursor-pointer group"
                       >
                         <History className="w-3.5 h-3.5 group-hover:rotate-[-20deg] transition-transform" />
-                        <span>{isPersian ? 'مشاهده تایم‌لاین جامع تغییرات' : 'Open Changes Timeline'}</span>
+                        <span>{isPersian ? 'مشاهده تایم‌لاین و نقشه آنلاین' : 'Open Changes & Online Timeline'}</span>
                       </button>
                     </div>
                   </div>

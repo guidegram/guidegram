@@ -154,6 +154,8 @@ export class SessionStore {
       profileChangeAuditorEnabled: true,
       activityRetentionPeriod: '30d',
       ignoredUserTrackingIds: [],
+      profileAuditInteractionRange: '180d',
+      profileAuditScanOnOnline: true,
       mcp: {
         enabled: true,
         port: 39527,

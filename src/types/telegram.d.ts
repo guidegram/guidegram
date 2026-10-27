@@ -138,6 +138,9 @@ import type {
   ContactChangeEvent,
   ActivityLogRetentionPeriod,
   ContactChangeFilter,
+  ContactOnlineSessionItem,
+  AccountOnlineTimelineUser,
+  AccountOnlineTimelineData,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -291,6 +294,9 @@ export type {
   ContactChangeEvent,
   ActivityLogRetentionPeriod,
   ContactChangeFilter,
+  ContactOnlineSessionItem,
+  AccountOnlineTimelineUser,
+  AccountOnlineTimelineData,
 }
 
 

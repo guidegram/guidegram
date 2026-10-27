@@ -25,6 +25,7 @@ import {
   ZoomIn,
   ArrowRight,
   PowerOff,
+  Maximize2,
 } from 'lucide-react'
 import type {
   UserActivityStats,
@@ -41,6 +42,7 @@ interface UserActivityRadarProps {
   avatarUrl?: string
   currentStatus?: UserOnlineStatusType
   lastSeen?: number
+  onOpenFullTimeline?: (userId?: string) => void
 }
 
 // Convert English digits to Persian digits
@@ -77,6 +79,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
   avatarUrl,
   currentStatus: propCurrentStatus,
   lastSeen: propLastSeen,
+  onOpenFullTimeline,
 }) => {
   const { t } = useI18n()
   const componentInstanceId = useId()
@@ -86,6 +89,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
   const [isLoading, setIsLoading] = useState(true)
   const [isChangesExpanded, setIsChangesExpanded] = useState(false)
   const [isPrivacyHelpOpen, setIsPrivacyHelpOpen] = useState(false)
+  const [chartMode, setChartMode] = useState<'timeline' | 'distribution'>('timeline')
   
   // Selected day offset: 0 = Today, 1 = Yesterday, 2 = 2 days ago, etc.
   const [selectedDayOffset, setSelectedDayOffset] = useState<number>(0)
@@ -396,28 +400,42 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             </div>
           </div>
 
-          {/* Per-User Tracking Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleTracking}
-            title={
-              isTrackingEnabled
-                ? 'ردیابی این شخص فعال است (کلیک برای غیرفعال‌سازی)'
-                : 'ردیابی این شخص متوقف است (کلیک برای فعال‌سازی)'
-            }
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-              isTrackingEnabled
-                ? 'bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border-primary-500/40 shadow-xs'
-                : 'bg-dark-800 hover:bg-dark-750 text-gray-400 border-white/10'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isTrackingEnabled ? 'bg-primary-400 animate-pulse' : 'bg-gray-500'
+          <div className="flex items-center gap-1.5">
+            {onOpenFullTimeline && (
+              <button
+                type="button"
+                onClick={() => onOpenFullTimeline(userId)}
+                title="مشاهده در نقشه و تایم‌لاین بزرگ"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan border border-accent-cyan/30 transition-all cursor-pointer shadow-xs"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>نقشه بزرگ</span>
+              </button>
+            )}
+
+            {/* Per-User Tracking Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleTracking}
+              title={
+                isTrackingEnabled
+                  ? 'ردیابی این شخص فعال است (کلیک برای غیرفعال‌سازی)'
+                  : 'ردیابی این شخص متوقف است (کلیک برای فعال‌سازی)'
+              }
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                isTrackingEnabled
+                  ? 'bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border-primary-500/40 shadow-xs'
+                  : 'bg-dark-800 hover:bg-dark-750 text-gray-400 border-white/10'
               }`}
-            />
-            <span>{isTrackingEnabled ? 'ردیابی: روشن' : 'ردیابی: خاموش'}</span>
-          </button>
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isTrackingEnabled ? 'bg-primary-400 animate-pulse' : 'bg-gray-500'
+                }`}
+              />
+              <span>{isTrackingEnabled ? 'روشن' : 'خاموش'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Current Status Pill & Privacy Notice */}

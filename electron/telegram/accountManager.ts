@@ -978,6 +978,9 @@ export class AccountManager {
   private topMessageIds = new Map<string, number>()
   private readOutboxMaxIds = new Map<string, number>()
   private contactAuditInterval?: NodeJS.Timeout
+  private auditQueue = new Map<string, Set<string>>()
+  private lastAuditedTime = new Map<string, number>()
+  private auditQueueInterval?: NodeJS.Timeout
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
@@ -1036,6 +1039,9 @@ export class AccountManager {
         }
       }
     }, 15 * 60 * 1000)
+
+    // Start active-targeted throttled profile audit queue processor (every 3.5 seconds)
+    this.startAuditQueueProcessor()
   }
 
   public setPeerAccessHash(accountId: string, key: string, hash: Long | string): void {
@@ -2401,7 +2407,7 @@ export class AccountManager {
         }
 
         let userStatus: UserStatusInfo | undefined = undefined
-        if (isUser && !isBot) {
+        if (isUser && !isBot && !isSelf && peerId !== accountId) {
           const rawStatus = (peer as any).raw?.status || (peer as any).status
           if (rawStatus) {
             userStatus = extractUserStatus(rawStatus, false)
@@ -2417,7 +2423,7 @@ export class AccountManager {
             this.activityTrackerService.inspectUserSnapshot(accountId, peer, undefined, {
               isMutual: Boolean(peer.isMutualContact || (peer as any).raw?.mutualContact || (peer as any).mutualContact),
               isContact: Boolean(peer.isContact || (peer as any).raw?.contact || (peer as any).contact),
-            })
+            }, { avatarUrl })
           } catch (_) {}
         }
 
@@ -2599,19 +2605,21 @@ export class AccountManager {
           } catch (_) {}
         }
         try {
-          const isMutual = Boolean(c.isMutualContact || c.raw?.mutualContact || c.mutualContact)
-          const isContact = Boolean(c.isContact || c.raw?.contact || (c.contact ?? true))
-          if (c.status) {
-            this.activityTrackerService.recordUserStatus(accountId, id, c.status, {
-              title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.username,
-              avatarUrl,
-              username: c.username,
-            })
+          if (id !== accountId && !c.self) {
+            const isMutual = Boolean(c.isMutualContact || c.raw?.mutualContact || c.mutualContact)
+            const isContact = Boolean(c.isContact || c.raw?.contact || (c.contact ?? true))
+            if (c.status) {
+              this.activityTrackerService.recordUserStatus(accountId, id, c.status, {
+                title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.username,
+                avatarUrl,
+                username: c.username,
+              })
+            }
+            this.activityTrackerService.inspectUserSnapshot(accountId, c, undefined, {
+              isMutual,
+              isContact,
+            }, { avatarUrl })
           }
-          this.activityTrackerService.inspectUserSnapshot(accountId, c, undefined, {
-            isMutual,
-            isContact,
-          })
         } catch (_) {}
 
         return {
@@ -2644,10 +2652,115 @@ export class AccountManager {
       Logger.info(
         `[ActivityTracker] Audited ${contacts.length} contacts for account ${accountId}. New events: ${newEventsCount}`
       )
+      // Also enqueue recent interaction users based on configured range
+      this.enqueueRecentInteractionUsers(accountId).catch(() => {})
       return { totalContacts: contacts.length, newEventsCount }
     } catch (err: any) {
       Logger.warn(`[ActivityTracker] syncAndAuditContacts error for ${accountId}:`, err)
       return { totalContacts: 0, newEventsCount: 0 }
+    }
+  }
+
+  public enqueueUserForAudit(accountId: string, userId: string): void {
+    if (!accountId || !userId || userId === accountId) return
+    const cfg = this.store.getConfig()
+    if (cfg.profileChangeAuditorEnabled === false) return
+    if (cfg.ignoredUserTrackingIds?.includes(userId)) return
+
+    let q = this.auditQueue.get(accountId)
+    if (!q) {
+      q = new Set<string>()
+      this.auditQueue.set(accountId, q)
+    }
+    q.add(userId)
+  }
+
+  public async enqueueRecentInteractionUsers(accountId: string): Promise<void> {
+    try {
+      const cfg = this.store.getConfig()
+      if (cfg.profileChangeAuditorEnabled === false) return
+
+      const range = cfg.profileAuditInteractionRange || '180d'
+      let cutoffSeconds = 180 * 86400
+      if (range === '24h') cutoffSeconds = 86400
+      else if (range === '7d') cutoffSeconds = 7 * 86400
+      else if (range === '30d') cutoffSeconds = 30 * 86400
+      else if (range === '90d') cutoffSeconds = 90 * 86400
+      else if (range === '180d') cutoffSeconds = 180 * 86400
+      else if (range === 'all') cutoffSeconds = Infinity
+
+      const now = Math.floor(Date.now() / 1000)
+      const cached = this.store.loadDialogsCache(accountId)
+      if (cached && Array.isArray(cached)) {
+        for (const d of cached) {
+          const peerId = d.id
+          if (peerId && !peerId.startsWith('-') && peerId !== accountId) {
+            const lastDate = d.lastMessageDate || 0
+            if (cutoffSeconds === Infinity || now - lastDate <= cutoffSeconds) {
+              this.enqueueUserForAudit(accountId, peerId)
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  private startAuditQueueProcessor(): void {
+    if (this.auditQueueInterval) return
+
+    this.auditQueueInterval = setInterval(async () => {
+      const cfg = this.store.getConfig()
+      if (cfg.profileChangeAuditorEnabled === false) return
+
+      for (const [accId, holder] of this.clients.entries()) {
+        if (holder?.info?.status !== 'connected' || !holder.client) continue
+        const q = this.auditQueue.get(accId)
+        if (!q || q.size === 0) continue
+
+        // Pick next user in queue
+        const nextUserId = q.values().next().value
+        if (!nextUserId) continue
+        q.delete(nextUserId)
+
+        // 12-hour cooldown check
+        const auditKey = `${accId}:${nextUserId}`
+        const lastAudit = this.lastAuditedTime.get(auditKey) || 0
+        const now = Math.floor(Date.now() / 1000)
+        if (now - lastAudit < 12 * 3600) {
+          continue
+        }
+
+        try {
+          const peer = await this.resolveInputPeer(accId, nextUserId)
+          if (peer && peer._ === 'inputPeerUser') {
+            const res: any = await holder.client.call({
+              _: 'users.getFullUser',
+              id: { _: 'inputUser', userId: peer.userId, accessHash: peer.accessHash },
+            })
+            const u = res?.users?.find((x: any) => String(x.id) === nextUserId) || res?.users?.[0]
+            if (u) {
+              const avatarUrl = this.avatarCache.get(`avatar_${accId}_${nextUserId}`)
+              this.activityTrackerService.inspectUserSnapshot(
+                accId,
+                u,
+                res.fullUser,
+                {
+                  isMutual: Boolean(u.mutualContact),
+                  isContact: Boolean(u.contact),
+                },
+                { avatarUrl }
+              )
+            }
+            this.lastAuditedTime.set(auditKey, now)
+          }
+        } catch (err: any) {
+          this.lastAuditedTime.set(auditKey, now)
+        }
+      }
+    }, 3500)
+
+    if (this.auditQueueInterval.unref) {
+      this.auditQueueInterval.unref()
     }
   }
 
@@ -5143,7 +5256,7 @@ export class AccountManager {
           userStatus,
         }
 
-        if (u) {
+        if (u && chatId !== accountId && !u.self) {
           try {
             if (u.status) {
               this.activityTrackerService.recordUserStatus(accountId, chatId, u.status, {
@@ -5155,7 +5268,7 @@ export class AccountManager {
             this.activityTrackerService.inspectUserSnapshot(accountId, u, res.fullUser, {
               isMutual: Boolean(u.mutualContact),
               isContact: Boolean(u.contact),
-            })
+            }, { avatarUrl: details.avatarUrl })
           } catch (_) {}
         }
       } else if (inputPeer._ === 'inputPeerChannel') {
@@ -9386,6 +9499,10 @@ export class AccountManager {
   ): Promise<any> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
+    const fullName = [firstName, lastName].filter(Boolean).join(' ')
+    if (fullName) {
+      this.activityTrackerService.updateSnapshotNameSilently(accountId, userId, fullName)
+    }
     return this.contactsService.addContact(holder as any, accountId, userId, firstName, lastName, phone, addPhonePrivacyException, note)
   }
 
@@ -10932,7 +11049,7 @@ export class AccountManager {
             contacts: Boolean(f.contacts),
             nonContacts: Boolean(f.nonContacts ?? f.non_contacts),
             groups: Boolean(f.groups),
-            broadcasts: Boolean(f.broadcasts),
+            broadcasts: f.broadcasts === true,
             bots: Boolean(f.bots),
             excludeMuted: Boolean(f.excludeMuted ?? f.exclude_muted),
             excludeRead: Boolean(f.excludeRead ?? f.exclude_read),
@@ -13814,30 +13931,44 @@ export class AccountManager {
           }
         } else if (update._ === 'updateUserStatus') {
           const uId = String(update.userId ?? update.user_id)
-          this.activityTrackerService.recordUserStatus(accountId, uId, update.status)
+          if (uId && uId !== accountId) {
+            this.activityTrackerService.recordUserStatus(accountId, uId, update.status)
+            const parsed = this.activityTrackerService.parseUserStatusType(update.status)
+            if (parsed.status === 'online' && this.store.getConfig().profileAuditScanOnOnline !== false) {
+              this.enqueueUserForAudit(accountId, uId)
+            }
+          }
         } else if (update._ === 'updateUserName') {
           const uId = String(update.userId ?? update.user_id)
-          const first = update.firstName ?? update.first_name
-          const last = update.lastName ?? update.last_name
-          const uname = Array.isArray(update.usernames) ? update.usernames[0]?.username : undefined
-          this.activityTrackerService.inspectUserSnapshot(accountId, {
-            id: uId,
-            firstName: first,
-            lastName: last,
-            username: uname,
-          })
+          if (uId && uId !== accountId) {
+            const first = update.firstName ?? update.first_name
+            const last = update.lastName ?? update.last_name
+            const uname = Array.isArray(update.usernames) ? update.usernames[0]?.username : undefined
+            this.activityTrackerService.inspectUserSnapshot(accountId, {
+              id: uId,
+              firstName: first,
+              lastName: last,
+              username: uname,
+            })
+          }
         } else if (update._ === 'updateUserPhoto') {
           const uId = String(update.userId ?? update.user_id)
-          this.activityTrackerService.inspectUserSnapshot(accountId, {
-            id: uId,
-            photo: update.photo,
-          })
+          if (uId && uId !== accountId) {
+            this.activityTrackerService.inspectUserSnapshot(accountId, {
+              id: uId,
+              photo: update.photo,
+            })
+          }
         } else if (update._ === 'updateUser') {
           const u = update.user
-          if (u) {
+          if (u && String(u.id) !== accountId && !u.self) {
             const uId = String(u.id)
             if (u.status) {
               this.activityTrackerService.recordUserStatus(accountId, uId, u.status)
+              const parsed = this.activityTrackerService.parseUserStatusType(u.status)
+              if (parsed.status === 'online' && this.store.getConfig().profileAuditScanOnOnline !== false) {
+                this.enqueueUserForAudit(accountId, uId)
+              }
             }
             this.activityTrackerService.inspectUserSnapshot(accountId, u)
           }

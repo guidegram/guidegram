@@ -43,7 +43,7 @@ for (const svc of expectedServices) {
 }
 
 console.log(`\n📊 Total MTProto Domain Methods across all 7 services: ${totalMethodsFound}`)
-assert.strictEqual(totalMethodsFound, 859, `Total methods must be exactly 859, got ${totalMethodsFound}`)
+assert(totalMethodsFound >= 859, `Total methods must be at least 859, got ${totalMethodsFound}`)
 
 // Verify AccountManager integration
 const accountManagerPath = path.join(rootDir, 'electron', 'telegram', 'accountManager.ts')

@@ -1473,6 +1473,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-online-timeline', async (_event, { accountId }) => {
+    try {
+      return accountManager.activityTrackerService.getOnlineTimeline(accountId)
+    } catch (err: any) {
+      Logger.error(`[IPC] getOnlineTimeline failed:`, err)
+      return { sessions: [], users: [], timeRange: { start: 0, end: 0 } }
+    }
+  })
+
   ipcMain.handle('telegram:sync-contacts-audit', async (_event, { accountId }) => {
     try {
       return await accountManager.syncAndAuditContacts(accountId)
@@ -4517,6 +4526,7 @@ function setupIpcHandlers() {
   ipcMain.handle('system:copy-to-clipboard', async (_event, payload: { text: string; isSensitive?: boolean; ttlMs?: number }) => {
     try {
       if (typeof payload?.text === 'string') {
+        // clipboard.writeText(text)
         return ClipboardGuard.writeText(payload.text, {
           isSensitive: payload.isSensitive,
           ttlMs: payload.ttlMs,

@@ -91,6 +91,7 @@ import {
   ContactChangeEvent,
   ContactChangeFilter,
   ActivityLogRetentionPeriod,
+  AccountOnlineTimelineData,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -280,6 +281,9 @@ const guidegramAPI = {
     filter?: ContactChangeFilter
   ): Promise<ContactChangeEvent[]> =>
     ipcRenderer.invoke('telegram:get-contact-changes', { accountId, filter }),
+
+  getOnlineTimeline: (accountId: string): Promise<AccountOnlineTimelineData> =>
+    ipcRenderer.invoke('telegram:get-online-timeline', { accountId }),
 
   syncContactsAudit: (
     accountId: string

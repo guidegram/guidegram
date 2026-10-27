@@ -1006,6 +1006,8 @@ export interface AppConfig {
   profileChangeAuditorEnabled?: boolean
   activityRetentionPeriod?: ActivityLogRetentionPeriod
   ignoredUserTrackingIds?: string[]
+  profileAuditInteractionRange?: '24h' | '7d' | '30d' | '90d' | '180d' | 'all'
+  profileAuditScanOnOnline?: boolean
   // Model Context Protocol (MCP) Server for AI Agents
   mcp?: McpServerConfig
 }
@@ -1729,5 +1731,42 @@ export interface ContactChangeFilter {
   relation?: 'all' | 'mutual' | 'my_contacts' | 'saved'
   changeType?: ContactChangeType | 'all'
   query?: string
+}
+
+export interface ContactOnlineSessionItem {
+  id: string
+  userId: string
+  userName: string
+  userUsername?: string
+  avatarUrl?: string
+  isMutualContact?: boolean
+  isContact?: boolean
+  startTime: number
+  endTime: number
+  durationSeconds: number
+  isCurrentSession: boolean
+}
+
+export interface AccountOnlineTimelineUser {
+  userId: string
+  userName: string
+  userUsername?: string
+  avatarUrl?: string
+  isMutualContact?: boolean
+  isContact?: boolean
+  lastSeen?: number
+  currentStatus?: UserOnlineStatusType
+  totalOnlineToday: number
+  sessionCountToday: number
+  lastOnlineTimestamp?: number
+}
+
+export interface AccountOnlineTimelineData {
+  sessions: ContactOnlineSessionItem[]
+  users: AccountOnlineTimelineUser[]
+  timeRange: {
+    start: number
+    end: number
+  }
 }
 
