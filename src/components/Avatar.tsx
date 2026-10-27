@@ -31,10 +31,27 @@ export const Avatar: React.FC<AvatarProps> = ({
   onClick,
 }) => {
   const cacheKey = accountId && peerId ? `${accountId}_${peerId}` : null
-  const cachedUrl = cacheKey ? avatarMemoryCache.get(cacheKey) : null
+  const cachedUrl = cacheKey ? avatarMemoryCache.get(cacheKey) || null : null
 
-  const [currentUrl, setCurrentUrl] = useState<string | null>(avatarUrl || cachedUrl || null)
+  const isPropValid = Boolean(
+    avatarUrl &&
+      typeof avatarUrl === 'string' &&
+      avatarUrl.trim().length > 30 &&
+      !avatarUrl.endsWith('base64,')
+  )
+
+  const resolvedInitialUrl = isPropValid ? avatarUrl! : cachedUrl
+
+  const [currentUrl, setCurrentUrl] = useState<string | null>(resolvedInitialUrl)
   const [hasError, setHasError] = useState(false)
+
+  // React-recommended pattern: synchronize state during render if identity changes
+  const [prevIdentity, setPrevIdentity] = useState<string | null>(cacheKey)
+  if (cacheKey !== prevIdentity) {
+    setPrevIdentity(cacheKey)
+    setCurrentUrl(resolvedInitialUrl)
+    setHasError(false)
+  }
 
   const isValidUrl =
     Boolean(currentUrl) &&
@@ -46,30 +63,26 @@ export const Avatar: React.FC<AvatarProps> = ({
     // 1. If we already have the full avatar in memory cache, use it immediately
     if (cacheKey && avatarMemoryCache.has(cacheKey)) {
       const cached = avatarMemoryCache.get(cacheKey)!
-      if (cached !== currentUrl && cached.length > 2000 && !cached.endsWith('base64,')) {
+      if (cached && cached.length > 2000 && !cached.endsWith('base64,')) {
         setCurrentUrl(cached)
         setHasError(false)
         return
       }
     }
 
-    // 2. If avatarUrl prop is provided, set as initial view if valid
-    const isPropValid =
-      avatarUrl &&
-      typeof avatarUrl === 'string' &&
-      avatarUrl.length > 30 &&
-      !avatarUrl.endsWith('base64,')
-
-    if (isPropValid && !currentUrl) {
+    // 2. If avatarUrl prop is valid
+    if (isPropValid && avatarUrl) {
       setCurrentUrl(avatarUrl)
-      // If it's a full dataUrl or media URL (not a stripped thumb < 2KB), cache it
       if (!avatarUrl.startsWith('data:image/jpeg;base64,') || avatarUrl.length > 2000) {
         if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
         return
       }
+    } else if (!cachedUrl) {
+      // Identity has no photo in props or cache -> explicitly clear previous avatar
+      setCurrentUrl(null)
     }
 
-    // 3. Always attempt to fetch the high-resolution profile photo if accountId and peerId are provided
+    // 3. Attempt to fetch profile photo from client if accountId and peerId are available
     if (!accountId || !peerId || !window.guidegram?.getProfilePhoto) {
       return
     }
@@ -88,16 +101,21 @@ export const Avatar: React.FC<AvatarProps> = ({
           if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)
           setCurrentUrl(photoDataUrl)
           setHasError(false)
+        } else if (!isPropValid) {
+          setCurrentUrl(null)
         }
       })
       .catch(() => {
-        // Silently fall back to gradient initials
+        if (!isMounted) return
+        if (!isPropValid) {
+          setCurrentUrl(null)
+        }
       })
 
     return () => {
       isMounted = false
     }
-  }, [accountId, peerId, avatarUrl, cacheKey])
+  }, [accountId, peerId, avatarUrl, cacheKey, isPropValid, cachedUrl])
 
   const safeInitials =
     initials ||

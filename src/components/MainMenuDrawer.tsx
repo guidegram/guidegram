@@ -191,6 +191,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <Avatar
+                  key={activeAccount.id}
                   accountId={activeAccount.id}
                   peerId={activeAccount.id}
                   title={fullName}

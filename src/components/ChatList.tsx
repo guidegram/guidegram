@@ -383,6 +383,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         <div className="px-3.5 py-2.5 bg-dark-900/60 border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <Avatar
+              key={account.id}
               accountId={account.id}
               peerId={account.id}
               title={account.firstName || 'User'}
