@@ -30,6 +30,7 @@ export interface SavedMessagesBarProps {
   onMediaFilterChange: (f: 'all' | 'media' | 'files' | 'links' | 'voice') => void
   totalCount: number
   filteredCount: number
+  isSearching?: boolean
 }
 
 export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
@@ -45,6 +46,7 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
   onMediaFilterChange,
   totalCount,
   filteredCount,
+  isSearching = false,
 }) => {
   const { t } = useI18n()
   const [remoteSources, setRemoteSources] = useState<SavedDialogItem[]>([])
@@ -157,7 +159,11 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5">
         {/* Search Bar */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          {isSearching ? (
+            <div className="w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          ) : (
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          )}
           <input
             type="text"
             value={searchQuery}

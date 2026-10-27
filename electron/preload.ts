@@ -535,6 +535,21 @@ const guidegramAPI = {
     maxDate?: number
   ): Promise<MessageItem[]> =>
     ipcRenderer.invoke('telegram:search-global', { accountId, query, filterType, limit, minDate, maxDate }),
+  searchMessages: (
+    accountId: string,
+    chatId: string,
+    query: string,
+    options?: {
+      filterType?: string
+      savedSourceId?: string
+      savedTag?: string
+      limit?: number
+      offsetId?: number
+      minDate?: number
+      maxDate?: number
+    }
+  ): Promise<MessageItem[]> =>
+    ipcRenderer.invoke('telegram:search-messages', { accountId, chatId, query, options }),
   getHistoricalMessages: (accountId: string, chatId: string, limit?: number, offsetDate?: number, offsetId?: number): Promise<MessageItem[]> =>
     ipcRenderer.invoke('telegram:get-historical-messages', { accountId, chatId, limit, offsetDate, offsetId }),
 

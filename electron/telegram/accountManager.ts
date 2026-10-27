@@ -4265,6 +4265,304 @@ export class AccountManager {
     }
   }
 
+  public async searchMessages(
+    accountId: string,
+    chatId: string,
+    query: string,
+    options?: {
+      filterType?: string
+      savedSourceId?: string
+      savedTag?: string
+      limit?: number
+      offsetId?: number
+      minDate?: number
+      maxDate?: number
+    }
+  ): Promise<MessageItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const s = String(chatId).trim()
+      const isSelf = s === 'self' || s === 'me' || (holder.info && s === holder.info.id)
+      const inputPeer = isSelf ? { _: 'inputPeerSelf' } : await this.resolveInputPeer(accountId, chatId)
+
+      // Map filterType to MTProto TL InputMessagesFilter
+      let mtFilter: any = { _: 'inputMessagesFilterEmpty' }
+      const fType = options?.filterType?.toLowerCase()
+      if (fType === 'media' || fType === 'photos' || fType === 'videos') {
+        mtFilter = { _: 'inputMessagesFilterPhotoVideo' }
+      } else if (fType === 'links' || fType === 'url') {
+        mtFilter = { _: 'inputMessagesFilterUrl' }
+      } else if (fType === 'files' || fType === 'documents') {
+        mtFilter = { _: 'inputMessagesFilterDocument' }
+      } else if (fType === 'audio' || fType === 'music') {
+        mtFilter = { _: 'inputMessagesFilterMusic' }
+      } else if (fType === 'voice' || fType === 'round') {
+        mtFilter = { _: 'inputMessagesFilterRoundVoice' }
+      } else if (fType === 'pinned') {
+        mtFilter = { _: 'inputMessagesFilterPinned' }
+      }
+
+      let savedPeer: any = undefined
+      if (options?.savedSourceId) {
+        try {
+          savedPeer = await this.resolveInputPeer(accountId, options.savedSourceId)
+        } catch (peerErr) {
+          Logger.warn('[AccountManager] searchMessages resolve savedSourceId error:', peerErr)
+        }
+      }
+
+      let savedReactionList: any[] | undefined = undefined
+      if (options?.savedTag && options.savedTag.trim()) {
+        savedReactionList = [{ _: 'reactionEmoji', emoticon: options.savedTag.trim() }]
+      }
+
+      const callPayload: any = {
+        _: 'messages.search',
+        peer: inputPeer,
+        q: query || '',
+        filter: mtFilter,
+        minDate: options?.minDate || 0,
+        maxDate: options?.maxDate || 0,
+        offsetId: options?.offsetId || 0,
+        addOffset: 0,
+        limit: Math.min(Math.max(options?.limit || 50, 1), 100),
+        maxId: 0,
+        minId: 0,
+        hash: Long.ZERO,
+      }
+
+      if (savedPeer) {
+        callPayload.saved_peer_id = savedPeer
+      }
+      if (savedReactionList && savedReactionList.length > 0) {
+        callPayload.saved_reaction = savedReactionList
+      }
+
+      const res: any = await holder.client.call(callPayload)
+
+      const rawMessages = Array.isArray(res?.messages) ? res.messages : []
+      const users = new Map<number, any>()
+      const chats = new Map<number, any>()
+
+      if (res?.users) {
+        res.users.forEach((u: any) => {
+          users.set(u.id, u)
+          if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+          const thumb = extractStrippedThumb(u.photo)
+          if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
+        })
+      }
+      if (res?.chats) {
+        res.chats.forEach((c: any) => {
+          chats.set(c.id, c)
+          if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+          const thumb = extractStrippedThumb(c.photo)
+          if (thumb) this.thumbCache.set(`${accountId}_-${c.id}`, thumb)
+        })
+      }
+
+      const items: MessageItem[] = []
+      for (const m of rawMessages) {
+        if (!m || m._ === 'messageEmpty') continue
+
+        const id = m.id
+        const date = m.date ? (m.date < 1e11 ? m.date * 1000 : m.date) : Date.now()
+        const isOutgoing = Boolean(m.out)
+        let text = m.message || ''
+
+        let senderId = ''
+        let senderName = ''
+        let senderUsername: string | undefined = undefined
+        let senderAvatarUrl: string | undefined = undefined
+
+        if (m.fromId) {
+          if (m.fromId._ === 'peerUser') {
+            senderId = m.fromId.userId.toString()
+            const u = users.get(m.fromId.userId)
+            if (u) {
+              senderName = formatEntityName(u)
+              senderUsername = u.username
+              senderAvatarUrl =
+                this.avatarCache.get(`${accountId}_${u.id}`) ||
+                this.thumbCache.get(`${accountId}_${u.id}`) ||
+                extractStrippedThumb(u.photo)
+            }
+          } else if (m.fromId._ === 'peerChannel') {
+            senderId = `-${m.fromId.channelId}`
+            const c = chats.get(m.fromId.channelId)
+            if (c) {
+              senderName = formatEntityName(c)
+              senderUsername = c.username
+              senderAvatarUrl =
+                this.avatarCache.get(`${accountId}_-${c.id}`) ||
+                this.thumbCache.get(`${accountId}_-${c.id}`) ||
+                extractStrippedThumb(c.photo)
+            }
+          } else if (m.fromId._ === 'peerChat') {
+            senderId = `-${m.fromId.chatId}`
+            const c = chats.get(m.fromId.chatId)
+            if (c) {
+              senderName = formatEntityName(c)
+              senderAvatarUrl =
+                this.avatarCache.get(`${accountId}_-${c.id}`) ||
+                this.thumbCache.get(`${accountId}_-${c.id}`) ||
+                extractStrippedThumb(c.photo)
+            }
+          }
+        }
+
+        if (!senderName) {
+          if (isOutgoing) {
+            senderName = holder.info?.firstName || 'You'
+            senderId = holder.info?.id || ''
+          } else {
+            senderName = 'Telegram User'
+          }
+        }
+
+        // Forward information (crucial for Saved Messages)
+        let isForwarded = Boolean((m as any).fwdFrom)
+        let forwardFromName = (m as any).fwdFrom?.fromName
+        let forwardFromId: string | undefined = undefined
+        const forwardDate = (m as any).fwdFrom?.date ? (m as any).fwdFrom.date * 1000 : undefined
+        if ((m as any).fwdFrom?.fromId) {
+          const fid = (m as any).fwdFrom.fromId
+          if (fid._ === 'peerUser') {
+            forwardFromId = fid.userId?.toString()
+            const u = users.get(fid.userId)
+            if (u && !forwardFromName) forwardFromName = formatEntityName(u)
+          } else if (fid._ === 'peerChannel') {
+            forwardFromId = `-${fid.channelId}`
+            const c = chats.get(fid.channelId)
+            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+          } else if (fid._ === 'peerChat') {
+            forwardFromId = `-${fid.chatId}`
+            const c = chats.get(fid.chatId)
+            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+          }
+        }
+        const forwardInfo = isForwarded
+          ? {
+              fromId: forwardFromId,
+              fromTitle: forwardFromName,
+              date: forwardDate,
+            }
+          : undefined
+
+        // Reactions
+        const reactions: MessageReactionItem[] = []
+        if (m.reactions?.results) {
+          for (const r of m.reactions.results) {
+            if (r.reaction?._ === 'reactionEmoji') {
+              reactions.push({ emoji: r.reaction.emoticon, count: r.count, chosen: r.chosen || false })
+            } else if (r.reaction?._ === 'reactionPaid') {
+              reactions.push({ emoji: '⭐️', count: r.count, chosen: r.chosen || false, isPaid: true })
+            }
+          }
+        }
+
+        // Media
+        let mediaType: MessageItem['mediaType']
+        let mediaFileName: string | undefined
+        let mediaFileSize: number | undefined
+        let mediaDuration: number | undefined
+        let mediaTitle: string | undefined
+        let mediaPerformer: string | undefined
+        let isVoice = false
+        let isRoundVideo = false
+        let isSticker = false
+        let strippedThumb: string | undefined
+        let voiceWaveform: number[] | undefined
+
+        if (m.media) {
+          const mType = m.media._
+          if (mType === 'messageMediaPhoto') {
+            mediaType = 'photo'
+            strippedThumb = extractStrippedThumb(m.media.photo)
+          } else if (mType === 'messageMediaDocument') {
+            const doc = m.media.document
+            if (doc && doc._ === 'document') {
+              mediaFileSize = Number(doc.size || 0)
+              mediaType = 'document'
+              strippedThumb = extractStrippedThumb(doc)
+              if (doc.attributes) {
+                for (const attr of doc.attributes) {
+                  if (attr._ === 'documentAttributeFilename') mediaFileName = attr.fileName
+                  if (attr._ === 'documentAttributeAudio') {
+                    mediaDuration = attr.duration
+                    if (attr.waveform) {
+                      voiceWaveform = decodeMtprotoWaveform(attr.waveform)
+                    }
+                    if (attr.voice) {
+                      isVoice = true
+                      mediaType = 'voice'
+                    } else {
+                      mediaType = 'audio'
+                      mediaTitle = attr.title
+                      mediaPerformer = attr.performer
+                    }
+                  }
+                  if (attr._ === 'documentAttributeVideo') {
+                    mediaDuration = attr.duration
+                    if (attr.roundMessage) isRoundVideo = true
+                    mediaType = 'video'
+                  }
+                  if (attr._ === 'documentAttributeSticker') {
+                    isSticker = true
+                    mediaType = 'sticker'
+                  }
+                }
+              }
+            }
+          } else if (mType === 'messageMediaWebPage') {
+            mediaType = 'webpage'
+          }
+        }
+
+        const entities = parseMtprotoEntities(m.entities)
+
+        items.push({
+          id,
+          chatId,
+          accountId,
+          senderId,
+          senderName,
+          senderUsername,
+          senderAvatarUrl,
+          text,
+          date,
+          isOutgoing,
+          isRead: true,
+          isForwarded,
+          forwardFromName,
+          forwardFromId,
+          forwardInfo,
+          reactions: reactions.length > 0 ? reactions : undefined,
+          mediaType,
+          mediaFileName,
+          mediaFileSize,
+          mediaDuration,
+          mediaTitle,
+          mediaPerformer,
+          strippedThumb,
+          isVoice,
+          voiceWaveform,
+          isRoundVideo,
+          isSticker,
+          entities,
+          replyToMsgId: m.replyTo?.replyToMsgId,
+        })
+      }
+
+      return items
+    } catch (err) {
+      Logger.error('[AccountManager] searchMessages error:', err)
+      return []
+    }
+  }
+
   public async getSharedMedia(
     accountId: string,
     chatId: string,

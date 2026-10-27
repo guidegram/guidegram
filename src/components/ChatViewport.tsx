@@ -1205,6 +1205,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [savedTagFilter, setSavedTagFilter] = useState<string | null>(null)
   const [savedSearchQuery, setSavedSearchQuery] = useState('')
   const [savedMediaFilter, setSavedMediaFilter] = useState<'all' | 'media' | 'files' | 'links' | 'voice'>('all')
+  const [savedSearchResults, setSavedSearchResults] = useState<MessageItem[] | null>(null)
+  const [isSavedSearching, setIsSavedSearching] = useState(false)
 
   // Telegram Instant View (IV) article reader state
   const [instantViewArticle, setInstantViewArticle] = useState<InstantViewArticle | null>(null)
@@ -1919,6 +1921,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setSavedTagFilter(null)
     setSavedSearchQuery('')
     setSavedMediaFilter('all')
+    setSavedSearchResults(null)
+    setIsSavedSearching(false)
     audioLifecycleGuard.stopCurrentVoice()
     audioPlayerRef.current = null
     setPlayingVoiceId(null)
@@ -2158,33 +2162,46 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     // 4. Saved Messages 2.0 Filters (Source Chat, Reaction Tags, Search Query, Media Type)
     if (chat?.isSavedMessages) {
-      if (savedSourceFilter) {
-        result = result.filter(
-          (m) => m.forwardInfo?.fromId === savedSourceFilter
-        )
-      }
-      if (savedTagFilter) {
-        result = result.filter(
-          (m) => m.reactions && m.reactions.some((r) => r.emoji === savedTagFilter)
-        )
-      }
-      if (savedSearchQuery.trim()) {
-        const sq = savedSearchQuery.toLowerCase()
-        result = result.filter(
-          (m) =>
-            (m.text && m.text.toLowerCase().includes(sq)) ||
-            (m.mediaFileName && m.mediaFileName.toLowerCase().includes(sq)) ||
-            (m.forwardInfo?.fromTitle && m.forwardInfo.fromTitle.toLowerCase().includes(sq))
-        )
-      }
-      if (savedMediaFilter !== 'all') {
-        result = result.filter((m) => {
-          if (savedMediaFilter === 'media') return m.mediaType === 'photo' || m.mediaType === 'video'
-          if (savedMediaFilter === 'files') return m.mediaType === 'document'
-          if (savedMediaFilter === 'links') return Boolean(m.webPage || m.text?.includes('http'))
-          if (savedMediaFilter === 'voice') return m.mediaType === 'voice' || Boolean(m.isVoice)
-          return true
-        })
+      const hasSavedFilters = Boolean(
+        savedSourceFilter ||
+        savedTagFilter ||
+        savedSearchQuery.trim() ||
+        savedMediaFilter !== 'all'
+      )
+
+      if (hasSavedFilters) {
+        if (savedSearchResults !== null) {
+          return savedSearchResults
+        }
+        if (savedSourceFilter) {
+          result = result.filter(
+            (m) => m.forwardInfo?.fromId === savedSourceFilter
+          )
+        }
+        if (savedTagFilter) {
+          result = result.filter(
+            (m) => m.reactions && m.reactions.some((r) => r.emoji === savedTagFilter)
+          )
+        }
+        if (savedSearchQuery.trim()) {
+          const sq = savedSearchQuery.toLowerCase()
+          result = result.filter(
+            (m) =>
+              (m.text && m.text.toLowerCase().includes(sq)) ||
+              (m.mediaFileName && m.mediaFileName.toLowerCase().includes(sq)) ||
+              (m.forwardInfo?.fromTitle && m.forwardInfo.fromTitle.toLowerCase().includes(sq))
+          )
+        }
+        if (savedMediaFilter !== 'all') {
+          result = result.filter((m) => {
+            if (savedMediaFilter === 'media') return m.mediaType === 'photo' || m.mediaType === 'video'
+            if (savedMediaFilter === 'files') return m.mediaType === 'document'
+            if (savedMediaFilter === 'links') return Boolean(m.webPage || m.text?.includes('http'))
+            if (savedMediaFilter === 'voice') return m.mediaType === 'voice' || Boolean(m.isVoice)
+            return true
+          })
+        }
+        return result
       }
     }
 
@@ -2198,6 +2215,73 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     savedSourceFilter,
     savedTagFilter,
     savedSearchQuery,
+    savedMediaFilter,
+    savedSearchResults,
+  ])
+
+  // Remote Telegram MTProto search for Saved Messages across entire server history
+  useEffect(() => {
+    if (!chat?.isSavedMessages) {
+      setSavedSearchResults(null)
+      setIsSavedSearching(false)
+      return
+    }
+
+    const hasFilters = Boolean(
+      savedSearchQuery.trim() ||
+      savedSourceFilter ||
+      savedTagFilter ||
+      savedMediaFilter !== 'all'
+    )
+
+    if (!hasFilters) {
+      setSavedSearchResults(null)
+      setIsSavedSearching(false)
+      return
+    }
+
+    let cancelled = false
+    setIsSavedSearching(true)
+
+    const timer = setTimeout(() => {
+      if (cancelled) return
+
+      if (window.guidegram?.searchMessages) {
+        window.guidegram.searchMessages(chat.accountId, chat.id, savedSearchQuery.trim(), {
+          filterType: savedMediaFilter,
+          savedSourceId: savedSourceFilter || undefined,
+          savedTag: savedTagFilter || undefined,
+          limit: 100,
+        }).then((results) => {
+          if (!cancelled) {
+            setSavedSearchResults(results || [])
+          }
+        }).catch((err) => {
+          if (!cancelled) {
+            console.warn('[ChatViewport] searchMessages error:', err)
+            setSavedSearchResults([])
+          }
+        }).finally(() => {
+          if (!cancelled) {
+            setIsSavedSearching(false)
+          }
+        })
+      } else {
+        setIsSavedSearching(false)
+      }
+    }, savedSearchQuery.trim() ? 300 : 50)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [
+    chat?.accountId,
+    chat?.id,
+    chat?.isSavedMessages,
+    savedSearchQuery,
+    savedSourceFilter,
+    savedTagFilter,
     savedMediaFilter,
   ])
 
@@ -5506,6 +5590,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           onMediaFilterChange={setSavedMediaFilter}
           totalCount={messages.length}
           filteredCount={filteredMessages.length}
+          isSearching={isSavedSearching}
         />
       )}
 
@@ -5554,9 +5639,48 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <span>{t('chat.loading_prev')}</span>
           </div>
         )}
-        {filteredMessages.length === 0 ? (
+        {isSavedSearching ? (
+          <div className="flex flex-col items-center justify-center h-full text-xs text-gray-400 gap-3 animate-in fade-in duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-400 mb-1 shadow-glow">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            </div>
+            <div className="text-sm font-semibold text-gray-200">
+              {t('saved_messages.searching_remote') || 'در حال جستجو در میان تمام پیام‌های ذخیره‌شده تلگرام...'}
+            </div>
+            <div className="text-[11px] text-gray-500 font-mono">
+              MTProto: messages.search
+            </div>
+          </div>
+        ) : filteredMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-xs text-gray-400 gap-3">
-            {(chat.isBot || chatDetails?.isBot) && !searchQuery ? (
+            {chat?.isSavedMessages && (savedSearchQuery || savedSourceFilter || savedTagFilter || savedMediaFilter !== 'all') ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center max-w-sm select-none animate-in fade-in zoom-in-95 duration-150">
+                <div className="w-14 h-14 rounded-2xl bg-dark-800/90 border border-white/5 flex items-center justify-center text-gray-500 mb-3 shadow-inner">
+                  <Bookmark className="w-7 h-7 text-primary-400/80" />
+                </div>
+                <div className="text-sm font-bold text-gray-200 mb-1">
+                  {savedSearchQuery
+                    ? `هیچ پیامی با عبارت «${savedSearchQuery}» در پیام‌های ذخیره‌شده پیدا نشد`
+                    : 'هیچ پیامی با فیلترهای انتخابی یافت نشد'}
+                </div>
+                <div className="text-xs text-gray-400 mb-4">
+                  سرچ از سرور تلگرام نتیجه‌ای برنگرداند یا فیلترهای انتخاب‌شده با هیچ پیامی مطابقت ندارند.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSavedSearchQuery('')
+                    setSavedSourceFilter(null)
+                    setSavedTagFilter(null)
+                    setSavedMediaFilter('all')
+                  }}
+                  className="px-4 py-2 rounded-xl bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 border border-primary-500/40 text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>پاک کردن فیلترها و نمایش همه پیام‌ها</span>
+                </button>
+              </div>
+            ) : (chat.isBot || chatDetails?.isBot) && !searchQuery ? (
               <BotIntroCard
                 chat={chat}
                 chatDetails={chatDetails}

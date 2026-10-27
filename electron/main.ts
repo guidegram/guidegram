@@ -2044,6 +2044,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:search-messages', async (_event, { accountId, chatId, query, options }) => {
+    try {
+      return await accountManager.searchMessages(accountId, chatId, query, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] searchMessages error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:get-historical-messages', async (_event, { accountId, chatId, limit, offsetDate, offsetId }) => {
     try {
       return await accountManager.getHistoricalMessages(accountId, chatId, limit, offsetDate, offsetId)
