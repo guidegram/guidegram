@@ -38,17 +38,57 @@ const pageHtml = `<!DOCTYPE html>
       }
     }
   </script>
+  <!-- High-Speed Unrestricted Variable Fonts (Direct CDN with 100% Iran accessibility) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/vazirmatn/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/noto-sans-arabic/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5.1.0/index.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --font-latin: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-fa: 'Vazirmatn Variable', 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-ar: 'Noto Sans Arabic Variable', 'Noto Sans Arabic', 'Vazirmatn Variable', 'Vazirmatn', system-ui, sans-serif;
+    }
+
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: var(--font-latin);
       background-color: #07090e;
       color: #f3f4f6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    [dir="rtl"] {
-      font-family: 'Vazirmatn', 'Noto Sans Arabic', Tahoma, sans-serif;
+
+    /* RTL & Persian Master Typography */
+    html[dir="rtl"], 
+    html[dir="rtl"] body, 
+    html[dir="rtl"] button, 
+    html[dir="rtl"] input, 
+    html[dir="rtl"] select, 
+    html[dir="rtl"] textarea {
+      font-family: var(--font-fa) !important;
+      letter-spacing: 0 !important;
+    }
+
+    /* Dedicated Arabic Typography */
+    html[lang="ar"], 
+    html[lang="ar"] body, 
+    html[lang="ar"] button, 
+    html[lang="ar"] input, 
+    html[lang="ar"] select, 
+    html[lang="ar"] textarea {
+      font-family: var(--font-ar) !important;
+    }
+
+    [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6 {
+      font-weight: 800 !important;
+      line-height: 1.45 !important;
+      letter-spacing: -0.015em !important;
+    }
+
+    [dir="rtl"] p, [dir="rtl"] span {
+      line-height: 1.75;
     }
     .glow-radial {
       background: radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.08) 35%, transparent 70%);
