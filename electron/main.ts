@@ -86,6 +86,7 @@ const portableDataDir = dataDirOverride
 
 app.setPath('userData', portableDataDir)
 passcodeGuard.init(portableDataDir)
+StorageGuardrails.setApp(app)
 
 // Enforce Single Instance Application Lock: prevent duplicate instances/windows
 const hasSingleInstanceLock = app.requestSingleInstanceLock()
@@ -174,7 +175,17 @@ let isQuitting = false
 
 // Focus primary window when user clicks pinned taskbar icon or second instance launches
 app.on('second-instance', (_event, commandLine) => {
-  Logger.info('[App] Second instance launch detected. Focusing primary window.')
+  Logger.info('[App] Second instance launch detected.')
+  const isHeadless = Array.isArray(commandLine)
+    ? commandLine.some((arg) => typeof arg === 'string' && arg.includes('--headless'))
+    : typeof commandLine === 'string' && (commandLine as string).includes('--headless')
+
+  if (isHeadless) {
+    Logger.info('[App] Second instance launch was headless (--headless). Keeping window state intact.')
+    return
+  }
+
+  Logger.info('[App] Focusing primary window for user interaction.')
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
     if (!mainWindow.isVisible()) mainWindow.show()
@@ -196,10 +207,7 @@ app.on('second-instance', (_event, commandLine) => {
       }
     }
   } else {
-    const isHeadless = commandLine?.includes('--headless')
-    if (!isHeadless) {
-      createWindow()
-    }
+    createWindow()
   }
 })
 

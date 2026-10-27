@@ -77,6 +77,7 @@ async function findAndLaunchGuidegramHeadless() {
   const appData = process.env.APPDATA || ''
   const locatorPath = path.join(appData, 'Guidegram', 'portable_locator.json')
   let exePath = ''
+  let dataPath = ''
 
   if (fs.existsSync(locatorPath)) {
     try {
@@ -84,7 +85,24 @@ async function findAndLaunchGuidegramHeadless() {
       if (info.executablePath && fs.existsSync(info.executablePath)) {
         exePath = info.executablePath
       }
+      if (info.dataPath && fs.existsSync(info.dataPath)) {
+        dataPath = info.dataPath
+      }
     } catch {}
+  }
+
+  // Check if MCP is disabled in user's config.json
+  if (dataPath) {
+    const cfgPath = path.join(dataPath, 'config.json')
+    if (fs.existsSync(cfgPath)) {
+      try {
+        const userCfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'))
+        if (userCfg?.mcp?.enabled === false) {
+          logDebug('Guidegram MCP server is explicitly disabled in user settings (config.json). Skipping auto-spawn.')
+          return false
+        }
+      } catch {}
+    }
   }
 
   // 1.5 Check relative installation directory (e.g. <app>/resources/scripts/mcp-bridge.mjs)
