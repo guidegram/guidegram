@@ -2884,7 +2884,9 @@ export class AccountManager {
       const rawMsgMap = new Map<number, any>()
       if (res?.users) {
         res.users.forEach((u: any) => {
+          const uid = u.id?.toString()
           users.set(u.id, u)
+          if (uid) users.set(uid, u)
           if (u.accessHash) this.setPeerAccessHash(accountId, u.id.toString(), u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
           if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
@@ -2902,7 +2904,9 @@ export class AccountManager {
       }
       if (res?.chats) {
         res.chats.forEach((c: any) => {
+          const cid = c.id?.toString()
           chats.set(c.id, c)
+          if (cid) chats.set(cid, c)
           const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
           const peerId = isChan ? `-100${c.id}` : `-${c.id}`
           if (c.accessHash) {
@@ -3294,26 +3298,60 @@ export class AccountManager {
 
         const entities = parseMtprotoEntities(m.entities)
 
-        let isForwarded = Boolean((m as any).fwdFrom)
-        let forwardFromName = (m as any).fwdFrom?.fromName
+        let isForwarded = Boolean((m as any).fwdFrom || (m as any).fwd_from || (m as any).savedPeerId || (m as any).saved_peer_id)
+        let forwardFromName: string | undefined = undefined
         let forwardFromId: string | undefined = undefined
-        const forwardDate = (m as any).fwdFrom?.date ? (m as any).fwdFrom.date * 1000 : undefined
-        if ((m as any).fwdFrom?.fromId) {
-          const fid = (m as any).fwdFrom.fromId
-          if (fid._ === 'peerUser') {
-            forwardFromId = fid.userId?.toString()
-            const u = users.get(fid.userId)
-            if (u && !forwardFromName) forwardFromName = formatEntityName(u)
-          } else if (fid._ === 'peerChannel') {
-            forwardFromId = `-${fid.channelId}`
-            const c = chats.get(fid.channelId)
+        let forwardDate: number | undefined = undefined
+        let postAuthor: string | undefined = undefined
+
+        const fwd = (m as any).fwdFrom || (m as any).fwd_from
+        if (fwd) {
+          if (fwd.date) forwardDate = fwd.date < 1e11 ? fwd.date * 1000 : fwd.date
+          if (fwd.fromName || fwd.from_name) forwardFromName = fwd.fromName || fwd.from_name
+          if (fwd.savedFromName || fwd.saved_from_name) forwardFromName = fwd.savedFromName || fwd.saved_from_name
+          if (fwd.postAuthor || fwd.post_author) postAuthor = fwd.postAuthor || fwd.post_author
+
+          const targetPeer = fwd.fromId || fwd.from_id || fwd.savedFromPeer || fwd.saved_from_peer || fwd.savedFromId || fwd.saved_from_id
+          if (targetPeer) {
+            if (targetPeer._ === 'peerChannel') {
+              const cid = targetPeer.channelId?.toString()
+              forwardFromId = `-100${cid}`
+              const c = chats.get(cid) || chats.get(targetPeer.channelId)
+              if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+            } else if (targetPeer._ === 'peerUser') {
+              const uid = targetPeer.userId?.toString()
+              forwardFromId = uid
+              const u = users.get(uid) || users.get(targetPeer.userId)
+              if (u && !forwardFromName) forwardFromName = formatEntityName(u)
+            } else if (targetPeer._ === 'peerChat') {
+              const cid = targetPeer.chatId?.toString()
+              forwardFromId = `-${cid}`
+              const c = chats.get(cid) || chats.get(targetPeer.chatId)
+              if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+            }
+          }
+        }
+
+        const rawSavedPeer = (m as any).savedPeerId || (m as any).saved_peer_id
+        if (rawSavedPeer) {
+          if (rawSavedPeer._ === 'peerChannel') {
+            const cid = rawSavedPeer.channelId?.toString()
+            if (!forwardFromId) forwardFromId = `-100${cid}`
+            const c = chats.get(cid) || chats.get(rawSavedPeer.channelId)
             if (c && !forwardFromName) forwardFromName = formatEntityName(c)
-          } else if (fid._ === 'peerChat') {
-            forwardFromId = `-${fid.chatId}`
-            const c = chats.get(fid.chatId)
+          } else if (rawSavedPeer._ === 'peerUser') {
+            const uid = rawSavedPeer.userId?.toString()
+            if (!forwardFromId) forwardFromId = uid
+            const u = users.get(uid) || users.get(rawSavedPeer.userId)
+            if (u && !forwardFromName) forwardFromName = formatEntityName(u)
+          } else if (rawSavedPeer._ === 'peerChat') {
+            const cid = rawSavedPeer.chatId?.toString()
+            if (!forwardFromId) forwardFromId = `-${cid}`
+            const c = chats.get(cid) || chats.get(rawSavedPeer.chatId)
             if (c && !forwardFromName) forwardFromName = formatEntityName(c)
           }
         }
+
         const forwardInfo = isForwarded ? {
           fromId: forwardFromId,
           fromTitle: forwardFromName,
@@ -4713,31 +4751,45 @@ export class AccountManager {
 
       if (savedPeer) {
         callPayload.saved_peer_id = savedPeer
+        callPayload.savedPeerId = savedPeer
       }
       if (savedReactionList && savedReactionList.length > 0) {
         callPayload.saved_reaction = savedReactionList
+        callPayload.savedReaction = savedReactionList
       }
 
       const res: any = await holder.client.call(callPayload)
 
       const rawMessages = Array.isArray(res?.messages) ? res.messages : []
-      const users = new Map<number, any>()
-      const chats = new Map<number, any>()
+      const users = new Map<string, any>()
+      const chats = new Map<string, any>()
 
       if (res?.users) {
         res.users.forEach((u: any) => {
-          users.set(u.id, u)
-          if (u.accessHash) this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
+          const uid = u.id?.toString()
+          users.set(uid, u)
+          if (u.accessHash) this.setPeerAccessHash(accountId, uid, u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
-          if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
+          if (thumb) this.thumbCache.set(`${accountId}_${uid}`, thumb)
         })
       }
       if (res?.chats) {
         res.chats.forEach((c: any) => {
-          chats.set(c.id, c)
-          if (c.accessHash) this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
+          const cid = c.id?.toString()
+          chats.set(cid, c)
+          const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
+          const peerId = isChan ? `-100${cid}` : `-${cid}`
+          if (c.accessHash) {
+            this.setPeerAccessHash(accountId, cid, c.accessHash)
+            this.setPeerAccessHash(accountId, peerId, c.accessHash)
+            this.setPeerAccessHash(accountId, `-${cid}`, c.accessHash)
+          }
           const thumb = extractStrippedThumb(c.photo)
-          if (thumb) this.thumbCache.set(`${accountId}_-${c.id}`, thumb)
+          if (thumb) {
+            this.thumbCache.set(`${accountId}_${cid}`, thumb)
+            this.thumbCache.set(`${accountId}_${peerId}`, thumb)
+            this.thumbCache.set(`${accountId}_-${cid}`, thumb)
+          }
         })
       }
 
@@ -4757,42 +4809,104 @@ export class AccountManager {
 
         if (m.fromId) {
           if (m.fromId._ === 'peerUser') {
-            senderId = m.fromId.userId.toString()
-            const u = users.get(m.fromId.userId)
+            const uid = m.fromId.userId?.toString()
+            senderId = uid
+            const u = users.get(uid)
             if (u) {
               senderName = formatEntityName(u)
               senderUsername = u.username
               senderAvatarUrl =
-                this.avatarCache.get(`${accountId}_${u.id}`) ||
-                this.thumbCache.get(`${accountId}_${u.id}`) ||
+                this.avatarCache.get(`${accountId}_${uid}`) ||
+                this.thumbCache.get(`${accountId}_${uid}`) ||
                 extractStrippedThumb(u.photo)
             }
           } else if (m.fromId._ === 'peerChannel') {
-            senderId = `-${m.fromId.channelId}`
-            const c = chats.get(m.fromId.channelId)
+            const cid = m.fromId.channelId?.toString()
+            senderId = `-100${cid}`
+            const c = chats.get(cid)
             if (c) {
               senderName = formatEntityName(c)
               senderUsername = c.username
               senderAvatarUrl =
-                this.avatarCache.get(`${accountId}_-${c.id}`) ||
-                this.thumbCache.get(`${accountId}_-${c.id}`) ||
+                this.avatarCache.get(`${accountId}_${senderId}`) ||
+                this.avatarCache.get(`${accountId}_-${cid}`) ||
+                this.thumbCache.get(`${accountId}_${senderId}`) ||
                 extractStrippedThumb(c.photo)
             }
           } else if (m.fromId._ === 'peerChat') {
-            senderId = `-${m.fromId.chatId}`
-            const c = chats.get(m.fromId.chatId)
+            const cid = m.fromId.chatId?.toString()
+            senderId = `-${cid}`
+            const c = chats.get(cid)
             if (c) {
               senderName = formatEntityName(c)
               senderAvatarUrl =
-                this.avatarCache.get(`${accountId}_-${c.id}`) ||
-                this.thumbCache.get(`${accountId}_-${c.id}`) ||
+                this.avatarCache.get(`${accountId}_-${cid}`) ||
+                this.thumbCache.get(`${accountId}_-${cid}`) ||
                 extractStrippedThumb(c.photo)
             }
           }
         }
 
+        // Comprehensive forward information (crucial for Saved Messages 2.0)
+        let isForwarded = Boolean((m as any).fwdFrom || (m as any).fwd_from || (m as any).savedPeerId || (m as any).saved_peer_id)
+        let forwardFromName: string | undefined = undefined
+        let forwardFromId: string | undefined = undefined
+        let forwardDate: number | undefined = undefined
+        let postAuthor: string | undefined = undefined
+
+        const fwd = (m as any).fwdFrom || (m as any).fwd_from
+        if (fwd) {
+          if (fwd.date) forwardDate = fwd.date < 1e11 ? fwd.date * 1000 : fwd.date
+          if (fwd.fromName || fwd.from_name) forwardFromName = fwd.fromName || fwd.from_name
+          if (fwd.savedFromName || fwd.saved_from_name) forwardFromName = fwd.savedFromName || fwd.saved_from_name
+          if (fwd.postAuthor || fwd.post_author) postAuthor = fwd.postAuthor || fwd.post_author
+
+          const targetPeer = fwd.fromId || fwd.from_id || fwd.savedFromPeer || fwd.saved_from_peer || fwd.savedFromId || fwd.saved_from_id
+          if (targetPeer) {
+            if (targetPeer._ === 'peerChannel') {
+              const cid = targetPeer.channelId?.toString()
+              forwardFromId = `-100${cid}`
+              const c = chats.get(cid)
+              if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+            } else if (targetPeer._ === 'peerUser') {
+              const uid = targetPeer.userId?.toString()
+              forwardFromId = uid
+              const u = users.get(uid)
+              if (u && !forwardFromName) forwardFromName = formatEntityName(u)
+            } else if (targetPeer._ === 'peerChat') {
+              const cid = targetPeer.chatId?.toString()
+              forwardFromId = `-${cid}`
+              const c = chats.get(cid)
+              if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+            }
+          }
+        }
+
+        const rawSavedPeer = (m as any).savedPeerId || (m as any).saved_peer_id
+        if (rawSavedPeer) {
+          if (rawSavedPeer._ === 'peerChannel') {
+            const cid = rawSavedPeer.channelId?.toString()
+            if (!forwardFromId) forwardFromId = `-100${cid}`
+            const c = chats.get(cid)
+            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+          } else if (rawSavedPeer._ === 'peerUser') {
+            const uid = rawSavedPeer.userId?.toString()
+            if (!forwardFromId) forwardFromId = uid
+            const u = users.get(uid)
+            if (u && !forwardFromName) forwardFromName = formatEntityName(u)
+          } else if (rawSavedPeer._ === 'peerChat') {
+            const cid = rawSavedPeer.chatId?.toString()
+            if (!forwardFromId) forwardFromId = `-${cid}`
+            const c = chats.get(cid)
+            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
+          }
+        }
+
         if (!senderName) {
-          if (isOutgoing) {
+          if (forwardFromName) {
+            senderName = forwardFromName
+            senderId = forwardFromId || ''
+          } else if (isOutgoing) {
             senderName = holder.info?.firstName || 'You'
             senderId = holder.info?.id || ''
           } else {
@@ -4800,27 +4914,6 @@ export class AccountManager {
           }
         }
 
-        // Forward information (crucial for Saved Messages)
-        let isForwarded = Boolean((m as any).fwdFrom)
-        let forwardFromName = (m as any).fwdFrom?.fromName
-        let forwardFromId: string | undefined = undefined
-        const forwardDate = (m as any).fwdFrom?.date ? (m as any).fwdFrom.date * 1000 : undefined
-        if ((m as any).fwdFrom?.fromId) {
-          const fid = (m as any).fwdFrom.fromId
-          if (fid._ === 'peerUser') {
-            forwardFromId = fid.userId?.toString()
-            const u = users.get(fid.userId)
-            if (u && !forwardFromName) forwardFromName = formatEntityName(u)
-          } else if (fid._ === 'peerChannel') {
-            forwardFromId = `-${fid.channelId}`
-            const c = chats.get(fid.channelId)
-            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
-          } else if (fid._ === 'peerChat') {
-            forwardFromId = `-${fid.chatId}`
-            const c = chats.get(fid.chatId)
-            if (c && !forwardFromName) forwardFromName = formatEntityName(c)
-          }
-        }
         const forwardInfo = isForwarded
           ? {
               fromId: forwardFromId,
@@ -4917,6 +5010,7 @@ export class AccountManager {
           forwardFromName,
           forwardFromId,
           forwardInfo,
+          postAuthor,
           reactions: reactions.length > 0 ? reactions : undefined,
           mediaType,
           mediaFileName,
@@ -7830,10 +7924,24 @@ export class AccountManager {
       const chatMap = new Map<string, any>()
       const userMap = new Map<string, any>()
       if (Array.isArray(res.chats)) {
-        for (const c of res.chats) chatMap.set(c.id?.toString(), c)
+        for (const c of res.chats) {
+          const cid = c.id?.toString()
+          chatMap.set(cid, c)
+          if (c.accessHash) {
+            this.setPeerAccessHash(accountId, cid, c.accessHash)
+            this.setPeerAccessHash(accountId, `-${cid}`, c.accessHash)
+            this.setPeerAccessHash(accountId, `-100${cid}`, c.accessHash)
+          }
+        }
       }
       if (Array.isArray(res.users)) {
-        for (const u of res.users) userMap.set(u.id?.toString(), u)
+        for (const u of res.users) {
+          const uid = u.id?.toString()
+          userMap.set(uid, u)
+          if (u.accessHash) {
+            this.setPeerAccessHash(accountId, uid, u.accessHash)
+          }
+        }
       }
 
       const items: SavedDialogItem[] = []

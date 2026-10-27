@@ -1,30 +1,34 @@
-# 🚀 Guidegram v2.4.4 — User-Centric Swimlane Gantt & Drag-to-Pan Timeline Edition
+# 🚀 Guidegram v2.4.5 — Thanos Dust Disintegration & Telegram Desktop Total Parity Edition
 
-> **User-Centric Swimlane Gantt Architecture & Mobile Identity Overhaul** featuring sticky multi-directional profile headers, continuous 24-hour horizontal user swimlanes, natural mouse-wheel & drag-to-pan physics, official Android adaptive launcher icons, and zero-empty-gap ergonomics.
+> **Grand Parity & Kinetic Visuals Release** featuring official Telegram Desktop Thanos dust message disintegration, GPU-pooled reaction particle bursts, residual-absorbing grouped media album solvers, native image clipboard & file exporter, and complete Layer 229+ MTProto synchronization.
 
 ---
 
-### 🌟 Release v2.4.4 Highlights
+### 🌟 Release v2.4.5 Highlights
 
-* 📊 **User-Centric Swimlane Gantt Timeline:**
-  * **Dedicated Contact Lanes:** Each contact gets exactly one persistent horizontal swimlane containing all their 24-hour online sessions, eliminating fragmented single-session rows and vertical voids.
-  * **Sticky Multi-Directional Headers:**
-    * **Sticky Left Profile Column:** Profile avatars, full untruncated display names, online status badges, and total active minutes stay pinned during horizontal timeline navigation.
-    * **Sticky Top Time Axis Ruler:** 24-hour clock markers (`00:00` to `23:00`) and live "Now" guideline remain anchored at the top during vertical scrolling.
-  * **Fluid Mouse & Touch Interactions:**
-    * **Mouse-Wheel Horizontal Translation:** Standard vertical mouse wheel naturally scrolls the timeline horizontally.
-    * **Click-and-Drag Panning:** Grabbable canvas enables click-and-drag panning left and right.
-    * **Smooth Zooming:** Granular 1x to 4x timeline zoom with proportional time-axis expansion.
+* 💫 **Thanos Dust Particle Disintegration on Message Delete:**
+  * **Ken Perlin Quintic Smootherstep Wind:** Deleted message bubbles dissolve from left to right into a cloud of glowing dust particles before smoothly unmounting from the chat stream.
+  * **Progressive Delay & Upward Drift:** Physical particle emitter governed by gravity, horizontal air friction, and progressive horizontal ignition delay matching Telegram's GLSL shaders.
+  * **Zero Residual Memory:** Automatically destroys canvas contexts and releases animation frames upon effect completion.
 
-* 📱 **Official Android Adaptive Launcher Icons & Dark Splash Screens:**
-  * Cleaned out default template Android robot vectors and legacy green grid assets.
-  * Generated high-resolution adaptive launcher icons (`ic_launcher`, `ic_launcher_round`, `ic_launcher_foreground`) across all Android screen densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) with signature `#39C6A4` brand background.
-  * Generated dark-themed splash screens (`#0A0D14`) with centered brand insignia.
+* 🌟 **Star & Emoji Reaction Particle Bursts:**
+  * Multi-colored particle explosions when clicking or reacting with emojis and Telegram Stars.
+  * Root-pooled canvas overlay avoiding DOM thrashing and VRAM spikes during rapid reaction picking.
 
-* 🛰️ **Contact Timeline Radar & Universal Self-Exclusion:**
-  * Universal self-exclusion across all 6 MTProto/IPC touchpoints.
-  * Silent local phonebook rename masking.
-  * Tri-state bio hygiene and safe 3.5s anti-flood background query queue.
+* 🖼️ **Grouped Media Album Layout Solver (0px Delta):**
+  * Direct port of Telegram Desktop's `history_view_media_grouped.cpp` and `ui/grouped_layout.cpp`.
+  * Employs residual width allocation to eliminate fractional rounding errors, ensuring 100% exact container width alignment across 2 to 10 photos/videos.
+
+* 🔒 **Official MTProto 333-Emoji Call Fingerprint:**
+  * Cryptographic SHA-256 visual verification key derivation using BigInt modulo 333, matching official iOS, Android, and Desktop clients.
+
+* 📋 **Native Image Clipboard & Save Image As:**
+  * Direct 1-click "Copy Image" to system clipboard via Electron native image buffers and standard Web Clipboard API.
+  * Native OS save dialog ("Save Image As...") with automatic naming and extension preservation.
+
+* 🌐 **Isolated Multi-Account Proxy & Global Controls:**
+  * Granular per-account proxy configurations with unified all-account global toggles.
+  * Instant manual proxy switching with auto-reconnect loop guards.
 
 ---
 *For past release changelogs, please inspect the git commit history.*

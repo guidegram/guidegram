@@ -136,6 +136,8 @@ import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatUserStatus } from '../utils/textUtils'
 import { parseTelegramUrl } from '../utils/telegramLink'
 import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
+import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverlay'
+import { triggerReactionBurst } from '../utils/triggerReactionBurst'
 
 interface ChatViewportProps {
   chat: DialogItem | null
@@ -747,6 +749,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const { t, formatNumber: formatLocalizedNumber } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
   const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
+  const [thanosTarget, setThanosTarget] = useState<{ id: number; rect: DOMRect } | null>(null)
+
+  const handleDeleteWithThanos = async (msg: MessageItem, e?: React.MouseEvent) => {
+    try {
+      const el = document.getElementById(`msg-${msg.id}`) || document.getElementById(`message-bubble-${msg.id}`) || (e?.currentTarget as HTMLElement)?.closest('.message-bubble-container')
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        setThanosTarget({ id: msg.id, rect })
+      }
+    } catch (err) {
+      console.error('Error measuring bubble for Thanos effect:', err)
+    }
+    if (onDeleteMessage) {
+      return await onDeleteMessage(msg)
+    }
+    return false
+  }
 
   // Media cache in component state (cacheKey -> dataUrl or guidegram-media url)
   const [downloadedMedia, setDownloadedMedia] = useState<Record<string, string>>({})
@@ -1213,6 +1232,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [savedMediaFilter, setSavedMediaFilter] = useState<'all' | 'media' | 'files' | 'links' | 'voice'>('all')
   const [savedSearchResults, setSavedSearchResults] = useState<MessageItem[] | null>(null)
   const [isSavedSearching, setIsSavedSearching] = useState(false)
+  const savedSearchInputRef = useRef<HTMLInputElement>(null)
 
   // Telegram Instant View (IV) article reader state
   const [instantViewArticle, setInstantViewArticle] = useState<InstantViewArticle | null>(null)
@@ -2091,14 +2111,25 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault()
-        setIsSearchOpen((prev) => !prev)
-      } else if (e.key === 'Escape' && isSearchOpen) {
-        setIsSearchOpen(false)
+        if (chat?.isSavedMessages) {
+          savedSearchInputRef.current?.focus()
+        } else {
+          setIsSearchOpen((prev) => !prev)
+        }
+      } else if (e.key === 'Escape') {
+        if (chat?.isSavedMessages) {
+          if (savedSearchQuery) {
+            setSavedSearchQuery('')
+          }
+          savedSearchInputRef.current?.blur()
+        } else if (isSearchOpen) {
+          setIsSearchOpen(false)
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isSearchOpen])
+  }, [isSearchOpen, chat?.isSavedMessages, savedSearchQuery])
 
   useEffect(() => {
     if (isSearchOpen) {
@@ -3631,6 +3662,40 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setCopiedChatId(true)
     showToast(`Copied Chat ID: ${chat.id}`)
     setTimeout(() => setCopiedChatId(false), 2000)
+  }
+
+  const isSameDay = (ts1?: number, ts2?: number) => {
+    if (!ts1 || !ts2) return false
+    const d1 = new Date(ts1)
+    const d2 = new Date(ts2)
+    return (
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate()
+    )
+  }
+
+  const formatDayDivider = (timestamp: number) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    const diffDays = Math.round((today - targetDay) / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      return t('date.today') || 'Today'
+    }
+    if (diffDays === 1) {
+      return t('date.yesterday') || 'Yesterday'
+    }
+
+    const isCurrentYear = date.getFullYear() === now.getFullYear()
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: isCurrentYear ? undefined : 'numeric',
+    })
   }
 
   const formatMessageTime = (timestamp: number) => {
@@ -5258,11 +5323,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
           {/* In-Chat Search Toggle (Ctrl+F) */}
           <button
-            onClick={() => setIsSearchOpen((prev) => !prev)}
-            title="Search in Chat (Ctrl+F)"
+            onClick={() => {
+              if (chat?.isSavedMessages) {
+                if (savedSearchQuery) {
+                  setSavedSearchQuery('')
+                } else {
+                  savedSearchInputRef.current?.focus()
+                }
+              } else {
+                setIsSearchOpen((prev) => !prev)
+              }
+            }}
+            title={chat?.isSavedMessages ? (t('saved_messages.search') || 'Search Saved Messages (Ctrl+F)') : 'Search in Chat (Ctrl+F)'}
             className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
-              isSearchOpen
-                ? 'bg-primary-500/20 text-primary-300 border-primary-500/40'
+              (chat?.isSavedMessages ? Boolean(savedSearchQuery.trim()) : isSearchOpen)
+                ? 'bg-primary-500/20 text-primary-300 border-primary-500/40 shadow-xs'
                 : 'bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/10'
             }`}
           >
@@ -5339,7 +5414,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       </div>
 
       {/* Floating In-Chat Search Bar (Ctrl+F) */}
-      {isSearchOpen && (
+      {isSearchOpen && !chat?.isSavedMessages && (
         <div className="shrink-0 px-4 py-2 bg-dark-800/95 border-b border-white/10 flex items-center gap-2 z-20 shadow-md animate-in slide-in-from-top duration-150 backdrop-blur-md">
           <Search className="w-4 h-4 text-primary-400 shrink-0" />
           {searchSenderFilter && (
@@ -5630,6 +5705,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           totalCount={messages.length}
           filteredCount={filteredMessages.length}
           isSearching={isSavedSearching}
+          inputRef={savedSearchInputRef}
         />
       )}
 
@@ -5742,12 +5818,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             )}
           </div>
         ) : (
-          filteredMessages.map((msg) => {
+          filteredMessages.map((msg, index) => {
             const isSelected = selectedMessageIds.has(msg.id) || selectedMessage?.id === msg.id
             const isFirstUnread = msg.id === firstUnreadMessageId
+            const prevMsg = index > 0 ? filteredMessages[index - 1] : null
+            const isNewDay = !prevMsg || !isSameDay(msg.date, prevMsg.date)
 
             return (
               <React.Fragment key={msg.id}>
+                {isNewDay && (
+                  <div className="flex items-center justify-center my-3 select-none sticky top-2 z-10 pointer-events-none">
+                    <div className="px-3.5 py-1 rounded-full bg-dark-900/85 backdrop-blur-md border border-white/10 text-gray-300 text-[11px] font-semibold shadow-md pointer-events-auto">
+                      {formatDayDivider(msg.date)}
+                    </div>
+                  </div>
+                )}
                 {isFirstUnread && (
                   <div className="flex items-center justify-center my-3 select-none sticky top-2 z-20">
                     <button
@@ -5842,7 +5927,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   setReplyMessage(msg)
                   setTimeout(() => textareaRef.current?.focus(), 50)
                 }}
-                className={`flex flex-col group transition-all select-text ${
+                className={`flex flex-col group transition-all select-text message-bubble-container ${
                   chat.isChannel && !chat.isGroup
                     ? 'items-center'
                     : msg.isOutgoing
@@ -5937,7 +6022,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         whileHover={{ scale: 1.3 }}
                                         whileTap={{ scale: 0.85 }}
                                         transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          triggerReactionBurst(e.clientX, e.clientY, emoji)
                                           handleToggleReaction(msg, emoji)
                                           setActiveReactionPickerMsgId(null)
                                         }}
@@ -6061,7 +6147,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                               ? `Delete message #${msg.id} for both sides?`
                               : `Delete message #${msg.id}?`
                             if (window.confirm(confirmMsg)) {
-                              const ok = await onDeleteMessage(msg)
+                              const ok = await handleDeleteWithThanos(msg, e)
                               if (ok !== false) {
                                 showToast(`Deleted message #${msg.id}`)
                               } else {
@@ -6190,10 +6276,34 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     )}
 
                     {/* Forwarded Header */}
-                    {msg.isForwarded && (
-                      <div className="text-[10px] text-primary-200/90 font-medium mb-1.5 flex items-center gap-1">
-                        <Forward className="w-3 h-3 inline" />
-                        <span>Forwarded from {msg.forwardFromName || 'unknown'}</span>
+                    {Boolean(msg.isForwarded || msg.forwardFromName || msg.forwardInfo) && (
+                      <div className="text-[11px] text-primary-300 font-medium mb-1.5 flex items-center gap-1.5 flex-wrap">
+                        <Forward className="w-3.5 h-3.5 inline text-primary-400 shrink-0" />
+                        <span className="text-gray-400 text-[10px]">{t('chat.forwarded_from') || 'Forwarded from'}</span>
+                        <span
+                          className={`font-semibold hover:underline cursor-pointer ${
+                            msg.forwardFromId ? getTelegramPeerColorClass(msg.forwardFromId) : 'text-primary-200'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (msg.forwardFromId) {
+                              onSelectChat?.(msg.forwardFromId)
+                            }
+                          }}
+                          title={msg.forwardFromId ? `Click to view ${msg.forwardFromName || msg.forwardInfo?.fromTitle}` : undefined}
+                        >
+                          {msg.forwardFromName || msg.forwardInfo?.fromTitle || 'Channel / Chat'}
+                        </span>
+                        {msg.forwardInfo?.date && (
+                          <span className="text-[10px] text-gray-500 font-mono">
+                            • {new Date(msg.forwardInfo.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        )}
+                        {msg.postAuthor && (
+                          <span className="text-[10px] text-gray-400 italic">
+                            ({msg.postAuthor})
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -6639,7 +6749,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         whileHover={{ scale: 1.3 }}
                                         whileTap={{ scale: 0.85 }}
                                         transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          triggerReactionBurst(e.clientX, e.clientY, emoji)
                                           handleToggleReaction(msg, emoji)
                                           setActiveReactionPickerMsgId(null)
                                         }}
@@ -6778,7 +6889,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                               ? `Delete message #${msg.id} for both sides?`
                               : `Delete message #${msg.id}?`
                             if (window.confirm(confirmMsg)) {
-                              const ok = await onDeleteMessage(msg)
+                              const ok = await handleDeleteWithThanos(msg, e)
                               if (ok !== false) {
                                 showToast(`Deleted message #${msg.id}`)
                               } else {
@@ -9565,7 +9676,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   ? `Delete message #${msg.id} for both sides?`
                   : `Delete message #${msg.id}?`
                 if (window.confirm(confirmMsg)) {
-                  const ok = await onDeleteMessage(msg)
+                  const ok = await handleDeleteWithThanos(msg)
                   if (ok !== false) {
                     showToast(`Deleted message #${msg.id}`)
                   } else {
@@ -10222,6 +10333,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           peerId={chat.id}
           userName={chatDetails?.title || chat.title}
           onClose={() => setIsStarGiftsModalOpen(false)}
+        />
+      )}
+
+      {/* 27. Thanos Dust Disintegration Overlay */}
+      {thanosTarget && (
+        <ThanosDisintegrationOverlay
+          targetRect={thanosTarget.rect}
+          onComplete={() => setThanosTarget(null)}
         />
       )}
     </div>

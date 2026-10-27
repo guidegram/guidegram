@@ -4547,6 +4547,82 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('system:copy-image-to-clipboard', async (_event, payload: { dataUrl?: string; filePath?: string }) => {
+    try {
+      if (payload?.filePath) {
+        let cleanPath = payload.filePath
+        if (cleanPath.startsWith('guidegram-media://local/')) {
+          cleanPath = decodeURIComponent(cleanPath.replace(/^guidegram-media:\/\/local\//, ''))
+        }
+        if (fs.existsSync(cleanPath)) {
+          const img = nativeImage.createFromPath(cleanPath)
+          clipboard.writeImage(img)
+          return true
+        }
+      }
+      if (payload?.dataUrl) {
+        const img = nativeImage.createFromDataURL(payload.dataUrl)
+        clipboard.writeImage(img)
+        return true
+      }
+      return false
+    } catch (err: any) {
+      Logger.warn('[IPC] copy-image-to-clipboard error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('system:save-image-to-file', async (_event, payload: { dataUrl?: string; filePath?: string; defaultName?: string }) => {
+    try {
+      const defaultFilename = payload?.defaultName || `image_${Date.now()}.jpg`
+      const focusedWin = BrowserWindow.getFocusedWindow()
+      const dialogRes = focusedWin
+        ? await dialog.showSaveDialog(focusedWin, {
+            title: 'Save Image As',
+            defaultPath: defaultFilename,
+            filters: [
+              { name: 'Images (*.jpg, *.png, *.webp)', extensions: ['jpg', 'png', 'webp'] },
+              { name: 'All Files (*.*)', extensions: ['*'] }
+            ]
+          })
+        : await dialog.showSaveDialog({
+            title: 'Save Image As',
+            defaultPath: defaultFilename,
+            filters: [
+              { name: 'Images (*.jpg, *.png, *.webp)', extensions: ['jpg', 'png', 'webp'] },
+              { name: 'All Files (*.*)', extensions: ['*'] }
+            ]
+          })
+
+      if (dialogRes.canceled || !dialogRes.filePath) {
+        return { success: false, canceled: true }
+      }
+
+      if (payload?.filePath) {
+        let cleanPath = payload.filePath
+        if (cleanPath.startsWith('guidegram-media://local/')) {
+          cleanPath = decodeURIComponent(cleanPath.replace(/^guidegram-media:\/\/local\//, ''))
+        }
+        if (fs.existsSync(cleanPath)) {
+          await fs.promises.copyFile(cleanPath, dialogRes.filePath)
+          return { success: true, filePath: dialogRes.filePath }
+        }
+      }
+
+      if (payload?.dataUrl) {
+        const base64Data = payload.dataUrl.replace(/^data:image\/\w+;base64,/, '')
+        const buffer = Buffer.from(base64Data, 'base64')
+        await fs.promises.writeFile(dialogRes.filePath, buffer)
+        return { success: true, filePath: dialogRes.filePath }
+      }
+
+      return { success: false, error: 'No image source provided' }
+    } catch (err: any) {
+      Logger.warn('[IPC] save-image-to-file error:', err)
+      return { success: false, error: err?.message || 'Failed to save image' }
+    }
+  })
+
   ipcMain.handle('telegram:resolve-doh', async (_event, payload: { hostname: string; recordType?: 'A' | 'AAAA' }) => {
     try {
       if (typeof payload?.hostname === 'string') {

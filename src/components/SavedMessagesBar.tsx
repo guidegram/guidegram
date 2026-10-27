@@ -31,6 +31,7 @@ export interface SavedMessagesBarProps {
   totalCount: number
   filteredCount: number
   isSearching?: boolean
+  inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
@@ -47,6 +48,7 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
   totalCount,
   filteredCount,
   isSearching = false,
+  inputRef,
 }) => {
   const { t } = useI18n()
   const [remoteSources, setRemoteSources] = useState<SavedDialogItem[]>([])
@@ -165,9 +167,16 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           )}
           <input
+            ref={inputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                onSearchChange('')
+                e.currentTarget.blur()
+              }
+            }}
             placeholder={t('saved_messages.search')}
             className="w-full bg-dark-900/80 border border-white/10 rounded-xl pl-8 pr-8 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
           />

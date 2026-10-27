@@ -339,6 +339,17 @@ const guidegramAPI = {
     options?: { isSensitive?: boolean; ttlMs?: number }
   ): Promise<boolean> =>
     ipcRenderer.invoke('system:copy-to-clipboard', { text, ...options }),
+  copyImageToClipboard: (payload: {
+    dataUrl?: string
+    filePath?: string
+  }): Promise<boolean> =>
+    ipcRenderer.invoke('system:copy-image-to-clipboard', payload),
+  saveImageToFile: (payload: {
+    dataUrl?: string
+    filePath?: string
+    defaultName?: string
+  }): Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }> =>
+    ipcRenderer.invoke('system:save-image-to-file', payload),
   resolveDoh: (
     hostname: string,
     recordType?: 'A' | 'AAAA'
