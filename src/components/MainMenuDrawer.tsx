@@ -176,9 +176,17 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
         exit={{ x: isRTL ? 320 : -320 }}
         transition={{ type: 'spring', damping: 26, stiffness: 400, mass: 0.8 }}
         className="drawer-pan-rail relative w-72 md:w-80 h-full bg-[#0e1621] border-r border-white/10 shadow-2xl z-10 flex flex-col overflow-hidden text-gray-200"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
       >
         {/* Profile Card Header */}
-        <div className="p-4 bg-[#17212b] border-b border-white/5 relative">
+        <div
+          className="p-4 bg-[#17212b] border-b border-white/5 relative"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+          }}
+        >
           <button
             type="button"
             onClick={onClose}

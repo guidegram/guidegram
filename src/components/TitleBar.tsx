@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { Minus, Square, X, Shield, Sparkles, Menu } from 'lucide-react'
+import { Minus, Square, X, Sparkles, Menu } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
+import { useIsMobile } from '../utils/useIsMobile'
 import logoImg from '../assets/logo.png'
 
 interface TitleBarProps {
@@ -28,6 +29,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   isCheckingUpdate = false,
 }) => {
   const [isMax, setIsMax] = useState(false)
+  const isMobile = useIsMobile(768)
 
   const handleMinimize = () => {
     window.guidegram?.minimizeWindow?.()
@@ -46,6 +48,81 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     } else {
       window.guidegram?.closeWindow?.()
     }
+  }
+
+  // On mobile without active account (Welcome screen), don't render desktop titlebar at all!
+  if (isMobile && !activeAccount) {
+    return null
+  }
+
+  if (isMobile) {
+    return (
+      <header
+        className="bg-dark-950/95 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-3 select-none z-50 transition-all"
+        style={{
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.35rem)',
+          paddingBottom: '0.4rem',
+        }}
+      >
+        {/* Left: Mobile Navigation Drawer Trigger & Brand */}
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            type="button"
+            onClick={onToggleMainMenu}
+            title="Open Menu"
+            className="p-2 -ml-1 rounded-xl text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
+          >
+            <Menu className="w-5 h-5" />
+          </motion.button>
+
+          <div
+            onClick={onOpenSavedMessages}
+            className="flex items-center gap-2 cursor-pointer active:opacity-80 transition-opacity"
+          >
+            <div className="w-7 h-7 rounded-lg overflow-hidden border border-primary-400/40 shadow-sm flex items-center justify-center">
+              <img src={logoImg} alt="Guidegram" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-gray-100 leading-tight">
+                {activeAccount?.firstName || 'Guidegram'}
+              </span>
+              <span className="text-[10px] text-gray-400 leading-tight">
+                {activeAccount?.proxyConfig?.enabled ? 'Proxy Protected' : 'Online'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Actions on mobile (Ghost mode toggle & MCP) */}
+        <div className="flex items-center gap-1.5">
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            type="button"
+            onClick={onToggleGhostMode}
+            title={ghostMode ? 'Ghost Mode ON' : 'Ghost Mode OFF'}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-semibold transition-all ${
+              ghostMode
+                ? 'text-accent-violet bg-accent-violet/20 border-accent-violet/40'
+                : 'text-gray-400 bg-white/5 border-white/10'
+            }`}
+          >
+            <Sparkles className={`w-3 h-3 ${ghostMode ? 'text-accent-violet animate-pulse' : 'text-gray-500'}`} />
+            <span>{ghostMode ? 'Ghost' : 'Ghost Off'}</span>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            type="button"
+            onClick={onOpenMcpHub}
+            title="AI & MCP Assistant"
+            className="p-1.5 rounded-xl bg-primary-600/20 border border-primary-500/30 text-primary-300 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-accent-cyan" />
+          </motion.button>
+        </div>
+      </header>
+    )
   }
 
   return (

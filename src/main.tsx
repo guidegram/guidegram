@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client'
 import { App } from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
+import { initMobileBridge } from './services/mobileBridge'
+
+// Ensure window.guidegram is robustly defined for Mobile/Capacitor/Web before anything else
+initMobileBridge()
 
 // Global window unhandled error listener
 window.addEventListener('error', (event) => {

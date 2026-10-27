@@ -7,11 +7,12 @@ import {
   Layers,
   Settings,
   ArrowRight,
-  Lock,
   ShieldCheck,
   BarChart2,
   Zap,
+  Lock,
 } from 'lucide-react'
+import { useIsMobile } from '../utils/useIsMobile'
 import logoImg from '../assets/logo.png'
 
 interface WelcomeScreenProps {
@@ -25,8 +26,20 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onOpenProxyModal,
   onOpenSettings,
 }) => {
+  const isMobile = useIsMobile(768)
+
   return (
-    <div className="flex-1 bg-dark-950 flex flex-col items-center justify-center p-8 relative overflow-hidden select-none titlebar-no-drag">
+    <div
+      className="flex-1 bg-dark-950 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-8 relative overflow-y-auto select-none titlebar-no-drag"
+      style={{
+        paddingTop: isMobile
+          ? 'calc(env(safe-area-inset-top, 0px) + 2rem)'
+          : '2rem',
+        paddingBottom: isMobile
+          ? 'calc(env(safe-area-inset-bottom, 0px) + 2.5rem)'
+          : '2rem',
+      }}
+    >
       {/* Dynamic Background Ambient Aura Glows */}
       <motion.div
         animate={{
@@ -55,7 +68,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* Floating Glowing Logo Badge */}
         <motion.div
           animate={{
-            y: [-5, 5, -5],
+            y: [-4, 4, -4],
             rotate: [-1, 1, -1],
           }}
           transition={{
@@ -63,7 +76,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             duration: 5,
             ease: 'easeInOut',
           }}
-          className="w-24 h-24 rounded-3xl overflow-hidden shadow-glow mb-6 border border-primary-400/40 relative cursor-pointer group"
+          className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden shadow-glow mb-5 border border-primary-400/40 relative cursor-pointer group shrink-0"
         >
           <img
             src={logoImg}
@@ -73,53 +86,57 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         </motion.div>
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary-600/15 border border-primary-500/30 text-primary-300 text-xs font-semibold mb-4 shadow-sm">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary-600/15 border border-primary-500/30 text-primary-300 text-xs font-semibold mb-3 sm:mb-4 shadow-sm">
           <Sparkles className="w-3.5 h-3.5 text-primary-400 animate-pulse" />
-          <span>Portable Edition • Unlimited Multi-Account</span>
+          <span>{isMobile ? 'Mobile Edition • Multi-Account' : 'Portable Edition • Unlimited Multi-Account'}</span>
         </div>
 
         {/* Main Title */}
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-2 sm:mb-3">
           Welcome to <span className="bg-gradient-to-r from-primary-400 via-[#4EE0B5] to-primary-300 bg-clip-text text-transparent">Guidegram</span>
         </h1>
 
         {/* Subtitle */}
-        <p className="text-sm text-gray-400 max-w-lg mb-8 leading-relaxed">
-          The ultimate desktop Telegram client built for power users. Manage dozens or hundreds of accounts concurrently with dedicated per-account proxies, deep group analytics, and multi-worker downloads.
+        <p className="text-xs sm:text-sm text-gray-400 max-w-lg mb-6 sm:mb-8 leading-relaxed px-2">
+          {isMobile
+            ? 'The ultimate Telegram client built for power users. Manage unlimited accounts concurrently with dedicated per-account proxies, deep group analytics, and high-speed downloads.'
+            : 'The ultimate desktop Telegram client built for power users. Manage dozens or hundreds of accounts concurrently with dedicated per-account proxies, deep group analytics, and multi-worker downloads.'}
         </p>
 
         {/* Primary CTA */}
-        <div className="flex items-center gap-3 mb-10">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto mb-8 sm:mb-10 px-2 sm:px-0">
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             onClick={onOpenAddAccount}
-            className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white font-bold text-sm rounded-2xl shadow-glow border border-primary-400/30 transition-all flex items-center gap-2 cursor-pointer"
+            className="px-6 py-3.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white font-bold text-sm rounded-2xl shadow-glow border border-primary-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Connect Telegram Account</span>
             <ArrowRight className="w-4 h-4 ml-1" />
           </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={onOpenProxyModal}
-            className="px-4 py-3 bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5 font-semibold text-sm rounded-2xl transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Shield className="w-4 h-4 text-primary-400" />
-            <span>Proxy Manager</span>
-          </motion.button>
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={onOpenProxyModal}
+              className="flex-1 sm:flex-none px-4 py-3.5 bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/5 font-semibold text-sm rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Shield className="w-4 h-4 text-primary-400" />
+              <span>Proxy Manager</span>
+            </motion.button>
 
-          <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            onClick={onOpenSettings}
-            className="p-3 bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/5 rounded-2xl transition-all cursor-pointer"
-            title="Preferences & API"
-          >
-            <Settings className="w-4 h-4" />
-          </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={onOpenSettings}
+              className="p-3.5 bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/5 rounded-2xl transition-all cursor-pointer flex items-center justify-center"
+              title="Preferences & API"
+            >
+              <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
+            </motion.button>
+          </div>
         </div>
 
         {/* Bento Grid - 4 Killer Feature Cards with Spring Hover Lift */}
