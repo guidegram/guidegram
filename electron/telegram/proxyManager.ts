@@ -10,39 +10,32 @@ export class ProxyManager {
    * Measure latency of a proxy in milliseconds
    */
   public static async testProxyPing(proxy: ProxyConfig): Promise<number> {
-    let connectHost = proxy.host
-    if (!DohResolver.isIpAddress(proxy.host)) {
-      try {
-        const resolvedIps = await DohResolver.resolve(proxy.host, 'A', 2000)
-        if (resolvedIps && resolvedIps.length > 0) {
-          connectHost = resolvedIps[0]
-        }
-      } catch {
-        // Fallback to raw hostname
-      }
-    }
+    if (!proxy || !proxy.host || !proxy.port) return -1
+    const host = String(proxy.host).trim()
+    const port = Number(proxy.port)
+    if (isNaN(port) || port <= 0 || port > 65535) return -1
 
     return new Promise((resolve) => {
       const startTime = Date.now()
       const socket = new net.Socket()
+      let settled = false
 
-      socket.setTimeout(4000)
-
-      socket.connect(proxy.port, connectHost, () => {
-        const latency = Date.now() - startTime
+      const cleanup = (latency: number) => {
+        if (settled) return
+        settled = true
         socket.destroy()
         resolve(latency)
+      }
+
+      socket.setTimeout(3500)
+
+      socket.connect(port, host, () => {
+        const latency = Date.now() - startTime
+        cleanup(latency)
       })
 
-      socket.on('error', () => {
-        socket.destroy()
-        resolve(-1) // Connection failed
-      })
-
-      socket.on('timeout', () => {
-        socket.destroy()
-        resolve(-1) // Timed out
-      })
+      socket.on('error', () => cleanup(-1))
+      socket.on('timeout', () => cleanup(-1))
     })
   }
 
@@ -133,16 +126,23 @@ export class ProxyManager {
     const list = proxies && proxies.length > 0 ? proxies : ProxyHarvester.getCachedProxies()
     if (!list || list.length === 0) return []
 
-    const benchmarkPromises = list.map(async (p) => {
-      try {
-        const ping = await this.testProxyPing(p)
-        return { ...p, pingMs: ping }
-      } catch {
-        return { ...p, pingMs: -1 }
-      }
-    })
+    const results: Array<ProxyConfig & { pingMs: number }> = []
+    const chunkSize = 8
+    for (let i = 0; i < list.length; i += chunkSize) {
+      const chunk = list.slice(i, i + chunkSize)
+      const chunkResults = await Promise.all(
+        chunk.map(async (p) => {
+          try {
+            const ping = await this.testProxyPing(p)
+            return { ...p, pingMs: ping, lastChecked: Date.now() }
+          } catch {
+            return { ...p, pingMs: -1, lastChecked: Date.now() }
+          }
+        })
+      )
+      results.push(...chunkResults)
+    }
 
-    const results = await Promise.all(benchmarkPromises)
     return results.sort((a, b) => {
       if (a.pingMs > 0 && b.pingMs > 0) return a.pingMs - b.pingMs
       if (a.pingMs > 0) return -1

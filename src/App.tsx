@@ -1820,6 +1820,7 @@ export const App: React.FC = () => {
         onOpenMcpHub={() => setIsMcpHubOpen(true)}
         onCheckUpdate={handleManualCheckUpdate}
         isCheckingUpdate={isCheckingUpdate}
+        onOpenProxyModal={() => setIsProxyModalOpen(true)}
       />
 
       {/* Floating System Notification Toast */}
@@ -1903,6 +1904,7 @@ export const App: React.FC = () => {
                   onSelectPeer={handleSelectUserOrChat}
                   isLoadingMoreDialogs={isLoadingMoreDialogs}
                   onLoadMoreDialogs={handleLoadMoreDialogs}
+                  onOpenProxyModal={() => setIsProxyModalOpen(true)}
                 />
               </div>
             ) : (
@@ -2012,6 +2014,7 @@ export const App: React.FC = () => {
                   onSelectPeer={handleSelectUserOrChat}
                   isLoadingMoreDialogs={isLoadingMoreDialogs}
                   onLoadMoreDialogs={handleLoadMoreDialogs}
+                  onOpenProxyModal={() => setIsProxyModalOpen(true)}
                 />
               </aside>
 

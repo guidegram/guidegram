@@ -981,6 +981,7 @@ export class AccountManager {
   private auditQueue = new Map<string, Set<string>>()
   private lastAuditedTime = new Map<string, number>()
   private auditQueueInterval?: NodeJS.Timeout
+  private manualDirectTimestamps = new Map<string, number>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
@@ -1216,9 +1217,10 @@ export class AccountManager {
       this.clients.set(savedAcc.id, { client, session: sessionString, info: disconnectedInfo })
       this.onEventCallback?.('telegram:account-updated', { account: disconnectedInfo, error: err?.message })
 
-      // Auto-connect to healthy harvested proxy if VPN dropped / direct connection failed
+      // Auto-connect to healthy harvested proxy if VPN dropped / direct connection failed (respecting manual direct mode)
       const autoConnectOnVpnDrop = config.autoConnectOnVpnDrop !== false
-      if (autoConnectOnVpnDrop && (!savedAcc.proxyConfig?.enabled || (savedAcc.proxyConfig.failCount && savedAcc.proxyConfig.failCount > 0))) {
+      const isRecentManualDirect = Date.now() - (this.manualDirectTimestamps.get(savedAcc.id) || 0) < 120000
+      if (autoConnectOnVpnDrop && !isRecentManualDirect && (!savedAcc.proxyConfig?.enabled || (savedAcc.proxyConfig.failCount && savedAcc.proxyConfig.failCount > 0))) {
         const fallbackProxy = ProxyManager.getDistinctProxyForAccount(savedAcc.id, config.accounts)
         if (fallbackProxy && fallbackProxy.host !== savedAcc.proxyConfig?.host) {
           Logger.info(`[AccountManager] Direct/failed connection on ${savedAcc.id}. Auto-fallback to healthy proxy ${fallbackProxy.host}:${fallbackProxy.port}...`)
@@ -1273,13 +1275,33 @@ export class AccountManager {
    * Seamlessly set or update an account's proxy, reconnecting through the new transport
    */
   public async setAccountProxy(accountId: string, proxy?: ProxyConfig): Promise<AccountInfo> {
-    Logger.info(`[AccountManager] Setting proxy for account ${accountId}: ${proxy ? `${proxy.type.toUpperCase()} (${proxy.host}:${proxy.port})` : 'DIRECT (Disabled)'}`)
+    const isDirect = !proxy || proxy.enabled === false || !proxy.host || !proxy.port
+    const effectiveProxy: ProxyConfig | undefined = isDirect
+      ? undefined
+      : {
+          ...proxy,
+          enabled: true,
+          type: proxy.type || 'socks5',
+        }
+
+    if (isDirect) {
+      this.manualDirectTimestamps.set(accountId, Date.now())
+    } else {
+      this.manualDirectTimestamps.delete(accountId)
+    }
+
+    const typeStr = (effectiveProxy?.type || 'SOCKS5').toUpperCase()
+    Logger.info(
+      `[AccountManager] Setting proxy for account ${accountId}: ${
+        effectiveProxy ? `${typeStr} (${effectiveProxy.host}:${effectiveProxy.port})` : 'DIRECT (Disabled by user)'
+      }`
+    )
 
     // 1. Update session store configuration
     const config = this.store.getConfig()
     const updatedAccounts = config.accounts.map((a) => {
       if (a.id === accountId) {
-        return { ...a, proxyConfig: proxy }
+        return { ...a, proxyConfig: effectiveProxy }
       }
       return a
     })
@@ -1295,7 +1317,7 @@ export class AccountManager {
     const existing = this.clients.get(accountId)
     const connectingInfo: AccountInfo = {
       ...(existing?.info || targetAcc),
-      proxyConfig: proxy,
+      proxyConfig: effectiveProxy,
       status: 'connecting',
     }
     this.clients.set(accountId, {
@@ -13419,8 +13441,9 @@ export class AccountManager {
 
           const config = this.store.getConfig()
           const autoConnect = config.autoConnectOnVpnDrop !== false
+          const isRecentManualDirect = Date.now() - (this.manualDirectTimestamps.get(accountId) || 0) < 120000
           const currentAcc = config.accounts.find((a) => a.id === accountId)
-          if (autoConnect && currentAcc && !currentAcc.proxyConfig?.enabled) {
+          if (autoConnect && !isRecentManualDirect && currentAcc && !currentAcc.proxyConfig?.enabled) {
             const fallbackProxy = ProxyManager.getDistinctProxyForAccount(accountId, config.accounts)
             if (fallbackProxy) {
               Logger.info(`[AccountManager] Network went offline (VPN dropped). Auto-switching account ${accountId} to healthy proxy ${fallbackProxy.host}:${fallbackProxy.port}...`)

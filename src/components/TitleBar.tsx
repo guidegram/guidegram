@@ -15,6 +15,7 @@ interface TitleBarProps {
   onOpenMcpHub?: () => void
   onCheckUpdate?: () => void
   isCheckingUpdate?: boolean
+  onOpenProxyModal?: () => void
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -27,6 +28,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenMcpHub,
   onCheckUpdate,
   isCheckingUpdate = false,
+  onOpenProxyModal,
 }) => {
   const [isMax, setIsMax] = useState(false)
   const isMobile = useIsMobile(768)
@@ -87,9 +89,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               <span className="text-xs font-bold text-gray-100 leading-tight">
                 {activeAccount?.firstName || 'Guidegram'}
               </span>
-              <span className="text-[10px] text-gray-400 leading-tight">
-                {activeAccount?.proxyConfig?.enabled ? 'Proxy Protected' : 'Online'}
-              </span>
+              <button
+                type="button"
+                onClick={onOpenProxyModal}
+                className="text-[10px] text-gray-400 hover:text-accent-cyan leading-tight text-left transition-colors cursor-pointer"
+              >
+                {activeAccount?.proxyConfig?.enabled ? 'Proxy Protected' : 'Online (Direct)'}
+              </button>
             </div>
           </div>
         </div>
@@ -188,12 +194,22 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="text-gray-300 font-medium">{activeAccount.firstName || 'User'}</span>
-            {activeAccount.proxyConfig?.enabled && (
-              <span className="text-[10px] text-accent-cyan bg-accent-cyan/10 px-1.5 py-0.2 rounded border border-accent-cyan/20">
-                Proxy
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={onOpenProxyModal}
+              title={
+                activeAccount.proxyConfig?.enabled
+                  ? `پروکسی فعال است: ${(activeAccount.proxyConfig.type || 'SOCKS5').toUpperCase()} (${activeAccount.proxyConfig.host}) — کلیک برای تغییر`
+                  : 'اتصال مستقیم — کلیک برای باز کردن تنظیمات پروکسی'
+              }
+              className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                activeAccount.proxyConfig?.enabled
+                  ? 'text-accent-cyan bg-accent-cyan/15 border-accent-cyan/30 hover:bg-accent-cyan/25'
+                  : 'text-gray-400 bg-white/5 border-white/10 hover:text-gray-200 hover:bg-white/10'
+              }`}
+            >
+              {activeAccount.proxyConfig?.enabled ? 'Proxy' : 'Direct'}
+            </button>
           </div>
         )}
       </div>

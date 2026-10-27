@@ -134,7 +134,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
                 {/* Proxy Indicator */}
                 {acc.proxyConfig?.enabled && (
                   <span
-                    title={`Proxy: ${acc.proxyConfig.type.toUpperCase()} (${acc.proxyConfig.host})`}
+                    title={`Proxy: ${(acc.proxyConfig.type || 'SOCKS5').toUpperCase()} (${acc.proxyConfig.host})`}
                     className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-accent-cyan ring-1 ring-dark-900"
                   />
                 )}

@@ -1937,12 +1937,20 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:test-proxy-ping', async (_event, { proxy }) => {
+  ipcMain.handle('telegram:test-proxy-ping', async (_event, payload: any) => {
+    const proxy = payload?.proxy || payload
     return ProxyManager.testProxyPing(proxy)
   })
 
-  ipcMain.handle('telegram:set-account-proxy', async (_event, { accountId, proxy }: { accountId: string; proxy?: ProxyConfig }) => {
-    return await accountManager.setAccountProxy(accountId, proxy)
+  ipcMain.handle('telegram:set-account-proxy', async (_event, payload: any) => {
+    try {
+      const accountId = payload?.accountId || (typeof payload === 'string' ? payload : '')
+      const proxy = payload?.proxy
+      return await accountManager.setAccountProxy(accountId, proxy)
+    } catch (err: any) {
+      Logger.error('[IPC] telegram:set-account-proxy error:', err)
+      throw err
+    }
   })
 
   ipcMain.handle('proxy:parse-url', async (_event, { url }: { url: string }) => {

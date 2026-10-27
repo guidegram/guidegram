@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX } from 'lucide-react'
+import { Search, Pin, ShieldCheck, ShieldOff, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
@@ -25,6 +25,7 @@ interface ChatListProps {
   onSelectChat: (chatId: string) => void
   onSelectPeer?: (target: string) => void
   onLoadMoreDialogs?: () => void
+  onOpenProxyModal?: () => void
 }
 
 type SearchFilterCategory =
@@ -53,6 +54,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   onSelectChat,
   onSelectPeer,
   onLoadMoreDialogs,
+  onOpenProxyModal,
 }) => {
   const { t, isRTL: isAppRtl, formatNumber } = useI18n()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -404,15 +406,29 @@ export const ChatList: React.FC<ChatListProps> = ({
             </div>
           </div>
 
-          {account.proxyConfig?.enabled && (
-            <div
-              title={`Protected by ${account.proxyConfig.type.toUpperCase()} Proxy`}
-              className="flex items-center gap-1 bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-lg text-[10px] font-semibold border border-accent-cyan/20 shrink-0"
-            >
-              <ShieldCheck className="w-3 h-3" />
-              <span>Proxy</span>
-            </div>
-          )}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="button"
+            onClick={onOpenProxyModal}
+            title={
+              account.proxyConfig?.enabled
+                ? `پروکسی ${(account.proxyConfig.type || 'SOCKS5').toUpperCase()} فعال است (${account.proxyConfig.host}:${account.proxyConfig.port}) — کلیک برای تنظیمات`
+                : 'اتصال مستقیم (بدون پروکسی) — کلیک برای فعال‌سازی پروکسی'
+            }
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border shrink-0 transition-all cursor-pointer shadow-sm ${
+              account.proxyConfig?.enabled
+                ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30 hover:bg-accent-cyan/25 shadow-accent-cyan/10'
+                : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-gray-200'
+            }`}
+          >
+            {account.proxyConfig?.enabled ? (
+              <ShieldCheck className="w-3.5 h-3.5 text-accent-cyan" />
+            ) : (
+              <ShieldOff className="w-3.5 h-3.5 text-gray-400" />
+            )}
+            <span>{account.proxyConfig?.enabled ? 'Proxy' : 'Direct'}</span>
+          </motion.button>
         </div>
       )}
 

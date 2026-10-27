@@ -359,7 +359,18 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
         const allCandidates = [...proxies, ...harvestedProxies]
         const sorted = await (window.guidegram as any).benchmarkProxies(allCandidates)
         if (sorted && sorted.length > 0) {
-          setHarvestedProxies(sorted)
+          const pingMap = new Map<string, number>()
+          sorted.forEach((item: any) => {
+            if (item.id && typeof item.pingMs === 'number') {
+              pingMap.set(item.id, item.pingMs)
+            }
+          })
+          setHarvestedProxies((prev) =>
+            prev.map((p) => (pingMap.has(p.id) ? { ...p, pingMs: pingMap.get(p.id)!, lastChecked: Date.now() } : p))
+          )
+          setProxies((prev) =>
+            prev.map((p) => (pingMap.has(p.id) ? { ...p, pingMs: pingMap.get(p.id)!, lastChecked: Date.now() } : p))
+          )
         }
       }
     } catch (e) {
