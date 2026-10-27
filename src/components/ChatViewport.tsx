@@ -957,6 +957,44 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const canSendMedia = isUserAdminOrCreator || chatDetails?.permissionsMatrix?.sendMedia !== false
   const canSendStickers = isUserAdminOrCreator || chatDetails?.permissionsMatrix?.sendStickers !== false
 
+  // Auto-focus message input whenever switching to a writable chat
+  useEffect(() => {
+    if (chat?.id && canSendMessages) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 60)
+      return () => clearTimeout(timer)
+    }
+  }, [chat?.id, canSendMessages])
+
+  // Type-to-message parity (Official Telegram Desktop):
+  // When viewing a writable chat, typing any printable character automatically focuses the input
+  useEffect(() => {
+    if (!chat?.id || !canSendMessages) return
+
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return
+      }
+
+      if (e.ctrlKey || e.altKey || e.metaKey) return
+      if (e.key.length > 1) return // Skip special keys like Enter, Escape, ArrowUp, F1-F12
+
+      if (textareaRef.current) {
+        textareaRef.current.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleWindowKeyDown)
+    return () => window.removeEventListener('keydown', handleWindowKeyDown)
+  }, [chat?.id, canSendMessages])
+
   // Forum Topics (MTProto channels.getForumTopics)
   const [forumTopics, setForumTopics] = useState<ForumTopicItem[]>([])
   const [activeTopicId, setActiveTopicId] = useState<number | null>(null)

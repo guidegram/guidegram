@@ -49,7 +49,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   }
 
   return (
-    <header className="h-10 bg-dark-950 border-b border-white/5 flex items-center justify-between px-3 select-none titlebar-drag z-50">
+    <header
+      onContextMenu={(e) => {
+        e.preventDefault()
+        window.guidegram?.showTitlebarMenu?.()
+      }}
+      className="h-10 bg-dark-950 border-b border-white/5 flex items-center justify-between px-3 select-none titlebar-drag z-50"
+    >
       {/* Left Brand Badge with Hamburger Menu Trigger and Saved Messages Logo */}
       <div className="flex items-center gap-1.5 titlebar-no-drag">
         {/* Hamburger Menu Trigger */}

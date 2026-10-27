@@ -189,11 +189,10 @@ app.on('second-instance', (_event, commandLine) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
     if (!mainWindow.isVisible()) mainWindow.show()
-    mainWindow.focus()
-    mainWindow.setAlwaysOnTop(true)
     mainWindow.show()
     mainWindow.focus()
-    mainWindow.setAlwaysOnTop(false)
+    mainWindow.webContents?.focus()
+    mainWindow.flashFrame(false)
 
     // DeepLinkHandler: Safely extract and dispatch deep link from second instance commandLine
     const rawDeepLink = DeepLinkHandler.extractDeepLinkFromArgv(commandLine)
@@ -406,10 +405,13 @@ function createWindow() {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.show()
       mainWindow.focus()
-      mainWindow.setAlwaysOnTop(true)
-      mainWindow.show()
-      mainWindow.focus()
-      mainWindow.setAlwaysOnTop(false)
+      mainWindow.webContents?.focus()
+    }
+  })
+
+  mainWindow.on('focus', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents?.focus()
     }
   })
 
@@ -1073,6 +1075,49 @@ function setupIpcHandlers() {
 
   ipcMain.handle('window:is-maximized', () => {
     return mainWindow?.isMaximized() || false
+  })
+
+  ipcMain.handle('window:show-titlebar-menu', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    if (!win || win.isDestroyed()) return
+
+    const isMax = win.isMaximized()
+    const menu = Menu.buildFromTemplate([
+      {
+        label: isMax ? 'Restore' : 'Maximize',
+        click: () => {
+          if (isMax) win.unmaximize()
+          else win.maximize()
+        },
+      },
+      {
+        label: 'Minimize',
+        click: () => {
+          win.minimize()
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Close (Alt+F4)',
+        click: () => {
+          win.close()
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit Guidegram Completely',
+        click: () => {
+          isQuitting = true
+          if (tray) {
+            tray.destroy()
+            tray = null
+          }
+          app.quit()
+        },
+      },
+    ])
+
+    menu.popup({ window: win })
   })
 
   // Update System Handlers

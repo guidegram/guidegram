@@ -103,6 +103,7 @@ const guidegramAPI = {
   confirmClose: (action: 'minimize' | 'quit', remember: boolean): Promise<void> =>
     ipcRenderer.invoke('window:confirm-close', { action, remember }),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  showTitlebarMenu: () => ipcRenderer.invoke('window:show-titlebar-menu'),
 
   // MTProto Engine Status
   getMtprotoStatus: (): Promise<{

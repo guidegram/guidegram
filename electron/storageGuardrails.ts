@@ -25,6 +25,14 @@ export interface StorageRootsConfig {
  */
 export class StorageGuardrails {
   private static mockRoots: StorageRootsConfig | null = null
+  private static appInstance: any = null
+
+  /**
+   * Explicitly set the active Electron app instance (for ESM or runtime injection)
+   */
+  public static setApp(app: any): void {
+    this.appInstance = app
+  }
 
   /**
    * Set mock roots for testing or non-Electron environments
@@ -52,24 +60,25 @@ export class StorageGuardrails {
       return Array.from(new Set(roots))
     }
 
-    if (electronApp && typeof electronApp.getPath === 'function') {
+    const activeApp = this.appInstance || electronApp
+    if (activeApp && typeof activeApp.getPath === 'function') {
       try {
-        const userData = electronApp.getPath('userData')
+        const userData = activeApp.getPath('userData')
         if (userData) roots.push(path.resolve(userData))
       } catch {}
 
       try {
-        const temp = electronApp.getPath('temp')
+        const temp = activeApp.getPath('temp')
         if (temp) roots.push(path.resolve(temp))
       } catch {}
 
       try {
-        const downloads = electronApp.getPath('downloads')
+        const downloads = activeApp.getPath('downloads')
         if (downloads) roots.push(path.resolve(downloads))
       } catch {}
 
       try {
-        const appPath = electronApp.getAppPath ? electronApp.getAppPath() : process.cwd()
+        const appPath = activeApp.getAppPath ? activeApp.getAppPath() : process.cwd()
         if (appPath) roots.push(path.resolve(appPath))
       } catch {}
     } else {
