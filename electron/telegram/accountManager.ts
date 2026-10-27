@@ -2032,7 +2032,8 @@ export class AccountManager {
     accountId: string,
     limit = 350,
     offsetDate = 0,
-    offsetId = 0
+    offsetId = 0,
+    offsetPeerId?: string
   ): Promise<DialogItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
@@ -2117,7 +2118,32 @@ export class AccountManager {
 
       const iterParams: any = { limit }
       if (offsetDate && offsetDate > 0) {
-        iterParams.offset = { date: offsetDate }
+        // mtcute normalizeDate divides number by 1000.
+        // If offsetDate is in seconds (< 10000000000), multiply by 1000 so normalizeDate gets exact timestamp.
+        iterParams.offsetDate = offsetDate < 10000000000 ? offsetDate * 1000 : offsetDate
+      }
+      if (offsetId && offsetId > 0) {
+        iterParams.offsetId = offsetId
+      }
+      if (offsetPeerId) {
+        try {
+          iterParams.offsetPeer = await this.resolveInputPeer(accountId, offsetPeerId)
+        } catch (peerErr) {
+          Logger.warn(`[AccountManager] Failed to resolve offsetPeer for ${offsetPeerId}:`, peerErr)
+        }
+      } else if (iterParams.offsetDate && !iterParams.offsetPeer) {
+        // Intelligent fallback: auto-discover offsetPeer from cached dialogs
+        try {
+          const cached = this.store.loadDialogsCache(accountId)
+          const targetSec = Math.floor(iterParams.offsetDate / 1000)
+          const match = cached.find((d) => d.lastMessageDate && Math.floor(d.lastMessageDate / 1000) <= targetSec)
+          if (match) {
+            iterParams.offsetPeer = await this.resolveInputPeer(accountId, match.id)
+            if (!iterParams.offsetId && match.lastMessageId) {
+              iterParams.offsetId = match.lastMessageId
+            }
+          }
+        } catch (_) {}
       }
 
       for await (const d of holder.client.iterDialogs(iterParams)) {
@@ -2367,9 +2393,10 @@ export class AccountManager {
         dialogs.push(item)
       }
 
-      // Ensure all chats present in local audit store are exposed as dialogs
-      try {
-        const audit = this.store.loadAccountAudit(accountId)
+      // Ensure all chats present in local audit store are exposed as dialogs ONLY on initial load
+      if ((!offsetDate || offsetDate === 0) && (!offsetId || offsetId === 0)) {
+        try {
+          const audit = this.store.loadAccountAudit(accountId)
         for (const [cId, msgs] of Object.entries(audit)) {
           if (seenIds.has(cId)) continue
           seenIds.add(cId)
@@ -2411,8 +2438,9 @@ export class AccountManager {
             username: topMsg.senderUsername,
           })
         }
-      } catch (auditDialogErr) {
-        Logger.warn('[AccountManager] Failed to merge audit dialogs:', auditDialogErr)
+        } catch (auditDialogErr) {
+          Logger.warn('[AccountManager] Failed to merge audit dialogs:', auditDialogErr)
+        }
       }
 
       // Persist dialogs to disk cache for instant zero-latency startup on next app launch!

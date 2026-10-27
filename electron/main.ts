@@ -1247,8 +1247,13 @@ function setupIpcHandlers() {
 
   ipcMain.handle(
     'telegram:get-dialogs',
-    async (_event, { accountId, limit, offsetDate, offsetId }) => {
+    async (_event, args: any) => {
+      const { accountId, limit, offsetDate, offsetId } = args || {}
+      const offsetPeerId = args?.offsetPeerId
       try {
+        if (offsetPeerId) {
+          return await accountManager.getDialogs(accountId, limit, offsetDate, offsetId, offsetPeerId)
+        }
         return await accountManager.getDialogs(accountId, limit, offsetDate, offsetId)
       } catch (err: any) {
         Logger.error(`[IPC] getDialogs failed for ${accountId}:`, err)

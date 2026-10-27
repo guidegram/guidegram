@@ -140,9 +140,10 @@ const guidegramAPI = {
     accountId: string,
     limit?: number,
     offsetDate?: number,
-    offsetId?: number
+    offsetId?: number,
+    offsetPeerId?: string
   ): Promise<DialogItem[]> =>
-    ipcRenderer.invoke('telegram:get-dialogs', { accountId, limit, offsetDate, offsetId }),
+    ipcRenderer.invoke('telegram:get-dialogs', { accountId, limit, offsetDate, offsetId, offsetPeerId }),
   getContacts: (accountId: string): Promise<ContactItem[]> =>
     ipcRenderer.invoke('telegram:get-contacts', { accountId }),
   getCallLog: (

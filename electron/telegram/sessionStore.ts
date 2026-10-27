@@ -826,8 +826,8 @@ export class SessionStore {
         fs.mkdirSync(this.cacheDir, { recursive: true })
       }
       const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
-      // Save up to 350 most recent dialogs
-      const dataToSave = dialogs.slice(0, 350)
+      // Save up to 1000 most recent dialogs for deep instant offline scroll
+      const dataToSave = dialogs.slice(0, 1000)
       fs.writeFileSync(filePath, JSON.stringify(dataToSave), 'utf-8')
     } catch (err) {
       console.error(`[SessionStore] Failed to save dialogs cache for ${accountId}:`, err)

@@ -682,7 +682,8 @@ export const ChatList: React.FC<ChatListProps> = ({
           const el = e.currentTarget
           if (
             !searchQuery.trim() &&
-            el.scrollTop + el.clientHeight >= el.scrollHeight - 180
+            (el.scrollTop + el.clientHeight >= el.scrollHeight - 500 ||
+             el.scrollTop + el.clientHeight >= el.scrollHeight - 180)
           ) {
             onLoadMoreDialogs?.()
           }

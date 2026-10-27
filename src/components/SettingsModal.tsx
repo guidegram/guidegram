@@ -1631,7 +1631,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="button"
                       onClick={() => playNotificationSound(notificationTone)}
                       className="px-3 py-1.5 rounded-xl bg-dark-900 hover:bg-dark-750 text-xs font-semibold text-primary-400 border border-primary-500/20 hover:border-primary-500/40 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Preview selected tone"
+                      title="Play Chime - Preview selected tone"
                     >
                       <Volume2 className="w-3.5 h-3.5" />
                       <span>Preview</span>

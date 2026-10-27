@@ -52,6 +52,10 @@ export const App: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false)
   const [accounts, setAccounts] = useState<AccountInfo[]>([])
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null)
+  const activeAccountIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    activeAccountIdRef.current = activeAccountId
+  }, [activeAccountId])
   const [dialogsByAccount, setDialogsByAccount] = useState<Record<string, DialogItem[]>>({})
   const dialogsByAccountRef = useRef<Record<string, DialogItem[]>>({})
   useEffect(() => {
@@ -91,6 +95,9 @@ export const App: React.FC = () => {
   const [forwardMessage, setForwardMessage] = useState<MessageItem | null>(null)
   const [forwardMessagesList, setForwardMessagesList] = useState<MessageItem[] | null>(null)
   const [isLoadingMoreDialogs, setIsLoadingMoreDialogs] = useState(false)
+  const isLoadingMoreDialogsRef = useRef(false)
+  const isBackgroundSyncingDialogsRef = useRef(false)
+  const backgroundSyncTimerRef = useRef<any>(null)
   const hasMoreDialogsRef = useRef(true)
 
   // Resizable Sidebar Splitter State (default 320px, min 240px, max 550px)
@@ -323,7 +330,7 @@ export const App: React.FC = () => {
         const isChannel = Boolean(targetDialog?.isChannel || (payload as any)?.chatInfo?.isChannel)
         const isChatMuted = targetDialog ? Boolean(targetDialog.isMuted) : (isChannel ? true : false)
         if (!message?.isOutgoing && !isChatMuted && configRef.current?.soundEnabled !== false) {
-          playNotificationSound(configRef.current?.notificationTone || 'classic')
+          playNotificationSound(configRef.current?.notificationTone || 'classic') // playNotificationSound()
         }
         if (!message?.isOutgoing) {
           const sender = message?.senderName || 'Someone'
@@ -877,21 +884,110 @@ export const App: React.FC = () => {
         setActiveChatId(uniqueDialogs[0].id)
         loadMessages(accountId, uniqueDialogs[0].id)
       }
+
+      // Progressive Background Dialog Hydration (Official Telegram UX parity: silently feeds chats in the background)
+      if (uniqueDialogs.length >= 50) {
+        scheduleBackgroundDialogSync(accountId)
+      } else {
+        hasMoreDialogsRef.current = false
+      }
     } catch (err) {
       console.error('Failed to load dialogs:', err)
     }
   }
 
+  const scheduleBackgroundDialogSync = (accountId: string) => {
+    if (backgroundSyncTimerRef.current) {
+      clearTimeout(backgroundSyncTimerRef.current)
+    }
+    backgroundSyncTimerRef.current = setTimeout(() => {
+      runBackgroundDialogSync(accountId)
+    }, 1200)
+  }
+
+  const runBackgroundDialogSync = async (accountId: string) => {
+    if (
+      !accountId ||
+      accountId !== activeAccountIdRef.current ||
+      isBackgroundSyncingDialogsRef.current ||
+      isLoadingMoreDialogsRef.current ||
+      !hasMoreDialogsRef.current ||
+      !window.guidegram?.getDialogs
+    ) {
+      return
+    }
+
+    const currentList = dialogsByAccountRef.current[accountId] || []
+    if (currentList.length === 0 || currentList.length >= 2500) {
+      return
+    }
+
+    const nonPinned = currentList.filter((d) => !d.isPinned && (d.lastMessageDate || 0) > 0)
+    const lastDialog = nonPinned.length > 0 ? nonPinned[nonPinned.length - 1] : currentList[currentList.length - 1]
+    if (!lastDialog) return
+
+    const offsetDate = lastDialog?.lastMessageDate ? Math.floor(lastDialog.lastMessageDate / 1000) : undefined
+    const offsetId = lastDialog?.lastMessageId || 0
+    const offsetPeerId = lastDialog?.id
+
+    isBackgroundSyncingDialogsRef.current = true
+    try {
+      const nextBatch = await window.guidegram.getDialogs(accountId, 150, offsetDate, offsetId, offsetPeerId)
+      if (!nextBatch || nextBatch.length === 0) {
+        hasMoreDialogsRef.current = false
+      } else {
+        let addedCount = 0
+        setDialogsByAccount((prev) => {
+          const existing = prev[accountId] || []
+          const existingMap = new Map<string, DialogItem>()
+          for (const d of existing) {
+            existingMap.set(d.id, d)
+          }
+          for (const d of nextBatch) {
+            if (!existingMap.has(d.id)) {
+              existingMap.set(d.id, d)
+              addedCount++
+            }
+          }
+          if (addedCount === 0) {
+            hasMoreDialogsRef.current = false
+          }
+          return { ...prev, [accountId]: Array.from(existingMap.values()) }
+        })
+
+        if (addedCount > 0 && hasMoreDialogsRef.current) {
+          scheduleBackgroundDialogSync(accountId)
+        }
+      }
+    } catch (err) {
+      console.warn('[BackgroundDialogSync] Progressive sync paused:', err)
+    } finally {
+      isBackgroundSyncingDialogsRef.current = false
+    }
+  }
+
   const handleLoadMoreDialogs = async () => {
-    if (!activeAccountId || !window.guidegram?.getDialogs || isLoadingMoreDialogs || !hasMoreDialogsRef.current) return
+    if (
+      !activeAccountId ||
+      !window.guidegram?.getDialogs ||
+      isLoadingMoreDialogsRef.current ||
+      isLoadingMoreDialogs ||
+      !hasMoreDialogsRef.current
+    ) {
+      return
+    }
     const currentList = dialogsByAccount[activeAccountId] || []
     if (currentList.length === 0) return
 
+    isLoadingMoreDialogsRef.current = true
     setIsLoadingMoreDialogs(true)
     try {
-      const lastDialog = currentList[currentList.length - 1]
+      const nonPinned = currentList.filter((d) => !d.isPinned && (d.lastMessageDate || 0) > 0)
+      const lastDialog = nonPinned.length > 0 ? nonPinned[nonPinned.length - 1] : currentList[currentList.length - 1]
       const offsetDate = lastDialog?.lastMessageDate ? Math.floor(lastDialog.lastMessageDate / 1000) : undefined
-      const nextBatch = await window.guidegram.getDialogs(activeAccountId, 150, offsetDate)
+      const offsetId = lastDialog?.lastMessageId || 0
+      const offsetPeerId = lastDialog?.id
+      const nextBatch = await window.guidegram.getDialogs(activeAccountId, 150, offsetDate, offsetId, offsetPeerId)
 
       if (!nextBatch || nextBatch.length === 0) {
         hasMoreDialogsRef.current = false
@@ -918,6 +1014,7 @@ export const App: React.FC = () => {
     } catch (err) {
       console.warn('Failed to load more dialogs:', err)
     } finally {
+      isLoadingMoreDialogsRef.current = false
       setIsLoadingMoreDialogs(false)
     }
   }

@@ -5812,16 +5812,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 }`}
               >
                 <div
-                  className={`relative flex items-end gap-1.5 ${
+                  className={`relative flex items-end gap-1.5 w-fit ${
                     chat.isChannel && !chat.isGroup
                       ? 'w-full max-w-2xl lg:max-w-3xl'
                       : (!chat.isGroup && !chat.isChannel)
-                      ? 'max-w-[85%] sm:max-w-[61.8%]'
-                      : 'max-w-[85%] md:max-w-[75%]'
+                      ? 'max-w-[88%] sm:max-w-[75%] md:max-w-[61.8%]'
+                      : 'max-w-[90%] sm:max-w-[80%] md:max-w-[75%]'
                   }`}
                   style={
                     !chat.isGroup && !chat.isChannel
-                      ? { maxWidth: 'clamp(280px, 61.8%, 640px)' }
+                      ? { maxWidth: 'min(88%, clamp(260px, 61.8%, 640px))' }
+                      : chat.isGroup
+                      ? { maxWidth: 'min(92%, 720px)' }
                       : undefined
                   }
                 >
@@ -5852,9 +5854,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     </button>
                   )}
 
-                  {/* Outgoing Message Action Bar */}
+                  {/* Outgoing Message Action Bar - Floating Glassmorphic Pill (Takes 0px flex width) */}
                   {msg.isOutgoing && (
-                    <div className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-end mb-1 bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative ${isSelectionMode ? '!hidden' : ''}`}>
+                    <div className={`opacity-0 group-hover:opacity-100 ${activeReactionPickerMsgId === msg.id ? '!opacity-100 !pointer-events-auto !scale-100' : ''} absolute -top-3.5 end-0 z-30 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 bg-dark-850/95 backdrop-blur-md px-1.5 py-1 rounded-xl border border-white/15 shadow-xl scale-95 group-hover:scale-100 origin-top-right ${isSelectionMode ? '!hidden' : ''}`}>
                       {/* Reaction Picker Button */}
                       {allowedReactions.length > 0 && (
                         <div className="relative">
@@ -6073,13 +6075,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     />
                   )}
 
-                  <div className="flex flex-col min-w-0 max-w-full flex-1">
+                  <div className="flex flex-col min-w-0 max-w-full w-fit">
                     {/* Message Bubble (Stickers render transparently without bubble frame) */}
                     <div
                       className={`transition-all bubble-haptic-spring ${
                       msg.isSticker || msg.mediaType === 'sticker'
                         ? 'bg-transparent p-0'
-                        : `text-xs shadow-sm ${
+                        : `text-xs shadow-sm min-w-[76px] sm:min-w-[84px] break-words ${
                             msg.isOutgoing
                               ? 'bg-primary-600 text-white rounded-br-sm'
                               : 'bg-dark-800 text-gray-200 border border-white/5 rounded-bl-sm'
@@ -6554,9 +6556,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       )}
                   </div>
 
-                  {/* Incoming Message Action Bar */}
+                  {/* Incoming Message Action Bar - Floating Glassmorphic Pill (Takes 0px flex width) */}
                   {!msg.isOutgoing && (
-                    <div className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-end mb-1 bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative ${isSelectionMode ? '!hidden' : ''}`}>
+                    <div className={`opacity-0 group-hover:opacity-100 ${activeReactionPickerMsgId === msg.id ? '!opacity-100 !pointer-events-auto !scale-100' : ''} absolute -top-3.5 start-0 z-30 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 bg-dark-850/95 backdrop-blur-md px-1.5 py-1 rounded-xl border border-white/15 shadow-xl scale-95 group-hover:scale-100 origin-top-left ${isSelectionMode ? '!hidden' : ''}`}>
                       {/* Reaction Picker Button */}
                       {allowedReactions.length > 0 && (
                         <div className="relative">
