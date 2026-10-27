@@ -1347,16 +1347,23 @@ export const App: React.FC = () => {
 
   // Open Saved Messages for current active account
   const handleOpenSavedMessages = () => {
-    if (!activeAccountId) return
-    const currentAcc = accounts.find((a) => a.id === activeAccountId)
-    const dialogs = dialogsByAccount[activeAccountId] || []
+    if (isUnifiedInboxOpen) {
+      setIsUnifiedInboxOpen(false)
+    }
+    const accId = activeAccountId || accounts[0]?.id
+    if (!accId) return
+    if (!activeAccountId && accounts.length > 0) {
+      setActiveAccountId(accounts[0].id)
+    }
+    const currentAcc = accounts.find((a) => a.id === accId)
+    const dialogs = dialogsByAccount[accId] || []
     // Look for Saved Messages dialog or self peer
     const savedChat = dialogs.find(
       (d) =>
         d.isSavedMessages ||
         d.title.toLowerCase() === 'saved messages' ||
         d.title === 'پیام‌های ذخیره‌شده' ||
-        (currentAcc?.id && (d.id === currentAcc.id || d.id === currentAcc.id.replace(/^-100/, '').replace(/^-/, ''))) ||
+        (currentAcc?.id && (d.id === currentAcc.id || isPeerMatch(d.id, currentAcc.id))) ||
         (currentAcc?.username && d.username?.toLowerCase() === currentAcc.username.toLowerCase()) ||
         (currentAcc?.phone && d.id === currentAcc.phone)
     )
@@ -1366,6 +1373,8 @@ export const App: React.FC = () => {
       handleSelectChat(currentAcc.id)
     } else if (currentAcc?.username) {
       handleSelectUserOrChat(currentAcc.username)
+    } else {
+      handleSelectChat('me')
     }
   }
 
@@ -1414,6 +1423,18 @@ export const App: React.FC = () => {
   const currentDialogs = (activeAccountId && dialogsByAccount[activeAccountId]) || []
   const currentChat = currentDialogs.find((d) => d.id === activeChatId || isPeerMatch(d.id, activeChatId)) || null
   const currentMessages = (activeChatId && messagesByChat[activeChatId]) || []
+
+  const isSavedMessagesActive = useMemo(() => {
+    if (isUnifiedInboxOpen || !activeChatId) return false
+    if (activeChatId === 'me') return true
+    if (currentChat?.isSavedMessages) return true
+    if (currentChat?.title?.toLowerCase() === 'saved messages' || currentChat?.title === 'پیام‌های ذخیره‌شده') return true
+    if (currentAccount?.id && (currentChat?.id === currentAccount.id || isPeerMatch(currentChat?.id, currentAccount.id))) return true
+    if (currentAccount?.id && (activeChatId === currentAccount.id || isPeerMatch(activeChatId, currentAccount.id))) return true
+    if (currentAccount?.phone && (activeChatId === currentAccount.phone || currentChat?.id === currentAccount.phone)) return true
+    if (currentAccount?.username && currentChat?.username && currentChat.username.toLowerCase() === currentAccount.username.toLowerCase()) return true
+    return false
+  }, [isUnifiedInboxOpen, activeChatId, currentChat, currentAccount])
 
   // Compute archived unread count
   const archivedUnreadCount = useMemo(() => {
@@ -1636,6 +1657,8 @@ export const App: React.FC = () => {
               onOpenProxyModal={() => setIsProxyModalOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenMcpHub={() => setIsMcpHubOpen(true)}
+              onOpenSavedMessages={handleOpenSavedMessages}
+              isSavedMessagesActive={isSavedMessagesActive}
             />
           </nav>
           <React.Suspense fallback={<div className="flex-1 flex items-center justify-center bg-dark-900 text-gray-400 text-sm">Loading Unified Inbox...</div>}>
@@ -1665,6 +1688,8 @@ export const App: React.FC = () => {
               onOpenProxyModal={() => setIsProxyModalOpen(true)}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenMcpHub={() => setIsMcpHubOpen(true)}
+              onOpenSavedMessages={handleOpenSavedMessages}
+              isSavedMessagesActive={isSavedMessagesActive}
             />
           </nav>
 
