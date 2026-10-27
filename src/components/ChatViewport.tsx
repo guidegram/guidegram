@@ -141,6 +141,7 @@ interface ChatViewportProps {
   chat: DialogItem | null
   messages: MessageItem[]
   ghostMode: boolean
+  onBack?: () => void
   // 64Gram Fork Power Preferences
   showChatId?: boolean
   showMessageId?: boolean
@@ -184,6 +185,7 @@ interface ChatViewportProps {
   onClearInitialScroll?: () => void
   onMergeHistoricalMessages?: (newMessages: MessageItem[]) => void
   onUpdateUnreadCount?: (chatId: string, unreadCount: number) => void
+  onOpenProxyModal?: (url?: string) => void
 }
 
 interface StagedAttachment {
@@ -706,6 +708,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   chat,
   messages,
   ghostMode,
+  onBack,
   showChatId = true,
   showMessageId = true,
   showSeconds = true,
@@ -733,6 +736,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onClearInitialScroll,
   onMergeHistoricalMessages,
   onUpdateUnreadCount,
+  onOpenProxyModal,
 }) => {
   const [inputText, setInputText] = useState('')
   const [copiedChatId, setCopiedChatId] = useState(false)
@@ -2475,6 +2479,20 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const handleSafeOpenUrl = (url: string) => {
     if (!url) return
     const parsed = parseTelegramUrl(url)
+
+    // Intercept Telegram Proxy links (tg://proxy, tg://socks, t.me/proxy, t.me/socks)
+    if (
+      parsed.type === 'proxy' ||
+      url.startsWith('tg://proxy') ||
+      url.startsWith('tg://socks') ||
+      url.includes('/proxy?') ||
+      url.includes('/socks?')
+    ) {
+      if (onOpenProxyModal) {
+        onOpenProxyModal(url)
+        return
+      }
+    }
     if (parsed.isTelegram && (parsed.type === 'peer' || parsed.type === 'private_channel') && parsed.target) {
       const isCurrentChat =
         Boolean(chat) &&
@@ -4981,13 +4999,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )}
 
       {/* 1. Chat Header with Generous Spacing & Clickable Channel Info */}
-      <div className="h-16 shrink-0 bg-dark-850/90 border-b border-white/5 px-4 flex items-center justify-between backdrop-blur-md z-20 shadow-sm">
-        {/* Clickable Header Profile Button */}
-        <div
-          onClick={handleOpenInfo}
-          title="Click to view channel/chat details"
-          className="flex items-center gap-3 hover:bg-white/5 p-1.5 -ml-1.5 rounded-2xl transition-colors cursor-pointer group max-w-lg chat-header-fluid"
-        >
+      <div className="h-16 shrink-0 bg-dark-850/90 border-b border-white/5 px-3 sm:px-4 flex items-center justify-between backdrop-blur-md z-20 shadow-sm">
+        {/* Left: Mobile Back Button & Clickable Header Profile Button */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          {onBack && (
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              type="button"
+              onClick={onBack}
+              title="Back to conversation list"
+              className="p-2 -ml-1 mr-1 rounded-xl text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer shrink-0"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </motion.button>
+          )}
+
+          <div
+            onClick={handleOpenInfo}
+            title="Click to view channel/chat details"
+            className="flex items-center gap-3 hover:bg-white/5 p-1.5 -ml-1.5 rounded-2xl transition-colors cursor-pointer group max-w-lg chat-header-fluid min-w-0"
+          >
           <motion.div
             key={`header-avatar-${chat.id}`}
             initial={{ opacity: 0, scale: 0.92 }}
@@ -5093,6 +5124,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </motion.div>
           </AnimatePresence>
         </div>
+      </div>
 
         {/* Quick Action Tools */}
         <div className="flex items-center gap-2">

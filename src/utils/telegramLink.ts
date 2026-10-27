@@ -153,6 +153,9 @@ export function parseTelegramUrl(rawUrl: string): ParsedTelegramLink {
 
   // D. Reserved paths on t.me
   if (RESERVED_PATHS.has(segments[0].toLowerCase())) {
+    if (segments[0].toLowerCase() === 'proxy' || segments[0].toLowerCase() === 'socks') {
+      return { isTelegram: true, type: 'proxy', rawUrl }
+    }
     return { isTelegram: true, type: 'other', rawUrl }
   }
 

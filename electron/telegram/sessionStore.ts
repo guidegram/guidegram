@@ -161,6 +161,7 @@ export class SessionStore {
         defaultDownloadDir: path.join(this.dataDir, 'downloads'),
         autoStartWithApp: true,
       },
+      autoConnectOnVpnDrop: true,
     }
 
     try {

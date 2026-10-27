@@ -7,6 +7,7 @@ import { ChatList } from './components/ChatList'
 import { ChatViewport } from './components/ChatViewport'
 import type { DirectForwardPayload } from './components/DirectForwardModal'
 import { UpdateBanner } from './components/UpdateBanner'
+import { useIsMobile } from './utils/useIsMobile'
 
 // Performance: Code-split heavy modals with React.lazy to reduce initial bundle and startup V8 parse time
 const DirectForwardModal = React.lazy(() => import('./components/DirectForwardModal').then((m) => ({ default: m.DirectForwardModal })))
@@ -51,6 +52,7 @@ export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
 }
 
 export const App: React.FC = () => {
+  const isMobile = useIsMobile(768)
   const [isLoaded, setIsLoaded] = useState(false)
   const [accounts, setAccounts] = useState<AccountInfo[]>([])
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null)
@@ -77,6 +79,7 @@ export const App: React.FC = () => {
   // Modals state
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
   const [isProxyModalOpen, setIsProxyModalOpen] = useState(false)
+  const [proxyToImport, setProxyToImport] = useState<string | undefined>(undefined)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'mcp' | 'business' | 'profile' | 'notifications' | 'privacy' | 'chat' | 'advanced' | 'features'>('general')
   const [isContactChangesOpen, setIsContactChangesOpen] = useState(false)
@@ -521,6 +524,22 @@ export const App: React.FC = () => {
         setUpdateInfo(info)
       })
 
+      // Deep-Link & Telegram URL handler (e.g. tg://proxy?..., tg://socks?...)
+      const unsubscribeDeepLink = window.guidegram.on('protocol:deep-link', (payload: any) => {
+        if (!payload) return
+        if (
+          payload.action === 'proxy' ||
+          payload.action === 'socks' ||
+          payload.rawUrl?.includes('proxy') ||
+          payload.rawUrl?.includes('socks')
+        ) {
+          if (payload.rawUrl) {
+            setProxyToImport(payload.rawUrl)
+            setIsProxyModalOpen(true)
+          }
+        }
+      })
+
       // Update completion celebration listener
       const unsubscribeUpdateInstalled = window.guidegram.on(
         'app:update-installed',
@@ -713,6 +732,7 @@ export const App: React.FC = () => {
         unsubscribeUpdateInstalled?.()
         unsubscribeReadHistory?.()
         unsubscribeReadOutbox?.()
+        unsubscribeDeepLink?.()
       }
     }
   }, [])
@@ -1571,11 +1591,15 @@ export const App: React.FC = () => {
 
   const handleUpdateAccountProxy = async (accountId: string, proxy?: ProxyConfig) => {
     if (!window.guidegram) return
-    const updatedAccounts = accounts.map((acc) =>
-      acc.id === accountId ? { ...acc, proxyConfig: proxy } : acc
-    )
-    setAccounts(updatedAccounts)
-    await window.guidegram.updateConfig({ accounts: updatedAccounts })
+    try {
+      const updatedAccount = await window.guidegram.setAccountProxy(accountId, proxy)
+      setAccounts((prev) =>
+        prev.map((acc) => (acc.id === accountId ? { ...acc, ...updatedAccount } : acc))
+      )
+    } catch (err: any) {
+      console.error('Failed to set account proxy:', err)
+      setAppToast('خطا در اعمال پروکسی: ' + (err?.message || 'نامشخص'))
+    }
   }
 
   const handleLogoutAccount = async (accountId: string) => {
@@ -1773,7 +1797,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-dark-950 font-sans">
+    <div className="flex flex-col h-[100dvh] w-full max-w-[100vw] overflow-hidden bg-dark-950 font-sans">
       {/* Accessible Screen-Reader Polite Live Region (WCAG 4.1.3 Status Messages) */}
       <div
         id="a11y-live-announcer"
@@ -1842,6 +1866,94 @@ export const App: React.FC = () => {
               }}
             />
           </React.Suspense>
+        </div>
+      ) : isMobile ? (
+        /* Mobile Single-Column Responsive View (Master-Detail) */
+        <div className="flex flex-1 min-h-0 overflow-hidden w-full relative">
+          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden w-full">
+            {/* Show ChatTabs only if conversation is not open */}
+            {!activeChatId && (
+              <ChatTabs
+                accountId={currentAccount?.id}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                unreadCounts={unreadCounts}
+                markAllReadEnabled={config?.markAllReadEnabled ?? true}
+                onMarkAllAsRead={handleMarkAllAsRead}
+                onCloudFoldersLoaded={setCloudFolders}
+                cloudFolders={cloudFolders}
+                onOpenFolderManager={() => setIsFolderManagerOpen(true)}
+              />
+            )}
+
+            {/* Conversation List Column */}
+            {!activeChatId ? (
+              <div className="flex-1 flex flex-col h-full bg-dark-850 overflow-hidden w-full">
+                <ChatList
+                  account={currentAccount}
+                  dialogs={currentDialogs}
+                  activeChatId={activeChatId}
+                  activeTab={activeTab}
+                  searchQuery={searchQuery}
+                  showChatId={config?.showChatId ?? true}
+                  ghostMode={ghostMode}
+                  cloudFolders={cloudFolders}
+                  onSearchChange={setSearchQuery}
+                  onSelectChat={handleSelectChat}
+                  onSelectPeer={handleSelectUserOrChat}
+                  isLoadingMoreDialogs={isLoadingMoreDialogs}
+                  onLoadMoreDialogs={handleLoadMoreDialogs}
+                />
+              </div>
+            ) : (
+              /* Active Conversation Viewport with Back button to return to chat list */
+              <main role="main" aria-label="Active conversation" className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative w-full">
+                <ChatViewport
+                  chat={currentChat}
+                  messages={currentMessages}
+                  ghostMode={ghostMode}
+                  onBack={() => setActiveChatId(null)}
+                  showChatId={config?.showChatId ?? true}
+                  showMessageId={config?.showMessageId ?? true}
+                  showSeconds={config?.showSeconds ?? true}
+                  showSenderAvatar={config?.showSenderAvatar ?? true}
+                  quickForwardToSaved={config?.quickForwardToSaved ?? true}
+                  alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
+                  copyCallbackData={config?.copyCallbackData ?? true}
+                  suppressLinkWarning={config?.suppressLinkWarning ?? false}
+                  autoDownload={config?.autoDownload}
+                  chatFontSize={config?.chatFontSize || 14}
+                  bubbleRadius={config?.bubbleRadius ?? 16}
+                  bubblePadding={config?.bubblePadding ?? 10}
+                  onSendMessage={handleSendMessage}
+                  onSendMedia={handleSendMedia}
+                  onOpenDirectForward={(msg) => {
+                    setForwardMessage(msg)
+                    setForwardMessagesList(null)
+                  }}
+                  onOpenBatchDirectForward={(msgs) => {
+                    setForwardMessagesList(msgs)
+                    setForwardMessage(msgs[0] || null)
+                  }}
+                  onQuickForwardToSaved={handleQuickForwardToSaved}
+                  onDeleteMessage={handleDeleteMessage}
+                  onDeleteMessages={handleDeleteMessages}
+                  onEditMessage={handleEditMessage}
+                  onToggleGhostMode={handleToggleGhostMode}
+                  onSelectUserOrChat={handleSelectUserOrChat}
+                  onOpenUserProfile={handleOpenUserProfile}
+                  initialScrollMsgId={initialScrollMsgId}
+                  onClearInitialScroll={() => setInitialScrollMsgId(null)}
+                  onMergeHistoricalMessages={handleMergeHistoricalMessages}
+                  onUpdateUnreadCount={handleUpdateUnreadCount}
+                  onOpenProxyModal={(url) => {
+                    if (url) setProxyToImport(url)
+                    setIsProxyModalOpen(true)
+                  }}
+                />
+              </main>
+            )}
+          </div>
         </div>
       ) : (
         <div className={`flex flex-1 min-h-0 overflow-hidden ${isResizingSidebar ? 'select-none' : ''}`}>
@@ -1955,6 +2067,10 @@ export const App: React.FC = () => {
                   onClearInitialScroll={() => setInitialScrollMsgId(null)}
                   onMergeHistoricalMessages={handleMergeHistoricalMessages}
                   onUpdateUnreadCount={handleUpdateUnreadCount}
+                  onOpenProxyModal={(url) => {
+                    if (url) setProxyToImport(url)
+                    setIsProxyModalOpen(true)
+                  }}
                 />
               </main>
             </div>
@@ -2109,7 +2225,11 @@ export const App: React.FC = () => {
           <ProxySettingsModal
             isOpen={isProxyModalOpen}
             accounts={accounts}
-            onClose={() => setIsProxyModalOpen(false)}
+            initialProxyToImport={proxyToImport}
+            onClose={() => {
+              setIsProxyModalOpen(false)
+              setProxyToImport(undefined)
+            }}
             onUpdateAccountProxy={handleUpdateAccountProxy}
           />
         )}

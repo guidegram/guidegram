@@ -132,6 +132,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:logout-account', { accountId }),
   reconnectAccount: (accountId: string): Promise<AccountInfo> =>
     ipcRenderer.invoke('telegram:reconnect-account', { accountId }),
+  setAccountProxy: (accountId: string, proxy?: ProxyConfig): Promise<AccountInfo> =>
+    ipcRenderer.invoke('telegram:set-account-proxy', { accountId, proxy }),
 
   // Dialogs & Messages
   getCachedDialogs: (accountId: string): Promise<DialogItem[]> =>
@@ -1739,6 +1741,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('proxy:benchmark-proxies', { proxies }),
   rotateAccountProxy: (accountId: string): Promise<ProxyConfig | null> =>
     ipcRenderer.invoke('proxy:rotate-account-proxy', { accountId }),
+  parseProxyUrl: (url: string): Promise<ProxyConfig | null> =>
+    ipcRenderer.invoke('proxy:parse-url', { url }),
+  toShareableProxyUrl: (proxy: ProxyConfig): Promise<string> =>
+    ipcRenderer.invoke('proxy:to-shareable-url', { proxy }),
   getConfig: () => ipcRenderer.invoke('telegram:get-config'),
   updateConfig: (partial: Partial<AppConfig>) =>
     ipcRenderer.invoke('telegram:update-config', { partial }),

@@ -222,6 +222,148 @@ export class ProxyManager {
   }
 
   /**
+   * Return a lazy factory function producing an @mtcute transport.
+   * This ensures each pooled socket (download/upload/primary) gets an isolated transport.
+   */
+  public static toMtcuteTransportFactory(proxy?: ProxyConfig): any {
+    const warpStatus = WarpManager.getStatus()
+    const isWarp = warpStatus.enabled && warpStatus.connected
+    if ((!proxy || !proxy.enabled) && !isWarp) {
+      return undefined
+    }
+    return () => this.toMtcuteTransport(proxy)
+  }
+
+  /**
+   * Parse any proxy string: tg://proxy, tg://socks, https://t.me/proxy, socks5://, http://, or host:port:secret
+   */
+  public static parseProxyUrlOrText(raw: string, defaultName?: string): ProxyConfig | null {
+    if (!raw || typeof raw !== 'string') return null
+    const str = raw.trim()
+
+    // 1. tg://proxy, https://t.me/proxy, or telegram.me/proxy (MTProto)
+    if (/^(?:tg|https?):\/\/(?:t\.me|telegram\.me|proxy)\/proxy\?/i.test(str) || /^tg:\/\/proxy\?/i.test(str)) {
+      try {
+        const u = new URL(str.replace(/^tg:\/\/proxy\?/i, 'https://t.me/proxy?'))
+        const host = u.searchParams.get('server') || u.searchParams.get('host')
+        const port = parseInt(u.searchParams.get('port') || '', 10)
+        const secret = u.searchParams.get('secret')
+        if (host && port > 0 && port <= 65535 && secret) {
+          return {
+            id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            name: defaultName || `MTProto (${host}:${port})`,
+            type: 'mtproto',
+            host: host.toLowerCase(),
+            port,
+            secret,
+            enabled: true,
+          }
+        }
+      } catch {}
+    }
+
+    // 2. tg://socks or t.me/socks (SOCKS5)
+    if (/^(?:tg|https?):\/\/(?:t\.me|telegram\.me|socks)\/socks\?/i.test(str) || /^tg:\/\/socks\?/i.test(str)) {
+      try {
+        const u = new URL(str.replace(/^tg:\/\/socks\?/i, 'https://t.me/socks?'))
+        const host = u.searchParams.get('server') || u.searchParams.get('host')
+        const port = parseInt(u.searchParams.get('port') || '', 10)
+        const user = u.searchParams.get('user') || u.searchParams.get('username') || undefined
+        const pass = u.searchParams.get('pass') || u.searchParams.get('password') || undefined
+        if (host && port > 0 && port <= 65535) {
+          return {
+            id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            name: defaultName || `SOCKS5 (${host}:${port})`,
+            type: 'socks5',
+            host: host.toLowerCase(),
+            port,
+            username: user,
+            password: pass,
+            enabled: true,
+          }
+        }
+      } catch {}
+    }
+
+    // 3. socks5://, socks4://, or http:// URL
+    if (/^(?:socks5|socks4|http|https):\/\//i.test(str)) {
+      try {
+        const u = new URL(str)
+        const isSocks = u.protocol.startsWith('socks')
+        const host = u.hostname
+        const port = parseInt(u.port || (isSocks ? '1080' : '8080'), 10)
+        const user = u.username ? decodeURIComponent(u.username) : undefined
+        const pass = u.password ? decodeURIComponent(u.password) : undefined
+        if (host && port > 0 && port <= 65535) {
+          return {
+            id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            name: defaultName || `${isSocks ? 'SOCKS5' : 'HTTP'} (${host}:${port})`,
+            type: isSocks ? 'socks5' : 'http',
+            host: host.toLowerCase(),
+            port,
+            username: user,
+            password: pass,
+            enabled: true,
+          }
+        }
+      } catch {}
+    }
+
+    // 4. host:port:secret (plain text MTProto commonly shared in channels)
+    const mtpMatch = str.match(/^([^:\s\/]+):(\d{2,5}):([a-fA-F0-9]{32,})$/)
+    if (mtpMatch) {
+      const port = parseInt(mtpMatch[2], 10)
+      if (port > 0 && port <= 65535) {
+        return {
+          id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: defaultName || `MTProto (${mtpMatch[1]}:${port})`,
+          type: 'mtproto',
+          host: mtpMatch[1].toLowerCase(),
+          port,
+          secret: mtpMatch[3],
+          enabled: true,
+        }
+      }
+    }
+
+    // 5. host:port (plain text SOCKS5)
+    const spMatch = str.match(/^([^:\s\/]+):(\d{2,5})$/)
+    if (spMatch) {
+      const port = parseInt(spMatch[2], 10)
+      if (port > 0 && port <= 65535) {
+        return {
+          id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: defaultName || `SOCKS5 (${spMatch[1]}:${port})`,
+          type: 'socks5',
+          host: spMatch[1].toLowerCase(),
+          port,
+          enabled: true,
+        }
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Format a ProxyConfig into a standard sharable link (tg://proxy or tg://socks)
+   */
+  public static toShareableUrl(proxy: ProxyConfig): string {
+    if (!proxy) return ''
+    if (proxy.type === 'mtproto' && proxy.secret) {
+      return `tg://proxy?server=${encodeURIComponent(proxy.host)}&port=${proxy.port}&secret=${encodeURIComponent(proxy.secret)}`
+    } else if (proxy.type === 'socks5') {
+      const userPart = proxy.username ? `&user=${encodeURIComponent(proxy.username)}` : ''
+      const passPart = proxy.password ? `&pass=${encodeURIComponent(proxy.password)}` : ''
+      return `tg://socks?server=${encodeURIComponent(proxy.host)}&port=${proxy.port}${userPart}${passPart}`
+    } else if (proxy.type === 'http') {
+      const auth = proxy.username ? `${encodeURIComponent(proxy.username)}${proxy.password ? `:${encodeURIComponent(proxy.password)}` : ''}@` : ''
+      return `http://${auth}${proxy.host}:${proxy.port}`
+    }
+    return `${proxy.host}:${proxy.port}`
+  }
+
+  /**
    * Convert ProxyConfig into GramJS compatible proxy object (legacy fallback)
    */
   public static toGramJsProxy(proxy?: ProxyConfig): any {

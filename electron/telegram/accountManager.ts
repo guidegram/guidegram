@@ -1090,7 +1090,7 @@ export class AccountManager {
       }
     }
 
-    const transport = ProxyManager.toMtcuteTransport(savedAcc.proxyConfig)
+    const transport = ProxyManager.toMtcuteTransportFactory(savedAcc.proxyConfig)
     const antiFingerprinting = config.antiFingerprinting !== false
     const profile = savedAcc.deviceProfile || DeviceProfileManager.getProfileForAccount(savedAcc.id, antiFingerprinting)
 
@@ -1118,7 +1118,7 @@ export class AccountManager {
       if (sessionString) {
         await client.importSession(sessionString)
       }
-      Logger.info(`[AccountManager] Connecting saved account ${savedAcc.id} (${savedAcc.phone || savedAcc.firstName}) [Device: ${profile.deviceModel}]...`)
+      Logger.info(`[AccountManager] Connecting saved account ${savedAcc.id} (${savedAcc.phone || savedAcc.firstName}) [Device: ${profile.deviceModel}] [Proxy: ${savedAcc.proxyConfig?.enabled ? savedAcc.proxyConfig.host : 'DIRECT'}]...`)
       await client.connect()
 
       const me: any = await client.getMe().catch(() => null)
@@ -1210,6 +1210,21 @@ export class AccountManager {
       this.clients.set(savedAcc.id, { client, session: sessionString, info: disconnectedInfo })
       this.onEventCallback?.('telegram:account-updated', { account: disconnectedInfo, error: err?.message })
 
+      // Auto-connect to healthy harvested proxy if VPN dropped / direct connection failed
+      const autoConnectOnVpnDrop = config.autoConnectOnVpnDrop !== false
+      if (autoConnectOnVpnDrop && (!savedAcc.proxyConfig?.enabled || (savedAcc.proxyConfig.failCount && savedAcc.proxyConfig.failCount > 0))) {
+        const fallbackProxy = ProxyManager.getDistinctProxyForAccount(savedAcc.id, config.accounts)
+        if (fallbackProxy && fallbackProxy.host !== savedAcc.proxyConfig?.host) {
+          Logger.info(`[AccountManager] Direct/failed connection on ${savedAcc.id}. Auto-fallback to healthy proxy ${fallbackProxy.host}:${fallbackProxy.port}...`)
+          setTimeout(() => {
+            this.setAccountProxy(savedAcc.id, fallbackProxy).catch((proxyErr) => {
+              Logger.warn(`[AccountManager] Auto-proxy fallback attempt failed for ${savedAcc.id}:`, proxyErr)
+            })
+          }, 800)
+          return disconnectedInfo
+        }
+      }
+
       // Schedule full jitter exponential backoff retry (Layer 11)
       networkReconnectManager.scheduleReconnect(
         savedAcc.id,
@@ -1237,7 +1252,65 @@ export class AccountManager {
     this.clients.set(accountId, { ...existing, info: connectingInfo })
     this.onEventCallback?.('telegram:account-updated', { account: connectingInfo })
 
+    if (existing?.client) {
+      try {
+        existing.client.stopUpdatesLoop?.()
+        await existing.client.disconnect().catch(() => {})
+        await existing.client.destroy?.().catch(() => {})
+      } catch (_) {}
+    }
+
     return this.connectSavedAccount(savedAcc)
+  }
+
+  /**
+   * Seamlessly set or update an account's proxy, reconnecting through the new transport
+   */
+  public async setAccountProxy(accountId: string, proxy?: ProxyConfig): Promise<AccountInfo> {
+    Logger.info(`[AccountManager] Setting proxy for account ${accountId}: ${proxy ? `${proxy.type.toUpperCase()} (${proxy.host}:${proxy.port})` : 'DIRECT (Disabled)'}`)
+
+    // 1. Update session store configuration
+    const config = this.store.getConfig()
+    const updatedAccounts = config.accounts.map((a) => {
+      if (a.id === accountId) {
+        return { ...a, proxyConfig: proxy }
+      }
+      return a
+    })
+    this.store.updateConfig({ accounts: updatedAccounts })
+
+    // 2. Retrieve target account
+    const targetAcc = updatedAccounts.find((a) => a.id === accountId)
+    if (!targetAcc) {
+      throw new Error(`Account ${accountId} not found in store.`)
+    }
+
+    // 3. Immediately update in-memory client info and emit status 'connecting' with the NEW proxyConfig
+    const existing = this.clients.get(accountId)
+    const connectingInfo: AccountInfo = {
+      ...(existing?.info || targetAcc),
+      proxyConfig: proxy,
+      status: 'connecting',
+    }
+    this.clients.set(accountId, {
+      ...existing,
+      info: connectingInfo,
+    })
+    this.onEventCallback?.('telegram:account-updated', { account: connectingInfo })
+
+    // 4. Gracefully close and destroy existing TelegramClient instance to prevent socket leaks
+    if (existing?.client) {
+      try {
+        existing.client.stopUpdatesLoop?.()
+        await existing.client.disconnect().catch(() => {})
+        await existing.client.destroy?.().catch(() => {})
+      } catch (discErr) {
+        Logger.warn(`[AccountManager] Disconnect error during proxy switch for ${accountId}:`, discErr)
+      }
+    }
+
+    // 5. Connect saved account with the new proxy transport
+    return this.connectSavedAccount(targetAcc)
   }
 
   public async initialize(): Promise<AccountInfo[]> {
@@ -1279,7 +1352,7 @@ export class AccountManager {
     }
 
     const config = this.store.getConfig()
-    const transport = ProxyManager.toMtcuteTransport(proxy)
+    const transport = ProxyManager.toMtcuteTransportFactory(proxy)
     const antiFingerprinting = config.antiFingerprinting !== false
     const profile = DeviceProfileManager.getProfileForAccount(phone, antiFingerprinting)
 
@@ -1441,7 +1514,7 @@ export class AccountManager {
     const botIdPrefix = cleanToken.split(':')[0]
     Logger.info(`[AccountManager] Starting bot auth for bot ID prefix: ${botIdPrefix}`)
     const config = this.store.getConfig()
-    const transport = ProxyManager.toMtcuteTransport(proxy)
+    const transport = ProxyManager.toMtcuteTransportFactory(proxy)
     const antiFingerprinting = config.antiFingerprinting !== false
     const botSeed = `bot_${botIdPrefix}`
     const profile = DeviceProfileManager.getProfileForAccount(botSeed, antiFingerprinting)
@@ -1542,7 +1615,7 @@ export class AccountManager {
     await this.cancelQrAuth()
 
     const config = this.store.getConfig()
-    const transport = ProxyManager.toMtcuteTransport(proxy)
+    const transport = ProxyManager.toMtcuteTransportFactory(proxy)
     const antiFingerprinting = config.antiFingerprinting !== false
     const qrSeed = `qr_${Date.now()}_${Math.random()}`
     const profile = DeviceProfileManager.getProfileForAccount(qrSeed, antiFingerprinting)
@@ -13217,6 +13290,30 @@ export class AccountManager {
         if (state === 'connected') {
           networkReconnectManager.onAccountConnected(accountId)
         } else if (state === 'offline') {
+          const existing = this.clients.get(accountId)
+          const disconnectedInfo: AccountInfo = {
+            ...(existing?.info || { id: accountId } as any),
+            status: 'disconnected',
+          }
+          if (existing) {
+            existing.info = disconnectedInfo
+          }
+          this.onEventCallback?.('telegram:account-updated', { account: disconnectedInfo, reason: 'network_offline' })
+
+          const config = this.store.getConfig()
+          const autoConnect = config.autoConnectOnVpnDrop !== false
+          const currentAcc = config.accounts.find((a) => a.id === accountId)
+          if (autoConnect && currentAcc && !currentAcc.proxyConfig?.enabled) {
+            const fallbackProxy = ProxyManager.getDistinctProxyForAccount(accountId, config.accounts)
+            if (fallbackProxy) {
+              Logger.info(`[AccountManager] Network went offline (VPN dropped). Auto-switching account ${accountId} to healthy proxy ${fallbackProxy.host}:${fallbackProxy.port}...`)
+              this.setAccountProxy(accountId, fallbackProxy).catch((err) => {
+                Logger.warn(`[AccountManager] Auto-switch proxy on offline failed:`, err)
+              })
+              return
+            }
+          }
+
           networkReconnectManager.scheduleReconnect(
             accountId,
             async () => {

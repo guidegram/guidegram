@@ -8,7 +8,7 @@ import { AccountManager, decodeMtprotoWaveform, encodeMtprotoWaveform, normalize
 import { ProxyManager } from './telegram/proxyManager'
 import { Logger } from './telegram/logger'
 import { UpdateManager } from './telegram/updateManager'
-import type { WebPagePreview, McpServerConfig } from './telegram/types'
+import type { WebPagePreview, McpServerConfig, ProxyConfig } from './telegram/types'
 import { GuidegramMcpServer } from './mcp/mcpServer'
 import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSchema, AccountIdSchema } from './ipcValidation'
 import { globalIpcRateLimiter } from './rateLimiter'
@@ -1930,6 +1930,18 @@ function setupIpcHandlers() {
 
   ipcMain.handle('telegram:test-proxy-ping', async (_event, { proxy }) => {
     return ProxyManager.testProxyPing(proxy)
+  })
+
+  ipcMain.handle('telegram:set-account-proxy', async (_event, { accountId, proxy }: { accountId: string; proxy?: ProxyConfig }) => {
+    return await accountManager.setAccountProxy(accountId, proxy)
+  })
+
+  ipcMain.handle('proxy:parse-url', async (_event, { url }: { url: string }) => {
+    return ProxyManager.parseProxyUrlOrText(url)
+  })
+
+  ipcMain.handle('proxy:to-shareable-url', async (_event, { proxy }: { proxy: ProxyConfig }) => {
+    return ProxyManager.toShareableUrl(proxy)
   })
 
   ipcMain.handle('proxy:start-auto-harvest', async (_event, { intervalMs } = {}) => {
