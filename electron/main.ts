@@ -2069,9 +2069,9 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:search-global', async (_event, { accountId, query, filterType, limit, minDate, maxDate }) => {
+  ipcMain.handle('telegram:search-global', async (_event, { accountId, query, filterType, limit, minDate, maxDate, chatTypeScope }) => {
     try {
-      return await accountManager.searchGlobal(accountId, query, filterType, limit, minDate, maxDate)
+      return await accountManager.searchGlobal(accountId, query, filterType, limit, minDate, maxDate, chatTypeScope)
     } catch (err: any) {
       Logger.warn(`[IPC] searchGlobal error:`, err)
       return []

@@ -533,15 +533,8 @@ const guidegramAPI = {
   // Global Telegram Search & Historical Messages
   searchPublicPeers: (accountId: string, query: string): Promise<DialogItem[]> =>
     ipcRenderer.invoke('telegram:search-public-peers', { accountId, query }),
-  searchGlobal: (
-    accountId: string,
-    query: string,
-    filterType?: string,
-    limit?: number,
-    minDate?: number,
-    maxDate?: number
-  ): Promise<MessageItem[]> =>
-    ipcRenderer.invoke('telegram:search-global', { accountId, query, filterType, limit, minDate, maxDate }),
+  searchGlobal: (accountId: string, query: string, filterType?: string, limit?: number, minDate?: number, maxDate?: number, chatTypeScope?: string): Promise<MessageItem[]> =>
+    ipcRenderer.invoke('telegram:search-global', { accountId, query, filterType, limit, minDate, maxDate, chatTypeScope }),
   searchMessages: (
     accountId: string,
     chatId: string,

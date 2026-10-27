@@ -27,6 +27,7 @@ import { ProxyConfig, AccountInfo, AutoHarvestStatus, WarpStatus } from '../type
 interface ProxySettingsModalProps {
   isOpen: boolean
   accounts: AccountInfo[]
+  activeAccountId?: string | null
   initialProxyToImport?: string
   onClose: () => void
   onUpdateAccountProxy: (accountId: string, proxy?: ProxyConfig) => void
@@ -148,6 +149,7 @@ function parseAnyProxyLocal(raw: string, defaultName?: string): ProxyConfig | nu
 export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
   isOpen,
   accounts,
+  activeAccountId,
   initialProxyToImport,
   onClose,
   onUpdateAccountProxy,
@@ -196,10 +198,17 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
 
   const [isDistributing, setIsDistributing] = useState(false)
   const [distributionSuccess, setDistributionSuccess] = useState<string | null>(null)
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id || '')
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(activeAccountId || accounts[0]?.id || 'all')
   const [isBenchmarking, setIsBenchmarking] = useState(false)
   const [isRotating, setIsRotating] = useState(false)
   const [autoConnectOnVpnDrop, setAutoConnectOnVpnDrop] = useState<boolean>(true)
+
+  // Sync selectedAccountId if activeAccountId changes
+  useEffect(() => {
+    if (activeAccountId && accounts.some((a) => a.id === activeAccountId)) {
+      setSelectedAccountId(activeAccountId)
+    }
+  }, [activeAccountId])
 
   // Load initial status and cached proxies on mount
   useEffect(() => {
@@ -268,9 +277,35 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
 
   if (!isOpen) return null
 
-  const targetAccount = accounts.find((a) => a.id === (selectedAccountId || accounts[0]?.id)) || accounts[0]
-  const targetName = targetAccount?.firstName || targetAccount?.phone || 'Account'
-  const isTargetAccountProxyActive = Boolean(targetAccount?.proxyConfig?.enabled)
+  const isAllAccountsSelected = selectedAccountId === 'all'
+  const targetAccount = accounts.find((a) => a.id === selectedAccountId) || (isAllAccountsSelected ? null : accounts[0])
+  const targetName = isAllAccountsSelected
+    ? `همه اکانت‌ها (${accounts.length})`
+    : targetAccount?.firstName || targetAccount?.phone || 'Account'
+  const isTargetAccountProxyActive = isAllAccountsSelected
+    ? accounts.some((a) => a.proxyConfig?.enabled)
+    : Boolean(targetAccount?.proxyConfig?.enabled)
+
+  const proxyOnCount = accounts.filter((a) => a.proxyConfig?.enabled).length
+  const directCount = accounts.length - proxyOnCount
+
+  const handleDirectAllAccounts = () => {
+    if (accounts.length === 0) return
+    for (const acc of accounts) {
+      onUpdateAccountProxy(acc.id, undefined)
+    }
+    setDistributionSuccess(`تمام ${accounts.length} اکانت روی حالت مستقیم (بدون پروکسی) تنظیم شدند.`)
+    setTimeout(() => setDistributionSuccess(null), 3500)
+  }
+
+  const handleApplyProxyToAll = (proxy: ProxyConfig) => {
+    if (accounts.length === 0) return
+    for (const acc of accounts) {
+      onUpdateAccountProxy(acc.id, proxy)
+    }
+    setDistributionSuccess(`پروکسی ${proxy.name} روی تمام ${accounts.length} اکانت فعال شد.`)
+    setTimeout(() => setDistributionSuccess(null), 3500)
+  }
 
   const handleToggleAutoConnectOnVpnDrop = async () => {
     const nextVal = !autoConnectOnVpnDrop
@@ -402,7 +437,16 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     }
   }
 
-  const handleAssignProxyToAccount = (proxy?: ProxyConfig) => {
+  const handleAssignProxyToAccount = (proxy?: ProxyConfig, forceAll: boolean = false) => {
+    if (isAllAccountsSelected || forceAll) {
+      if (!proxy) {
+        handleDirectAllAccounts()
+      } else {
+        handleApplyProxyToAll(proxy)
+      }
+      return
+    }
+
     const targetId = selectedAccountId || accounts[0]?.id
     if (!targetId) return
 
@@ -647,14 +691,15 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-gray-400 flex items-center gap-1.5 font-medium">
               <User className="w-3.5 h-3.5 text-accent-cyan" />
-              Target Account:
+              Target:
             </span>
             {accounts.length > 1 ? (
               <select
-                value={selectedAccountId || accounts[0]?.id}
+                value={selectedAccountId}
                 onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="bg-dark-850 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-accent-cyan/40"
+                className="bg-dark-850 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-accent-cyan/40 font-semibold cursor-pointer"
               >
+                <option value="all">🌟 همه اکانت‌ها ({accounts.length} اکانت)</option>
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.firstName || acc.phone || acc.id} ({acc.proxyConfig?.enabled ? 'Proxy ON' : 'Direct'})
@@ -666,29 +711,59 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {isTargetAccountProxyActive ? (
-              <div className="flex items-center gap-1.5">
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>
-                    {targetAccount?.proxyConfig?.type.toUpperCase()} ({targetAccount?.proxyConfig?.host})
-                  </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {isAllAccountsSelected ? (
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-lg bg-primary-500/15 text-primary-300 border border-primary-500/30 text-[11px] font-semibold">
+                  {proxyOnCount} پروکسی • {directCount} مستقیم
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleAssignProxyToAccount(undefined)}
-                  title="خاموش کردن پروکسی و اتصال مستقیم"
-                  className="px-2 py-0.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  onClick={handleDirectAllAccounts}
+                  title="خاموش کردن پروکسی تمام اکانت‌ها و اتصال مستقیم به اینترنت"
+                  className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-red-500/10"
                 >
-                  <ShieldOff className="w-3 h-3" />
-                  <span>Direct (Off)</span>
+                  <ShieldOff className="w-3.5 h-3.5" />
+                  <span>خاموش کردن همه (Direct All)</span>
                 </button>
               </div>
             ) : (
-              <span className="px-2 py-0.5 rounded-lg bg-white/5 text-gray-400 border border-white/10 text-[11px]">
-                Direct Connection (No Proxy)
-              </span>
+              <div className="flex items-center gap-2">
+                {isTargetAccountProxyActive ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>
+                        {(targetAccount?.proxyConfig?.type || 'SOCKS5').toUpperCase()} ({targetAccount?.proxyConfig?.host})
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAssignProxyToAccount(undefined)}
+                      title="خاموش کردن پروکسی این اکانت و اتصال مستقیم"
+                      className="px-2 py-0.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <ShieldOff className="w-3 h-3" />
+                      <span>Direct (Off)</span>
+                    </button>
+                  </div>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-lg bg-white/5 text-gray-400 border border-white/10 text-[11px]">
+                    Direct Connection (No Proxy)
+                  </span>
+                )}
+                {proxyOnCount > 0 && accounts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleDirectAllAccounts}
+                    title="خاموش کردن پروکسی روی تمام اکانت‌ها با یک کلیک"
+                    className="px-2 py-0.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <ShieldOff className="w-3 h-3" />
+                    <span>خاموشی همه ({proxyOnCount})</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -761,11 +836,15 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                   type="button"
                   onClick={() => handleImportProxy(true)}
                   disabled={isImporting || !quickPasteInput.trim()}
-                  title="افزودن و اتصال فوری به اکانت جاری"
+                  title={
+                    isAllAccountsSelected
+                      ? 'افزودن و اتصال فوری به تمام اکانت‌ها'
+                      : `افزودن و اتصال فوری به ${targetName}`
+                  }
                   className="px-3 py-1.5 rounded-xl bg-accent-emerald text-dark-900 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-accent-emerald/20 hover:brightness-110 disabled:opacity-40 cursor-pointer shrink-0"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  <span>افزودن و اتصال</span>
+                  <span>{isAllAccountsSelected ? 'افزودن و اتصال به همه' : 'افزودن و اتصال'}</span>
                 </button>
               )}
             </div>
@@ -975,11 +1054,16 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                     {harvestedProxies.map((p) => {
                       const isChecking = testingPing[p.id]
                       const isHealthy = (p.pingMs || -1) > 0
-                      const isActiveOnTarget = Boolean(
-                        targetAccount?.proxyConfig?.enabled &&
-                        targetAccount?.proxyConfig?.host === p.host &&
-                        targetAccount?.proxyConfig?.port === p.port
+                      const accountsUsingThis = accounts.filter(
+                        (a) => a.proxyConfig?.enabled && a.proxyConfig.host === p.host && a.proxyConfig.port === p.port
                       )
+                      const isActiveOnTarget = isAllAccountsSelected
+                        ? accountsUsingThis.length === accounts.length && accounts.length > 0
+                        : Boolean(
+                            targetAccount?.proxyConfig?.enabled &&
+                            targetAccount?.proxyConfig?.host === p.host &&
+                            targetAccount?.proxyConfig?.port === p.port
+                          )
 
                       return (
                         <motion.div
@@ -1006,12 +1090,24 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                               )}
                             </div>
                             <div className="min-w-0">
-                              <div className="text-xs font-bold text-gray-200 truncate flex items-center gap-1.5">
+                              <div className="text-xs font-bold text-gray-200 truncate flex items-center gap-1.5 flex-wrap">
                                 <span>{p.name}</span>
                                 {isActiveOnTarget && (
                                   <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded font-semibold border border-emerald-500/30">
-                                    Active
+                                    {isAllAccountsSelected ? 'روی همه فعال' : 'Active'}
                                   </span>
+                                )}
+                                {accountsUsingThis.length > 0 && !isAllAccountsSelected && (
+                                  <div className="flex items-center gap-1">
+                                    {accountsUsingThis.map((acc) => (
+                                      <span
+                                        key={acc.id}
+                                        className="text-[9px] text-accent-cyan bg-accent-cyan/15 px-1 rounded border border-accent-cyan/25 font-medium"
+                                      >
+                                        {acc.firstName || acc.phone || acc.id}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                               <div className="text-[10px] text-gray-400 font-mono truncate">
@@ -1052,30 +1148,56 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                 )}
                               </button>
 
-                              {/* Assign / In Use Button */}
+                              {/* Assign / In Use / All Button */}
                               {accounts.length > 0 && isHealthy && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleAssignProxyToAccount(p)}
-                                  title={isActiveOnTarget ? 'کلیک جهت قطع اتصال پروکسی' : 'اتصال این پروکسی به اکانت'}
-                                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                    isActiveOnTarget
-                                      ? 'bg-emerald-500 text-dark-900 shadow-md shadow-emerald-500/20 hover:bg-emerald-400'
-                                      : 'bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan'
-                                  }`}
-                                >
-                                  {isActiveOnTarget ? (
-                                    <>
-                                      <ShieldCheck className="w-3 h-3" />
-                                      <span>In Use</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Check className="w-3 h-3" />
-                                      <span>Use</span>
-                                    </>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAssignProxyToAccount(p)}
+                                    title={
+                                      isAllAccountsSelected
+                                        ? 'اعمال و فعال‌سازی این پروکسی روی تمام اکانت‌ها'
+                                        : isActiveOnTarget
+                                        ? 'کلیک جهت قطع اتصال پروکسی'
+                                        : `اتصال این پروکسی به ${targetName}`
+                                    }
+                                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                      isActiveOnTarget
+                                        ? 'bg-emerald-500 text-dark-900 shadow-md shadow-emerald-500/20 hover:bg-emerald-400'
+                                        : isAllAccountsSelected
+                                        ? 'bg-primary-500 hover:bg-primary-400 text-white shadow-md shadow-primary-500/20'
+                                        : 'bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan'
+                                    }`}
+                                  >
+                                    {isActiveOnTarget ? (
+                                      <>
+                                        <ShieldCheck className="w-3 h-3" />
+                                        <span>{isAllAccountsSelected ? 'روی همه فعال' : 'In Use'}</span>
+                                      </>
+                                    ) : isAllAccountsSelected ? (
+                                      <>
+                                        <Sparkles className="w-3 h-3" />
+                                        <span>روشن کردن همه</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="w-3 h-3" />
+                                        <span>Use</span>
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {!isAllAccountsSelected && accounts.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApplyProxyToAll(p)}
+                                      title="اعمال فوری این پروکسی روی تمام اکانت‌ها"
+                                      className="px-2 py-1.5 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-primary-500/20 text-gray-300 hover:text-primary-300 border border-white/10 hover:border-primary-500/30 transition-all cursor-pointer"
+                                    >
+                                      همه
+                                    </button>
                                   )}
-                                </button>
+                                </div>
                               )}
 
                               {/* Ping Test Button */}
@@ -1121,11 +1243,16 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                     {proxies.map((p) => {
                       const isChecking = testingPing[p.id]
                       const isHealthy = (p.pingMs || -1) > 0
-                      const isActiveOnTarget = Boolean(
-                        targetAccount?.proxyConfig?.enabled &&
-                        targetAccount?.proxyConfig?.host === p.host &&
-                        targetAccount?.proxyConfig?.port === p.port
+                      const accountsUsingThis = accounts.filter(
+                        (a) => a.proxyConfig?.enabled && a.proxyConfig.host === p.host && a.proxyConfig.port === p.port
                       )
+                      const isActiveOnTarget = isAllAccountsSelected
+                        ? accountsUsingThis.length === accounts.length && accounts.length > 0
+                        : Boolean(
+                            targetAccount?.proxyConfig?.enabled &&
+                            targetAccount?.proxyConfig?.host === p.host &&
+                            targetAccount?.proxyConfig?.port === p.port
+                          )
 
                       return (
                         <div
@@ -1145,12 +1272,24 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                               )}
                             </div>
                             <div className="min-w-0">
-                              <div className="text-xs font-bold text-gray-200 truncate flex items-center gap-1.5">
+                              <div className="text-xs font-bold text-gray-200 truncate flex items-center gap-1.5 flex-wrap">
                                 <span>{p.name}</span>
                                 {isActiveOnTarget && (
                                   <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded font-semibold border border-emerald-500/30">
-                                    Active
+                                    {isAllAccountsSelected ? 'روی همه فعال' : 'Active'}
                                   </span>
+                                )}
+                                {accountsUsingThis.length > 0 && !isAllAccountsSelected && (
+                                  <div className="flex items-center gap-1">
+                                    {accountsUsingThis.map((acc) => (
+                                      <span
+                                        key={acc.id}
+                                        className="text-[9px] text-accent-cyan bg-accent-cyan/15 px-1 rounded border border-accent-cyan/25 font-medium"
+                                      >
+                                        {acc.firstName || acc.phone || acc.id}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                               <div className="text-[11px] text-gray-400 font-mono truncate">
@@ -1191,30 +1330,56 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                 )}
                               </button>
 
-                              {/* Assign / In Use Button */}
+                              {/* Assign / In Use / All Button */}
                               {accounts.length > 0 && isHealthy && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleAssignProxyToAccount(p)}
-                                  title={isActiveOnTarget ? 'کلیک جهت قطع اتصال پروکسی' : 'اتصال این پروکسی به اکانت'}
-                                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                    isActiveOnTarget
-                                      ? 'bg-emerald-500 text-dark-900 shadow-md shadow-emerald-500/20 hover:bg-emerald-400'
-                                      : 'bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 border border-primary-500/30'
-                                  }`}
-                                >
-                                  {isActiveOnTarget ? (
-                                    <>
-                                      <ShieldCheck className="w-3 h-3" />
-                                      <span>In Use</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Check className="w-3 h-3" />
-                                      <span>Use</span>
-                                    </>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAssignProxyToAccount(p)}
+                                    title={
+                                      isAllAccountsSelected
+                                        ? 'اعمال و فعال‌سازی این پروکسی روی تمام اکانت‌ها'
+                                        : isActiveOnTarget
+                                        ? 'کلیک جهت قطع اتصال پروکسی'
+                                        : `اتصال این پروکسی به ${targetName}`
+                                    }
+                                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                      isActiveOnTarget
+                                        ? 'bg-emerald-500 text-dark-900 shadow-md shadow-emerald-500/20 hover:bg-emerald-400'
+                                        : isAllAccountsSelected
+                                        ? 'bg-primary-500 hover:bg-primary-400 text-white shadow-md shadow-primary-500/20'
+                                        : 'bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 border border-primary-500/30'
+                                    }`}
+                                  >
+                                    {isActiveOnTarget ? (
+                                      <>
+                                        <ShieldCheck className="w-3 h-3" />
+                                        <span>{isAllAccountsSelected ? 'روی همه فعال' : 'In Use'}</span>
+                                      </>
+                                    ) : isAllAccountsSelected ? (
+                                      <>
+                                        <Sparkles className="w-3 h-3" />
+                                        <span>روشن کردن همه</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="w-3 h-3" />
+                                        <span>Use</span>
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {!isAllAccountsSelected && accounts.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApplyProxyToAll(p)}
+                                      title="اعمال فوری این پروکسی روی تمام اکانت‌ها"
+                                      className="px-2 py-1.5 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-primary-500/20 text-gray-300 hover:text-primary-300 border border-white/10 hover:border-primary-500/30 transition-all cursor-pointer"
+                                    >
+                                      همه
+                                    </button>
                                   )}
-                                </button>
+                                </div>
                               )}
 
                               {/* Ping Button */}

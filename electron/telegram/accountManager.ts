@@ -981,7 +981,7 @@ export class AccountManager {
   private auditQueue = new Map<string, Set<string>>()
   private lastAuditedTime = new Map<string, number>()
   private auditQueueInterval?: NodeJS.Timeout
-  private manualDirectTimestamps = new Map<string, number>()
+  private manualDirectAccounts = new Set<string>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
@@ -1219,8 +1219,8 @@ export class AccountManager {
 
       // Auto-connect to healthy harvested proxy if VPN dropped / direct connection failed (respecting manual direct mode)
       const autoConnectOnVpnDrop = config.autoConnectOnVpnDrop !== false
-      const isRecentManualDirect = Date.now() - (this.manualDirectTimestamps.get(savedAcc.id) || 0) < 120000
-      if (autoConnectOnVpnDrop && !isRecentManualDirect && (!savedAcc.proxyConfig?.enabled || (savedAcc.proxyConfig.failCount && savedAcc.proxyConfig.failCount > 0))) {
+      const isManualDirect = this.manualDirectAccounts.has(savedAcc.id)
+      if (autoConnectOnVpnDrop && !isManualDirect && (!savedAcc.proxyConfig?.enabled || (savedAcc.proxyConfig.failCount && savedAcc.proxyConfig.failCount > 0))) {
         const fallbackProxy = ProxyManager.getDistinctProxyForAccount(savedAcc.id, config.accounts)
         if (fallbackProxy && fallbackProxy.host !== savedAcc.proxyConfig?.host) {
           Logger.info(`[AccountManager] Direct/failed connection on ${savedAcc.id}. Auto-fallback to healthy proxy ${fallbackProxy.host}:${fallbackProxy.port}...`)
@@ -1285,9 +1285,9 @@ export class AccountManager {
         }
 
     if (isDirect) {
-      this.manualDirectTimestamps.set(accountId, Date.now())
+      this.manualDirectAccounts.add(accountId)
     } else {
-      this.manualDirectTimestamps.delete(accountId)
+      this.manualDirectAccounts.delete(accountId)
     }
 
     const typeStr = (effectiveProxy?.type || 'SOCKS5').toUpperCase()
@@ -4301,53 +4301,146 @@ export class AccountManager {
       const res: any = await holder.client.call({
         _: 'contacts.search',
         q: query,
-        limit: 20,
+        limit: 30,
       })
 
-      const items: DialogItem[] = []
       const chats = res.chats || []
       const users = res.users || []
+
+      // Index and cache hashes
+      const chatMap = new Map<string, any>()
+      const userMap = new Map<string, any>()
 
       for (const c of chats) {
         const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
         const peerId = isChan ? `-100${c.id}` : `-${c.id}`
+        chatMap.set(String(c.id), c)
+        chatMap.set(peerId, c)
+        chatMap.set(`-${c.id}`, c)
+        chatMap.set(`-100${c.id}`, c)
+
         if (c.accessHash) {
           this.peerAccessHashes.set(`${accountId}_${peerId}`, c.accessHash)
           this.peerAccessHashes.set(`${accountId}_-${c.id}`, c.accessHash)
           this.peerAccessHashes.set(`${accountId}_-100${c.id}`, c.accessHash)
           this.peerAccessHashes.set(`${accountId}_${c.id}`, c.accessHash)
         }
-
-        items.push({
-          id: peerId,
-          accountId,
-          title: c.title || 'Channel',
-          unreadCount: 0,
-          isUser: false,
-          isGroup: !c.broadcast,
-          isChannel: !!c.broadcast,
-          isBot: false,
-          isPinned: false,
-          username: c.username,
-        })
       }
 
       for (const u of users) {
+        userMap.set(String(u.id), u)
         if (u.accessHash) {
           this.peerAccessHashes.set(`${accountId}_${u.id}`, u.accessHash)
         }
-        items.push({
-          id: u.id.toString(),
+      }
+
+      const convertPeerToDialogItem = (p: any, isMyPeer: boolean): DialogItem | null => {
+        let entityId = ''
+        let isUser = false
+        let isChannel = false
+        let isGroup = false
+        let entity: any = null
+
+        if (p._ === 'peerUser' || p.userId) {
+          entityId = String(p.userId || p.id)
+          entity = userMap.get(entityId)
+          isUser = true
+        } else if (p._ === 'peerChannel' || p.channelId) {
+          entityId = String(p.channelId || p.id)
+          entity = chatMap.get(entityId)
+          isChannel = Boolean(entity?.broadcast)
+          isGroup = !isChannel
+        } else if (p._ === 'peerChat' || p.chatId) {
+          entityId = String(p.chatId || p.id)
+          entity = chatMap.get(entityId)
+          isGroup = true
+        }
+
+        if (!entity) return null
+
+        const isChan = isChannel || Boolean(entity.broadcast || entity.megagroup || entity.gigagroup || entity._ === 'channel')
+        const peerId = isUser ? entityId : (isChan ? `-100${entity.id}` : `-${entity.id}`)
+
+        return {
+          id: peerId,
           accountId,
-          title: formatEntityName(u),
+          title: isUser ? formatEntityName(entity) : (entity.title || 'Chat'),
           unreadCount: 0,
-          isUser: true,
-          isGroup: false,
-          isChannel: false,
-          isBot: !!u.bot,
+          isUser,
+          isGroup: !isUser && !isChan,
+          isChannel: !isUser && isChan,
+          isBot: isUser && !!entity.bot,
           isPinned: false,
-          username: u.username,
-        })
+          username: entity.username,
+          accessHash: entity.accessHash ? entity.accessHash.toString() : undefined,
+          isMyPeer,
+        }
+      }
+
+      const items: DialogItem[] = []
+      const seenIds = new Set<string>()
+
+      // 1. User's existing chats/contacts matching query (from my_results)
+      for (const p of res.my_results || []) {
+        const item = convertPeerToDialogItem(p, true)
+        if (item && !seenIds.has(item.id)) {
+          seenIds.add(item.id)
+          items.push(item)
+        }
+      }
+
+      // 2. Global public peers matching query (from results)
+      for (const p of res.results || []) {
+        const item = convertPeerToDialogItem(p, false)
+        if (item && !seenIds.has(item.id)) {
+          seenIds.add(item.id)
+          items.push(item)
+        }
+      }
+
+      // Fallback if my_results and results were not populated
+      if (items.length === 0) {
+        for (const c of chats) {
+          const isChan = Boolean(c.broadcast || c.megagroup || c.gigagroup || c._ === 'channel')
+          const peerId = isChan ? `-100${c.id}` : `-${c.id}`
+          if (!seenIds.has(peerId)) {
+            seenIds.add(peerId)
+            items.push({
+              id: peerId,
+              accountId,
+              title: c.title || 'Channel',
+              unreadCount: 0,
+              isUser: false,
+              isGroup: !c.broadcast,
+              isChannel: !!c.broadcast,
+              isBot: false,
+              isPinned: false,
+              username: c.username,
+              accessHash: c.accessHash ? c.accessHash.toString() : undefined,
+              isMyPeer: false,
+            })
+          }
+        }
+        for (const u of users) {
+          const peerId = u.id.toString()
+          if (!seenIds.has(peerId)) {
+            seenIds.add(peerId)
+            items.push({
+              id: peerId,
+              accountId,
+              title: formatEntityName(u),
+              unreadCount: 0,
+              isUser: true,
+              isGroup: false,
+              isChannel: false,
+              isBot: !!u.bot,
+              isPinned: false,
+              username: u.username,
+              accessHash: u.accessHash ? u.accessHash.toString() : undefined,
+              isMyPeer: false,
+            })
+          }
+        }
       }
 
       return items
@@ -4363,7 +4456,8 @@ export class AccountManager {
     filterType = 'all',
     limit = 40,
     minDate = 0,
-    maxDate = 0
+    maxDate = 0,
+    chatTypeScope = 'all'
   ): Promise<MessageItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
@@ -4386,8 +4480,16 @@ export class AccountManager {
         mtFilter = { _: 'inputMessagesFilterPinned' }
       }
 
+      // Chat scope filters in MTProto messages.searchGlobal
+      const broadcastsOnly = chatTypeScope === 'channels' ? true : undefined
+      const groupsOnly = chatTypeScope === 'groups' ? true : undefined
+      const usersOnly = chatTypeScope === 'private' ? true : undefined
+
       const res: any = await holder.client.call({
         _: 'messages.searchGlobal',
+        broadcastsOnly,
+        groupsOnly,
+        usersOnly,
         q: query,
         filter: mtFilter,
         minDate: minDate || 0,
@@ -13441,9 +13543,9 @@ export class AccountManager {
 
           const config = this.store.getConfig()
           const autoConnect = config.autoConnectOnVpnDrop !== false
-          const isRecentManualDirect = Date.now() - (this.manualDirectTimestamps.get(accountId) || 0) < 120000
+          const isManualDirect = this.manualDirectAccounts.has(accountId)
           const currentAcc = config.accounts.find((a) => a.id === accountId)
-          if (autoConnect && !isRecentManualDirect && currentAcc && !currentAcc.proxyConfig?.enabled) {
+          if (autoConnect && !isManualDirect && currentAcc && !currentAcc.proxyConfig?.enabled) {
             const fallbackProxy = ProxyManager.getDistinctProxyForAccount(accountId, config.accounts)
             if (fallbackProxy) {
               Logger.info(`[AccountManager] Network went offline (VPN dropped). Auto-switching account ${accountId} to healthy proxy ${fallbackProxy.host}:${fallbackProxy.port}...`)

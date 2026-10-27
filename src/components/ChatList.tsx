@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, ShieldOff, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX } from 'lucide-react'
+import { Search, Pin, ShieldCheck, ShieldOff, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX, Calendar, Bot } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
@@ -22,7 +22,7 @@ interface ChatListProps {
   cloudFolders?: CloudFolderItem[]
   isLoadingMoreDialogs?: boolean
   onSearchChange: (query: string) => void
-  onSelectChat: (chatId: string) => void
+  onSelectChat: (chatId: string, targetMsgId?: number, provisionalPeer?: Partial<DialogItem>) => void
   onSelectPeer?: (target: string) => void
   onLoadMoreDialogs?: () => void
   onOpenProxyModal?: () => void
@@ -39,6 +39,8 @@ type SearchFilterCategory =
   | 'groups'
   | 'private'
   | 'archive'
+
+type SearchScopeCategory = 'all' | 'private' | 'groups' | 'channels' | 'bots'
 
 export const ChatList: React.FC<ChatListProps> = ({
   account,
@@ -59,15 +61,24 @@ export const ChatList: React.FC<ChatListProps> = ({
   const { t, isRTL: isAppRtl, formatNumber } = useI18n()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchFilter, setSearchFilter] = useState<SearchFilterCategory>('all')
+  const [searchScope, setSearchScope] = useState<SearchScopeCategory>('all')
   const [globalPeers, setGlobalPeers] = useState<DialogItem[]>([])
+  const [serverMyPeers, setServerMyPeers] = useState<DialogItem[]>([])
   const [globalMessages, setGlobalMessages] = useState<MessageItem[]>([])
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false)
-  const [searchDateFilter, setSearchDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
+  const [searchDateFilter, setSearchDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all')
+  const [customDate, setCustomDate] = useState('')
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [viewingStoryPeer, setViewingStoryPeer] = useState<{ id: string; title: string } | null>(null)
   const [isStoryComposerOpen, setIsStoryComposerOpen] = useState(false)
   const [activeStoryPeers, setActiveStoryPeers] = useState<ActiveStoryPeer[]>([])
   const [storyRefreshKey, setStoryRefreshKey] = useState(0)
   const [pvFilter, setPvFilter] = useState<'all' | 'contacts' | 'non_contacts'>('all')
+
+  const dialogsRef = useRef(dialogs)
+  useEffect(() => {
+    dialogsRef.current = dialogs
+  }, [dialogs])
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -91,9 +102,10 @@ export const ChatList: React.FC<ChatListProps> = ({
   const handleSelectDialog = useCallback(
     (dialogId: string) => {
       if (searchQuery.trim()) saveRecentSearch(searchQuery.trim())
-      onSelectChat(dialogId)
+      const found = dialogs.find((d) => d.id === dialogId) || serverMyPeers.find((d) => d.id === dialogId)
+      onSelectChat(dialogId, undefined, found)
     },
-    [searchQuery, onSelectChat, recentSearches]
+    [searchQuery, onSelectChat, dialogs, serverMyPeers]
   )
 
   const clearRecentSearches = () => {
@@ -179,7 +191,11 @@ export const ChatList: React.FC<ChatListProps> = ({
     const isGroup = dialog.isGroup || (dialog.isChannel && !isBroadcast)
 
     if (searchQuery.trim()) {
-      // In search mode, apply search filter category
+      // In search mode, apply searchScope / searchFilter category
+      if (searchScope === 'channels' && !isBroadcast) return false
+      if (searchScope === 'groups' && !isGroup) return false
+      if (searchScope === 'private' && (!dialog.isUser || dialog.isBot)) return false
+      if (searchScope === 'bots' && !dialog.isBot) return false
       if (searchFilter === 'channels' && !isBroadcast) return false
       if (searchFilter === 'groups' && !isGroup) return false
       if (searchFilter === 'private' && !dialog.isUser) return false
@@ -264,6 +280,24 @@ export const ChatList: React.FC<ChatListProps> = ({
     return true
   })
 
+  // Seamlessly merge local matching dialogs with server myPeers (full Telegram parity)
+  const chatsAndContacts = React.useMemo(() => {
+    const map = new Map<string, DialogItem>()
+    for (const d of filteredDialogs) {
+      map.set(d.id, d)
+    }
+    for (const p of serverMyPeers) {
+      if (!map.has(p.id)) {
+        if (searchScope === 'channels' && !p.isChannel) continue
+        if (searchScope === 'groups' && !p.isGroup) continue
+        if (searchScope === 'private' && (!p.isUser || p.isBot)) continue
+        if (searchScope === 'bots' && !p.isBot) continue
+        map.set(p.id, p)
+      }
+    }
+    return Array.from(map.values())
+  }, [filteredDialogs, serverMyPeers, searchScope])
+
   const storyPeerMap = new Map(activeStoryPeers.map((peer) => [peer.peerId, peer]))
 
   // Counts for PV filter toggle
@@ -298,6 +332,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   useEffect(() => {
     if (!searchQuery.trim() || !account?.id) {
       setGlobalPeers([])
+      setServerMyPeers([])
       setGlobalMessages([])
       setIsSearchingGlobal(false)
       return
@@ -317,6 +352,8 @@ export const ChatList: React.FC<ChatListProps> = ({
           minDate = nowSec - 7 * 24 * 3600
         } else if (searchDateFilter === 'month') {
           minDate = nowSec - 30 * 24 * 3600
+        } else if (searchDateFilter === 'custom' && customDate) {
+          minDate = Math.floor(new Date(customDate).getTime() / 1000)
         }
 
         const [peersRes, msgsRes] = await Promise.all([
@@ -326,15 +363,21 @@ export const ChatList: React.FC<ChatListProps> = ({
             query,
             searchFilter === 'all' ? undefined : searchFilter,
             40,
-            minDate
+            minDate,
+            undefined,
+            searchScope === 'all' ? undefined : searchScope
           ),
         ])
 
-        // Filter out peers already in local dialogs
-        const existingIds = new Set(dialogs.map((d) => d.id))
-        const uniquePeers = (peersRes || []).filter((p) => !existingIds.has(p.id))
+        const myPeers = (peersRes || []).filter((p) => p.isMyPeer === true)
+        const pubPeers = (peersRes || []).filter((p) => p.isMyPeer !== true)
 
-        setGlobalPeers(uniquePeers)
+        // Filter out peers already in local dialogs from the public search results
+        const localIds = new Set(dialogsRef.current.map((d) => d.id))
+        const uniquePubPeers = pubPeers.filter((p) => !localIds.has(p.id))
+
+        setServerMyPeers(myPeers)
+        setGlobalPeers(uniquePubPeers)
         setGlobalMessages(msgsRes || [])
       } catch (err) {
         console.warn('Global search error:', err)
@@ -346,7 +389,7 @@ export const ChatList: React.FC<ChatListProps> = ({
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     }
-  }, [searchQuery, searchFilter, searchDateFilter, account?.id, dialogs])
+  }, [searchQuery, searchFilter, searchScope, searchDateFilter, customDate, account?.id])
 
   // Format time (e.g. 14:20 or Yesterday)
   const formatTime = (timestamp?: number) => {
@@ -432,10 +475,10 @@ export const ChatList: React.FC<ChatListProps> = ({
         </div>
       )}
 
-      {/* Search Input with Clear button and Recent Searches */}
+      {/* Search Input with Clear button, Calendar Picker and Recent Searches */}
       <div className="p-2.5 shrink-0 relative">
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="relative flex items-center">
+          <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             aria-label={t('app.search_placeholder') || 'Search chats, media, and links'}
@@ -452,80 +495,207 @@ export const ChatList: React.FC<ChatListProps> = ({
               }
             }}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-dark-800 border border-white/5 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50 transition-colors"
+            className="w-full bg-dark-800 border border-white/5 rounded-xl pl-9 pr-16 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50 transition-colors"
           />
 
-          {searchQuery && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                title={t('app.cancel')}
+                aria-label={t('app.cancel') || 'Clear search query'}
+                className="p-1 text-gray-400 hover:text-white rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => onSearchChange('')}
-              title={t('app.cancel')}
-              aria-label={t('app.cancel') || 'Clear search query'}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white rounded-md hover:bg-white/10 transition-colors cursor-pointer touch-hit-slop min-w-[32px] min-h-[32px] flex items-center justify-center"
+              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+              title="فیلتر بازه زمانی و تاریخ"
+              aria-label="Filter by date"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer relative ${
+                searchDateFilter !== 'all'
+                  ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
+              }`}
             >
-              <X className="w-3.5 h-3.5" />
+              <Calendar className="w-3.5 h-3.5" />
+              {searchDateFilter !== 'all' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan absolute top-1 right-1 animate-pulse shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+              )}
             </button>
-          )}
+          </div>
         </div>
 
-        {/* Global Search Filter Pills (Telegram Desktop style) */}
-        {searchQuery.trim().length > 0 && (
-          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 text-[11px] font-medium text-gray-400 no-scrollbar">
-            {(
-              [
-                { key: 'all', label: t('search.all_chats') || 'Chats' },
-                { key: 'media', label: 'Media', icon: Image },
-                { key: 'links', label: 'Links', icon: Link2 },
-                { key: 'files', label: 'Files', icon: FileText },
-                { key: 'audio', label: 'Music', icon: Music },
-                { key: 'voice', label: 'Voice', icon: Mic },
-                { key: 'channels', label: t('search.channels') },
-                { key: 'groups', label: t('search.group_chats') },
-                { key: 'private', label: t('search.private_chats') },
-                { key: 'archive', label: t('search.archive') },
-              ] as const
-            ).map((filter) => {
-              const IconComp = (filter as any).icon
-              return (
+        {/* Calendar / Date Filter Popover */}
+        {isCalendarOpen && (
+          <div className="absolute left-2.5 right-2.5 top-full z-50 mt-1 bg-dark-900 border border-white/10 rounded-2xl shadow-2xl p-3 space-y-2.5 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between text-[11px] font-bold text-gray-300 px-1 border-b border-white/5 pb-2">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
+                <span>بازه زمانی جستجو</span>
+              </span>
+              {searchDateFilter !== 'all' && (
                 <button
-                  key={filter.key}
                   type="button"
-                  onClick={() => setSearchFilter(filter.key)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap cursor-pointer touch-hit-slop min-h-[32px] ${
-                    searchFilter === filter.key
-                      ? 'bg-primary-600/90 text-white font-semibold shadow-sm'
-                      : 'bg-white/5 hover:bg-white/10 text-gray-300'
-                  }`}
+                  onClick={() => {
+                    setSearchDateFilter('all')
+                    setCustomDate('')
+                    setIsCalendarOpen(false)
+                  }}
+                  className="text-accent-rose hover:underline text-[10.5px] cursor-pointer"
                 >
-                  {IconComp && <IconComp className="w-3 h-3 opacity-80" />}
-                  <span>{filter.label}</span>
+                  پاک کردن فیلتر
                 </button>
-              )
-            })}
+              )}
+            </div>
 
             {/* Quick Date Range Indexing Pills */}
-            <div className="h-4 w-[1px] bg-white/10 shrink-0 mx-1" />
-            {(
-              [
-                { key: 'all', label: 'Anytime' },
-                { key: 'today', label: '24h' },
-                { key: 'week', label: '7d' },
-                { key: 'month', label: '30d' },
-              ] as const
-            ).map((df) => (
-              <button
-                key={df.key}
-                type="button"
-                onClick={() => setSearchDateFilter(df.key)}
-                className={`px-2 py-0.5 rounded-md text-[10px] transition-colors whitespace-nowrap cursor-pointer ${
-                  searchDateFilter === df.key
-                    ? 'bg-accent-cyan/20 text-accent-cyan font-bold border border-accent-cyan/30'
-                    : 'bg-white/5 hover:bg-white/10 text-gray-400'
-                }`}
-              >
-                {df.label}
-              </button>
-            ))}
+            <div className="grid grid-cols-2 gap-1.5">
+              {(
+                [
+                  { key: 'all', label: 'Anytime' },
+                  { key: 'today', label: '24h' },
+                  { key: 'week', label: '7d' },
+                  { key: 'month', label: '30d' },
+                ] as const
+              ).map((df) => (
+                <button
+                  key={df.key}
+                  type="button"
+                  onClick={() => {
+                    setSearchDateFilter(df.key)
+                    setCustomDate('')
+                    setIsCalendarOpen(false)
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all text-center cursor-pointer border ${
+                    searchDateFilter === df.key && !customDate
+                      ? 'bg-accent-cyan/20 text-accent-cyan font-bold border-accent-cyan/40 shadow-sm'
+                      : 'bg-dark-800/80 hover:bg-dark-750 text-gray-300 border-white/5'
+                  }`}
+                >
+                  {df.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-1.5 border-t border-white/5">
+              <label className="block text-[10.5px] text-gray-400 font-medium mb-1 px-1">
+                انتخاب تاریخ مشخص:
+              </label>
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => {
+                  setCustomDate(e.target.value)
+                  if (e.target.value) {
+                    setSearchDateFilter('custom')
+                  } else {
+                    setSearchDateFilter('all')
+                  }
+                }}
+                className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-accent-cyan/50"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Categorized Filter Controls in Search Mode */}
+        {searchQuery.trim().length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {/* Row 1: Chat Scope Segmented Control (Front & Center, No Hidden Pills) */}
+            <div className="flex items-center gap-1 bg-dark-900/80 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
+              {(
+                [
+                  { key: 'all', label: t('search.all_chats') || 'همه' },
+                  { key: 'private', label: t('search.private_chats') || 'مخاطبین', icon: UserCheck },
+                  { key: 'groups', label: t('search.group_chats') || 'گروه‌ها', icon: Users },
+                  { key: 'channels', label: t('search.channels') || 'کانال‌ها', icon: Radio },
+                  { key: 'bots', label: 'ربات‌ها', icon: Bot },
+                ] as const
+              ).map((scope) => {
+                const IconComp = (scope as any).icon
+                const isActive = searchScope === scope.key
+                return (
+                  <button
+                    key={scope.key}
+                    type="button"
+                    onClick={() => setSearchScope(scope.key)}
+                    className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? 'bg-primary-600 text-white font-bold shadow-sm'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                    }`}
+                  >
+                    {IconComp && <IconComp className="w-3 h-3 opacity-90" />}
+                    <span>{scope.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Row 2: Media and Content Type Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px] font-medium text-gray-400 no-scrollbar">
+              {(
+                [
+                  { key: 'all', label: 'همه پیام‌ها' },
+                  { key: 'media', label: 'Media', icon: Image },
+                  { key: 'links', label: 'Links', icon: Link2 },
+                  { key: 'files', label: 'Files', icon: FileText },
+                  { key: 'audio', label: 'Music', icon: Music },
+                  { key: 'voice', label: 'Voice', icon: Mic },
+                ] as const
+              ).map((filter) => {
+                const IconComp = (filter as any).icon
+                const isActive = searchFilter === filter.key
+                return (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={() => setSearchFilter(filter.key)}
+                    className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer text-[10.5px] ${
+                      isActive
+                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 font-semibold shadow-sm'
+                        : 'bg-white/5 hover:bg-white/10 text-gray-300'
+                    }`}
+                  >
+                    {IconComp && <IconComp className="w-3 h-3 opacity-80" />}
+                    <span>{filter.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Active Date Filter Indicator Badge */}
+            {searchDateFilter !== 'all' && (
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30">
+                  <Calendar className="w-3 h-3" />
+                  <span>
+                    {searchDateFilter === 'today'
+                      ? '۲۴ ساعت گذشته'
+                      : searchDateFilter === 'week'
+                      ? '۷ روز گذشته'
+                      : searchDateFilter === 'month'
+                      ? '۳۰ روز گذشته'
+                      : `تاریخ: ${customDate}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchDateFilter('all')
+                      setCustomDate('')
+                    }}
+                    className="hover:text-white cursor-pointer ml-1"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -709,13 +879,19 @@ export const ChatList: React.FC<ChatListProps> = ({
         {/* If user is searching and has results */}
         {searchQuery.trim().length > 0 ? (
           <div className="space-y-3 p-1.5">
-            {/* 1. Matching Local Chats */}
-            {filteredDialogs.length > 0 && (
+            {/* 1. Matching Chats & Contacts (Local + Server MyPeers) */}
+            {chatsAndContacts.length > 0 && (
               <div>
-                <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  {t('search.all_chats')}
+                <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-3 h-3 text-primary-400" />
+                    <span>{t('search.all_chats')}</span>
+                  </span>
+                  <span className="text-[10px] font-normal text-gray-400 font-mono">
+                    {formatNumber(chatsAndContacts.length)}
+                  </span>
                 </div>
-                {filteredDialogs.map((dialog) => (
+                {chatsAndContacts.map((dialog) => (
                   <DialogListItem
                     key={dialog.id}
                     dialog={dialog}
@@ -735,20 +911,21 @@ export const ChatList: React.FC<ChatListProps> = ({
             {/* 2. Global Public Channels & Users (Contacts.Search) */}
             {globalPeers.length > 0 && (
               <div>
-                <div className="px-3 py-1 text-[11px] font-bold text-accent-cyan uppercase tracking-wider flex items-center gap-1.5">
-                  <Globe className="w-3 h-3" />
-                  <span>{t('search.public_chats')}</span>
+                <div className="px-3 py-1 text-[11px] font-bold text-accent-cyan uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Globe className="w-3 h-3" />
+                    <span>{t('search.public_chats')}</span>
+                  </span>
+                  <span className="text-[10px] font-normal text-gray-400 font-mono">
+                    {formatNumber(globalPeers.length)}
+                  </span>
                 </div>
                 {globalPeers.map((peer) => (
                   <div
                     key={`peer-${peer.id}`}
                     onClick={() => {
                       saveRecentSearch(searchQuery.trim())
-                      if (onSelectPeer && peer.username) {
-                        onSelectPeer(peer.username)
-                      } else {
-                        onSelectChat(peer.id)
-                      }
+                      onSelectChat(peer.id, undefined, peer)
                     }}
                     className="p-2.5 rounded-xl hover:bg-dark-800/80 cursor-pointer flex items-center gap-3 transition-colors"
                   >
@@ -797,7 +974,7 @@ export const ChatList: React.FC<ChatListProps> = ({
                       key={`gmsg-${msg.chatId}-${msg.id}`}
                       onClick={() => {
                         saveRecentSearch(searchQuery.trim())
-                        onSelectChat(msg.chatId)
+                        onSelectChat(msg.chatId, msg.id)
                       }}
                       className="p-2.5 rounded-xl hover:bg-dark-800/80 cursor-pointer transition-colors border-b border-white/5 last:border-0"
                     >
@@ -844,7 +1021,7 @@ export const ChatList: React.FC<ChatListProps> = ({
             )}
 
             {/* Empty State when searching */}
-            {!isSearchingGlobal && filteredDialogs.length === 0 && globalPeers.length === 0 && globalMessages.length === 0 && (
+            {!isSearchingGlobal && chatsAndContacts.length === 0 && globalPeers.length === 0 && globalMessages.length === 0 && (
               <div className="p-8 text-center text-xs text-gray-400">
                 {t('search.no_results', { query: searchQuery })}
               </div>

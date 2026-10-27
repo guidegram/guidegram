@@ -465,40 +465,9 @@ export const App: React.FC = () => {
           return currentActive
         })
 
-        // Auto-Recovery on VPN Disconnect / Network Drop
+        // Account status updated: logging only (accountManager handles per-account resilience)
         if (updated.status === 'disconnected') {
-          const autoConnect = configRef.current?.autoConnectOnVpnDrop !== false
-          if (autoConnect) {
-            if (!isAutoConnectingVpnRef.current) {
-              isAutoConnectingVpnRef.current = true
-              setAppToast('VPN/اینترنت قطع شد — در حال اتصال خودکار به بهترین پروکسی‌های تفکیک‌شده...')
-              if ((window.guidegram as any).distributeProxiesToAccounts) {
-                (window.guidegram as any).distributeProxiesToAccounts().then((map: any) => {
-                  if (map && typeof map === 'object') {
-                    for (const [accId, prx] of Object.entries(map)) {
-                      handleUpdateAccountProxy(accId, prx as ProxyConfig)
-                    }
-                  }
-                  setAppToast('اتصال با موفقیت به پروکسی‌های اختصاصی و پرسرعت برقرار شد.')
-                  setTimeout(() => setAppToast(null), 4000)
-                }).catch((err: any) => {
-                  console.warn('Auto-connect on VPN drop failed:', err)
-                  setIsProxyModalOpen(true)
-                }).finally(() => {
-                  setTimeout(() => {
-                    isAutoConnectingVpnRef.current = false
-                  }, 5000)
-                })
-              } else {
-                isAutoConnectingVpnRef.current = false
-              }
-            }
-          } else {
-            // Auto-connect disabled: pop up proxy window with options
-            setIsProxyModalOpen(true)
-            setAppToast('ارتباط قطع شد — پنجره پروکسی جهت انتخاب سرور باز شد.')
-            setTimeout(() => setAppToast(null), 4000)
-          }
+          console.log(`[App] Account ${updated.id} (${updated.firstName || ''}) status is disconnected`)
         }
       })
 
@@ -1097,27 +1066,37 @@ export const App: React.FC = () => {
     setIsUnifiedInboxOpen(false)
     setActiveChatId(null)
 
-    // Distinct Proxy Switching on Account Change:
-    // If proxy mode is active or account is disconnected, switch to a healthy proxy
-    // that is NOT assigned to other accounts (preventing IP reuse/conflict across accounts)
-    const targetAcc = accounts.find((a) => a.id === accountId)
-    const hasProxyActive = Boolean(targetAcc?.proxyConfig?.enabled || accounts.some((a) => a.proxyConfig?.enabled))
-    if (hasProxyActive && (window.guidegram as any).getDistinctProxy) {
-      try {
-        const allIds = accounts.map((a) => a.id)
-        const distinctProxy = await (window.guidegram as any).getDistinctProxy(accountId, allIds)
-        if (distinctProxy) {
-          handleUpdateAccountProxy(accountId, distinctProxy)
-        }
-      } catch (err) {
-        console.warn('Failed to assign distinct proxy on account switch:', err)
-      }
-    }
-
     loadDialogsForAccount(accountId)
   }
 
-  const handleSelectChat = (chatId: string, targetMsgId?: number) => {
+  const handleSelectChat = (
+    chatId: string,
+    targetMsgId?: number,
+    provisionalPeer?: Partial<DialogItem>
+  ) => {
+    if (activeAccountId && provisionalPeer) {
+      setDialogsByAccount((prev) => {
+        const list = prev[activeAccountId] || []
+        const exists = list.some((d) => d.id === chatId)
+        if (exists) return prev
+        const newPeer: DialogItem = {
+          id: chatId,
+          accountId: activeAccountId,
+          title: provisionalPeer.title || 'Chat',
+          unreadCount: provisionalPeer.unreadCount || 0,
+          isUser: Boolean(provisionalPeer.isUser),
+          isGroup: Boolean(provisionalPeer.isGroup),
+          isChannel: Boolean(provisionalPeer.isChannel),
+          isBot: Boolean(provisionalPeer.isBot),
+          isPinned: false,
+          username: provisionalPeer.username,
+          avatarUrl: provisionalPeer.avatarUrl,
+          accessHash: provisionalPeer.accessHash,
+          ...provisionalPeer,
+        }
+        return { ...prev, [activeAccountId]: [newPeer, ...list] }
+      })
+    }
     setActiveChatId(chatId)
     setInitialScrollMsgId(targetMsgId ?? null)
     if (activeAccountId) {
@@ -1489,6 +1468,33 @@ export const App: React.FC = () => {
       return
     }
 
+    // If initialMeta exists, use it immediately with zero network latency
+    if (initialMeta) {
+      const peerId = initialMeta.id || cleanTarget
+      const provisional: DialogItem = {
+        id: peerId,
+        accountId: activeAccountId,
+        title: initialMeta.title || `Chat ${cleanTarget}`,
+        username: initialMeta.username,
+        avatarUrl: initialMeta.avatarUrl,
+        unreadCount: initialMeta.unreadCount || 0,
+        isUser: initialMeta.isUser ?? true,
+        isGroup: initialMeta.isGroup ?? false,
+        isChannel: initialMeta.isChannel ?? false,
+        isBot: initialMeta.isBot ?? false,
+        isPinned: false,
+        accessHash: initialMeta.accessHash,
+        ...initialMeta,
+      }
+      setDialogsByAccount((prev) => {
+        const list = prev[activeAccountId] || []
+        const exists = list.some((d) => d.id === peerId)
+        return exists ? prev : { ...prev, [activeAccountId]: [provisional, ...list] }
+      })
+      handleSelectChat(peerId, targetMsgId)
+      return
+    }
+
     // Attempt peer resolution via GramJS if window.guidegram.resolvePeer exists
     if (window.guidegram?.resolvePeer) {
       try {
@@ -1507,14 +1513,12 @@ export const App: React.FC = () => {
       }
     }
 
-    // If initialMeta exists or cleanTarget is numeric user ID, create a provisional dialog item
-    if (initialMeta || isTargetNumeric) {
+    // If cleanTarget is numeric user ID, create a provisional dialog item
+    if (isTargetNumeric) {
       const provisional: DialogItem = {
         id: cleanTarget,
         accountId: activeAccountId,
-        title: initialMeta?.title || `User ${cleanTarget}`,
-        username: initialMeta?.username,
-        avatarUrl: initialMeta?.avatarUrl,
+        title: `User ${cleanTarget}`,
         unreadCount: 0,
         isUser: true,
         isGroup: false,
@@ -2228,6 +2232,7 @@ export const App: React.FC = () => {
           <ProxySettingsModal
             isOpen={isProxyModalOpen}
             accounts={accounts}
+            activeAccountId={activeAccountId}
             initialProxyToImport={proxyToImport}
             onClose={() => {
               setIsProxyModalOpen(false)

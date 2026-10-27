@@ -161,6 +161,7 @@ export interface DialogItem {
   userStatus?: UserStatusInfo
   isContact?: boolean
   isMutualContact?: boolean
+  isMyPeer?: boolean
 }
 
 export interface DraftItem {
