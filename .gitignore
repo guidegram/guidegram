@@ -26,6 +26,7 @@ data/
 # IDE & OS
 .idea/
 .vscode/
+.playwright-mcp/
 *.suo
 *.ntvs*
 *.njsproj
