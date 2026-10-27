@@ -1,3 +1,35 @@
+# 🚀 Guidegram v2.4.2 — Multi-Pinned Messages & Real-Time Sync Edition
+
+> **Private Chat Multi-Pinned Parity & Real-Time Event Architecture** featuring automatic pinned message resolution across all peer types (users, groups, channels), multi-cycle banner cycling, unified drawer modal with live search, mutual two-way pinning default, and live MTProto update synchronization.
+
+---
+
+<div align="center">
+  <img src="resources/guidegram_logo_transparent.png" alt="Guidegram Logo" width="150" height="150" />
+  <h3>Guidegram v2.4.2 Multi-Pinned Messages & Real-Time Sync</h3>
+  <p><strong>Private Chat Pinned Messages • Multi-Cycle Top Banner • Real-Time MTProto Updates • Pinned Drawer & Unpin Actions • Sender Names & Media Preview</strong></p>
+</div>
+
+---
+
+## 🌟 Release v2.4.2 Highlights
+
+1. **Private Chat Pinned Messages Parity (MTProto Layer 229):**
+   - **Automatic Multi-Pinned Resolution:** Resolved Telegram MTProto's private chat omission where `userFull` does not expose `pinned_msg_id`. Implemented automatic `messages.search` with `inputMessagesFilterPinned` within `getChatDetails`.
+   - **Multi-Cycle Top Banner:** Displays pinned message count badge (`X of Y`), message text snippet or media label (`📷 Photo`, `🎙 Voice message`, `📹 Video`, `📎 Document`), and clickable jump-and-cycle navigation.
+   - **Sender Attribution:** Extracts sender names for pinned messages in all chat types directly from returned MTProto entity collections (`res.users` & `res.chats`).
+
+2. **Mutual Two-Way Pinning & Unpin Management:**
+   - **Two-Way Pinning by Default:** Sets `bothSides: true` (instead of one-sided local pinning), aligning private chat message pinning with official Telegram Desktop behavior.
+   - **Pinned Messages Drawer:** Added live search drawer modal (`All (N)`) with one-click unpin capability directly from the drawer list.
+   - **Message Bubble Pin Badges:** Added subtle amber pin indicator to pinned messages in the chat history bubble footer.
+
+3. **Real-Time Update Synchronization:**
+   - **Live Updates (`updatePinnedMessages` & `updatePinnedChannelMessages`):** Wired MTProto updates to notify the UI in real time whenever messages are pinned or unpinned from other devices or participants.
+   - **Service Message Hook:** Intercepts `actionType: message_pinned` to trigger instant chat details re-sync without requiring a page refresh.
+
+---
+
 # 🚀 Guidegram v2.4.1 — Full-Width Kinetic Header & Zero-Fake MTProto Edition
 
 > **Ergonomic Desktop Parity & Zero-Mock Architecture** featuring full-window kinetic folder tabs header, bidirectional mouse-wheel horizontal rail navigation, 100% purged mock data, deterministic transaction IDs, live MTProto privacy settings, real channel boost telemetry, and wired UI actions.
