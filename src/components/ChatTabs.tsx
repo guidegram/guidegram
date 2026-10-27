@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { MessageSquare, Users, Radio, Bot, BellRing, Layers, CheckCheck, Folder, Archive, ArrowLeft, ArrowRight, Palette } from 'lucide-react'
+import { MessageSquare, Users, Radio, Bot, BellRing, Layers, CheckCheck, Folder, Archive, ArrowLeft, ArrowRight, Palette, Plus } from 'lucide-react'
 import { CloudFolderItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 
@@ -15,6 +15,7 @@ interface ChatTabsProps {
   onMarkAllAsRead?: (category?: TabCategory) => Promise<boolean> | void
   onCloudFoldersLoaded?: (folders: CloudFolderItem[]) => void
   cloudFolders?: CloudFolderItem[]
+  onOpenFolderManager?: () => void
 }
 
 export const TELEGRAM_FOLDER_TAG_COLORS: Record<number, string> = {
@@ -36,6 +37,7 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
   onMarkAllAsRead,
   onCloudFoldersLoaded,
   cloudFolders: cloudFoldersProp,
+  onOpenFolderManager,
 }) => {
   const { t, isRTL, formatNumber } = useI18n()
   const [isMarking, setIsMarking] = React.useState(false)
@@ -298,6 +300,21 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
             </motion.button>
           )
         })}
+
+        {/* Manage & Add Cloud Folders Button */}
+        {onOpenFolderManager && (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            type="button"
+            onClick={onOpenFolderManager}
+            title={t('folders.manage')}
+            aria-label={t('folders.manage')}
+            className="p-1.5 rounded-xl text-gray-400 hover:text-primary-400 hover:bg-primary-500/10 border border-transparent hover:border-primary-500/20 transition-all cursor-pointer shrink-0 ml-0.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </motion.button>
+        )}
       </div>
 
       {/* 64Gram Power Feature: Dynamic Mark Read Button */}
@@ -405,6 +422,22 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
               <CheckCheck className="w-3.5 h-3.5 shrink-0" />
               <span>{t('tab.mark_all_chats_read')}</span>
             </button>
+            {onOpenFolderManager && (
+              <>
+                <div className="h-px bg-white/5 my-1" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTabContextMenu(null)
+                    onOpenFolderManager()
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-primary-400 hover:bg-primary-500/15 transition-colors ${isRTL ? 'text-right' : 'text-left'} cursor-pointer`}
+                >
+                  <Folder className="w-3.5 h-3.5 shrink-0" />
+                  <span>{t('folders.manage')}</span>
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

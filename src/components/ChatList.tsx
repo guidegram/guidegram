@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock } from 'lucide-react'
+import { Search, Pin, ShieldCheck, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
@@ -65,6 +65,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   const [isStoryComposerOpen, setIsStoryComposerOpen] = useState(false)
   const [activeStoryPeers, setActiveStoryPeers] = useState<ActiveStoryPeer[]>([])
   const [storyRefreshKey, setStoryRefreshKey] = useState(0)
+  const [pvFilter, setPvFilter] = useState<'all' | 'contacts' | 'non_contacts'>('all')
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -196,7 +197,11 @@ export const ChatList: React.FC<ChatListProps> = ({
     }
 
     // Normal tab category match
-    if (activeTab === 'users' && (!dialog.isUser || dialog.isBot)) return false
+    if (activeTab === 'users') {
+      if (!dialog.isUser || dialog.isBot) return false
+      if (pvFilter === 'contacts' && !dialog.isContact) return false
+      if (pvFilter === 'non_contacts' && dialog.isContact) return false
+    }
     if (activeTab === 'groups' && !isGroup) return false
     if (activeTab === 'channels' && !isBroadcast) return false
     if (activeTab === 'bots' && !dialog.isBot) return false
@@ -240,8 +245,14 @@ export const ChatList: React.FC<ChatListProps> = ({
           if (folder.bots && dialog.isBot) {
             matched = true
           }
-          if ((folder.contacts || folder.nonContacts) && dialog.isUser && !dialog.isBot) {
-            matched = true
+          if (dialog.isUser && !dialog.isBot) {
+            if (folder.contacts && folder.nonContacts) {
+              matched = true
+            } else if (folder.contacts && dialog.isContact) {
+              matched = true
+            } else if (folder.nonContacts && !dialog.isContact) {
+              matched = true
+            }
           }
           if (!matched) return false
         }
@@ -252,6 +263,33 @@ export const ChatList: React.FC<ChatListProps> = ({
   })
 
   const storyPeerMap = new Map(activeStoryPeers.map((peer) => [peer.peerId, peer]))
+
+  // Counts for PV filter toggle
+  const userDialogs = React.useMemo(() => {
+    return dialogs.filter(
+      (d) =>
+        d.isUser &&
+        !d.isBot &&
+        !d.isSponsored &&
+        !d.isSponsorChannel &&
+        d.folderId !== 1 &&
+        !(d as any).archived
+    )
+  }, [dialogs])
+
+  const contactsCount = React.useMemo(() => {
+    return userDialogs.filter((d) => Boolean(d.isContact)).length
+  }, [userDialogs])
+
+  const nonContactsCount = React.useMemo(() => {
+    return userDialogs.filter((d) => !d.isContact).length
+  }, [userDialogs])
+
+  const nonContactsUnread = React.useMemo(() => {
+    return userDialogs
+      .filter((d) => !d.isContact && d.unreadCount > 0)
+      .reduce((acc, d) => acc + d.unreadCount, 0)
+  }, [userDialogs])
 
   // Debounced Telegram MTProto Global Search
   const searchTimeoutRef = useRef<any>(null)
@@ -573,6 +611,64 @@ export const ChatList: React.FC<ChatListProps> = ({
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* PV Filter Toggle (All / Contacts / Non-Contacts) in Users Tab */}
+      {activeTab === 'users' && !searchQuery.trim() && (
+        <div className="shrink-0 px-2.5 py-1.5 bg-dark-900/60 backdrop-blur-sm border-b border-white/5 flex items-center justify-between gap-1 select-none">
+          <div className="flex items-center gap-1 p-0.5 bg-dark-800/80 rounded-xl border border-white/5 w-full">
+            <button
+              type="button"
+              onClick={() => setPvFilter('all')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer relative ${
+                pvFilter === 'all'
+                  ? 'text-primary-400 bg-primary-500/15 border border-primary-500/30 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+              <span>{t('pv.all')}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-dark-750/80 text-gray-400">
+                {formatNumber(userDialogs.length)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPvFilter('contacts')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer relative ${
+                pvFilter === 'contacts'
+                  ? 'text-teal-400 bg-teal-500/15 border border-teal-500/30 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>{t('pv.contacts')}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-dark-750/80 text-gray-400">
+                {formatNumber(contactsCount)}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPvFilter('non_contacts')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer relative ${
+                pvFilter === 'non_contacts'
+                  ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+              }`}
+            >
+              <UserX className="w-3.5 h-3.5 shrink-0" />
+              <span>{t('pv.non_contacts')}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-dark-750/80 text-gray-400">
+                {formatNumber(nonContactsCount)}
+              </span>
+              {nonContactsUnread > 0 && (
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+              )}
+            </button>
           </div>
         </div>
       )}

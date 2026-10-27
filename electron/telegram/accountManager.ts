@@ -2361,6 +2361,8 @@ export class AccountManager {
           accessHash: rawAccessHash ? rawAccessHash.toString() : undefined,
           draft,
           userStatus,
+          isContact: Boolean(peer.isContact || (peer as any).raw?.contact || (peer as any).contact),
+          isMutualContact: Boolean(peer.isMutualContact || (peer as any).raw?.mutualContact || (peer as any).mutualContact),
         }
         dialogs.push(item)
       }
@@ -10463,9 +10465,9 @@ export class AccountManager {
 
     try {
       const res: any = await holder.client.call({ _: 'messages.getDialogFilters' })
-      const filters = res.filters || []
+      const filters = Array.isArray(res) ? res : (res?.filters || [])
       return filters
-        .filter((f: any) => f._ === 'dialogFilter' || f._ === 'dialogFilterChatlist')
+        .filter((f: any) => f && (f._ === 'dialogFilter' || f._ === 'dialogFilterChatlist'))
         .map((f: any) => {
           let folderTitle = ''
           if (typeof f.title === 'string') {
@@ -10473,21 +10475,36 @@ export class AccountManager {
           } else if (f.title && typeof f.title === 'object') {
             folderTitle = f.title.text || ''
           }
+
+          const extractPeers = (list?: any[]) => {
+            if (!list || !Array.isArray(list)) return []
+            return list
+              .map((p: any) => {
+                const id = p.userId ?? p.user_id ?? p.channelId ?? p.channel_id ?? p.chatId ?? p.chat_id ?? ''
+                return id ? id.toString() : ''
+              })
+              .filter(Boolean)
+          }
+
+          const includePeerIds = extractPeers(f.includePeers || f.include_peers)
+          const excludePeerIds = extractPeers(f.excludePeers || f.exclude_peers)
+          const pinnedPeerIds = extractPeers(f.pinnedPeers || f.pinned_peers)
+
           return {
             id: f.id,
             title: folderTitle || 'Folder',
             emoticon: f.emoticon,
-            includePeerIds: (f.includePeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
-            excludePeerIds: (f.excludePeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
-            pinnedPeerIds: (f.pinnedPeers || []).map((p: any) => p.userId?.toString() || p.channelId?.toString() || p.chatId?.toString() || ''),
-            contacts: f.contacts,
-            nonContacts: f.nonContacts,
-            groups: f.groups,
-            broadcasts: f.broadcasts,
-            bots: f.bots,
-            excludeMuted: f.excludeMuted,
-            excludeRead: f.excludeRead,
-            excludeArchived: f.excludeArchived,
+            includePeerIds,
+            excludePeerIds,
+            pinnedPeerIds,
+            contacts: Boolean(f.contacts),
+            nonContacts: Boolean(f.nonContacts ?? f.non_contacts),
+            groups: Boolean(f.groups),
+            broadcasts: Boolean(f.broadcasts),
+            bots: Boolean(f.bots),
+            excludeMuted: Boolean(f.excludeMuted ?? f.exclude_muted),
+            excludeRead: Boolean(f.excludeRead ?? f.exclude_read),
+            excludeArchived: Boolean(f.excludeArchived ?? f.exclude_archived),
             color: f.color,
           }
         })
@@ -13100,6 +13117,7 @@ export class AccountManager {
                 isChannel: chat.chatType === 'channel',
                 isBroadcast: chat.chatType === 'channel',
                 isBot: chat.chatType === 'bot',
+                isContact: Boolean(chat.isContact || chat.contact || (chat as any).raw?.contact || msg.sender?.isContact),
               }
             : undefined,
         })

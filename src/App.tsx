@@ -25,6 +25,7 @@ const SupportModal = React.lazy(() => import('./components/SupportModal').then((
 const McpHubModal = React.lazy(() => import('./components/McpHubModal').then((m) => ({ default: m.McpHubModal })))
 const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then((m) => ({ default: m.KeyboardShortcutsModal })))
 const ContactChangesModal = React.lazy(() => import('./components/ContactChangesModal').then((m) => ({ default: m.ContactChangesModal })))
+const FolderManagerModal = React.lazy(() => import('./components/FolderManagerModal').then((m) => ({ default: m.FolderManagerModal })))
 import {
   AccountInfo,
   DialogItem,
@@ -82,6 +83,7 @@ export const App: React.FC = () => {
   const [isCallsOpen, setIsCallsOpen] = useState(false)
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
+  const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false)
   const [createChatState, setCreateChatState] = useState<{ isOpen: boolean; mode: 'group' | 'channel' }>({
     isOpen: false,
     mode: 'group',
@@ -359,6 +361,7 @@ export const App: React.FC = () => {
               isChannel: chatInfo?.isChannel ?? false,
               isBroadcast: chatInfo?.isBroadcast ?? false,
               isBot: chatInfo?.isBot ?? false,
+              isContact: chatInfo?.isContact ?? Boolean((payload as any)?.message?.sender?.isContact),
               isPinned: false,
               isSavedMessages: isSaved,
               lastMessageText: msgText,
@@ -1705,6 +1708,7 @@ export const App: React.FC = () => {
               onMarkAllAsRead={handleMarkAllAsRead}
               onCloudFoldersLoaded={setCloudFolders}
               cloudFolders={cloudFolders}
+              onOpenFolderManager={() => setIsFolderManagerOpen(true)}
             />
 
             {/* Split View: Chat List Sidebar & Active Conversation */}
@@ -2007,6 +2011,16 @@ export const App: React.FC = () => {
           <KeyboardShortcutsModal
             isOpen={isShortcutsModalOpen}
             onClose={() => setIsShortcutsModalOpen(false)}
+          />
+        )}
+
+        {isFolderManagerOpen && (
+          <FolderManagerModal
+            isOpen={isFolderManagerOpen}
+            accountId={currentAccount?.id}
+            folders={cloudFolders}
+            onClose={() => setIsFolderManagerOpen(false)}
+            onFoldersUpdated={(updated) => setCloudFolders(updated)}
           />
         )}
       </React.Suspense>

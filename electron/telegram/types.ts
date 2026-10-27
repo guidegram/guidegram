@@ -159,6 +159,8 @@ export interface DialogItem {
   chatTheme?: string
   chatWallpaper?: string
   userStatus?: UserStatusInfo
+  isContact?: boolean
+  isMutualContact?: boolean
 }
 
 export interface DraftItem {
