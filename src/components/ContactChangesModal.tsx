@@ -74,12 +74,17 @@ function formatDurationHuman(seconds: number): string {
 
 function formatClockTime(timestamp: number): string {
   const d = new Date(timestamp * 1000)
-  return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+  const h = toPersianDigits(String(d.getHours()).padStart(2, '0'))
+  const m = toPersianDigits(String(d.getMinutes()).padStart(2, '0'))
+  return `${h}:${m}`
 }
 
 function formatClockTimeWithSeconds(timestamp: number): string {
   const d = new Date(timestamp * 1000)
-  return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const h = toPersianDigits(String(d.getHours()).padStart(2, '0'))
+  const m = toPersianDigits(String(d.getMinutes()).padStart(2, '0'))
+  const s = toPersianDigits(String(d.getSeconds()).padStart(2, '0'))
+  return `${h}:${m}:${s}`
 }
 
 export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
@@ -354,25 +359,49 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
     return { totalSecs, count }
   }, [selectedUserId, filteredSessions, viewStartSec, viewEndSec])
 
-  // Generate Hour Ruler Markers
+  // Generate Hour Ruler Markers with adaptive spacing & pure Persian digits
   const hourMarkers = useMemo(() => {
-    const markers = []
+    const markers: Array<{
+      hourStr: string
+      posPercent: number
+      markerSec: number
+      isMajor: boolean
+      showLabel: boolean
+    }> = []
+
+    const is48h = viewDurationSec > 86400
+    // Adaptive step: at 1x zoom in 24h, step by 2 hours so labels never crowd or collide.
+    // When zoomed in (>= 1.4x), show every hour since there is plenty of space.
+    let labelStepHours = 2
+    if (is48h) {
+      labelStepHours = zoomLevel >= 2 ? 2 : zoomLevel >= 1.4 ? 4 : 6
+    } else {
+      labelStepHours = zoomLevel >= 1.4 ? 1 : 2
+    }
+
     const totalHours = Math.ceil(viewDurationSec / 3600)
     for (let i = 0; i <= totalHours; i++) {
       const markerSec = viewStartSec + i * 3600
       if (markerSec <= viewEndSec) {
         const d = new Date(markerSec * 1000)
-        const hourStr = String(d.getHours()).padStart(2, '0')
+        const hourNum = d.getHours()
+        const isEndMarker = markerSec === viewEndSec
+        const showLabel = isEndMarker ? false : (hourNum % labelStepHours === 0)
+        // Clean Persian hour digits: "۲۱", "۲۲", with "۰۰" for midnight
+        const hourStr = hourNum === 0 ? '۰۰' : toPersianDigits(hourNum)
         const posPercent = ((markerSec - viewStartSec) / viewDurationSec) * 100
+
         markers.push({
-          hourStr: `${hourStr}:۰۰`,
+          hourStr,
           posPercent,
           markerSec,
+          isMajor: hourNum % labelStepHours === 0,
+          showLabel,
         })
       }
     }
     return markers
-  }, [viewStartSec, viewEndSec, viewDurationSec])
+  }, [viewStartSec, viewEndSec, viewDurationSec, zoomLevel])
 
   // Progress of current moment in today view
   const nowPercent =
@@ -872,8 +901,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                   {/* STICKY TOP TIME RULER (Never disappears on vertical scroll!) */}
                   <div className="sticky top-0 z-40 flex items-stretch bg-dark-900/98 backdrop-blur-md border-b border-white/15 h-11 shadow-sm">
                     {/* Fixed Left Header for User Info */}
-                    <div className="w-60 shrink-0 sticky left-0 z-50 bg-dark-900 border-r border-white/15 px-3.5 flex items-center justify-between text-xs font-bold text-gray-300 shadow-md">
-                      <span className="flex items-center gap-1.5">
+                    <div className="w-60 shrink-0 sticky left-0 z-50 bg-dark-900 border-r border-white/15 px-3.5 flex items-center justify-between text-xs font-bold text-gray-300 shadow-md font-sans">
+                      <span className="flex items-center gap-1.5" dir="rtl">
                         <Users className="w-3.5 h-3.5 text-accent-cyan" />
                         <span>مخاطبان ({toPersianDigits(sortedSwimlaneUsers.length)})</span>
                       </span>
@@ -889,17 +918,23 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     </div>
 
                     {/* Time Ruler Axis */}
-                    <div className="flex-1 relative h-full flex items-center">
+                    <div className="flex-1 relative h-full flex items-center overflow-hidden">
                       {hourMarkers.map((hm) => (
                         <div
                           key={hm.markerSec}
                           style={{ left: `${hm.posPercent}%` }}
                           className="absolute top-0 bottom-0 flex flex-col items-center -translate-x-1/2 pointer-events-none"
                         >
-                          <span className="text-[10px] text-gray-300 font-mono font-semibold pt-1">
-                            {hm.hourStr}
-                          </span>
-                          <div className="w-px h-2 bg-white/25 mt-auto mb-1" />
+                          {hm.showLabel ? (
+                            <>
+                              <span className="text-[11px] text-gray-300 font-sans font-medium pt-1 select-none">
+                                {hm.hourStr}
+                              </span>
+                              <div className="w-px h-2.5 bg-white/25 mt-auto mb-1" />
+                            </>
+                          ) : (
+                            <div className="w-px h-1.5 bg-white/10 mt-auto mb-1" />
+                          )}
                         </div>
                       ))}
 
@@ -909,7 +944,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           style={{ left: `${nowPercent}%` }}
                           className="absolute top-0 bottom-0 z-30 flex flex-col items-center pointer-events-none -translate-x-1/2"
                         >
-                          <span className="text-[9px] bg-accent-cyan text-dark-950 font-bold px-1.5 py-0.5 rounded-xs shadow-md">
+                          <span className="text-[9px] bg-accent-cyan text-dark-950 font-bold px-1.5 py-0.5 rounded-xs shadow-md font-sans">
                             اکنون ({formatClockTime(nowSec)})
                           </span>
                           <div className="w-0.5 h-full bg-accent-cyan shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
@@ -951,22 +986,22 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                               )}
                             </div>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 text-right" dir="rtl">
                               <div
-                                className="text-xs font-bold text-gray-200 truncate group-hover:text-white"
+                                className="text-xs font-bold text-gray-200 truncate group-hover:text-white font-sans"
                                 title={user.userName}
                               >
                                 {user.userName}
                               </div>
-                              <div className="text-[10px] flex items-center gap-1.5 mt-0.5">
+                              <div className="text-[10px] flex items-center gap-1.5 mt-0.5 font-sans">
                                 {isOnline ? (
                                   <span className="text-emerald-400 font-semibold flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                                     <span>هم‌اکنون آنلاین</span>
                                   </span>
                                 ) : totalSecs > 0 ? (
-                                  <span className="text-accent-cyan font-mono font-medium">
-                                    {formatDurationHuman(totalSecs)} آنلاین
+                                  <span className="text-accent-cyan font-sans font-medium" dir="rtl">
+                                    <bdi>{formatDurationHuman(totalSecs)} آنلاین</bdi>
                                   </span>
                                 ) : (
                                   <span className="text-gray-500">نشستی ثبت نشده</span>
@@ -977,12 +1012,19 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
 
                           {/* Right Lane: 24h Timeline for this user */}
                           <div className="flex-1 relative h-full flex items-center overflow-hidden">
+                            {/* Horizontal centerline guide rail */}
+                            <div className="absolute left-0 right-0 h-[2px] bg-white/[0.04] rounded-full pointer-events-none" />
+
                             {/* Background Hour Gridlines */}
                             {hourMarkers.map((hm) => (
                               <div
                                 key={`grid_${hm.markerSec}`}
                                 style={{ left: `${hm.posPercent}%` }}
-                                className="absolute top-0 bottom-0 w-px border-r border-dashed border-white/5 pointer-events-none"
+                                className={`absolute top-0 bottom-0 w-px pointer-events-none ${
+                                  hm.showLabel
+                                    ? 'border-r border-dashed border-white/[0.07]'
+                                    : 'border-r border-dotted border-white/[0.03]'
+                                }`}
                               />
                             ))}
 
@@ -990,7 +1032,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                             {nowPercent !== null && (
                               <div
                                 style={{ left: `${nowPercent}%` }}
-                                className="absolute top-0 bottom-0 w-0.5 bg-accent-cyan/20 pointer-events-none -translate-x-1/2"
+                                className="absolute top-0 bottom-0 w-px bg-accent-cyan/30 shadow-[0_0_8px_rgba(34,211,238,0.5)] pointer-events-none -translate-x-1/2"
                               />
                             )}
 
@@ -1002,8 +1044,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
 
                               const leftPercent = ((sessStart - viewStartSec) / viewDurationSec) * 100
                               const rawWidthPercent = ((sessEnd - sessStart) / viewDurationSec) * 100
-                              // Minimum width of 0.8% (or ~10px) so even 30-sec sessions are visible and clickable
-                              const widthPercent = Math.max(0.8, rawWidthPercent)
+                              // Minimum width so short sessions are sleek and interactive
+                              const widthPercent = Math.max(0.4, rawWidthPercent)
 
                               const isLive = sess.isCurrentSession
                               const isHovered = hoveredSession?.id === sess.id
@@ -1014,6 +1056,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                   style={{
                                     left: `${leftPercent}%`,
                                     width: `${widthPercent}%`,
+                                    minWidth: '6px',
                                   }}
                                   onMouseEnter={() => setHoveredSession(sess)}
                                   onMouseLeave={() => setHoveredSession(null)}
@@ -1024,18 +1067,16 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                   title={`${sess.userName}: ${formatClockTime(sess.startTime)} تا ${
                                     isLive ? 'اکنون' : formatClockTime(sess.endTime)
                                   } (${formatDurationHuman(sess.durationSeconds)})`}
-                                  className={`interactive-session absolute h-7 rounded-lg cursor-pointer transition-all flex items-center px-1.5 shadow-sm overflow-hidden z-10 ${
+                                  className={`interactive-session absolute h-2.5 rounded-full cursor-pointer transition-all duration-150 z-10 ${
                                     isLive
-                                      ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-accent-cyan ring-2 ring-accent-cyan shadow-[0_0_10px_rgba(34,211,238,0.7)] animate-pulse'
+                                      ? 'h-3 bg-gradient-to-r from-emerald-400 via-teal-300 to-accent-cyan ring-1 ring-accent-cyan shadow-[0_0_12px_rgba(34,211,238,0.8)] animate-pulse z-20'
                                       : isHovered
-                                      ? 'bg-gradient-to-r from-emerald-400 to-teal-300 ring-2 ring-white scale-105 z-30 shadow-lg'
-                                      : 'bg-gradient-to-r from-emerald-600/90 to-teal-500/90 hover:from-emerald-500 hover:to-teal-400 hover:ring-1 hover:ring-white/60'
+                                      ? 'h-3.5 -translate-y-0.5 bg-gradient-to-r from-emerald-300 to-teal-200 ring-2 ring-white shadow-[0_0_12px_rgba(52,211,153,0.8)] z-30'
+                                      : 'bg-gradient-to-r from-emerald-500/90 to-teal-400/90 hover:from-emerald-400 hover:to-teal-300 hover:h-3 hover:ring-1 hover:ring-white/70 shadow-[0_0_6px_rgba(16,185,129,0.3)]'
                                   }`}
                                 >
-                                  {widthPercent > 3.5 && (
-                                    <span className="text-[10px] font-bold text-dark-950 font-mono select-none truncate">
-                                      {formatClockTime(sess.startTime)}
-                                    </span>
+                                  {isLive && (
+                                    <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-cyan ring-2 ring-dark-900 shadow-[0_0_8px_#22d3ee] animate-ping" />
                                   )}
                                 </div>
                               )
@@ -1052,6 +1093,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               <AnimatePresence>
                 {hoveredSession && (
                   <motion.div
+                    dir="rtl"
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 6 }}
