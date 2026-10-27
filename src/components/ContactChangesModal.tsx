@@ -34,8 +34,8 @@ interface ContactChangesModalProps {
   isOpen: boolean
   accountId: string
   onClose: () => void
-  onOpenChat?: (chatId: string) => void
-  onOpenUserProfile?: (peerId: string) => void
+  onOpenChat?: (chatId: string, initialMeta?: any) => void
+  onOpenUserProfile?: (peerId: string, initialDetails?: any) => void
 }
 
 type RelationFilterType = 'all' | 'mutual' | 'my_contacts' | 'saved'
@@ -454,7 +454,13 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           type="button"
                           onClick={() => {
                             onClose()
-                            onOpenUserProfile(evt.userId)
+                            onOpenUserProfile(evt.userId, {
+                              id: evt.userId,
+                              title: evt.userName || evt.title,
+                              username: evt.userUsername,
+                              avatarUrl: evt.newPhotoUrl || evt.userAvatarUrl,
+                              isUser: true,
+                            })
                           }}
                           className="px-3 py-1.5 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/10 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
                         >
@@ -468,7 +474,13 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           type="button"
                           onClick={() => {
                             onClose()
-                            onOpenChat(evt.userId)
+                            onOpenChat(evt.userId, {
+                              id: evt.userId,
+                              title: evt.userName || evt.title,
+                              username: evt.userUsername,
+                              avatarUrl: evt.newPhotoUrl || evt.userAvatarUrl,
+                              isUser: true,
+                            })
                           }}
                           className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                         >

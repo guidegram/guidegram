@@ -26,10 +26,12 @@ const McpHubModal = React.lazy(() => import('./components/McpHubModal').then((m)
 const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then((m) => ({ default: m.KeyboardShortcutsModal })))
 const ContactChangesModal = React.lazy(() => import('./components/ContactChangesModal').then((m) => ({ default: m.ContactChangesModal })))
 const FolderManagerModal = React.lazy(() => import('./components/FolderManagerModal').then((m) => ({ default: m.FolderManagerModal })))
+const UserProfileDrawer = React.lazy(() => import('./components/UserProfileDrawer').then((m) => ({ default: m.UserProfileDrawer })))
 import {
   AccountInfo,
   DialogItem,
   MessageItem,
+  ChatDetails,
   AppConfig,
   ProxyConfig,
   UpdateInfo,
@@ -94,6 +96,10 @@ export const App: React.FC = () => {
   })
   const [forwardMessage, setForwardMessage] = useState<MessageItem | null>(null)
   const [forwardMessagesList, setForwardMessagesList] = useState<MessageItem[] | null>(null)
+  const [viewingUserProfile, setViewingUserProfile] = useState<{
+    peerId: string
+    initialDetails?: Partial<ChatDetails>
+  } | null>(null)
   const [isLoadingMoreDialogs, setIsLoadingMoreDialogs] = useState(false)
   const isLoadingMoreDialogsRef = useRef(false)
   const isBackgroundSyncingDialogsRef = useRef(false)
@@ -1428,7 +1434,22 @@ export const App: React.FC = () => {
     }
   }
 
-  const handleSelectUserOrChat = async (target: string, targetMsgId?: number) => {
+  const handleOpenUserProfile = (
+    peerId: string,
+    initialDetailsOrTitle?: Partial<ChatDetails> | string
+  ) => {
+    const initialDetails =
+      typeof initialDetailsOrTitle === 'string'
+        ? { title: initialDetailsOrTitle }
+        : initialDetailsOrTitle
+    setViewingUserProfile({ peerId, initialDetails })
+  }
+
+  const handleSelectUserOrChat = async (
+    target: string,
+    targetMsgId?: number,
+    initialMeta?: Partial<DialogItem>
+  ) => {
     if (!activeAccountId) return
     const dialogs = dialogsByAccount[activeAccountId] || []
     const cleanTarget = target.replace(/^@/, '').trim()
@@ -1462,8 +1483,32 @@ export const App: React.FC = () => {
           return
         }
       } catch (err) {
-        console.warn('resolvePeer failed, falling back to search query:', err)
+        console.warn('resolvePeer failed, falling back to provisional dialog or search query:', err)
       }
+    }
+
+    // If initialMeta exists or cleanTarget is numeric user ID, create a provisional dialog item
+    if (initialMeta || isTargetNumeric) {
+      const provisional: DialogItem = {
+        id: cleanTarget,
+        accountId: activeAccountId,
+        title: initialMeta?.title || `User ${cleanTarget}`,
+        username: initialMeta?.username,
+        avatarUrl: initialMeta?.avatarUrl,
+        unreadCount: 0,
+        isUser: true,
+        isGroup: false,
+        isChannel: false,
+        isBot: false,
+        isPinned: false,
+      }
+      setDialogsByAccount((prev) => {
+        const list = prev[activeAccountId] || []
+        const exists = list.some((d) => d.id === provisional.id)
+        return exists ? prev : { ...prev, [activeAccountId]: [provisional, ...list] }
+      })
+      handleSelectChat(provisional.id, targetMsgId)
+      return
     }
 
     setSearchQuery(cleanTarget)
@@ -1905,6 +1950,7 @@ export const App: React.FC = () => {
                   onEditMessage={handleEditMessage}
                   onToggleGhostMode={handleToggleGhostMode}
                   onSelectUserOrChat={handleSelectUserOrChat}
+                  onOpenUserProfile={handleOpenUserProfile}
                   initialScrollMsgId={initialScrollMsgId}
                   onClearInitialScroll={() => setInitialScrollMsgId(null)}
                   onMergeHistoricalMessages={handleMergeHistoricalMessages}
@@ -2094,14 +2140,37 @@ export const App: React.FC = () => {
             isOpen={isContactChangesOpen}
             accountId={currentAccount?.id || ''}
             onClose={() => setIsContactChangesOpen(false)}
-            onOpenChat={(chatId) => {
+            onOpenChat={(chatId, initialMeta) => {
               setIsContactChangesOpen(false)
-              handleSelectChat(chatId)
+              handleSelectUserOrChat(chatId, undefined, initialMeta)
             }}
-            onOpenUserProfile={(peerId) => {
+            onOpenUserProfile={(peerId, initialDetails) => {
               setIsContactChangesOpen(false)
-              handleSelectUserOrChat(peerId)
+              handleOpenUserProfile(peerId, initialDetails)
             }}
+          />
+        )}
+
+        {viewingUserProfile && (
+          <UserProfileDrawer
+            isOpen={Boolean(viewingUserProfile)}
+            accountId={activeAccountId || accounts[0]?.id || ''}
+            peerId={viewingUserProfile.peerId}
+            initialDetails={viewingUserProfile.initialDetails}
+            currentChatId={activeChatId}
+            onClose={() => setViewingUserProfile(null)}
+            onSelectUserOrChat={(target) => {
+              setViewingUserProfile(null)
+              handleSelectUserOrChat(target, undefined, viewingUserProfile.initialDetails)
+            }}
+            onSearchFromUser={(peerId) => {
+              setViewingUserProfile(null)
+              handleSelectUserOrChat(peerId, undefined, viewingUserProfile.initialDetails)
+            }}
+            onMentionUser={() => {
+              setViewingUserProfile(null)
+            }}
+            onShowToast={(msg) => setAppToast(msg)}
           />
         )}
 

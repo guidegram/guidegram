@@ -179,6 +179,7 @@ interface ChatViewportProps {
   onEditMessage?: (message: MessageItem, newText: string) => Promise<void> | void
   onToggleGhostMode: () => void
   onSelectUserOrChat?: (target: string, targetMsgId?: number) => void
+  onOpenUserProfile?: (peerId: string, fallbackTitle?: string) => void
   initialScrollMsgId?: number | null
   onClearInitialScroll?: () => void
   onMergeHistoricalMessages?: (newMessages: MessageItem[]) => void
@@ -727,6 +728,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onEditMessage,
   onToggleGhostMode,
   onSelectUserOrChat,
+  onOpenUserProfile,
   initialScrollMsgId,
   onClearInitialScroll,
   onMergeHistoricalMessages,
@@ -2521,7 +2523,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Open dedicated User Profile Drawer for a user
   const handleOpenUserProfile = (peerId?: string, fallbackTitle?: string) => {
-    if (!peerId || !chat) return
+    if (!peerId) return
+    if (onOpenUserProfile) {
+      onOpenUserProfile(peerId, fallbackTitle)
+      return
+    }
+    if (!chat) return
     setUserProfilePeerId(peerId)
     setUserProfileDetails({
       id: peerId,

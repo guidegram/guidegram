@@ -4023,6 +4023,24 @@ export class AccountManager {
           }
         }
       }
+
+      // Snapshot fallback for numeric users tracked in activity audit
+      const snapshot = this.activityTrackerService.getUserSnapshot(accountId, clean)
+      if (snapshot) {
+        return {
+          id: clean,
+          accountId,
+          title: snapshot.name || 'User',
+          unreadCount: 0,
+          isUser: true,
+          isGroup: false,
+          isChannel: false,
+          isBot: false,
+          isPinned: false,
+          username: snapshot.username,
+          avatarUrl: snapshot.avatarUrl,
+        }
+      }
     }
 
     const res: any = await holder.client.call({
@@ -5359,6 +5377,21 @@ export class AccountManager {
       }
     } catch (err: any) {
       Logger.warn(`[AccountManager] getChatDetails warning for ${chatId}:`, err?.message || err)
+    }
+
+    // Snapshot fallback for Users when MTProto fails or returns empty placeholder
+    if ((!details.title || details.title === 'Chat') && this.activityTrackerService) {
+      const snap = this.activityTrackerService.getUserSnapshot(accountId, chatId)
+      if (snap) {
+        details.title = snap.name || details.title
+        details.username = snap.username || details.username
+        details.phone = snap.phone || details.phone
+        details.about = snap.bio || details.about
+        details.avatarUrl = snap.avatarUrl || details.avatarUrl
+        details.personalChannelId = snap.personalChannelId || details.personalChannelId
+        details.personalChannelTitle = snap.personalChannelTitle || details.personalChannelTitle
+        details.isUser = true
+      }
     }
 
     return details

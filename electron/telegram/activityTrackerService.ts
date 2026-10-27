@@ -19,7 +19,7 @@ interface UserStatusRecord {
   expires?: number
 }
 
-interface UserSnapshot {
+export interface UserSnapshot {
   id: string
   name: string
   username?: string
@@ -773,6 +773,11 @@ export class ActivityTrackerService {
   public getUserChangeHistory(accountId: string, userId: string): ContactChangeEvent[] {
     const changes = this.loadChanges(accountId)
     return changes.filter((c) => c.userId === userId)
+  }
+
+  public getUserSnapshot(accountId: string, userId: string): UserSnapshot | undefined {
+    const snapshots = this.loadSnapshots(accountId)
+    return snapshots[userId]
   }
 
   // =========================================================================
