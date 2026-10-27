@@ -1,41 +1,30 @@
-# 🚀 Guidegram v2.4.3 — Contact Timeline Radar, Safe Anti-Flood Queue & Mobile Identity Edition
+# 🚀 Guidegram v2.4.4 — User-Centric Swimlane Gantt & Drag-to-Pan Timeline Edition
 
-> **Contact Timeline Radar & Online Activity Map Architecture** featuring universal self-exclusion, silent local contact rename masking, tri-state bio deletion audits, anti-flood throttled background queues, visual before/after avatar comparisons, and official Android adaptive launcher icons.
+> **User-Centric Swimlane Gantt Architecture & Mobile Identity Overhaul** featuring sticky multi-directional profile headers, continuous 24-hour horizontal user swimlanes, natural mouse-wheel & drag-to-pan physics, official Android adaptive launcher icons, and zero-empty-gap ergonomics.
 
 ---
 
-### 🌟 Release v2.4.3 Highlights
+### 🌟 Release v2.4.4 Highlights
 
-* 🛰️ **Contact Timeline Radar & Profile Change Auditor:**
-  * **Universal Self-Exclusion:** Completely eliminates self-tracking across all 6 MTProto/IPC touchpoints (Saved Messages, live status updates, dialogs hydration, and contact lists).
-  * **Silent Phonebook Rename Masking:** Distinguishes local phonebook edits (`isContact: true`) from public profile updates, preventing personal contact renames from generating false timeline events.
-  * **Tri-State Bio & Personal Channel Hygiene:** Robust detection of bio clearing and channel removal with initial baseline seeding to eliminate phantom first-time events.
+* 📊 **User-Centric Swimlane Gantt Timeline:**
+  * **Dedicated Contact Lanes:** Each contact gets exactly one persistent horizontal swimlane containing all their 24-hour online sessions, eliminating fragmented single-session rows and vertical voids.
+  * **Sticky Multi-Directional Headers:**
+    * **Sticky Left Profile Column:** Profile avatars, full untruncated display names, online status badges, and total active minutes stay pinned during horizontal timeline navigation.
+    * **Sticky Top Time Axis Ruler:** 24-hour clock markers (`00:00` to `23:00`) and live "Now" guideline remain anchored at the top during vertical scrolling.
+  * **Fluid Mouse & Touch Interactions:**
+    * **Mouse-Wheel Horizontal Translation:** Standard vertical mouse wheel naturally scrolls the timeline horizontally.
+    * **Click-and-Drag Panning:** Grabbable canvas enables click-and-drag panning left and right.
+    * **Smooth Zooming:** Granular 1x to 4x timeline zoom with proportional time-axis expansion.
 
-* 🛡️ **Anti-Flood Throttled Background Queue:**
-  * **Flood-Wait Immunity:** 3.5s to 5s spaced query engine with a 12-hour per-contact cooldown, preventing Telegram RPC `FLOOD_WAIT` rate limits.
-  * **Interaction Range Selector:** Configurable background scan range in Settings (`24h`, `7d`, `30d`, `90d`, `180d` [default], and `All`).
-  * **Auto-Audit on Online Event:** Automatically enqueues active contacts for full profile inspection the moment they come online.
+* 📱 **Official Android Adaptive Launcher Icons & Dark Splash Screens:**
+  * Cleaned out default template Android robot vectors and legacy green grid assets.
+  * Generated high-resolution adaptive launcher icons (`ic_launcher`, `ic_launcher_round`, `ic_launcher_foreground`) across all Android screen densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) with signature `#39C6A4` brand background.
+  * Generated dark-themed splash screens (`#0A0D14`) with centered brand insignia.
 
-* 📊 **Interactive Online Timeline & Activity Map:**
-  * **24-Hour Zoomable Ruler:** Smooth horizontal timeline with mouse wheel and button zoom (1x to 4x).
-  * **Session Visualization:** Displays exact online minutes with contact avatars, saved names, and status badges.
-  * **Per-User Isolation:** Click on any user to instantly view all their historical online sessions on the timeline.
-  * **Fullscreen / Maximize View:** Dedicated modal expander for high-density monitoring.
-
-* 🖼️ **Visual Avatar Before/After Comparison:**
-  * Stores previous and new avatar thumbnails locally in `ContactChangeRecord`.
-  * Renders a side-by-side Before & After comparison widget with click-to-preview enlarged modals.
-
-* 📱 **Official Android Adaptive Launcher Icons & Splash Screens:**
-  * Eliminated legacy template Android robot vector files and green grid artifacts.
-  * Generated high-resolution adaptive launcher icons (`ic_launcher`, `ic_launcher_round`, `ic_launcher_foreground`) across all screen densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) matching the signature `#39C6A4` brand background.
-  * Generated unified dark splash screens (`#0A0D14`) with centered brand emblem.
-
-* 🤖 **Multiplatform Automated CI Pipeline:**
-  * Android APK (`Guidegram-Android.apk` with Java 21 & SDK 36 compatibility).
-  * Windows Setup Installer & Portable ZIP.
-  * macOS Universal DMG (Apple Silicon + Intel).
-  * Linux AppImage.
+* 🛰️ **Contact Timeline Radar & Universal Self-Exclusion:**
+  * Universal self-exclusion across all 6 MTProto/IPC touchpoints.
+  * Silent local phonebook rename masking.
+  * Tri-state bio hygiene and safe 3.5s anti-flood background query queue.
 
 ---
 *For past release changelogs, please inspect the git commit history.*
