@@ -1,23 +1,35 @@
-# 🚀 Guidegram v2.4.2 — Multi-Pinned Messages & Real-Time Sync Edition
+# 🚀 Guidegram v2.4.3 — Contact Timeline Radar, Safe Anti-Flood Queue & Mobile Identity Edition
 
-> **Private Chat Multi-Pinned Parity & Real-Time Event Architecture** featuring automatic pinned message resolution across all peer types, multi-cycle banner cycling, unified drawer modal with live search, mutual two-way pinning default, and multi-message selection.
+> **Contact Timeline Radar & Online Activity Map Architecture** featuring universal self-exclusion, silent local contact rename masking, tri-state bio deletion audits, anti-flood throttled background queues, visual before/after avatar comparisons, and official Android adaptive launcher icons.
 
 ---
 
-### 🌟 Release v2.4.2 Highlights
+### 🌟 Release v2.4.3 Highlights
 
-* 📌 **Private Chat Pinned Messages Parity (MTProto Layer 229):**
-  * **Automatic Resolution:** Automatically fetches and maps pinned messages in private chats via `inputMessagesFilterPinned`.
-  * **Multi-Cycle Top Banner:** Shows pinned counter (`X of Y`), snippet / media badge (`📷 Photo`, `🎙 Voice`, `📹 Video`, `📎 Document`), and smooth jump-and-cycle navigation.
-  * **Sender Attribution:** Direct sender names from returned MTProto entity collections (`users` & `chats`).
+* 🛰️ **Contact Timeline Radar & Profile Change Auditor:**
+  * **Universal Self-Exclusion:** Completely eliminates self-tracking across all 6 MTProto/IPC touchpoints (Saved Messages, live status updates, dialogs hydration, and contact lists).
+  * **Silent Phonebook Rename Masking:** Distinguishes local phonebook edits (`isContact: true`) from public profile updates, preventing personal contact renames from generating false timeline events.
+  * **Tri-State Bio & Personal Channel Hygiene:** Robust detection of bio clearing and channel removal with initial baseline seeding to eliminate phantom first-time events.
 
-* 🔄 **Mutual Two-Way Pinning & Drawer Modal:**
-  * **Two-Way Pinning Default:** Pins for both participants (`bothSides: true`), matching official Telegram Desktop behavior.
-  * **Pinned Messages Drawer:** Modal drawer (`All (N)`) with live search and one-click unpin capability.
-  * **Subtle Bubble Indicator:** Amber pin indicator badge on pinned bubbles in chat history.
+* 🛡️ **Anti-Flood Throttled Background Queue:**
+  * **Flood-Wait Immunity:** 3.5s to 5s spaced query engine with a 12-hour per-contact cooldown, preventing Telegram RPC `FLOOD_WAIT` rate limits.
+  * **Interaction Range Selector:** Configurable background scan range in Settings (`24h`, `7d`, `30d`, `90d`, `180d` [default], and `All`).
+  * **Auto-Audit on Online Event:** Automatically enqueues active contacts for full profile inspection the moment they come online.
 
-* ⚡ **Multi-Message Selection & Quick Actions:**
-  * Interactive hover checkboxes, continuous multi-selection, and fixed bottom action bar for batch forwarding and management.
+* 📊 **Interactive Online Timeline & Activity Map:**
+  * **24-Hour Zoomable Ruler:** Smooth horizontal timeline with mouse wheel and button zoom (1x to 4x).
+  * **Session Visualization:** Displays exact online minutes with contact avatars, saved names, and status badges.
+  * **Per-User Isolation:** Click on any user to instantly view all their historical online sessions on the timeline.
+  * **Fullscreen / Maximize View:** Dedicated modal expander for high-density monitoring.
+
+* 🖼️ **Visual Avatar Before/After Comparison:**
+  * Stores previous and new avatar thumbnails locally in `ContactChangeRecord`.
+  * Renders a side-by-side Before & After comparison widget with click-to-preview enlarged modals.
+
+* 📱 **Official Android Adaptive Launcher Icons & Splash Screens:**
+  * Eliminated legacy template Android robot vector files and green grid artifacts.
+  * Generated high-resolution adaptive launcher icons (`ic_launcher`, `ic_launcher_round`, `ic_launcher_foreground`) across all screen densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) matching the signature `#39C6A4` brand background.
+  * Generated unified dark splash screens (`#0A0D14`) with centered brand emblem.
 
 * 🤖 **Multiplatform Automated CI Pipeline:**
   * Android APK (`Guidegram-Android.apk` with Java 21 & SDK 36 compatibility).
