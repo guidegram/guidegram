@@ -1,4 +1,4 @@
-package io.guidegram.app;
+package io.github.guidegram.app;
 
 import com.getcapacitor.BridgeActivity;
 

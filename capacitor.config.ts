@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'io.guidegram.app',
+  appId: 'io.github.guidegram.app',
   appName: 'Guidegram',
   webDir: 'dist',
   server: {
