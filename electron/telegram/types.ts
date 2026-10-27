@@ -1688,7 +1688,9 @@ export interface UserActivityStats {
   totalOnlineSecondsWeek: number
   totalSessionsToday: number
   sessions: UserActivitySession[]
-  hourlyDistribution: number[] // 24 hours 0-23
+  hourlyDistribution: number[] // 24 hours 0-23 session count
+  hourlyDurationSeconds?: number[] // 24 hours 0-23 active duration in seconds (0-3600)
+  appUptimeIntervals?: Array<{ start: number; end: number }> // intervals where Guidegram app was running
   trackingEnabled: boolean
 }
 

@@ -55,6 +55,8 @@ export class ActivityTrackerService {
   private saveStatusTimers = new Map<string, NodeJS.Timeout>()
   private saveChangesTimers = new Map<string, NodeJS.Timeout>()
   private saveSnapshotsTimers = new Map<string, NodeJS.Timeout>()
+  private uptimeHeartbeatInterval?: NodeJS.Timeout
+  private appUptimeIntervals: Array<{ start: number; end: number }> = []
 
   constructor(
     baseDataDir: string,
@@ -66,6 +68,7 @@ export class ActivityTrackerService {
     this.onEventCallback = onEvent
     this.getConfig = getConfig || (() => ({} as AppConfig))
     this.ensureDirectory()
+    this.initUptimeTracker()
   }
 
   private ensureDirectory(): void {
@@ -75,6 +78,54 @@ export class ActivityTrackerService {
       }
     } catch (err) {
       Logger.warn('[ActivityTracker] Failed to create directory:', err)
+    }
+  }
+
+  private getUptimeFilePath(): string {
+    return path.join(this.activityDir, 'platform_uptime.json')
+  }
+
+  private initUptimeTracker(): void {
+    const fp = this.getUptimeFilePath()
+    try {
+      if (fs.existsSync(fp)) {
+        const raw = fs.readFileSync(fp, 'utf-8')
+        this.appUptimeIntervals = JSON.parse(raw)
+      }
+    } catch (err) {
+      Logger.warn('[ActivityTracker] Failed to load uptime history:', err)
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    // If the last interval was updated within 3 minutes, extend it; otherwise start a new interval
+    const last = this.appUptimeIntervals[this.appUptimeIntervals.length - 1]
+    if (last && now - last.end < 180) {
+      last.end = now
+    } else {
+      this.appUptimeIntervals.push({ start: now, end: now })
+    }
+
+    // Keep up to 30 days of uptime intervals
+    const retentionCutoff = now - 30 * 86400
+    this.appUptimeIntervals = this.appUptimeIntervals.filter((iv) => iv.end >= retentionCutoff)
+
+    const persistUptime = () => {
+      try {
+        const curNow = Math.floor(Date.now() / 1000)
+        const curLast = this.appUptimeIntervals[this.appUptimeIntervals.length - 1]
+        if (curLast) {
+          curLast.end = curNow
+        }
+        fs.writeFileSync(fp, JSON.stringify(this.appUptimeIntervals, null, 2), 'utf-8')
+      } catch (err) {
+        // Silent fail on write
+      }
+    }
+
+    persistUptime()
+    this.uptimeHeartbeatInterval = setInterval(persistUptime, 30000)
+    if (this.uptimeHeartbeatInterval.unref) {
+      this.uptimeHeartbeatInterval.unref()
     }
   }
 
@@ -627,24 +678,38 @@ export class ActivityTrackerService {
       })
     }
 
-    // Calculate totals
+    // Calculate totals and precise hourly duration (seconds active in each hour today)
     let totalOnlineSecondsToday = 0
     let totalOnlineSecondsWeek = 0
     let totalSessionsToday = 0
     const hourlyDistribution = new Array(24).fill(0)
+    const hourlyDurationSeconds = new Array(24).fill(0)
 
     for (const sess of sessions) {
       if (sess.endTime >= startOfToday) {
         totalOnlineSecondsToday += sess.durationSeconds
         totalSessionsToday++
+
+        // Calculate overlap for each hour of today (0 to 23)
+        for (let h = 0; h < 24; h++) {
+          const hourStart = startOfToday + h * 3600
+          const hourEnd = hourStart + 3600
+          const overlapStart = Math.max(sess.startTime, hourStart)
+          const overlapEnd = Math.min(sess.endTime, hourEnd)
+          if (overlapEnd > overlapStart) {
+            hourlyDurationSeconds[h] += (overlapEnd - overlapStart)
+            hourlyDistribution[h] = (hourlyDistribution[h] || 0) + 1
+          }
+        }
       }
       if (sess.endTime >= startOfWeek) {
         totalOnlineSecondsWeek += sess.durationSeconds
       }
+    }
 
-      // Distribute to hourly buckets
-      const sessHour = new Date(sess.startTime * 1000).getHours()
-      hourlyDistribution[sessHour] = (hourlyDistribution[sessHour] || 0) + 1
+    // Clamp hourly duration to maximum 3600 seconds per hour
+    for (let h = 0; h < 24; h++) {
+      hourlyDurationSeconds[h] = Math.min(3600, hourlyDurationSeconds[h])
     }
 
     return {
@@ -654,8 +719,10 @@ export class ActivityTrackerService {
       totalOnlineSecondsToday,
       totalOnlineSecondsWeek,
       totalSessionsToday,
-      sessions: sessions.slice(-50), // Return last 50 sessions
+      sessions: sessions.slice(-500), // Return up to 500 sessions for multi-day history
       hourlyDistribution,
+      hourlyDurationSeconds,
+      appUptimeIntervals: this.appUptimeIntervals,
       trackingEnabled,
     }
   }

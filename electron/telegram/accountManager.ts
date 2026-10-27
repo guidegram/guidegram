@@ -5020,10 +5020,6 @@ export class AccountManager {
             senderName: pm.senderName,
           }))
           details.pinnedMessage = details.pinnedMessages[0]
-        } else if ((details.isChannel || details.isGroup) && (res as any)?.fullChat?.pinnedMsgId) {
-          const rawPinnedId = (res as any).fullChat.pinnedMsgId
-          details.pinnedMessage = { id: rawPinnedId }
-          details.pinnedMessages = [{ id: rawPinnedId }]
         } else {
           details.pinnedMessages = []
           details.pinnedMessage = undefined
