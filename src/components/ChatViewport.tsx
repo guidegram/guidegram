@@ -5550,14 +5550,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className={`relative flex items-end gap-1.5 ${
                     chat.isChannel && !chat.isGroup
                       ? 'w-full max-w-2xl lg:max-w-3xl'
-                      : (chat.isBot || chatDetails?.isBot)
-                      ? 'w-full max-w-[92%] sm:max-w-[85%] md:max-w-[80%]'
                       : (!chat.isGroup && !chat.isChannel)
                       ? 'max-w-[85%] sm:max-w-[61.8%]'
                       : 'max-w-[85%] md:max-w-[75%]'
                   }`}
                   style={
-                    !chat.isGroup && !chat.isChannel && !chat.isBot
+                    !chat.isGroup && !chat.isChannel
                       ? { maxWidth: 'clamp(280px, 61.8%, 640px)' }
                       : undefined
                   }
