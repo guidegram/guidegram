@@ -89,6 +89,7 @@ export const App: React.FC = () => {
     mode: 'group',
   })
   const [forwardMessage, setForwardMessage] = useState<MessageItem | null>(null)
+  const [forwardMessagesList, setForwardMessagesList] = useState<MessageItem[] | null>(null)
   const [isLoadingMoreDialogs, setIsLoadingMoreDialogs] = useState(false)
   const hasMoreDialogsRef = useRef(true)
 
@@ -1188,7 +1189,8 @@ export const App: React.FC = () => {
     silentArg?: boolean,
     extraOptions?: { dropMediaCaptions?: boolean; newCaption?: string }
   ) => {
-    if (!activeAccountId || !forwardMessage || !window.guidegram) return
+    const msgs = forwardMessagesList && forwardMessagesList.length > 0 ? forwardMessagesList : (forwardMessage ? [forwardMessage] : [])
+    if (!activeAccountId || msgs.length === 0 || !window.guidegram) return
     const isPayload = !Array.isArray(targetChatIdsOrPayload) && typeof targetChatIdsOrPayload === 'object' && targetChatIdsOrPayload !== null
     const targetChatIds = isPayload
       ? (targetChatIdsOrPayload as DirectForwardPayload).toChatIds
@@ -1206,11 +1208,14 @@ export const App: React.FC = () => {
       ? (targetChatIdsOrPayload as DirectForwardPayload).newCaption
       : extraOptions?.newCaption
 
+    const fromChatId = msgs[0].chatId
+    const msgIds = msgs.map((m) => m.id)
+
     await window.guidegram.forwardMessages(
       activeAccountId,
       targetChatIds,
-      forwardMessage.chatId,
-      [forwardMessage.id],
+      fromChatId,
+      msgIds,
       {
         withoutQuote,
         silent,
@@ -1252,6 +1257,25 @@ export const App: React.FC = () => {
       return true
     } catch (err) {
       console.error('Failed to delete message:', err)
+      return false
+    }
+  }
+
+  // Batch delete messages
+  const handleDeleteMessages = async (messagesToDelete: MessageItem[]): Promise<boolean> => {
+    if (!activeAccountId || !activeChatId || !window.guidegram || messagesToDelete.length === 0) return false
+    const revoke = config?.alwaysDeleteBoth ?? true
+    try {
+      const ids = messagesToDelete.map((m) => m.id)
+      await window.guidegram.deleteMessages(activeAccountId, activeChatId, ids, revoke)
+      const idSet = new Set(ids)
+      setMessagesByChat((prev) => ({
+        ...prev,
+        [activeChatId]: (prev[activeChatId] || []).filter((m) => !idSet.has(m.id)),
+      }))
+      return true
+    } catch (err) {
+      console.error('Failed to delete messages batch:', err)
       return false
     }
   }
@@ -1770,9 +1794,17 @@ export const App: React.FC = () => {
                   bubblePadding={config?.bubblePadding ?? 10}
                   onSendMessage={handleSendMessage}
                   onSendMedia={handleSendMedia}
-                  onOpenDirectForward={(msg) => setForwardMessage(msg)}
+                  onOpenDirectForward={(msg) => {
+                    setForwardMessage(msg)
+                    setForwardMessagesList(null)
+                  }}
+                  onOpenBatchDirectForward={(msgs) => {
+                    setForwardMessagesList(msgs)
+                    setForwardMessage(msgs[0] || null)
+                  }}
                   onQuickForwardToSaved={handleQuickForwardToSaved}
                   onDeleteMessage={handleDeleteMessage}
+                  onDeleteMessages={handleDeleteMessages}
                   onEditMessage={handleEditMessage}
                   onToggleGhostMode={handleToggleGhostMode}
                   onSelectUserOrChat={handleSelectUserOrChat}
@@ -1916,12 +1948,16 @@ export const App: React.FC = () => {
           />
         )}
 
-        {Boolean(forwardMessage) && (
+        {(Boolean(forwardMessage) || (Boolean(forwardMessagesList) && forwardMessagesList!.length > 0)) && (
           <DirectForwardModal
-            isOpen={!!forwardMessage}
-            message={forwardMessage}
+            isOpen={!!forwardMessage || (!!forwardMessagesList && forwardMessagesList.length > 0)}
+            message={forwardMessage || (forwardMessagesList ? forwardMessagesList[0] : null)}
+            messages={forwardMessagesList || (forwardMessage ? [forwardMessage] : undefined)}
             dialogs={currentDialogs}
-            onClose={() => setForwardMessage(null)}
+            onClose={() => {
+              setForwardMessage(null)
+              setForwardMessagesList(null)
+            }}
             onForward={handleDirectForward}
           />
         )}

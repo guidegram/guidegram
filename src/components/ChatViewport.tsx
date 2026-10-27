@@ -172,8 +172,10 @@ interface ChatViewportProps {
     }
   ) => Promise<void> | void
   onOpenDirectForward: (message: MessageItem) => void
+  onOpenBatchDirectForward?: (messages: MessageItem[]) => void
   onQuickForwardToSaved?: (message: MessageItem) => Promise<boolean> | void
   onDeleteMessage?: (message: MessageItem) => Promise<boolean> | void
+  onDeleteMessages?: (messages: MessageItem[]) => Promise<boolean> | void
   onEditMessage?: (message: MessageItem, newText: string) => Promise<void> | void
   onToggleGhostMode: () => void
   onSelectUserOrChat?: (target: string, targetMsgId?: number) => void
@@ -718,8 +720,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onSendMessage,
   onSendMedia,
   onOpenDirectForward,
+  onOpenBatchDirectForward,
   onQuickForwardToSaved,
   onDeleteMessage,
+  onDeleteMessages,
   onEditMessage,
   onToggleGhostMode,
   onSelectUserOrChat,
@@ -731,6 +735,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [inputText, setInputText] = useState('')
   const [copiedChatId, setCopiedChatId] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null)
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(new Set())
+  const isSelectionMode = selectedMessageIds.size > 0
   const [hoveredMessage, setHoveredMessage] = useState<MessageItem | null>(null)
   const { t, formatNumber: formatLocalizedNumber } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
@@ -2485,6 +2491,122 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     [chat, chatDetails]
   )
 
+  // Message Multi-Selection Handlers (Telegram Desktop Pattern)
+  const toggleSelectMessage = useCallback((msgId: number) => {
+    setSelectedMessageIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(msgId)) {
+        next.delete(msgId)
+      } else {
+        next.add(msgId)
+      }
+      return next
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedMessageIds(new Set())
+    setSelectedMessage(null)
+  }, [])
+
+  const selectAllMessages = useCallback(() => {
+    const allIds = new Set(filteredMessages.map((m) => m.id))
+    setSelectedMessageIds(allIds)
+  }, [filteredMessages])
+
+  const isMessageSelected = useCallback(
+    (msgId: number) => selectedMessageIds.has(msgId) || selectedMessage?.id === msgId,
+    [selectedMessageIds, selectedMessage]
+  )
+
+  const getSelectedMessages = useCallback(() => {
+    return messages.filter((m) => selectedMessageIds.has(m.id))
+  }, [messages, selectedMessageIds])
+
+  const canDeleteSelected = useCallback(() => {
+    const selected = getSelectedMessages()
+    if (selected.length === 0) return false
+    return selected.every((m) => canDeleteMessage(m))
+  }, [getSelectedMessages, canDeleteMessage])
+
+  const handleBatchCopyText = useCallback(async () => {
+    const selected = getSelectedMessages()
+    if (selected.length === 0) return
+    const texts = selected
+      .map((m) => m.text?.trim())
+      .filter(Boolean)
+    if (texts.length === 0) {
+      showToast('Selected messages have no text to copy')
+      return
+    }
+    const combined = texts.join('\n\n')
+    const ok = await copyTextToClipboard(combined)
+    if (ok) {
+      showToast(`Copied text from ${texts.length} messages`)
+    } else {
+      showToast('Failed to copy text')
+    }
+  }, [getSelectedMessages])
+
+  const handleBatchSaveToSaved = useCallback(async () => {
+    const selected = getSelectedMessages()
+    if (selected.length === 0 || !onQuickForwardToSaved) return
+    let successCount = 0
+    for (const m of selected) {
+      const res = await onQuickForwardToSaved(m)
+      if (res !== false) successCount++
+    }
+    if (successCount > 0) {
+      showToast(`Saved ${successCount} message${successCount > 1 ? 's' : ''} to Saved Messages!`)
+      clearSelection()
+    } else {
+      showToast('Failed to save selected messages')
+    }
+  }, [getSelectedMessages, onQuickForwardToSaved, clearSelection])
+
+  const handleBatchForward = useCallback(() => {
+    const selected = getSelectedMessages()
+    if (selected.length === 0) return
+    if (onOpenBatchDirectForward) {
+      onOpenBatchDirectForward(selected)
+    } else {
+      onOpenDirectForward(selected[0])
+    }
+    clearSelection()
+  }, [getSelectedMessages, onOpenBatchDirectForward, onOpenDirectForward, clearSelection])
+
+  const handleBatchDelete = useCallback(async () => {
+    const selected = getSelectedMessages()
+    if (selected.length === 0) return
+    const count = selected.length
+    const confirmMsg =
+      t('chat.delete_selected_confirm', { count: formatLocalizedNumber(count) }) ||
+      `Delete ${count} selected messages?`
+    if (!window.confirm(confirmMsg)) return
+
+    if (onDeleteMessages) {
+      const ok = await onDeleteMessages(selected)
+      if (ok !== false) {
+        showToast(`Deleted ${count} messages`)
+        clearSelection()
+      } else {
+        showToast('Failed to delete messages')
+      }
+    } else if (onDeleteMessage) {
+      let successCount = 0
+      for (const m of selected) {
+        const ok = await onDeleteMessage(m)
+        if (ok !== false) successCount++
+      }
+      if (successCount > 0) {
+        showToast(`Deleted ${successCount} messages`)
+        clearSelection()
+      } else {
+        showToast('Failed to delete messages')
+      }
+    }
+  }, [getSelectedMessages, t, formatLocalizedNumber, onDeleteMessages, onDeleteMessage, clearSelection])
+
   // Check whether current user can pin messages in this chat
   const canPinMessage = useCallback(() => {
     if (!chat) return false
@@ -2737,6 +2859,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           setIsInfoOpen(false)
           return
         }
+        if (isSelectionMode) {
+          clearSelection()
+          return
+        }
         if (isAttachMenuOpen) {
           setIsAttachMenuOpen(false)
           return
@@ -2745,13 +2871,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           setReplyMessage(null)
           return
         }
-        setSelectedMessage(null)
+        clearSelection()
         return
       }
 
       const activeEl = document.activeElement
       const isInputFocused =
         activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && !isInputFocused) {
+        if (filteredMessages.length > 0) {
+          e.preventDefault()
+          selectAllMessages()
+          return
+        }
+      }
 
       if (e.altKey && (e.key === 'f' || e.key === 'F')) {
         const target =
@@ -2789,7 +2923,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedMessage, hoveredMessage, messages, onOpenDirectForward, lightboxUrl, isInfoOpen, replyMessage, isAttachMenuOpen])
+  }, [selectedMessage, hoveredMessage, messages, onOpenDirectForward, lightboxUrl, isInfoOpen, replyMessage, isAttachMenuOpen, isSelectionMode, clearSelection, selectAllMessages, filteredMessages])
 
   // Attachment picking handlers (Feature 17)
   const handlePickAttachment = async (category: 'media' | 'document' | 'audio') => {
@@ -5411,7 +5545,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           onScroll={handleScroll}
           className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedMessage(null)
+            if (e.target === e.currentTarget) clearSelection()
           }}
         >
         {isLoadingOlder && (
@@ -5446,7 +5580,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           </div>
         ) : (
           filteredMessages.map((msg) => {
-            const isSelected = selectedMessage?.id === msg.id
+            const isSelected = selectedMessageIds.has(msg.id) || selectedMessage?.id === msg.id
             const isFirstUnread = msg.id === firstUnreadMessageId
 
             return (
@@ -5517,6 +5651,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   })
                 }}
                 onClick={async (e) => {
+                  if (isSelectionMode) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggleSelectMessage(msg.id)
+                    return
+                  }
                   // 64Gram Feature: Quick forward when pressed ctrl
                   if (e.ctrlKey || e.metaKey) {
                     e.preventDefault()
@@ -5534,6 +5674,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   setSelectedMessage(isSelected ? null : msg)
                 }}
                 onDoubleClick={(e) => {
+                  if (isSelectionMode) return
                   e.stopPropagation()
                   setReplyMessage(msg)
                   setTimeout(() => textareaRef.current?.focus(), 50)
@@ -5560,9 +5701,36 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       : undefined
                   }
                 >
+                  {/* Outgoing Selection Checkbox */}
+                  {msg.isOutgoing && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleSelectMessage(msg.id)
+                      }}
+                      title={isSelected ? t('chat.deselect') || 'Deselect' : t('chat.select') || 'Select'}
+                      className={`self-end mb-1.5 shrink-0 p-0.5 rounded-lg transition-all duration-150 cursor-pointer ${
+                        isSelectionMode
+                          ? 'opacity-100 scale-100'
+                          : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-primary-500 border border-primary-400 text-white shadow-xs shadow-primary-500/30'
+                            : 'border-2 border-gray-400/60 hover:border-primary-400 bg-dark-850/80 backdrop-blur-xs text-transparent hover:bg-primary-500/15'
+                        }`}
+                      >
+                        <Check className={`w-3.5 h-3.5 stroke-[2.5] transition-transform ${isSelected ? 'scale-100 text-white' : 'scale-75 opacity-0'}`} />
+                      </div>
+                    </button>
+                  )}
+
                   {/* Outgoing Message Action Bar */}
                   {msg.isOutgoing && (
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-center bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative">
+                    <div className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-end mb-1 bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative ${isSelectionMode ? '!hidden' : ''}`}>
                       {/* Reaction Picker Button */}
                       {allowedReactions.length > 0 && (
                         <div className="relative">
@@ -5742,6 +5910,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
+
+                      {/* Select Message Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSelectMessage(msg.id)
+                        }}
+                        title={isSelected ? t('chat.deselect') || 'Deselect' : t('chat.select') || 'Select'}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'text-primary-400 bg-primary-500/20'
+                            : 'text-gray-400 hover:text-primary-400 hover:bg-dark-750'
+                        }`}
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
 
@@ -6247,7 +6432,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
                   {/* Incoming Message Action Bar */}
                   {!msg.isOutgoing && (
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-center bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative">
+                    <div className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity self-end mb-1 bg-dark-850/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-md relative ${isSelectionMode ? '!hidden' : ''}`}>
                       {/* Reaction Picker Button */}
                       {allowedReactions.length > 0 && (
                         <div className="relative">
@@ -6442,7 +6627,51 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
+
+                      {/* Select Message Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSelectMessage(msg.id)
+                        }}
+                        title={isSelected ? t('chat.deselect') || 'Deselect' : t('chat.select') || 'Select'}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'text-primary-400 bg-primary-500/20'
+                            : 'text-gray-400 hover:text-primary-400 hover:bg-dark-750'
+                        }`}
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+                  )}
+
+                  {/* Incoming Selection Checkbox */}
+                  {!msg.isOutgoing && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleSelectMessage(msg.id)
+                      }}
+                      title={isSelected ? t('chat.deselect') || 'Deselect' : t('chat.select') || 'Select'}
+                      className={`self-end mb-1.5 shrink-0 p-0.5 rounded-lg transition-all duration-150 cursor-pointer ${
+                        isSelectionMode
+                          ? 'opacity-100 scale-100'
+                          : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-primary-500 border border-primary-400 text-white shadow-xs shadow-primary-500/30'
+                            : 'border-2 border-gray-400/60 hover:border-primary-400 bg-dark-850/80 backdrop-blur-xs text-transparent hover:bg-primary-500/15'
+                        }`}
+                      >
+                        <Check className={`w-3.5 h-3.5 stroke-[2.5] transition-transform ${isSelected ? 'scale-100 text-white' : 'scale-75 opacity-0'}`} />
+                      </div>
+                    </button>
                   )}
                 </div>
               </div>
@@ -6763,7 +6992,89 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           }}
         />
 
-        {chatDetails?.canSendMessages === false || (isChannel && !chatDetails?.canSendMessages) ? (
+        {isSelectionMode ? (
+          <div className="p-3 bg-dark-900/98 backdrop-blur-xl border-t border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150">
+            <div className="flex items-center justify-between gap-3 max-w-4xl mx-auto flex-wrap sm:flex-nowrap">
+              {/* Left: Selected count & Clear */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  title={t('chat.clear_selection') || 'Clear selection (Esc)'}
+                  className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
+                  <span className="text-sm font-bold text-gray-100">
+                    {selectedMessageIds.size === 1
+                      ? (t('chat.one_message_selected') || '1 message selected')
+                      : (t('chat.messages_selected', { count: formatLocalizedNumber(selectedMessageIds.size) }) || `${selectedMessageIds.size} messages selected`)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={selectAllMessages}
+                  className="text-xs text-primary-400 hover:text-primary-300 hover:underline cursor-pointer px-2 py-1 rounded-lg hover:bg-primary-500/10 transition-colors ml-2"
+                >
+                  {t('chat.select_all') || 'Select All'}
+                </button>
+              </div>
+
+              {/* Right: Actions (Copy, Save, Forward, Delete) */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Copy Text */}
+                <button
+                  type="button"
+                  onClick={handleBatchCopyText}
+                  title={t('chat.copy_selected_text') || 'Copy Selected Text'}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-200 hover:text-white border border-white/10 transition-all cursor-pointer text-xs font-semibold shadow-xs"
+                >
+                  <Copy className="w-3.5 h-3.5 text-accent-cyan" />
+                  <span className="hidden sm:inline">{t('chat.copy_selected_text') || 'Copy Text'}</span>
+                </button>
+
+                {/* Save to Saved Messages */}
+                {quickForwardToSaved && onQuickForwardToSaved && (
+                  <button
+                    type="button"
+                    onClick={handleBatchSaveToSaved}
+                    title={t('chat.save_selected') || 'Save to Saved Messages'}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-200 hover:text-white border border-white/10 transition-all cursor-pointer text-xs font-semibold shadow-xs"
+                  >
+                    <Bookmark className="w-3.5 h-3.5 text-accent-cyan" />
+                    <span className="hidden sm:inline">{t('chat.save_selected') || 'Save to Saved'}</span>
+                  </button>
+                )}
+
+                {/* Forward */}
+                <button
+                  type="button"
+                  onClick={handleBatchForward}
+                  title={t('chat.forward_selected') || 'Forward Selected'}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer text-xs font-semibold shadow-md shadow-primary-600/30"
+                >
+                  <Forward className="w-3.5 h-3.5" />
+                  <span>{t('chat.forward_selected') || 'Forward'}</span>
+                </button>
+
+                {/* Delete */}
+                {onDeleteMessage && canDeleteSelected() && (
+                  <button
+                    type="button"
+                    onClick={handleBatchDelete}
+                    title={t('chat.delete_selected') || 'Delete Selected'}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent-rose/15 hover:bg-accent-rose/25 text-accent-rose border border-accent-rose/30 transition-all cursor-pointer text-xs font-semibold"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{t('chat.delete_selected') || 'Delete'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : chatDetails?.canSendMessages === false || (isChannel && !chatDetails?.canSendMessages) ? (
           <div className="p-3 flex items-center justify-center">
             <button
               type="button"
@@ -8858,6 +9169,20 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           >
             <Reply className="w-3.5 h-3.5 shrink-0 text-primary-400" />
             <span>{t('app.reply') || 'Reply'}</span>
+          </button>
+
+          {/* Select / Deselect message */}
+          <button
+            type="button"
+            onClick={() => {
+              const msg = contextMenu.message
+              setContextMenu(null)
+              toggleSelectMessage(msg.id)
+            }}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer"
+          >
+            <CheckSquare className="w-3.5 h-3.5 shrink-0 text-primary-400" />
+            <span>{isMessageSelected(contextMenu.message.id) ? (t('chat.deselect') || 'Deselect') : (t('chat.select') || 'Select')}</span>
           </button>
 
           {/* Edit own text message */}

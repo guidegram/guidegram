@@ -26,6 +26,7 @@ export interface DirectForwardPayload {
 export interface DirectForwardModalProps {
   isOpen: boolean
   message: MessageItem | null
+  messages?: MessageItem[]
   dialogs: DialogItem[]
   onClose: () => void
   onForward: (
@@ -39,6 +40,7 @@ export interface DirectForwardModalProps {
 export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   isOpen,
   message,
+  messages,
   dialogs,
   onClose,
   onForward,
@@ -148,8 +150,16 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
               <Forward className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-sm font-bold text-gray-100">Advanced No-Quote Forwarding</div>
-              <div className="text-[10px] text-gray-400">Direct dispatch, caption editor & recipient sequencing</div>
+              <div className="text-sm font-bold text-gray-100">
+                {messages && messages.length > 1
+                  ? `Forward ${messages.length} Messages`
+                  : 'Advanced No-Quote Forwarding'}
+              </div>
+              <div className="text-[10px] text-gray-400">
+                {messages && messages.length > 1
+                  ? `${messages.length} messages queued for direct forward`
+                  : 'Direct dispatch, caption editor & recipient sequencing'}
+              </div>
             </div>
           </div>
           <button
