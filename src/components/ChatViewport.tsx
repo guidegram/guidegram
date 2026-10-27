@@ -7346,7 +7346,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     {isSendMenuOpen && (
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute bottom-full right-0 mb-2 w-56 bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100 z-50 text-xs select-none"
+                        className="absolute bottom-full end-0 mb-2 w-56 bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100 z-50 text-xs select-none"
                       >
                         <button
                           type="button"
@@ -7354,14 +7354,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             setIsSendMenuOpen(false)
                             handleSend(undefined, { silent: true })
                           }}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-start cursor-pointer group"
                         >
                           <div className="w-7 h-7 rounded-lg bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0 group-hover:bg-accent-cyan/25 transition-colors">
                             <BellOff className="w-4 h-4" />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-gray-100">Send Without Sound</span>
-                            <span className="text-[10px] text-gray-400">Silent notification</span>
+                          <div className="flex flex-col text-start">
+                            <span className="font-semibold text-gray-100">{t('chat.send_without_sound')}</span>
+                            <span className="text-[10px] text-gray-400">{t('chat.silent_notification')}</span>
                           </div>
                         </button>
 
@@ -7371,14 +7371,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             setIsSendMenuOpen(false)
                             setIsScheduleModalOpen(true)
                           }}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-start cursor-pointer group"
                         >
                           <div className="w-7 h-7 rounded-lg bg-accent-violet/15 text-accent-violet flex items-center justify-center shrink-0 group-hover:bg-accent-violet/25 transition-colors">
                             <Clock className="w-4 h-4" />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-gray-100">Schedule Message...</span>
-                            <span className="text-[10px] text-gray-400">Send at specific time</span>
+                          <div className="flex flex-col text-start">
+                            <span className="font-semibold text-gray-100">{t('chat.schedule_message')}</span>
+                            <span className="text-[10px] text-gray-400">{t('chat.send_at_specific_time')}</span>
                           </div>
                         </button>
 
@@ -7388,14 +7388,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             setIsSendMenuOpen(false)
                             setIsScheduledListOpen(true)
                           }}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-start cursor-pointer group"
                         >
                           <div className="w-7 h-7 rounded-lg bg-primary-500/15 text-primary-400 flex items-center justify-center shrink-0 group-hover:bg-primary-500/25 transition-colors">
                             <Calendar className="w-4 h-4" />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-gray-100">Scheduled Queue...</span>
-                            <span className="text-[10px] text-gray-400">View & manage pending</span>
+                          <div className="flex flex-col text-start">
+                            <span className="font-semibold text-gray-100">{t('chat.scheduled_queue')}</span>
+                            <span className="text-[10px] text-gray-400">{t('chat.view_manage_pending')}</span>
                           </div>
                         </button>
                       </div>
@@ -7411,7 +7411,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           setIsSendMenuOpen((prev) => !prev)
                         }
                       }}
-                      className={`p-2.5 text-white rounded-l-2xl transition-all shadow-glow flex items-center justify-center touch-hit-slop min-w-[40px] min-h-[40px] ${
+                      className={`p-2.5 text-white rounded-s-2xl transition-all shadow-glow flex items-center justify-center touch-hit-slop min-w-[40px] min-h-[40px] ${
                         slowModeSecondsLeft > 0
                           ? 'bg-dark-700 text-gray-400 cursor-not-allowed opacity-80 gap-1.5 px-3'
                           : 'bg-primary-600 hover:bg-primary-500 cursor-pointer'
@@ -7441,7 +7441,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           setIsSendMenuOpen((prev) => !prev)
                         }
                       }}
-                      className={`p-2.5 text-primary-200 hover:text-white rounded-r-2xl border-l border-white/10 transition-colors flex items-center justify-center touch-hit-slop min-w-[32px] min-h-[40px] ${
+                      className={`p-2.5 text-primary-200 hover:text-white rounded-e-2xl border-s border-white/10 transition-colors flex items-center justify-center touch-hit-slop min-w-[32px] min-h-[40px] ${
                         slowModeSecondsLeft > 0
                           ? 'bg-dark-750 cursor-not-allowed opacity-50'
                           : 'bg-primary-700 hover:bg-primary-600 cursor-pointer'

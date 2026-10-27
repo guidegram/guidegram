@@ -199,8 +199,13 @@ export const translations: Record<Language, TranslationDictionary> = {
     'chat.bot_cmd_restart': 'Restart Bot',
     'chat.bot_cmd_help': 'Bot Help',
     'chat.bot_cmd_settings': 'Settings',
-    'chat.bot_cmd_menu': 'Main Menu',
     'chat.live_translation': 'Telegram Live Translation',
+    'chat.send_without_sound': 'Send Without Sound',
+    'chat.silent_notification': 'Silent notification',
+    'chat.schedule_message': 'Schedule Message...',
+    'chat.send_at_specific_time': 'Send at specific time',
+    'chat.scheduled_queue': 'Scheduled Queue...',
+    'chat.view_manage_pending': 'View & manage pending',
 
     // Service Messages & Actions
     'action.user_left': '{name} left the group',
@@ -1077,8 +1082,13 @@ export const translations: Record<Language, TranslationDictionary> = {
     'chat.bot_cmd_restart': 'شروع مجدد ربات',
     'chat.bot_cmd_help': 'راهنمای ربات',
     'chat.bot_cmd_settings': 'تنظیمات',
-    'chat.bot_cmd_menu': 'منوی اصلی',
     'chat.live_translation': 'ترجمه زنده تلگرام',
+    'chat.send_without_sound': 'ارسال بدون صدا',
+    'chat.silent_notification': 'اعلان بی‌صدا برای مخاطب',
+    'chat.schedule_message': 'زمان‌بندی ارسال پیام...',
+    'chat.send_at_specific_time': 'ارسال در ساعت و تاریخ مشخص',
+    'chat.scheduled_queue': 'صف پیام‌های زمان‌بندی‌شده...',
+    'chat.view_manage_pending': 'مشاهده و مدیریت پیام‌های در انتظار',
 
     // Service Messages & Actions
     'action.user_left': '{name} گروه را ترک کرد',
