@@ -141,6 +141,8 @@ import type {
   ContactOnlineSessionItem,
   AccountOnlineTimelineUser,
   AccountOnlineTimelineData,
+  PreparedExportResult,
+  ExportedAccountPayload,
 } from '../../electron/telegram/types'
 
 declare global {
@@ -297,6 +299,8 @@ export type {
   ContactOnlineSessionItem,
   AccountOnlineTimelineUser,
   AccountOnlineTimelineData,
+  PreparedExportResult,
+  ExportedAccountPayload,
 }
 
 

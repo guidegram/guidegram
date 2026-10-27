@@ -23,6 +23,7 @@ import {
   Loader2,
   Bot,
   History,
+  Smartphone,
 } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -59,6 +60,7 @@ interface MainMenuDrawerProps {
   onToggleNightMode?: () => void
   ghostMode?: boolean
   onToggleGhostMode?: () => void
+  onOpenAccountExport?: () => void
 }
 
 export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
@@ -87,6 +89,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   onToggleNightMode,
   ghostMode = false,
   onToggleGhostMode,
+  onOpenAccountExport,
 }) => {
   const { t, isRTL, formatNumber } = useI18n()
   const [isAccountsExpanded, setIsAccountsExpanded] = useState(true)
@@ -469,6 +472,22 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                 <span>{t('menu.star_gifts')}</span>
               </button>
 
+              {/* Account Export / Transfer */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenAccountExport?.()
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <Smartphone className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span>{isRTL ? 'انتقال و پشتیبان‌گیری اکانت‌ها' : 'Transfer & Backup Accounts'}</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 font-bold">QR</span>
+              </button>
+
               {/* AI & Telegram MCP Hub */}
               <button
                 type="button"
@@ -508,6 +527,24 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <Laptop className="w-4 h-4 text-emerald-400" />
                 <span>{t('menu.devices')}</span>
+              </button>
+
+              {/* Account Export to Mobile */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenAccountExport?.()
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <Smartphone className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                  <span>{isRTL ? 'انتقال اکانت‌ها به موبایل' : 'Transfer to Mobile'}</span>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  QR Sync
+                </span>
               </button>
 
               {/* Proxy Settings */}

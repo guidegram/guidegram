@@ -9376,12 +9376,111 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               exit={{ opacity: 0, scale: 0.94, y: -2 }}
               transition={{ type: 'spring', stiffness: 450, damping: 28, mass: 0.7 }}
               style={{
-                top: Math.min(contextMenu.y, window.innerHeight - (contextMenu.linkUrl ? 420 : 340)),
+                top: Math.min(contextMenu.y, window.innerHeight - 440),
                 left: Math.min(contextMenu.x, window.innerWidth - 240),
               }}
               onClick={(e) => e.stopPropagation()}
-              className="fixed z-50 min-w-[210px] max-w-[280px] bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs context-menu-spring"
+              className="fixed z-50 min-w-[210px] max-w-[280px] max-h-[85vh] overflow-y-auto bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs context-menu-spring custom-scrollbar"
             >
+          {/* Telegram Desktop Media & Photo Context Actions */}
+          {(() => {
+            const msg = contextMenu.message
+            const isPhotoMsg = Boolean(
+              msg.mediaType === 'photo' ||
+              (msg.mediaType as string) === 'image' ||
+              (msg.mediaUrl &&
+                !msg.mediaType?.includes('audio') &&
+                !msg.mediaType?.includes('video') &&
+                !msg.mediaType?.includes('voice') &&
+                !msg.isSticker &&
+                msg.mediaType !== 'sticker')
+            )
+            const photoUrl = downloadedMedia[msg.id] || msg.mediaUrl
+            const hasAnyMedia = Boolean(msg.mediaType && (msg.mediaType as string) !== 'text' && !msg.isService)
+
+            if (isPhotoMsg) {
+              return (
+                <>
+                  {/* Open Image in Fullscreen Viewer */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContextMenu(null)
+                      handleOpenMediaViewer(msg, photoUrl)
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-accent-cyan hover:text-white hover:bg-accent-cyan/20 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.open_image') || 'Open Image'}</span>
+                  </button>
+
+                  {/* Copy Image to System Clipboard */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setContextMenu(null)
+                      let url = photoUrl
+                      if (!url) {
+                        showToast(t('chat.preparing_save') || 'Preparing image...')
+                        url = (await requestMediaDownload(msg, false, true)) || undefined
+                      }
+                      if (url) {
+                        const ok = await copyImageToClipboard(url)
+                        if (ok) {
+                          showToast(t('chat.image_copied') || 'Image copied to clipboard')
+                        } else {
+                          showToast('Failed to copy image to clipboard')
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Copy className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.copy_image') || 'Copy Image'}</span>
+                  </button>
+
+                  {/* Save Image As Native Dialog */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setContextMenu(null)
+                      await handleSaveMedia(msg)
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Download className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.save_image_as') || 'Save Image As...'}</span>
+                  </button>
+
+                  <div className="h-px bg-white/10 my-1 -mx-1" />
+                </>
+              )
+            }
+
+            if (!isPhotoMsg && hasAnyMedia && (msg.mediaFileName || msg.mediaUrl)) {
+              return (
+                <>
+                  {/* Save Media File As... */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setContextMenu(null)
+                      await handleSaveMedia(msg)
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Download className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.save_file_as') || 'Save File As...'}</span>
+                  </button>
+
+                  <div className="h-px bg-white/10 my-1 -mx-1" />
+                </>
+              )
+            }
+
+            return null
+          })()}
+
           {/* Specific Link Actions (when right-clicking directly on a link) */}
           {contextMenu.linkUrl && (
             <>
@@ -9450,24 +9549,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <span>{isMessageSelected(contextMenu.message.id) ? (t('chat.deselect') || 'Deselect') : (t('chat.select') || 'Select')}</span>
           </button>
 
-          {/* Edit own text message */}
-          {contextMenu.message.isOutgoing &&
-            !contextMenu.message.isService &&
-            !!contextMenu.message.text?.trim() && (
+          {/* Edit own message or media caption (including Saved Messages) */}
+          {!contextMenu.message.isService &&
+            (contextMenu.message.isOutgoing || chat?.isSavedMessages || chat?.id === 'saved_messages') &&
+            (Boolean(contextMenu.message.text?.trim()) || Boolean(contextMenu.message.mediaType || contextMenu.message.mediaUrl)) && (
               <button
                 type="button"
                 onClick={() => {
                   editingDraftBackupRef.current = inputText
                   setEditingMessage(contextMenu.message)
                   setReplyMessage(null)
-                  setInputText(contextMenu.message.text)
+                  setInputText(contextMenu.message.text || '')
                   setContextMenu(null)
                   setTimeout(() => textareaRef.current?.focus(), 50)
                 }}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-accent-cyan hover:text-white hover:bg-accent-cyan/15 transition-colors text-left cursor-pointer"
               >
                 <Pencil className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
-                <span>Edit Message</span>
+                <span>
+                  {!contextMenu.message.text?.trim() && (contextMenu.message.mediaType || contextMenu.message.mediaUrl)
+                    ? (t('chat.add_caption') || 'Add Caption')
+                    : (t('chat.edit_message') || 'Edit Message')}
+                </span>
               </button>
             )}
 
@@ -9661,7 +9764,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               onClick={async () => {
                 const msg = contextMenu.message
                 setContextMenu(null)
-                const confirmMsg = alwaysDeleteBoth
+                const isSaved = Boolean(chat?.isSavedMessages || chat?.id === 'saved_messages')
+                const confirmMsg = isSaved
+                  ? `Delete message #${msg.id} from Saved Messages?`
+                  : alwaysDeleteBoth
                   ? `Delete message #${msg.id} for both sides?`
                   : `Delete message #${msg.id}?`
                 if (window.confirm(confirmMsg)) {
@@ -9676,7 +9782,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-accent-rose hover:bg-accent-rose/15 transition-colors text-left cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5 shrink-0" />
-              <span>{alwaysDeleteBoth ? 'Delete for Everyone' : 'Delete Message'}</span>
+              <span>{chat?.isSavedMessages || chat?.id === 'saved_messages' ? 'Delete from Saved Messages' : alwaysDeleteBoth ? 'Delete for Everyone' : 'Delete Message'}</span>
             </button>
           )}
         </motion.div>

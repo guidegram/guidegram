@@ -92,6 +92,8 @@ import {
   ContactChangeFilter,
   ActivityLogRetentionPeriod,
   AccountOnlineTimelineData,
+  PreparedExportResult,
+  ExportedAccountPayload,
 } from './telegram/types'
 
 const guidegramAPI = {
@@ -135,6 +137,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:reconnect-account', { accountId }),
   setAccountProxy: (accountId: string, proxy?: ProxyConfig): Promise<AccountInfo> =>
     ipcRenderer.invoke('telegram:set-account-proxy', { accountId, proxy }),
+  prepareAccountExport: (accountIds?: string[]): Promise<PreparedExportResult> =>
+    ipcRenderer.invoke('telegram:prepare-account-export', { accountIds }),
+  cancelAccountExport: (): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:cancel-account-export'),
+  decryptAccountExport: (wirePacket: string, pin: string): Promise<ExportedAccountPayload[]> =>
+    ipcRenderer.invoke('telegram:decrypt-account-export', { wirePacket, pin }),
 
   // Dialogs & Messages
   getCachedDialogs: (accountId: string): Promise<DialogItem[]> =>

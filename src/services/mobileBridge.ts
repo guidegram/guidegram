@@ -100,6 +100,16 @@ export function initMobileBridge(): void {
         return []
       }
     },
+    prepareAccountExport: async () => ({
+      sessionToken: 'mobile_token',
+      pin: '000000',
+      expiresAt: Date.now() + 90000,
+      accountCount: 0,
+      chunks: [],
+      totalChunks: 0,
+    }),
+    cancelAccountExport: async () => true,
+    decryptAccountExport: async () => [],
 
     // Config
     getConfig: async (): Promise<AppConfig> => {

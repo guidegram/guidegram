@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Shield, Inbox, Settings, Bot } from 'lucide-react'
+import { Plus, Shield, Inbox, Settings, Bot, Smartphone } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
 
@@ -15,6 +15,7 @@ interface AccountDockProps {
   onOpenMcpHub?: () => void
   onOpenSavedMessages?: () => void
   isSavedMessagesActive?: boolean
+  onOpenAccountExport?: () => void
 }
 
 export const AccountDock: React.FC<AccountDockProps> = ({
@@ -29,6 +30,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
   onOpenMcpHub,
   onOpenSavedMessages,
   isSavedMessagesActive = false,
+  onOpenAccountExport,
 }) => {
   return (
     <aside className="w-[72px] shrink-0 h-full bg-dark-900 border-r border-white/5 flex flex-col items-center py-3 select-none z-20 titlebar-no-drag">
@@ -178,6 +180,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           className="w-10 h-10 rounded-xl bg-dark-800 text-gray-400 hover:text-white hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer"
         >
           <Shield className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={onOpenAccountExport}
+          title="Transfer Accounts to Mobile (Air-Gap QR Sync)"
+          className="w-10 h-10 rounded-xl bg-dark-800 text-cyan-400 hover:text-cyan-300 hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer group"
+        >
+          <Smartphone className="w-4 h-4 group-hover:scale-110 transition-transform" />
         </button>
 
         <button

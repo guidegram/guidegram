@@ -14,6 +14,7 @@ const DirectForwardModal = React.lazy(() => import('./components/DirectForwardMo
 const AddAccountModal = React.lazy(() => import('./components/AddAccountModal').then((m) => ({ default: m.AddAccountModal })))
 const ProxySettingsModal = React.lazy(() => import('./components/ProxySettingsModal').then((m) => ({ default: m.ProxySettingsModal })))
 const SettingsModal = React.lazy(() => import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal })))
+const AccountExportModal = React.lazy(() => import('./components/AccountExportModal').then((m) => ({ default: m.AccountExportModal })))
 const UnifiedInbox = React.lazy(() => import('./components/UnifiedInbox').then((m) => ({ default: m.UnifiedInbox })))
 const MainMenuDrawer = React.lazy(() => import('./components/MainMenuDrawer').then((m) => ({ default: m.MainMenuDrawer })))
 const MyProfileDrawer = React.lazy(() => import('./components/MyProfileDrawer').then((m) => ({ default: m.MyProfileDrawer })))
@@ -88,6 +89,7 @@ export const App: React.FC = () => {
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false)
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false)
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false)
+  const [isAccountExportOpen, setIsAccountExportOpen] = useState(false)
   const [isContactsOpen, setIsContactsOpen] = useState(false)
   const [isCallsOpen, setIsCallsOpen] = useState(false)
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
@@ -1857,6 +1859,7 @@ export const App: React.FC = () => {
               onOpenMcpHub={() => setIsMcpHubOpen(true)}
               onOpenSavedMessages={handleOpenSavedMessages}
               isSavedMessagesActive={isSavedMessagesActive}
+              onOpenAccountExport={() => setIsAccountExportOpen(true)}
             />
           </nav>
           <React.Suspense fallback={<div className="flex-1 flex items-center justify-center bg-dark-900 text-gray-400 text-sm">Loading Unified Inbox...</div>}>
@@ -1977,6 +1980,7 @@ export const App: React.FC = () => {
               onOpenMcpHub={() => setIsMcpHubOpen(true)}
               onOpenSavedMessages={handleOpenSavedMessages}
               isSavedMessagesActive={isSavedMessagesActive}
+              onOpenAccountExport={() => setIsAccountExportOpen(true)}
             />
           </nav>
 
@@ -2154,6 +2158,7 @@ export const App: React.FC = () => {
             unreadCountsByAccount={unreadCountsByAccount}
             isNightMode={config?.theme !== 'light'}
             onToggleNightMode={handleToggleNightMode}
+            onOpenAccountExport={() => setIsAccountExportOpen(true)}
           />
         )}
 
@@ -2162,6 +2167,14 @@ export const App: React.FC = () => {
             isOpen={isMyProfileOpen}
             onClose={() => setIsMyProfileOpen(false)}
             account={currentAccount}
+          />
+        )}
+
+        {isAccountExportOpen && (
+          <AccountExportModal
+            isOpen={isAccountExportOpen}
+            onClose={() => setIsAccountExportOpen(false)}
+            accounts={accounts}
           />
         )}
 

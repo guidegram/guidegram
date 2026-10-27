@@ -1771,3 +1771,24 @@ export interface AccountOnlineTimelineData {
   }
 }
 
+export interface PreparedExportResult {
+  sessionToken: string
+  pin: string
+  expiresAt: number
+  accountCount: number
+  chunks: string[]
+  totalChunks: number
+}
+
+export interface ExportedAccountPayload {
+  id: string
+  phone?: string
+  firstName?: string
+  lastName?: string
+  username?: string
+  sessionString: string
+  isBot?: boolean
+  proxy?: ProxyConfig
+}
+
+

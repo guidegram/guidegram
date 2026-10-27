@@ -34,6 +34,7 @@ import { accountVaultManager } from './telegram/accountVaultManager'
 import { MediaStreamValidator } from './mediaStreamValidator'
 import { networkReconnectManager } from './telegram/reconnectManager'
 import { sqliteDeadlockGuard } from './telegram/sqliteDeadlockGuard'
+import { AccountExportService } from './telegram/accountExportService'
 import { dragDropSanitizer } from './dragDropSanitizer'
 import { memoryPressureManager } from './memoryPressureManager'
 import { swrCache } from './swrCache'
@@ -170,6 +171,7 @@ let tray: Tray | null = null
 let sessionStore: SessionStore
 let accountManager: AccountManager
 let updateManager: UpdateManager
+let accountExportService: AccountExportService
 let mcpServer: GuidegramMcpServer | null = null
 let isQuitting = false
 
@@ -691,6 +693,7 @@ app.whenReady().then(async () => {
   ProxyManager.startAutoHarvest()
 
   updateManager = new UpdateManager()
+  accountExportService = new AccountExportService(sessionStore)
 
   try {
     setupIpcHandlers()
@@ -1227,6 +1230,32 @@ function setupIpcHandlers() {
       return await accountManager.submitQrPassword(password)
     } catch (err: any) {
       Logger.error('[IPC] submitQrPassword failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:prepare-account-export', async (_event, { accountIds }: { accountIds?: string[] } = {}) => {
+    Logger.info('[IPC] telegram:prepare-account-export')
+    try {
+      return accountExportService.prepareExport(accountIds)
+    } catch (err: any) {
+      Logger.error('[IPC] prepareExport failed:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:cancel-account-export', async () => {
+    Logger.info('[IPC] telegram:cancel-account-export')
+    accountExportService.cancelExport()
+    return true
+  })
+
+  ipcMain.handle('telegram:decrypt-account-export', async (_event, { wirePacket, pin }: { wirePacket: string; pin: string }) => {
+    Logger.info('[IPC] telegram:decrypt-account-export')
+    try {
+      return AccountExportService.decryptPayload(wirePacket, pin)
+    } catch (err: any) {
+      Logger.error('[IPC] decryptAccountExport failed:', err)
       throw err
     }
   })

@@ -38,6 +38,7 @@ import {
 } from '../../../electron/telegram/types'
 import { isRTL } from '../../utils/textUtils'
 import { copyTextToClipboard } from '../../utils/clipboard'
+import { SpoilerNoiseOverlay } from '../effects/SpoilerNoiseOverlay'
 import {
   parseRichMessage,
   buildEntitySegments,
@@ -78,33 +79,15 @@ export const SpoilerSpan: React.FC<{
   const [revealed, setRevealed] = useState(initialRevealed)
 
   return (
-    <span
-      onClick={(e) => {
-        e.stopPropagation()
-        setRevealed((prev) => !prev)
-      }}
-      title={revealed ? 'Click to hide spoiler' : 'Click to reveal spoiler'}
+    <SpoilerNoiseOverlay
+      isRevealed={revealed}
+      onClick={() => setRevealed((prev) => !prev)}
       className={`relative inline-block rounded-md px-1.5 py-0.5 transition-all duration-300 cursor-pointer select-none ${
-        revealed
-          ? 'bg-white/10 text-inherit backdrop-blur-none'
-          : 'bg-white/15 text-transparent blur-[5px] hover:blur-[3px] shadow-[inset_0_0_8px_rgba(255,255,255,0.2)]'
+        revealed ? 'bg-white/10 text-inherit backdrop-blur-none' : ''
       } ${className}`}
     >
-      <span className={revealed ? 'opacity-100' : 'opacity-0 select-none'}>
-        {children}
-      </span>
-      {!revealed && (
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center pointer-events-none text-white/50 text-[10px] font-mono tracking-widest uppercase overflow-hidden"
-        >
-          <span className="animate-pulse flex items-center gap-1">
-            <Sparkles className="w-2.5 h-2.5 inline-block opacity-70" />
-            <span className="text-[9px] font-bold">SPOILER</span>
-          </span>
-        </span>
-      )}
-    </span>
+      {children}
+    </SpoilerNoiseOverlay>
   )
 }
 
