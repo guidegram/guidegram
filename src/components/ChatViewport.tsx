@@ -5552,8 +5552,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       ? 'w-full max-w-2xl lg:max-w-3xl'
                       : (chat.isBot || chatDetails?.isBot)
                       ? 'w-full max-w-[92%] sm:max-w-[85%] md:max-w-[80%]'
+                      : (!chat.isGroup && !chat.isChannel)
+                      ? 'max-w-[85%] sm:max-w-[61.8%]'
                       : 'max-w-[85%] md:max-w-[75%]'
                   }`}
+                  style={
+                    !chat.isGroup && !chat.isChannel && !chat.isBot
+                      ? { maxWidth: 'clamp(280px, 61.8%, 640px)' }
+                      : undefined
+                  }
                 >
                   {/* Outgoing Message Action Bar */}
                   {msg.isOutgoing && (
@@ -5868,7 +5875,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             handleScrollToReply(msg.replyToMsgId!)
                           }}
                           dir={isRTL(rText || '') ? 'rtl' : 'ltr'}
-                          className={`mb-2 p-1.5 px-2.5 rounded-xl bg-black/25 hover:bg-black/35 border-l-2 ${peerBorderClass} cursor-pointer transition-colors flex items-center gap-2.5 text-left`}
+                          className={`mb-2 p-1.5 px-2.5 rounded-xl bg-black/25 hover:bg-black/35 border-l-2 ${peerBorderClass} cursor-pointer transition-colors flex items-center gap-2.5 text-left w-full`}
                         >
                           {/* Mini thumbnail if media exists */}
                           {hasMediaThumb && (
@@ -5893,7 +5900,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                               <CornerUpLeft className="w-2.5 h-2.5 shrink-0" />
                               <span>{rName}</span>
                             </div>
-                            <div className="text-[11px] text-gray-300 truncate max-w-md font-normal">
+                            <div className="text-[11px] text-gray-300 truncate font-normal">
                               {rText ? (
                                 rText
                               ) : rIsVoice ? (
