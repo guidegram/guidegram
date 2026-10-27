@@ -132,12 +132,13 @@ import { BotIntroCard } from './chat/BotIntroCard'
 import { BotMenuDrawer, BotMenuButtonType } from './chat/BotMenuDrawer'
 import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeyboardPanel'
 import { useI18n } from '../i18n'
-import { copyTextToClipboard } from '../utils/clipboard'
+import { copyTextToClipboard, copyImageToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatUserStatus } from '../utils/textUtils'
 import { parseTelegramUrl } from '../utils/telegramLink'
 import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
 import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverlay'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
+import { MediaViewerModal } from './MediaViewerModal'
 
 interface ChatViewportProps {
   chat: DialogItem | null
@@ -771,9 +772,45 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [downloadedMedia, setDownloadedMedia] = useState<Record<string, string>>({})
   const [loadingMediaIds, setLoadingMediaIds] = useState<Record<string, boolean>>({})
 
-  // Fullscreen image lightbox
+  // Fullscreen image lightbox & media viewer
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [lightboxScale, setLightboxScale] = useState(1)
+  const [activeViewerMessage, setActiveViewerMessage] = useState<MessageItem | null>(null)
+
+  // Filter all photo messages in current chat for gallery navigation
+  const allPhotoMessages = useMemo(() => {
+    return messages.filter(
+      (m) =>
+        m.mediaType === 'photo' ||
+        (m.mediaType as string) === 'image' ||
+        (m.mediaUrl &&
+          !m.mediaType?.includes('audio') &&
+          !m.mediaType?.includes('video') &&
+          !m.mediaType?.includes('voice') &&
+          !m.isSticker &&
+          m.mediaType !== 'sticker')
+    )
+  }, [messages])
+
+  const handleOpenMediaViewer = (msg: MessageItem, url?: string) => {
+    setActiveViewerMessage(msg)
+    const resolved = url || downloadedMedia[msg.id] || msg.mediaUrl
+    if (resolved) {
+      setLightboxUrl(resolved)
+    } else {
+      requestMediaDownload(msg, false)
+    }
+  }
+
+  const handleNavigatePhoto = (targetMsg: MessageItem, targetUrl?: string) => {
+    setActiveViewerMessage(targetMsg)
+    const resolved = targetUrl || downloadedMedia[targetMsg.id] || targetMsg.mediaUrl
+    if (resolved) {
+      setLightboxUrl(resolved)
+    } else {
+      requestMediaDownload(targetMsg, false)
+    }
+  }
 
   // Channel / User Info Drawer
   const [isInfoOpen, setIsInfoOpen] = useState(false)
@@ -2620,6 +2657,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   // Check whether current user can delete a message
   const canDeleteMessage = useCallback(
     (msg: MessageItem) => {
+      // In Saved Messages -> always allow delete
+      if (chat?.isSavedMessages || chat?.id === 'saved_messages') return true
       // Outgoing message (sent by me) -> always allow delete
       if (msg.isOutgoing) return true
       // In 1-on-1 private chat (not channel, not group) -> allow delete
@@ -4427,7 +4466,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       return (
         <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-900/50">
           {mediaUrl ? (
-            <div className="relative group cursor-pointer" onClick={() => setLightboxUrl(mediaUrl)}>
+            <div className="relative group cursor-pointer" onClick={() => handleOpenMediaViewer(msg, mediaUrl)}>
               <img
                 src={mediaUrl}
                 alt="Telegram Photo"
@@ -6287,7 +6326,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           onClick={(e) => {
                             e.stopPropagation()
                             if (msg.forwardFromId) {
-                              onSelectChat?.(msg.forwardFromId)
+                              onSelectUserOrChat?.(msg.forwardFromId)
                             }
                           }}
                           title={msg.forwardFromId ? `Click to view ${msg.forwardFromName || msg.forwardInfo?.fromTitle}` : undefined}
@@ -6564,7 +6603,20 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         </span>
                       )}
 
-                      <span>{formatMessageTime(msg.date)}</span>
+                      <span
+                        title={new Date(msg.date).toLocaleString([], {
+                          dateStyle: 'full',
+                          timeStyle: 'medium',
+                        })}
+                        className="cursor-default"
+                      >
+                        {(savedSearchQuery || searchQuery) && !isSameDay(msg.date, Date.now()) && (
+                          <span className="opacity-75 font-mono text-[9px] mr-1">
+                            {new Date(msg.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
+                          </span>
+                        )}
+                        {formatMessageTime(msg.date)}
+                      </span>
                       {msg.isOutgoing && (() => {
                         const isRead = Boolean(
                           chat?.isSavedMessages ||
@@ -9276,98 +9328,35 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         </div>
       )}
 
-      {/* 5. Fullscreen Lightbox Modal */}
-      <AnimatePresence>
-        {lightboxUrl && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => {
-              setLightboxScale(1)
-              setLightboxUrl(null)
-            }}
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 select-none"
-          >
-            <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-              {/* Zoom Out Button */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setLightboxScale((prev) => Math.max(1, prev - 0.5))
-                }}
-                disabled={lightboxScale <= 1}
-                title="Zoom Out"
-                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ZoomOut className="w-5 h-5" />
-              </button>
-
-              {/* Zoom In Button */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setLightboxScale((prev) => Math.min(3, prev + 0.5))
-                }}
-                disabled={lightboxScale >= 3}
-                title="Zoom In"
-                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ZoomIn className="w-5 h-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const a = document.createElement('a')
-                  a.href = lightboxUrl
-                  a.download = `photo_${Date.now()}.jpg`
-                  a.click()
-                }}
-                title="Download photo"
-                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer"
-              >
-                <Download className="w-5 h-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLightboxScale(1)
-                  setLightboxUrl(null)
-                }}
-                title="Close (Esc)"
-                className="p-2.5 rounded-xl bg-dark-800/80 hover:bg-dark-750 text-white transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <motion.img
-              drag={lightboxScale > 1}
-              dragConstraints={{ left: -300, right: 300, top: -200, bottom: 200 }}
-              dragElastic={0.2}
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: lightboxScale, opacity: 1 }}
-              exit={{ scale: 0.94, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 380, mass: 0.7 }}
-              onDoubleClick={(e) => {
-                e.stopPropagation()
-                setLightboxScale((prev) => (prev > 1 ? 1 : 2))
-              }}
-              src={lightboxUrl}
-              alt="Preview"
-              onClick={(e) => e.stopPropagation()}
-              className={`max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl ${
-                lightboxScale > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
-              } lightbox-image-pan`}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 5. Fullscreen Media Viewer Modal (Telegram Desktop Parity) */}
+      <MediaViewerModal
+        isOpen={Boolean(lightboxUrl)}
+        url={lightboxUrl || ''}
+        message={activeViewerMessage}
+        allPhotoMessages={allPhotoMessages}
+        currentChat={chat}
+        onClose={() => {
+          setLightboxUrl(null)
+          setActiveViewerMessage(null)
+        }}
+        onNavigate={handleNavigatePhoto}
+        onForward={(msg) => onOpenDirectForward(msg)}
+        onDeleteMessage={async (msg) => {
+          if (onDeleteMessage) {
+            await onDeleteMessage(msg)
+          }
+        }}
+        onEditMessage={(msg) => {
+          editingDraftBackupRef.current = inputText
+          setEditingMessage(msg)
+          setReplyMessage(null)
+          setInputText(msg.text || '')
+          setTimeout(() => textareaRef.current?.focus(), 50)
+        }}
+        onGoToMessage={(msgId) => {
+          handleScrollToReply(msgId)
+        }}
+      />
 
       {/* 6. Telegram Desktop Right-Click Context Menu */}
       <AnimatePresence>
