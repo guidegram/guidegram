@@ -5008,6 +5008,31 @@ export class AccountManager {
           },
         }
       }
+
+      // Automatically fetch pinned messages for all chat types (User, Group, Channel)
+      try {
+        const pinnedRes = await this.getPinnedMessages(accountId, chatId, 50)
+        if (pinnedRes?.messages && pinnedRes.messages.length > 0) {
+          details.pinnedMessages = pinnedRes.messages.map((pm: any) => ({
+            id: pm.id,
+            text: pm.text,
+            date: pm.timestamp,
+            senderName: pm.senderName,
+          }))
+          details.pinnedMessage = details.pinnedMessages[0]
+        } else if ((details.isChannel || details.isGroup) && (res as any)?.fullChat?.pinnedMsgId) {
+          const rawPinnedId = (res as any).fullChat.pinnedMsgId
+          details.pinnedMessage = { id: rawPinnedId }
+          details.pinnedMessages = [{ id: rawPinnedId }]
+        } else {
+          details.pinnedMessages = []
+          details.pinnedMessage = undefined
+        }
+      } catch (pinErr: any) {
+        Logger.warn(`[AccountManager] Failed to fetch pinned messages in getChatDetails for ${chatId}:`, pinErr?.message || pinErr)
+        details.pinnedMessages = []
+        details.pinnedMessage = undefined
+      }
     } catch (err: any) {
       Logger.warn(`[AccountManager] getChatDetails warning for ${chatId}:`, err?.message || err)
     }
@@ -5705,7 +5730,7 @@ export class AccountManager {
     chatId: string,
     messageId: number,
     notify = true,
-    bothSides = false
+    bothSides = true
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
@@ -5785,21 +5810,69 @@ export class AccountManager {
         hash: Long.ZERO,
       } as any)
 
+      const userMap = new Map<string, string>()
+      if (Array.isArray(res.users)) {
+        for (const u of res.users) {
+          if (u && u.id) {
+            userMap.set(String(u.id), formatEntityName(u))
+          }
+        }
+      }
+      if (Array.isArray(res.chats)) {
+        for (const c of res.chats) {
+          if (c && c.id) {
+            userMap.set(String(c.id), c.title || formatEntityName(c))
+          }
+        }
+      }
+
       const rawMessages = Array.isArray(res.messages) ? res.messages : []
       const items = rawMessages
         .filter((m: any) => m && m._ !== 'messageEmpty')
-        .map((m: any) => ({
-          id: m.id,
-          chatId,
-          senderId: m.fromId ? (m.fromId.userId ? String(m.fromId.userId) : String(m.fromId.channelId || '')) : chatId,
-          text: m.message || '',
-          timestamp: m.date ? m.date * 1000 : Date.now(),
-          isOutgoing: Boolean(m.out),
-          replyToMsgId: m.replyTo?.replyToMsgId,
-          pinned: true,
-          views: m.views,
-          forwards: m.forwards,
-        }))
+        .map((m: any) => {
+          const senderId = m.fromId
+            ? (m.fromId.userId ? String(m.fromId.userId) : (m.fromId.channelId ? String(m.fromId.channelId) : String(m.fromId.chatId || '')))
+            : chatId
+          const senderName = userMap.get(senderId)
+
+          let text = m.message || ''
+          if (!text && m.media) {
+            if (m.media._ === 'messageMediaPhoto') text = '📷 Photo'
+            else if (m.media._ === 'messageMediaDocument') {
+              const doc = m.media.document
+              const fileName = doc?.attributes?.find((a: any) => a._ === 'documentAttributeFilename')?.fileName
+              const isVoice = doc?.attributes?.some((a: any) => a._ === 'documentAttributeAudio' && a.voice)
+              const isAudio = doc?.attributes?.some((a: any) => a._ === 'documentAttributeAudio' && !a.voice)
+              const isVideo = doc?.attributes?.some((a: any) => a._ === 'documentAttributeVideo')
+              const isSticker = doc?.attributes?.some((a: any) => a._ === 'documentAttributeSticker')
+              if (isVoice) text = '🎙 Voice message'
+              else if (isAudio) text = '🎵 Audio'
+              else if (isVideo) text = '📹 Video'
+              else if (isSticker) text = 'Sticker'
+              else text = fileName ? `📎 ${fileName}` : '📎 Document'
+            } else if (m.media._ === 'messageMediaPoll') {
+              text = `📊 Poll: ${m.media.poll?.question || ''}`
+            } else if (m.media._ === 'messageMediaContact') {
+              text = `👤 Contact: ${m.media.firstName || ''} ${m.media.lastName || ''}`.trim()
+            } else if (m.media._ === 'messageMediaGeo' || m.media._ === 'messageMediaVenue') {
+              text = '📍 Location'
+            }
+          }
+
+          return {
+            id: m.id,
+            chatId,
+            senderId,
+            senderName,
+            text,
+            timestamp: m.date ? m.date * 1000 : Date.now(),
+            isOutgoing: Boolean(m.out),
+            replyToMsgId: m.replyTo?.replyToMsgId,
+            pinned: true,
+            views: m.views,
+            forwards: m.forwards,
+          }
+        })
 
       return {
         count: res.count !== undefined ? res.count : items.length,
@@ -13034,6 +13107,13 @@ export class AccountManager {
               }
             : undefined,
         })
+        if (actionType === 'message_pinned') {
+          this.onEventCallback?.('telegram:pinned-messages-updated', {
+            accountId,
+            chatId,
+            actionData,
+          })
+        }
       } catch (e) {
         Logger.warn('[AccountManager] Error processing new message update:', e)
       }
@@ -13290,6 +13370,28 @@ export class AccountManager {
               this.activityTrackerService.recordUserStatus(accountId, uId, u.status)
             }
             this.activityTrackerService.inspectUserSnapshot(accountId, u)
+          }
+        } else if (update._ === 'updatePinnedMessages' || update._ === 'updatePinnedChannelMessages') {
+          let peerId = ''
+          const peer = update.peer?.peer || update.peer
+          if (peer) {
+            if (peer.userId !== undefined || peer.user_id !== undefined) peerId = (peer.userId ?? peer.user_id).toString()
+            else if (peer.chatId !== undefined || peer.chat_id !== undefined) peerId = `-${peer.chatId ?? peer.chat_id}`
+            else if (peer.channelId !== undefined || peer.channel_id !== undefined) {
+              const chStr = (peer.channelId ?? peer.channel_id).toString()
+              peerId = chStr.startsWith('-100') ? chStr : `-100${chStr}`
+            }
+          } else if (update.channelId !== undefined || update.channel_id !== undefined) {
+            const chStr = (update.channelId ?? update.channel_id).toString()
+            peerId = chStr.startsWith('-100') ? chStr : `-100${chStr}`
+          }
+          if (peerId) {
+            this.onEventCallback?.('telegram:pinned-messages-updated', {
+              accountId,
+              chatId: peerId,
+              messages: update.messages || [],
+              pinned: Boolean(update.pinned),
+            })
           }
         }
       } catch (_) {}

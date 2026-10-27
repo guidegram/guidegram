@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Search,
   Pin,
+  PinOff,
   MapPin,
   CheckSquare,
   BookOpen,
@@ -1851,6 +1852,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   useEffect(() => {
     setIsInfoOpen(false)
     setChatDetails(null)
+    setActivePinnedIdx(0)
+    setIsPinnedDrawerOpen(false)
+    setPinnedSearchQuery('')
     setIsSearchOpen(false)
     setSearchQuery('')
     setSearchSenderFilter(null)
@@ -1901,7 +1905,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     return () => {
       audioLifecycleGuard.stopCurrentVoice()
     }
-  }, [chat?.id])
+  }, [chat?.id, chat?.accountId])
+
+  // Real-time synchronization for pinned messages
+  useEffect(() => {
+    if (!chat || !window.guidegram?.on) return
+    const unsubscribe = window.guidegram.on('telegram:pinned-messages-updated', async (payload: any) => {
+      if (
+        payload &&
+        String(payload.accountId) === String(chat.accountId) &&
+        String(payload.chatId) === String(chat.id)
+      ) {
+        try {
+          const details = await window.guidegram.getChatDetails(chat.accountId, chat.id)
+          if (details) setChatDetails(details)
+        } catch (_) {}
+      }
+    })
+    return () => {
+      unsubscribe?.()
+    }
+  }, [chat?.id, chat?.accountId])
 
   useEffect(() => {
     messagesRef.current = messages
@@ -5237,6 +5261,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <div className="min-w-0">
                 <div className="text-[11px] font-bold text-accent-cyan flex items-center gap-2">
                   <span>Pinned Message</span>
+                  {currentPinned.senderName && (
+                    <span className="text-[10px] text-gray-400 font-normal">
+                      from {currentPinned.senderName}
+                    </span>
+                  )}
                   {totalPinned > 1 && (
                     <span className="text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.2 rounded-md">
                       {(activePinnedIdx % totalPinned) + 1} of {totalPinned}
@@ -6025,6 +6054,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                           <span>{msg.ttlSeconds}s</span>
                         </span>
                       ) : null}
+
+                      {isMessagePinned(msg.id) && (
+                        <span title="Pinned message" className="inline-flex items-center text-amber-400">
+                          <Pin className="w-2.5 h-2.5 inline" />
+                        </span>
+                      )}
 
                       <span>{formatMessageTime(msg.date)}</span>
                       {msg.isOutgoing && (() => {
@@ -9137,9 +9172,31 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-accent-cyan">
-                        #{pm.id} {pm.date ? `• ${new Date(pm.date).toLocaleDateString()}` : ''}
+                        {pm.senderName ? `${pm.senderName} • ` : ''}#{pm.id} {pm.date ? `• ${new Date(pm.date).toLocaleDateString()}` : ''}
                       </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-accent-cyan transition-colors" />
+                      <div className="flex items-center gap-1.5">
+                        {canPinMessage() && (
+                          <button
+                            type="button"
+                            title="Unpin message"
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                await window.guidegram.unpinMessage(chat.accountId, chat.id, pm.id)
+                                const details = await window.guidegram.getChatDetails(chat.accountId, chat.id)
+                                if (details) setChatDetails(details)
+                                showToast('Message unpinned')
+                              } catch (err: any) {
+                                showToast(`Failed to unpin: ${err?.message || err}`)
+                              }
+                            }}
+                            className="p-1 rounded-md text-gray-400 hover:text-accent-rose hover:bg-white/10 transition-colors"
+                          >
+                            <PinOff className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-accent-cyan transition-colors" />
+                      </div>
                     </div>
                     <p className="text-xs text-gray-200 line-clamp-3 leading-relaxed break-words">
                       {pm.text || `Message #${pm.id}`}
