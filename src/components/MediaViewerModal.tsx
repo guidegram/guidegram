@@ -23,6 +23,7 @@ import { useI18n } from '../i18n'
 import { copyImageToClipboard } from '../utils/clipboard'
 import { isRTL } from '../utils/textUtils'
 import { Avatar } from './Avatar'
+import { SmartContextMenu } from './SmartContextMenu'
 
 export interface MediaViewerModalProps {
   isOpen: boolean
@@ -717,11 +718,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
               setContextMenu(null)
             }}
           />
-          <div
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onClick={(e) => e.stopPropagation()}
-            className="fixed z-50 min-w-[220px] max-w-[280px] bg-dark-850/98 border border-white/15 rounded-2xl shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-0.5 select-none text-xs animate-in fade-in zoom-in-95 duration-100"
-          >
+          <SmartContextMenu x={contextMenu.x} y={contextMenu.y}>
             {/* Copy Image */}
             <button
               type="button"
@@ -852,7 +849,7 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
                 </button>
               </>
             )}
-          </div>
+          </SmartContextMenu>
         </>
       )}
 
