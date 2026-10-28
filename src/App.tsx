@@ -630,16 +630,17 @@ export const App: React.FC = () => {
             }
           })
           setMessagesByChat((prev) => {
-            const matchingKey = Object.keys(prev).find((k) => k === chatId || isPeerMatch(k, chatId))
-            if (!matchingKey || !prev[matchingKey]) return prev
-            return {
-              ...prev,
-              [matchingKey]: prev[matchingKey].map((m) =>
+            const matchingKeys = Object.keys(prev).filter((k) => k === chatId || isPeerMatch(k, chatId))
+            if (matchingKeys.length === 0) return prev
+            const next = { ...prev }
+            for (const k of matchingKeys) {
+              next[k] = (prev[k] || []).map((m) =>
                 m.isOutgoing && m.id <= maxId && !m.isRead
                   ? { ...m, isRead: true }
                   : m
-              ),
+              )
             }
+            return next
           })
         }
       )

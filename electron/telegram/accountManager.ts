@@ -2306,8 +2306,8 @@ export class AccountManager {
         const isBroadcast = isChannel && !isGroup
 
         const title = formatEntityName(peer, 'Unknown Chat')
-        const readInboxMaxId = (d as any).readInboxMaxId ?? (d.raw as any)?.readInboxMaxId ?? (d.raw as any)?.read_inbox_max_id ?? 0
-        const readOutboxMaxId = (d as any).readOutboxMaxId ?? (d.raw as any)?.readOutboxMaxId ?? (d.raw as any)?.read_outbox_max_id ?? 0
+        const readInboxMaxId = (d as any).lastReadIngoing ?? (d as any).readInboxMaxId ?? (d.raw as any)?.readInboxMaxId ?? (d.raw as any)?.read_inbox_max_id ?? 0
+        const readOutboxMaxId = (d as any).lastReadOutgoing ?? (d as any).readOutboxMaxId ?? (d.raw as any)?.readOutboxMaxId ?? (d.raw as any)?.read_outbox_max_id ?? 0
         if (readOutboxMaxId > 0) {
           this.readOutboxMaxIds.set(`${accountId}_${peerId}`, readOutboxMaxId)
         }
@@ -11828,17 +11828,33 @@ export class AccountManager {
     stickerId: string,
     accessHash: string,
     fileReferenceHex: string
-  ): Promise<string | null> {
+  ): Promise<any> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
 
-    const cachedFile = path.join(this.mediaDir, `sticker_${stickerId}.bin`)
-    if (fs.existsSync(cachedFile)) {
-      return `guidegram-media://${cachedFile.replace(/\\/g, '/')}`
+    const lottieCache = path.join(this.mediaDir, `sticker_${stickerId}.json`)
+    const webpCache = path.join(this.mediaDir, `sticker_${stickerId}.webp`)
+    const webmCache = path.join(this.mediaDir, `sticker_${stickerId}.webm`)
+    const rawFile = path.join(this.mediaDir, `sticker_${stickerId}.bin`)
+
+    if (fs.existsSync(lottieCache)) {
+      try {
+        const rawJson = fs.readFileSync(lottieCache, 'utf8')
+        return { format: 'lottie', data: JSON.parse(rawJson) }
+      } catch (_) {}
+    }
+    if (fs.existsSync(webpCache)) {
+      return { format: 'image', url: `guidegram-media://${webpCache.replace(/\\/g, '/')}` }
+    }
+    if (fs.existsSync(webmCache)) {
+      return { format: 'video', url: `guidegram-media://${webmCache.replace(/\\/g, '/')}` }
+    }
+    if (fs.existsSync(rawFile)) {
+      return this.processDownloadedSticker(stickerId, rawFile)
     }
 
     try {
-      await holder.client.downloadToFile(cachedFile, {
+      await holder.client.downloadToFile(rawFile, {
         _: 'inputDocumentFileLocation',
         id: toLong(stickerId),
         accessHash: toLong(accessHash),
@@ -11846,9 +11862,44 @@ export class AccountManager {
         thumbSize: '',
       } as any)
 
-      return `guidegram-media://${cachedFile.replace(/\\/g, '/')}`
+      return this.processDownloadedSticker(stickerId, rawFile)
     } catch (_) {
       return null
+    }
+  }
+
+  private processDownloadedSticker(stickerId: string, rawFile: string): any {
+    try {
+      const buffer = fs.readFileSync(rawFile)
+      // Check if gzipped Lottie (.tgs): magic bytes 0x1f, 0x8b
+      if (buffer.length > 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {
+        try {
+          const unzipped = zlib.gunzipSync(buffer)
+          const jsonStr = unzipped.toString('utf8')
+          const jsonData = JSON.parse(jsonStr)
+          const lottieCache = path.join(this.mediaDir, `sticker_${stickerId}.json`)
+          fs.writeFileSync(lottieCache, jsonStr, 'utf8')
+          return { format: 'lottie', data: jsonData }
+        } catch (_) {}
+      }
+
+      // Check if WebM video: magic bytes 0x1A 0x45 0xDF 0xA3
+      if (buffer.length > 4 && buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+        const webmCache = path.join(this.mediaDir, `sticker_${stickerId}.webm`)
+        if (!fs.existsSync(webmCache)) {
+          fs.copyFileSync(rawFile, webmCache)
+        }
+        return { format: 'video', url: `guidegram-media://${webmCache.replace(/\\/g, '/')}` }
+      }
+
+      // Default to WebP image
+      const webpCache = path.join(this.mediaDir, `sticker_${stickerId}.webp`)
+      if (!fs.existsSync(webpCache)) {
+        fs.copyFileSync(rawFile, webpCache)
+      }
+      return { format: 'image', url: `guidegram-media://${webpCache.replace(/\\/g, '/')}` }
+    } catch (_) {
+      return `guidegram-media://${rawFile.replace(/\\/g, '/')}`
     }
   }
 
@@ -14245,6 +14296,57 @@ export class AccountManager {
         Logger.warn('[AccountManager] Error processing delete message update:', e)
       }
     })
+
+    if (client.onHistoryRead) {
+      client.onHistoryRead.add((update: any) => {
+        try {
+          const peerId = update.chatId?.toString()
+          if (!peerId) return
+
+          if (update.isOutbox) {
+            const maxId = update.maxReadId || 0
+            this.readOutboxMaxIds.set(`${accountId}_${peerId}`, maxId)
+            this.onEventCallback?.('telegram:read-outbox', {
+              accountId,
+              chatId: peerId,
+              maxId,
+            })
+
+            try {
+              const cached = this.store.loadDialogsCache(accountId)
+              if (cached && cached.length > 0) {
+                let changed = false
+                const next = cached.map((d) => {
+                  if (d.id === peerId || peerId.endsWith(d.id) || d.id.endsWith(peerId)) {
+                    changed = true
+                    return {
+                      ...d,
+                      readOutboxMaxId: Math.max(d.readOutboxMaxId || 0, maxId),
+                      lastMessageRead: d.lastMessageId ? d.lastMessageId <= maxId : true,
+                    }
+                  }
+                  return d
+                })
+                if (changed) {
+                  this.store.saveDialogsCache(accountId, next)
+                }
+              }
+            } catch (_) {}
+          } else {
+            const maxId = update.maxReadId || 0
+            const nextCount = update.unreadCount ?? 0
+            this.onEventCallback?.('telegram:unread-count', {
+              accountId,
+              chatId: peerId,
+              unreadCount: nextCount,
+              maxId,
+            })
+          }
+        } catch (e) {
+          Logger.warn('[AccountManager] Error processing onHistoryRead update:', e)
+        }
+      })
+    }
 
     client.onRawUpdate.add((update: any) => {
       try {

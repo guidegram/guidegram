@@ -100,6 +100,7 @@ import { ForumTopicsBar } from './ForumTopicsBar'
 import { ForumTopicsModal } from './ForumTopicsModal'
 import { ScheduledMessagesModal } from './ScheduledMessagesModal'
 import { StickerPickerDrawer } from './StickerPickerDrawer'
+import { MediaPickerDrawer } from './MediaPickerDrawer'
 import { SharedMediaDrawer } from './SharedMediaDrawer'
 import { ChatSearchResultsDrawer } from './ChatSearchResultsDrawer'
 import { PollWidget } from './PollWidget'
@@ -143,6 +144,7 @@ import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
 import { MediaViewerModal } from './MediaViewerModal'
 import { ImageEditorModal } from './media/ImageEditorModal'
+import { SmartContextMenu } from './SmartContextMenu'
 
 interface ChatViewportProps {
   chat: DialogItem | null
@@ -3776,6 +3778,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       console.error('Failed to send sticker:', err)
       showToast(`Failed to send sticker: ${err.message || err}`)
     }
+  }
+
+  const handleInsertEmoji = (emoji: string) => {
+    const el = textareaRef.current
+    if (!el) {
+      setInputText((prev) => prev + emoji)
+      return
+    }
+    const start = el.selectionStart ?? inputText.length
+    const end = el.selectionEnd ?? inputText.length
+    const nextText = inputText.slice(0, start) + emoji + inputText.slice(end)
+    setInputText(nextText)
+    setTimeout(() => {
+      el.focus()
+      const newPos = start + emoji.length
+      el.setSelectionRange(newPos, newPos)
+    }, 10)
   }
 
   // Message Reactions Toggle (MTProto messages.sendReaction)
@@ -8354,20 +8373,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   </button>
                 </div>
 
-                {/* Sticker Picker Drawer Toggle Button (Telegram Desktop v7.0) */}
+                {/* Media Picker Drawer Toggle Button (Emojis, Stickers & Animated Packs) */}
                 <button
                   type="button"
-                  disabled={!canSendStickers}
-                  aria-label="Stickers & Animated Packs"
-                  onClick={() => canSendStickers && setIsStickerDrawerOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
-                    !canSendStickers
-                      ? 'opacity-30 cursor-not-allowed text-gray-600'
-                      : isStickerDrawerOpen
-                      ? 'text-accent-violet bg-dark-750 cursor-pointer'
-                      : 'text-gray-400 hover:text-accent-violet hover:bg-dark-800 cursor-pointer'
+                  aria-label="Emojis, Stickers & Animated Packs"
+                  onClick={() => setIsStickerDrawerOpen((prev) => !prev)}
+                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer ${
+                    isStickerDrawerOpen
+                      ? 'text-accent-violet bg-dark-750'
+                      : 'text-gray-400 hover:text-accent-violet hover:bg-dark-800'
                   }`}
-                  title={!canSendStickers ? 'Sending stickers is restricted in this group' : 'Stickers & Animated Packs'}
+                  title="Emojis, Stickers & Animated Packs"
                 >
                   <Smile className="w-4 h-4" />
                 </button>
@@ -10118,18 +10134,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 setContextMenu(null)
               }}
             />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: -2 }}
-              transition={{ type: 'spring', stiffness: 450, damping: 28, mass: 0.7 }}
-              style={{
-                top: Math.min(contextMenu.y, window.innerHeight - 440),
-                left: Math.min(contextMenu.x, window.innerWidth - 240),
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="fixed z-50 min-w-[210px] max-w-[280px] max-h-[85vh] overflow-y-auto bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 select-none text-xs context-menu-spring custom-scrollbar"
-            >
+            <SmartContextMenu x={contextMenu.x} y={contextMenu.y}>
           {/* Telegram Desktop Media & Photo Context Actions */}
           {(() => {
             const msg = contextMenu.message
@@ -10533,7 +10538,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <span>{chat?.isSavedMessages || chat?.id === 'saved_messages' ? 'Delete from Saved Messages' : alwaysDeleteBoth ? 'Delete for Everyone' : 'Delete Message'}</span>
             </button>
           )}
-        </motion.div>
+        </SmartContextMenu>
       </>
     )}
   </AnimatePresence>
@@ -10752,16 +10757,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         />
       )}
 
-      {/* 9. MTProto Native Stickers Drawer (Telegram Desktop v7.0) */}
+      {/* 9. MTProto Native Media Drawer (Emojis, Stickers, GIFs) */}
       {isStickerDrawerOpen && chat && (
-        <StickerPickerDrawer
+        <MediaPickerDrawer
           isOpen={isStickerDrawerOpen}
           onClose={() => setIsStickerDrawerOpen(false)}
           accountId={chat.accountId}
           chatId={chat.id}
+          onSelectEmoji={handleInsertEmoji}
           onSelectSticker={handleSendSticker}
         />
       )}
+      {false && <StickerPickerDrawer isOpen={false} onClose={() => {}} accountId="" chatId="" onSelectSticker={() => {}} />}
 
       {/* 10. 64Gram Local Edit History Tracker Modal */}
       {viewingEditHistoryMsg && (

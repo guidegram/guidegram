@@ -214,7 +214,6 @@ const GIF_CATEGORIES = [
   { tag: 'fire', label: '🔥 Fire' },
 ]
 
-// Single Sticker Preview with animated Lottie or WebP
 const StickerThumbnail: React.FC<{
   accountId: string
   sticker: StickerItem
@@ -222,6 +221,7 @@ const StickerThumbnail: React.FC<{
 }> = ({ accountId, sticker, onClick }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [dataUrl, setDataUrl] = useState<string | null>(null)
+  const [format, setFormat] = useState<'lottie' | 'video' | 'image' | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -231,9 +231,13 @@ const StickerThumbnail: React.FC<{
 
     window.guidegram
       .getStickerData(accountId, sticker.id, sticker.accessHash, sticker.fileReferenceHex)
-      .then((res) => {
+      .then((res: any) => {
         if (!active || !res) return
-        if (res.format === 'lottie' && res.data && containerRef.current) {
+        if (typeof res === 'string') {
+          setDataUrl(res)
+          setFormat('image')
+        } else if (res.format === 'lottie' && res.data && containerRef.current) {
+          setFormat('lottie')
           try {
             containerRef.current.innerHTML = ''
             animItem = lottie.loadAnimation({
@@ -244,7 +248,11 @@ const StickerThumbnail: React.FC<{
               animationData: res.data,
             })
           } catch (_) {}
+        } else if (res.format === 'video' && res.url) {
+          setFormat('video')
+          setDataUrl(res.url)
         } else if (res.url) {
+          setFormat('image')
           setDataUrl(res.url)
         }
       })
@@ -268,8 +276,17 @@ const StickerThumbnail: React.FC<{
       className="w-16 h-16 sm:w-18 sm:h-18 p-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center cursor-pointer group relative shrink-0"
       title={sticker.emoticon ? `${sticker.emoticon} (Click to send)` : 'Click to send'}
     >
-      {sticker.isAnimated ? (
+      {format === 'lottie' || sticker.isAnimated ? (
         <div ref={containerRef} className="w-full h-full object-contain pointer-events-none" />
+      ) : format === 'video' && dataUrl ? (
+        <video
+          src={dataUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-contain pointer-events-none"
+        />
       ) : dataUrl ? (
         <img
           src={dataUrl}
@@ -295,6 +312,65 @@ const StickerThumbnail: React.FC<{
   )
 }
 
+// Emoji Keyword Search Index
+const EMOJI_KEYWORDS: Record<string, string[]> = {
+  '😀': ['smile', 'happy', 'face', 'grin'],
+  '😃': ['smile', 'happy', 'face', 'big'],
+  '😄': ['smile', 'happy', 'laugh'],
+  '😁': ['grin', 'teeth', 'smile', 'happy'],
+  '😆': ['laugh', 'lol', 'haha', 'xd'],
+  '😅': ['sweat', 'relief', 'smile'],
+  '😂': ['joy', 'tears', 'laugh', 'lol', 'haha', 'crying'],
+  '🤣': ['rofl', 'laughing', 'floor', 'lol'],
+  '🥲': ['smiling', 'tear', 'sad', 'happy'],
+  '🥹': ['pleading', 'tears', 'cute', 'eyes'],
+  '😊': ['blush', 'smile', 'warm', 'happy'],
+  '😇': ['angel', 'halo', 'innocent', 'good'],
+  '😍': ['love', 'heart', 'eyes', 'crush'],
+  '🥰': ['love', 'hearts', 'adorable', 'blush'],
+  '😘': ['kiss', 'blow', 'love', 'heart'],
+  '😋': ['yum', 'delicious', 'tongue', 'food'],
+  '😛': ['tongue', 'playful', 'joke'],
+  '😜': ['wink', 'tongue', 'joke', 'crazy'],
+  '🤪': ['zany', 'crazy', 'wild', 'goofy'],
+  '😎': ['cool', 'sunglasses', 'boss'],
+  '🥳': ['party', 'celebrate', 'birthday', 'hat'],
+  '😭': ['cry', 'tears', 'sobbing', 'sad'],
+  '🥺': ['plead', 'puppy', 'eyes', 'beg'],
+  '😡': ['angry', 'mad', 'rage', 'red'],
+  '🤬': ['cursing', 'swear', 'mad', 'angry'],
+  '🤯': ['mindblown', 'explode', 'shocked'],
+  '😱': ['scream', 'fear', 'shocked', 'scared'],
+  '🤔': ['think', 'ponder', 'wonder'],
+  '😴': ['sleep', 'tired', 'zzz'],
+  '💀': ['skull', 'dead', 'deadass', 'skeleton'],
+  '💩': ['poop', 'crap', 'shit'],
+  '🔥': ['fire', 'lit', 'flame', 'hot'],
+  '❤️': ['heart', 'love', 'red'],
+  '💖': ['sparkle', 'heart', 'pink', 'love'],
+  '💔': ['broken', 'heart', 'heartbreak'],
+  '👍': ['thumbsup', 'like', 'approve', 'yes', 'ok'],
+  '👎': ['thumbsdown', 'dislike', 'no'],
+  '👏': ['clap', 'applause', 'bravo'],
+  '🙌': ['hooray', 'praise', 'celebrate'],
+  '🙏': ['pray', 'thanks', 'please', 'grateful'],
+  '🎉': ['tada', 'party', 'celebrate', 'congrats'],
+  '✨': ['sparkles', 'magic', 'shine', 'clean'],
+  '⭐': ['star', 'favorite', 'rating'],
+  '🌟': ['star', 'glow', 'shine'],
+  '💯': ['hundred', '100', 'perfect'],
+  '🐱': ['cat', 'kitten', 'pet'],
+  '🐶': ['dog', 'puppy', 'pet'],
+  '🍕': ['pizza', 'food', 'cheese'],
+  '🍔': ['burger', 'food', 'fastfood'],
+  '🍺': ['beer', 'drink', 'alcohol', 'cheers'],
+  '☕': ['coffee', 'tea', 'cafe', 'morning'],
+  '🚗': ['car', 'auto', 'drive'],
+  '🚀': ['rocket', 'space', 'launch', 'moon'],
+  '💡': ['lightbulb', 'idea', 'lamp'],
+  '💵': ['money', 'cash', 'dollar'],
+}
+
 export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
   isOpen,
   onClose,
@@ -306,7 +382,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('emoji')
   const [searchQuery, setSearchQuery] = useState('')
   const [recentEmojis, setRecentEmojis] = useState<string[]>([])
-  const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('smileys')
+  const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('all')
 
   // Sticker state
   const [sets, setSets] = useState<StickerSetItem[]>([])
@@ -381,15 +457,23 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
     }
   }, [isOpen, accountId, activeSetId, sets, activeTab, cachedSetDetails])
 
-  // Filter emojis based on search
+  // Filter emojis based on search and category
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return EMOJI_CATEGORIES
-    const q = searchQuery.toLowerCase()
+    if (!searchQuery.trim()) {
+      if (!selectedEmojiCategory || selectedEmojiCategory === 'all') return EMOJI_CATEGORIES
+      if (selectedEmojiCategory === 'recents' || selectedEmojiCategory === 'premium') return []
+      return EMOJI_CATEGORIES.filter((c) => c.id === selectedEmojiCategory)
+    }
+    const q = searchQuery.toLowerCase().trim()
     return EMOJI_CATEGORIES.map((cat) => {
-      const matched = cat.emojis.filter((e) => e.includes(q))
+      const matched = cat.emojis.filter((e) => {
+        if (e.includes(q)) return true
+        const keywords = EMOJI_KEYWORDS[e] || []
+        return keywords.some((k) => k.includes(q))
+      })
       return { ...cat, emojis: matched }
     }).filter((cat) => cat.emojis.length > 0)
-  }, [searchQuery])
+  }, [searchQuery, selectedEmojiCategory])
 
   if (!isOpen) return null
 
@@ -488,6 +572,18 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
           {/* Emoji Category Navigator Pills */}
           {!searchQuery && (
             <div className="px-3 py-1 flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-white/5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedEmojiCategory('all')}
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                  selectedEmojiCategory === 'all'
+                    ? 'bg-primary-600/30 text-primary-300 border border-primary-500/40'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+                title="All Categories"
+              >
+                All
+              </button>
               {recentEmojis.length > 0 && (
                 <button
                   type="button"
@@ -532,7 +628,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
           {/* Emoji Palette Scrollable List */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
             {/* Recent Emojis Section */}
-            {!searchQuery && (selectedEmojiCategory === 'recents' || selectedEmojiCategory === 'smileys') && recentEmojis.length > 0 && (
+            {!searchQuery && (selectedEmojiCategory === 'recents' || selectedEmojiCategory === 'all') && recentEmojis.length > 0 && (
               <div>
                 <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-primary-400" />
@@ -554,7 +650,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
             )}
 
             {/* Telegram Premium Custom Emojis Section */}
-            {!searchQuery && (selectedEmojiCategory === 'premium' || selectedEmojiCategory === 'smileys') && (
+            {!searchQuery && (selectedEmojiCategory === 'premium' || selectedEmojiCategory === 'all') && (
               <div className="p-2.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-purple-500/5 to-transparent border border-amber-500/20">
                 <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -661,23 +757,24 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
 
           {/* Bottom Tabs for Installed Packs */}
           {sets.length > 0 && (
-            <div className="p-1.5 border-t border-white/5 bg-dark-950 flex items-center gap-1 overflow-x-auto scrollbar-none">
-              {sets.map((set) => {
+            <div className="p-2 border-t border-white/5 bg-dark-950 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              {sets.map((set, idx) => {
                 const isSelected = set.id === activeSetId
+                const shortLabel = set.title ? set.title.trim().replace(/^@/, '').slice(0, 3).toUpperCase() : `#${idx + 1}`
                 return (
                   <button
                     key={set.id}
                     type="button"
                     onClick={() => setActiveSetId(set.id)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`h-9 min-w-[36px] px-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 ${
                       isSelected
-                        ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30'
-                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                        ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40 shadow-sm shadow-accent-cyan/10'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent'
                     }`}
                     title={set.title}
                   >
-                    <Layers className="w-3 h-3" />
-                    <span className="max-w-[80px] truncate">{set.title}</span>
+                    <Layers className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-mono tracking-tight">{shortLabel}</span>
                   </button>
                 )
               })}
