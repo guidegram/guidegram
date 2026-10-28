@@ -87,8 +87,20 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       setDrawHistory([])
       renderCanvas()
     }
+    img.onerror = () => {
+      console.warn('[ImageEditorModal] Failed to load image:', imageSrc)
+    }
     img.src = imageSrc
   }, [isOpen, imageSrc])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current

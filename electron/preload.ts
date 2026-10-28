@@ -119,6 +119,8 @@ const guidegramAPI = {
 
   // Accounts
   getAccounts: (): Promise<AccountInfo[]> => ipcRenderer.invoke('telegram:get-accounts'),
+  refreshAccountProfile: (accountId: string): Promise<AccountInfo | null> =>
+    ipcRenderer.invoke('telegram:refresh-account-profile', { accountId }),
   startPhoneAuth: (phone: string, proxy?: ProxyConfig) =>
     ipcRenderer.invoke('telegram:start-phone-auth', { phone, proxy }),
   completePhoneAuth: (phone: string, code: string, password?: string): Promise<PhoneAuthResult> =>

@@ -5698,7 +5698,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 let closestMsg: MessageItem | null = null
                 let minDiff = Infinity
                 for (const m of messages) {
-                  const diff = Math.abs(m.date - selectedTimestamp)
+                  const mTime = m.date < 1e11 ? m.date * 1000 : m.date
+                  const diff = Math.abs(mTime - selectedTimestamp)
                   if (diff < minDiff) {
                     minDiff = diff
                     closestMsg = m
@@ -5706,7 +5707,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 }
                 if (closestMsg) {
                   handleScrollToReply(closestMsg.id)
-                  showToast(`Jumped to ${new Date(closestMsg.date).toLocaleDateString()}`)
+                  const displayTime = closestMsg.date < 1e11 ? closestMsg.date * 1000 : closestMsg.date
+                  showToast(`Jumped to ${new Date(displayTime).toLocaleDateString()}`)
                 } else {
                   showToast('No messages found around that date')
                 }

@@ -978,6 +978,7 @@ export class AccountManager {
   private topMessageIds = new Map<string, number>()
   private readOutboxMaxIds = new Map<string, number>()
   private contactAuditInterval?: NodeJS.Timeout
+  private profileSyncInterval?: NodeJS.Timeout
   private auditQueue = new Map<string, Set<string>>()
   private lastAuditedTime = new Map<string, number>()
   private auditQueueInterval?: NodeJS.Timeout
@@ -1041,6 +1042,12 @@ export class AccountManager {
         }
       }
     }, 15 * 60 * 1000)
+
+    // Start periodic self profile sync (every 60 seconds) to ensure dynamic name/photo changes
+    // (e.g. clock bots, external bio/photo updates) are reflected in real-time.
+    this.profileSyncInterval = setInterval(() => {
+      this.syncAllActiveAccountsProfile().catch(() => {})
+    }, 60 * 1000)
 
     // Start active-targeted throttled profile audit queue processor (every 3.5 seconds)
     this.startAuditQueueProcessor()
@@ -1133,8 +1140,14 @@ export class AccountManager {
       if (me && me.id) {
         const isBot = Boolean(me.isBot || (me as any).bot || savedAcc.isBot)
         const accountId = me.id.toString()
-        const currentPhotoId = (me.raw?.photo as any)?.photoId ? (me.raw.photo as any).photoId.toString() : (me.photo?.id ? me.photo.id.toString() : '')
-        const isPhotoChanged = Boolean(currentPhotoId && savedAcc.photoId && currentPhotoId !== savedAcc.photoId)
+        const currentPhotoId = (me.raw?.photo as any)?.photoId
+          ? (me.raw.photo as any).photoId.toString()
+          : (me.photo?.raw?.photoId ? me.photo.raw.photoId.toString() : (me.photo?.id ? me.photo.id.toString() : ''))
+        const isPhotoChanged = Boolean(
+          (currentPhotoId && savedAcc.photoId && currentPhotoId !== savedAcc.photoId) ||
+          (currentPhotoId && !savedAcc.photoId) ||
+          (!me.photo && !!savedAcc.avatarUrl)
+        )
         let avatarUrl = isPhotoChanged ? undefined : savedAcc.avatarUrl
 
         if (me.photo) {
@@ -1191,6 +1204,7 @@ export class AccountManager {
               const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: fullPhoto, photoId: currentPhotoId } : a))
               this.store.updateConfig({ accounts: accs })
               this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
+              this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: fullPhoto })
             }
           }).catch(() => {})
         }
@@ -3455,6 +3469,10 @@ export class AccountManager {
 
       if (forceRefresh) {
         this.avatarCache.delete(cacheKey)
+        if (isSelf) {
+          this.peerPhotos.delete(`${accountId}_${peerId}`)
+          this.peerBigPhotos.delete(`${accountId}_${peerId}`)
+        }
         for (const p of candidateFiles) {
           try {
             if (fs.existsSync(p)) fs.unlinkSync(p)
@@ -13242,6 +13260,25 @@ export class AccountManager {
         birthdayStr = year ? `${day}.${month}.${year}` : `${day}.${month}`
       }
 
+      let changed = false
+      if (u.firstName && u.firstName !== holder.info.firstName) {
+        holder.info.firstName = u.firstName
+        changed = true
+      }
+      if (u.lastName !== holder.info.lastName) {
+        holder.info.lastName = u.lastName
+        changed = true
+      }
+      if (u.username !== holder.info.username) {
+        holder.info.username = u.username
+        changed = true
+      }
+      if (changed) {
+        const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, firstName: holder.info.firstName, lastName: holder.info.lastName, username: holder.info.username } : a))
+        this.store.updateConfig({ accounts: accs })
+        this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+      }
+
       return {
         id: me.id.toString(),
         firstName: u.firstName || '',
@@ -13668,6 +13705,107 @@ export class AccountManager {
       }
     }
     return null
+  }
+
+  /**
+   * Proactively synchronizes self user profile (name, username, premium, photo)
+   * with Telegram MTProto reality. Solves clock/dynamic bio script lag immediately.
+   */
+  public async syncAccountProfile(accountId: string, forceAvatarRefresh = false): Promise<AccountInfo | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client || holder.info.status !== 'connected') return null
+
+    try {
+      const me: any = await holder.client.getMe().catch(() => null)
+      if (!me || !me.id) return null
+
+      let changed = false
+      const first = me.firstName || (holder.info.isBot ? 'Bot' : 'User')
+      const last = me.lastName
+      const uname = me.username
+
+      if (first !== holder.info.firstName) {
+        holder.info.firstName = first
+        changed = true
+      }
+      if (last !== holder.info.lastName) {
+        holder.info.lastName = last
+        changed = true
+      }
+      if (uname !== holder.info.username) {
+        holder.info.username = uname
+        changed = true
+      }
+      if (typeof me.isPremium === 'boolean' && me.isPremium !== holder.info.isPremium) {
+        holder.info.isPremium = me.isPremium
+        changed = true
+      }
+
+      const currentPhotoId = (me.raw?.photo as any)?.photoId
+        ? (me.raw.photo as any).photoId.toString()
+        : (me.photo?.raw?.photoId ? me.photo.raw.photoId.toString() : (me.photo?.id ? me.photo.id.toString() : ''))
+
+      const photoChanged = Boolean(
+        forceAvatarRefresh ||
+        (currentPhotoId && currentPhotoId !== holder.info.photoId) ||
+        (currentPhotoId && !holder.info.photoId) ||
+        (!me.photo && !!holder.info.avatarUrl)
+      )
+
+      if (photoChanged) {
+        changed = true
+        if (!me.photo || me.photo._ === 'userProfilePhotoEmpty') {
+          holder.info.avatarUrl = undefined
+          holder.info.photoId = ''
+          this.avatarCache.delete(`${accountId}_${accountId}`)
+          this.avatarCache.delete(`${accountId}_${accountId}_big`)
+          this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: '' })
+        } else {
+          this.avatarCache.delete(`${accountId}_${accountId}`)
+          this.avatarCache.delete(`${accountId}_${accountId}_big`)
+          if (me.photo.small) this.peerPhotos.set(`${accountId}_${accountId}`, me.photo.small)
+          if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, me.photo.big)
+
+          const freshAvatar = await this.getProfilePhoto(accountId, accountId, false, true).catch(() => null)
+          if (freshAvatar) {
+            holder.info.avatarUrl = freshAvatar
+            holder.info.photoId = currentPhotoId
+            this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: freshAvatar })
+          }
+        }
+      }
+
+      if (changed) {
+        const accs = this.store.getConfig().accounts.map((a) =>
+          a.id === accountId
+            ? {
+                ...a,
+                firstName: holder.info.firstName,
+                lastName: holder.info.lastName,
+                username: holder.info.username,
+                isPremium: holder.info.isPremium,
+                avatarUrl: holder.info.avatarUrl,
+                photoId: holder.info.photoId,
+              }
+            : a
+        )
+        this.store.updateConfig({ accounts: accs })
+        this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+      }
+
+      return this.sanitizeAccountInfo(holder.info)
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] syncAccountProfile error for ${accountId}:`, err?.message || err)
+      return null
+    }
+  }
+
+  public async syncAllActiveAccountsProfile(forceAvatarRefresh = false): Promise<void> {
+    for (const [accId, holder] of this.clients.entries()) {
+      if (holder?.info?.status === 'connected') {
+        await this.syncAccountProfile(accId, forceAvatarRefresh).catch(() => {})
+      }
+    }
   }
 
   private setupEventListeners(accountId: string, client: TelegramClient): void {
@@ -14211,7 +14349,22 @@ export class AccountManager {
           }
         } else if (update._ === 'updateUserName') {
           const uId = String(update.userId ?? update.user_id)
-          if (uId && uId !== accountId) {
+          if (uId && uId === accountId) {
+            const holder = this.clients.get(accountId)
+            if (holder) {
+              const first = update.firstName ?? update.first_name
+              const last = update.lastName ?? update.last_name
+              const uname = Array.isArray(update.usernames) ? update.usernames[0]?.username : (update.username || holder.info.username)
+              if (first !== undefined || last !== undefined || uname !== undefined) {
+                if (first !== undefined) holder.info.firstName = first
+                if (last !== undefined) holder.info.lastName = last
+                if (uname !== undefined) holder.info.username = uname
+                const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, firstName: holder.info.firstName, lastName: holder.info.lastName, username: holder.info.username } : a))
+                this.store.updateConfig({ accounts: accs })
+                this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+              }
+            }
+          } else if (uId && uId !== accountId) {
             const first = update.firstName ?? update.first_name
             const last = update.lastName ?? update.last_name
             const uname = Array.isArray(update.usernames) ? update.usernames[0]?.username : undefined
@@ -14224,7 +14377,51 @@ export class AccountManager {
           }
         } else if (update._ === 'updateUserPhoto') {
           const uId = String(update.userId ?? update.user_id)
-          if (uId && uId !== accountId) {
+          if (uId && uId === accountId) {
+            const holder = this.clients.get(accountId)
+            if (holder) {
+              this.avatarCache.delete(`${accountId}_${accountId}`)
+              this.avatarCache.delete(`${accountId}_${accountId}_big`)
+              this.avatarCache.delete(`${accountId}_self`)
+              this.avatarCache.delete(`${accountId}_me`)
+
+              const isPhotoEmpty = !update.photo || update.photo._ === 'userProfilePhotoEmpty'
+              if (isPhotoEmpty) {
+                holder.info.avatarUrl = undefined
+                holder.info.photoId = ''
+                const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: undefined, photoId: '' } : a))
+                this.store.updateConfig({ accounts: accs })
+                this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+                this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: '' })
+              } else {
+                const currentPhotoId = update.photo.photoId ? update.photo.photoId.toString() : (update.photo.id ? update.photo.id.toString() : '')
+                if (update.photo?.small) this.peerPhotos.set(`${accountId}_${accountId}`, update.photo.small)
+                if (update.photo?.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, update.photo.big)
+
+                if (update.photo.strippedThumb) {
+                  const fastThumb = strippedThumbToDataUrl(update.photo.strippedThumb)
+                  if (fastThumb) {
+                    holder.info.avatarUrl = fastThumb
+                    this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+                    this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: fastThumb })
+                  }
+                }
+
+                this.getProfilePhoto(accountId, accountId, false, true)
+                  .then((hdAvatarUrl) => {
+                    if (hdAvatarUrl) {
+                      holder.info.avatarUrl = hdAvatarUrl
+                      holder.info.photoId = currentPhotoId
+                      const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: hdAvatarUrl, photoId: currentPhotoId } : a))
+                      this.store.updateConfig({ accounts: accs })
+                      this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+                      this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: hdAvatarUrl })
+                    }
+                  })
+                  .catch(() => {})
+              }
+            }
+          } else if (uId && uId !== accountId) {
             // Invalidate cached avatar for this user
             this.avatarCache.delete(`${accountId}_${uId}`)
             this.avatarCache.delete(`${accountId}_${uId}_big`)
@@ -14253,7 +14450,68 @@ export class AccountManager {
           }
         } else if (update._ === 'updateUser') {
           const u = update.user
-          if (u && String(u.id) !== accountId && !u.self) {
+          if (u && (String(u.id) === accountId || u.self)) {
+            const holder = this.clients.get(accountId)
+            if (holder) {
+              let changed = false
+              const first = u.firstName ?? u.first_name
+              const last = u.lastName ?? u.last_name
+              const uname = u.username || (Array.isArray(u.usernames) ? u.usernames[0]?.username : undefined)
+              if (first !== undefined && first !== holder.info.firstName) {
+                holder.info.firstName = first
+                changed = true
+              }
+              if (last !== undefined && last !== holder.info.lastName) {
+                holder.info.lastName = last
+                changed = true
+              }
+              if (uname !== undefined && uname !== holder.info.username) {
+                holder.info.username = uname
+                changed = true
+              }
+              if (typeof u.isPremium === 'boolean' && u.isPremium !== holder.info.isPremium) {
+                holder.info.isPremium = u.isPremium
+                changed = true
+              }
+
+              const currentPhotoId = (u.raw?.photo as any)?.photoId
+                ? (u.raw.photo as any).photoId.toString()
+                : (u.photo?.raw?.photoId ? u.photo.raw.photoId.toString() : (u.photo?.id ? u.photo.id.toString() : ''))
+              const photoChanged = Boolean((currentPhotoId && currentPhotoId !== holder.info.photoId) || (!u.photo && !!holder.info.avatarUrl))
+
+              if (photoChanged) {
+                changed = true
+                if (!u.photo || u.photo._ === 'userProfilePhotoEmpty') {
+                  holder.info.avatarUrl = undefined
+                  holder.info.photoId = ''
+                  this.avatarCache.delete(`${accountId}_${accountId}`)
+                  this.avatarCache.delete(`${accountId}_${accountId}_big`)
+                  this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: '' })
+                } else {
+                  this.avatarCache.delete(`${accountId}_${accountId}`)
+                  this.avatarCache.delete(`${accountId}_${accountId}_big`)
+                  if (u.photo?.small) this.peerPhotos.set(`${accountId}_${accountId}`, u.photo.small)
+                  if (u.photo?.big) this.peerBigPhotos.set(`${accountId}_${accountId}`, u.photo.big)
+                  this.getProfilePhoto(accountId, accountId, false, true).then((full) => {
+                    if (full) {
+                      holder.info.avatarUrl = full
+                      holder.info.photoId = currentPhotoId
+                      const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, avatarUrl: full, photoId: currentPhotoId } : a))
+                      this.store.updateConfig({ accounts: accs })
+                      this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+                      this.onEventCallback?.('telegram:user-avatar-updated', { accountId, userId: accountId, avatarUrl: full })
+                    }
+                  }).catch(() => {})
+                }
+              }
+
+              if (changed) {
+                const accs = this.store.getConfig().accounts.map((a) => (a.id === accountId ? { ...a, firstName: holder.info.firstName, lastName: holder.info.lastName, username: holder.info.username, avatarUrl: holder.info.avatarUrl, photoId: holder.info.photoId } : a))
+                this.store.updateConfig({ accounts: accs })
+                this.onEventCallback?.('telegram:account-updated', { account: this.sanitizeAccountInfo(holder.info) })
+              }
+            }
+          } else if (u && String(u.id) !== accountId && !u.self) {
             const uId = String(u.id)
             if (u.status) {
               this.activityTrackerService.recordUserStatus(accountId, uId, u.status)

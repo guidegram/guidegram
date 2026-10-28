@@ -414,6 +414,7 @@ function createWindow() {
   mainWindow.on('focus', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents?.focus()
+      accountManager?.syncAllActiveAccountsProfile?.().catch(() => {})
     }
   })
 
@@ -1157,6 +1158,17 @@ function setupIpcHandlers() {
   ipcMain.handle('telegram:get-accounts', async () => {
     Logger.structured('INFO', 'ipc:telegram:get-accounts')
     return accountManager.getAccounts()
+  })
+
+  ipcMain.handle('telegram:refresh-account-profile', async (_event, rawPayload: any) => {
+    const { accountId } = validateIpcPayload(AccountIdSchema, rawPayload, 'telegram:refresh-account-profile')
+    Logger.info(`[IPC] telegram:refresh-account-profile for ${accountId}`)
+    try {
+      return await accountManager.syncAccountProfile(accountId, true)
+    } catch (err: any) {
+      Logger.warn(`[IPC] refresh-account-profile failed for ${accountId}:`, err)
+      return null
+    }
   })
 
   ipcMain.handle('telegram:reconnect-account', async (_event, rawPayload: any) => {
