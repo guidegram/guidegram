@@ -50,6 +50,10 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
     let isMounted = true
     setLoading(true)
 
+    if (window.guidegram?.refreshAccountProfile) {
+      window.guidegram.refreshAccountProfile(account.id).catch(() => {})
+    }
+
     if (window.guidegram?.getMyFullProfile) {
       window.guidegram
         .getMyFullProfile(account.id)
@@ -96,7 +100,7 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
     }
   }
 
-  const fullName = [account.firstName, account.lastName].filter(Boolean).join(' ') || 'User'
+  const fullName = [profile?.firstName || account.firstName, profile?.lastName || account.lastName].filter(Boolean).join(' ') || 'User'
   const usernameText = profile?.username || account.username
   const phoneText = profile?.phone || account.phone
   const bioText = profile?.bio || 'No bio specified'

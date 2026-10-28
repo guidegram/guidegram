@@ -123,6 +123,7 @@ import { UserActivityRadar } from './UserActivityRadar'
 import { PaidMediaComposerModal } from './chat/PaidMediaComposerModal'
 import { InlineBotResultsPanel } from './chat/InlineBotResultsPanel'
 import { QuickRepliesPanel } from './chat/QuickRepliesPanel'
+import { InteractiveSpoiler } from './chat/InteractiveSpoiler'
 import { SavedMessagesBar } from './SavedMessagesBar'
 import { GroupCallBar } from './GroupCallBar'
 import { GroupCallModal } from './GroupCallModal'
@@ -1490,6 +1491,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [unreadScrollCount, setUnreadScrollCount] = useState(0)
   const isScrollingRef = useRef(false)
+
+  // Telegram Desktop Floating Sticky Date Badge & Advanced Date Navigator
+  const [floatingScrollDate, setFloatingScrollDate] = useState<number | null>(null)
+  const [showFloatingDate, setShowFloatingDate] = useState(false)
+  const [isDateNavOpen, setIsDateNavOpen] = useState(false)
+  const [targetJumpDate, setTargetJumpDate] = useState<string>('')
+  const floatingDateTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isFloatingDateHoveredRef = useRef(false)
   const previousChatIdRef = useRef<string | null>(null)
   const prevLastMessageIdRef = useRef<number | null>(null)
   const prevMessagesLengthRef = useRef<number>(0)
@@ -1766,8 +1775,42 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
         const isScrolledUp = distanceFromBottom > 300
         setShowScrollBottom(isScrolledUp)
-        if (distanceFromBottom <= 50) {
-          setUnreadScrollCount(0)
+        // Telegram Desktop: Floating Sticky Date Badge calculation
+        if (messages.length > 0 && el.scrollTop > 60) {
+          const targetTop = el.scrollTop + 60
+          let low = 0
+          let high = messages.length - 1
+          let foundMsg: MessageItem | null = null
+          while (low <= high) {
+            const mid = (low + high) >> 1
+            const m = messages[mid]
+            const elMsg = document.getElementById(`msg-${m.id}`)
+            if (!elMsg) {
+              low = mid + 1
+              continue
+            }
+            if (elMsg.offsetTop + elMsg.offsetHeight >= targetTop) {
+              foundMsg = m
+              high = mid - 1
+            } else {
+              low = mid + 1
+            }
+          }
+          if (foundMsg) {
+            const msgTime = foundMsg.date < 1e11 ? foundMsg.date * 1000 : foundMsg.date
+            setFloatingScrollDate(msgTime)
+            setShowFloatingDate(true)
+            if (floatingDateTimerRef.current) clearTimeout(floatingDateTimerRef.current)
+            floatingDateTimerRef.current = setTimeout(() => {
+              if (!isFloatingDateHoveredRef.current) {
+                setShowFloatingDate(false)
+              }
+            }, 2000)
+          }
+        } else {
+          if (!isFloatingDateHoveredRef.current) {
+            setShowFloatingDate(false)
+          }
         }
 
         // Lightweight & Non-blocking Read Tracking: avoid querying full DOM on every scroll tick
@@ -1866,6 +1909,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       isScrollingRef.current = false
     })
   }, [messages, chat, onMergeHistoricalMessages, ghostMode, onUpdateUnreadCount, unreadScrollCount])
+
 
   const handleScrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -2526,6 +2570,92 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setToast(null)
     }, 2200)
   }
+
+  // Telegram Desktop: Sticky Floating Date Formatting
+  const formatFloatingDate = useCallback((timestamp: number) => {
+    const d = new Date(timestamp)
+    const now = new Date()
+    const isToday = isSameDay(d.getTime(), now.getTime())
+    if (isToday) return t('date.today') || 'Today'
+    const isYesterday = isSameDay(d.getTime(), now.getTime() - 86400000)
+    if (isYesterday) return t('date.yesterday') || 'Yesterday'
+
+    const isCurrentYear = d.getFullYear() === now.getFullYear()
+    const pStr = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      month: 'short',
+      day: 'numeric',
+      ...(isCurrentYear ? {} : { year: 'numeric' }),
+    }).format(d)
+
+    const gStr = d.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      ...(isCurrentYear ? {} : { year: 'numeric' }),
+    })
+
+    return `${pStr} • ${gStr}`
+  }, [t])
+
+  // Advanced Date Navigator Jump Handler
+  const handleJumpToTimestamp = useCallback(
+    (targetTimestamp: number) => {
+      if (messages.length === 0) return
+      let closestMsg: MessageItem = messages[0]
+      let minDiff = Math.abs(
+        (closestMsg.date < 1e11 ? closestMsg.date * 1000 : closestMsg.date) - targetTimestamp
+      )
+      for (let i = 1; i < messages.length; i++) {
+        const m = messages[i]
+        const mTime = m.date < 1e11 ? m.date * 1000 : m.date
+        const diff = Math.abs(mTime - targetTimestamp)
+        if (diff < minDiff) {
+          minDiff = diff
+          closestMsg = m
+        }
+      }
+      handleScrollToReply(closestMsg.id)
+      const displayTime = closestMsg.date < 1e11 ? closestMsg.date * 1000 : closestMsg.date
+      const pDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(displayTime)
+      const gDate = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(displayTime)
+      showToast(`📅 پرش به پیام‌های ${pDate} (${gDate})`)
+      setIsDateNavOpen(false)
+    },
+    [messages]
+  )
+
+  const handleJumpToPreset = useCallback(
+    (preset: 'today' | 'yesterday' | 'week' | 'month' | 'threeMonths' | 'first') => {
+      if (messages.length === 0) return
+      if (preset === 'today') {
+        handleScrollToBottom()
+        setIsDateNavOpen(false)
+        return
+      }
+      if (preset === 'first') {
+        const firstMsg = messages[0]
+        handleScrollToReply(firstMsg.id)
+        setIsDateNavOpen(false)
+        showToast('⏮ پرش به اولین پیام چت')
+        return
+      }
+      const now = Date.now()
+      let target = now
+      if (preset === 'yesterday') target = now - 86400000
+      else if (preset === 'week') target = now - 7 * 86400000
+      else if (preset === 'month') target = now - 30 * 86400000
+      else if (preset === 'threeMonths') target = now - 90 * 86400000
+      handleJumpToTimestamp(target)
+    },
+    [messages, handleScrollToBottom, handleJumpToTimestamp]
+  )
 
   const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = e.clipboardData
@@ -3963,18 +4093,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               node = <span key={key} className="line-through text-gray-400">{node}</span>
             } else if (ent.type === 'spoiler') {
               node = (
-                <span
-                  key={key}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    e.currentTarget.classList.toggle('blur-[4px]')
-                    e.currentTarget.classList.toggle('bg-white/15')
-                  }}
-                  title="Click to reveal spoiler"
-                  className="rounded px-1 bg-white/15 blur-[4px] hover:blur-[2px] transition-all cursor-pointer select-none active:blur-none"
-                >
+                <InteractiveSpoiler key={key} title="Click to reveal spoiler">
                   {node}
-                </span>
+                </InteractiveSpoiler>
               )
             } else if (ent.type === 'code') {
               node = (
@@ -4213,18 +4334,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
         if (part.startsWith('||') && part.endsWith('||') && part.length > 4) {
           return (
-            <span
-              key={partKey}
-              onClick={(e) => {
-                e.stopPropagation()
-                e.currentTarget.classList.toggle('bg-white/15')
-                e.currentTarget.classList.toggle('blur-[4px]')
-              }}
-              title="Click to reveal spoiler"
-              className="rounded px-1 bg-white/15 blur-[4px] hover:blur-[2px] transition-all cursor-pointer select-none active:blur-none"
-            >
+            <InteractiveSpoiler key={partKey} title="Click to reveal spoiler">
               {part.slice(2, -2)}
-            </span>
+            </InteractiveSpoiler>
           )
         }
 
@@ -5982,6 +6094,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             backgroundPosition: 'center',
           }}
         />
+
+        {/* Telegram Desktop Sticky Floating Date Badge */}
+        <AnimatePresence>
+          {showFloatingDate && floatingScrollDate && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              onMouseEnter={() => { isFloatingDateHoveredRef.current = true }}
+              onMouseLeave={() => {
+                isFloatingDateHoveredRef.current = false
+                setShowFloatingDate(false)
+              }}
+              onClick={() => setIsDateNavOpen((prev) => !prev)}
+              className="absolute top-3 left-1/2 -translate-x-1/2 z-25 px-3 py-1 rounded-full bg-dark-900/80 hover:bg-dark-800 text-gray-200 text-xs font-medium border border-white/10 shadow-lg backdrop-blur-md cursor-pointer select-none transition-colors"
+            >
+              {formatFloatingDate(floatingScrollDate)}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div
           ref={messagesContainerRef}

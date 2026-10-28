@@ -318,6 +318,7 @@ export const App: React.FC = () => {
     let unsubscribeMsgDeleted: (() => void) | undefined
     let unsubscribeMsgEdited: (() => void) | undefined
     let unsubscribeReadOutbox: (() => void) | undefined
+    let unsubscribeAvatarUpdated: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -454,9 +455,28 @@ export const App: React.FC = () => {
         setAccounts((prev) => {
           const exists = prev.some((a) => a.id === updated.id)
           if (exists) {
-            return prev.map((a) => (a.id === updated.id ? updated : a))
+            return prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a))
           }
           return [...prev, updated]
+        })
+
+        // Synchronize matching self / Saved Messages dialogs with new name / avatar
+        setDialogsByAccount((prev) => {
+          const list = prev[updated.id]
+          if (!list) return prev
+          let changed = false
+          const next = list.map((d) => {
+            if (d.id === updated.id || isPeerMatch(d.id, updated.id) || d.isSavedMessages) {
+              changed = true
+              return {
+                ...d,
+                avatarUrl: updated.avatarUrl !== undefined ? updated.avatarUrl : d.avatarUrl,
+                title: d.isSavedMessages ? d.title : (updated.firstName || d.title),
+              }
+            }
+            return d
+          })
+          return changed ? { ...prev, [updated.id]: next } : prev
         })
 
         setActiveAccountId((currentActive) => {
@@ -474,6 +494,35 @@ export const App: React.FC = () => {
           console.log(`[App] Account ${updated.id} (${updated.firstName || ''}) status is disconnected`)
         }
       })
+
+      // Real-time peer & account avatar updates
+      unsubscribeAvatarUpdated = window.guidegram.on(
+        'telegram:user-avatar-updated',
+        (payload: { accountId: string; userId: string; avatarUrl?: string }) => {
+          if (!payload) return
+          const { accountId, userId, avatarUrl } = payload
+
+          if (userId === accountId) {
+            setAccounts((prev) =>
+              prev.map((acc) => (acc.id === accountId ? { ...acc, avatarUrl } : acc))
+            )
+          }
+
+          setDialogsByAccount((prev) => {
+            const list = prev[accountId]
+            if (!list) return prev
+            let changed = false
+            const next = list.map((d) => {
+              if (d.id === userId || isPeerMatch(d.id, userId) || (userId === accountId && d.isSavedMessages)) {
+                changed = true
+                return { ...d, avatarUrl }
+              }
+              return d
+            })
+            return changed ? { ...prev, [accountId]: next } : prev
+          })
+        }
+      )
 
       // Accounts loaded initial batch
       unsubscribeAccountsLoaded = window.guidegram.on('telegram:accounts-loaded', (payload: { accounts: AccountInfo[] }) => {
@@ -705,6 +754,7 @@ export const App: React.FC = () => {
         unsubscribeUpdateInstalled?.()
         unsubscribeReadHistory?.()
         unsubscribeReadOutbox?.()
+        unsubscribeAvatarUpdated?.()
         unsubscribeDeepLink?.()
       }
     }

@@ -45,11 +45,23 @@ export const Avatar: React.FC<AvatarProps> = ({
   const [currentUrl, setCurrentUrl] = useState<string | null>(resolvedInitialUrl)
   const [hasError, setHasError] = useState(false)
 
-  // React-recommended pattern: synchronize state during render if identity changes
+  // React-recommended pattern: synchronize state during render if identity or avatarUrl prop changes
   const [prevIdentity, setPrevIdentity] = useState<string | null>(cacheKey)
-  if (cacheKey !== prevIdentity) {
+  const [prevAvatarUrlProp, setPrevAvatarUrlProp] = useState<string | undefined>(avatarUrl)
+  if (cacheKey !== prevIdentity || avatarUrl !== prevAvatarUrlProp) {
     setPrevIdentity(cacheKey)
-    setCurrentUrl(resolvedInitialUrl)
+    setPrevAvatarUrlProp(avatarUrl)
+    if (isPropValid) {
+      setCurrentUrl(avatarUrl!)
+      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl!)
+    } else if (avatarUrl === undefined || avatarUrl === null || avatarUrl === '') {
+      if (cacheKey && prevAvatarUrlProp) {
+        avatarMemoryCache.delete(cacheKey)
+      }
+      setCurrentUrl(null)
+    } else {
+      setCurrentUrl(cachedUrl)
+    }
     setHasError(false)
   }
 
@@ -59,22 +71,46 @@ export const Avatar: React.FC<AvatarProps> = ({
     currentUrl.trim().length > 30 &&
     !currentUrl.endsWith('base64,')
 
+  // Real-time avatar update listener from Telegram MTProto
   useEffect(() => {
-    // 1. If we already have the full avatar in memory cache, use it immediately
+    if (!cacheKey || !accountId || !peerId || !window.guidegram?.on) return
+
+    const unsubAvatarUpdated = window.guidegram.on(
+      'telegram:user-avatar-updated',
+      (payload: { accountId: string; userId: string; avatarUrl?: string }) => {
+        if (payload?.accountId === accountId && payload?.userId === peerId) {
+          if (payload.avatarUrl) {
+            avatarMemoryCache.set(cacheKey, payload.avatarUrl)
+            setCurrentUrl(payload.avatarUrl)
+            setHasError(false)
+          } else {
+            avatarMemoryCache.delete(cacheKey)
+            setCurrentUrl(null)
+          }
+        }
+      }
+    )
+
+    return () => {
+      unsubAvatarUpdated?.()
+    }
+  }, [cacheKey, accountId, peerId])
+
+  useEffect(() => {
+    // 1. If avatarUrl prop is already valid and non-empty, use it immediately
+    if (isPropValid && avatarUrl) {
+      setCurrentUrl(avatarUrl)
+      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
+      setHasError(false)
+      return
+    }
+
+    // 2. If we already have the full avatar in memory cache, use it immediately
     if (cacheKey && avatarMemoryCache.has(cacheKey)) {
       const cached = avatarMemoryCache.get(cacheKey)!
       if (cached && cached.length > 2000 && !cached.endsWith('base64,')) {
         setCurrentUrl(cached)
         setHasError(false)
-        return
-      }
-    }
-
-    // 2. If avatarUrl prop is valid
-    if (isPropValid && avatarUrl) {
-      setCurrentUrl(avatarUrl)
-      if (!avatarUrl.startsWith('data:image/jpeg;base64,') || avatarUrl.length > 2000) {
-        if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
         return
       }
     } else if (!cachedUrl) {
