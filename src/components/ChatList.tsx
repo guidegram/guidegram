@@ -42,7 +42,7 @@ type SearchFilterCategory =
 
 type SearchScopeCategory = 'all' | 'private' | 'groups' | 'channels' | 'bots'
 
-export const ChatList: React.FC<ChatListProps> = ({
+export const ChatList = React.memo<ChatListProps>(({
   account,
   dialogs,
   activeChatId,
@@ -1092,7 +1092,7 @@ export const ChatList: React.FC<ChatListProps> = ({
       )}
     </div>
   )
-}
+})
 
 interface DialogListItemProps {
   dialog: DialogItem

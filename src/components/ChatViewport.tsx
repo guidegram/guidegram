@@ -277,7 +277,7 @@ interface LinkPreviewCardProps {
   onOpenInstantView?: (url: string, preview?: WebPagePreview) => void
 }
 
-const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview, accountId, onSafeOpen, onOpenInstantView }) => {
+const LinkPreviewCard = React.memo<LinkPreviewCardProps>(({ url, existingPreview, accountId, onSafeOpen, onOpenInstantView }) => {
   const [preview, setPreview] = useState<WebPagePreview | null>(
     existingPreview || rendererPreviewCache.get(url) || null
   )
@@ -422,7 +422,7 @@ const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url, existingPreview,
       })()}
     </div>
   )
-}
+})
 
 interface ComposerLinkPreviewBarProps {
   url: string
@@ -526,25 +526,36 @@ const ComposerLinkPreviewBar: React.FC<ComposerLinkPreviewBarProps> = ({ url, on
   )
 }
 
-export const CustomEmojiView: React.FC<{
+const customEmojiPayloadCache = new Map<string, CustomEmojiPayload>()
+
+export const CustomEmojiView = React.memo<{
   accountId: string
   documentId: string
   fallback?: string
   className?: string
-}> = ({ accountId, documentId, fallback, className = "inline-block w-[1.25em] h-[1.25em] align-[-0.2em] object-contain mx-0.5 select-none" }) => {
-  const [payload, setPayload] = useState<CustomEmojiPayload | null>(null)
+}>(({ accountId, documentId, fallback, className = "inline-block w-[1.25em] h-[1.25em] align-[-0.2em] object-contain mx-0.5 select-none" }) => {
+  const cacheKey = `${accountId}_${documentId}`
+  const [payload, setPayload] = useState<CustomEmojiPayload | null>(() => customEmojiPayloadCache.get(cacheKey) || null)
   const [hasError, setHasError] = useState(false)
   const animContainerRef = useRef<HTMLSpanElement | null>(null)
 
   useEffect(() => {
     let active = true
     if (!documentId || !accountId) return
+    if (customEmojiPayloadCache.has(cacheKey)) {
+      const cached = customEmojiPayloadCache.get(cacheKey)
+      if (cached && cached !== payload) {
+        setPayload(cached)
+      }
+      return
+    }
 
     if (window.guidegram?.getCustomEmojiData) {
       window.guidegram
         .getCustomEmojiData(accountId, documentId)
         .then((res) => {
           if (active && res) {
+            customEmojiPayloadCache.set(cacheKey, res)
             setPayload(res)
           }
         })
@@ -554,7 +565,9 @@ export const CustomEmojiView: React.FC<{
         .getCustomEmojiUrl(accountId, documentId)
         .then((url) => {
           if (active && url) {
-            setPayload({ format: 'image', url })
+            const data: CustomEmojiPayload = { format: 'image', url }
+            customEmojiPayloadCache.set(cacheKey, data)
+            setPayload(data)
           }
         })
         .catch(() => {})
@@ -563,7 +576,7 @@ export const CustomEmojiView: React.FC<{
     return () => {
       active = false
     }
-  }, [accountId, documentId])
+  }, [accountId, documentId, cacheKey, payload])
 
   // Mount animated Lottie instance when payload is lottie
   useEffect(() => {
@@ -610,7 +623,6 @@ export const CustomEmojiView: React.FC<{
     )
   }
 
-
   if (payload?.url && !hasError) {
     return (
       <img
@@ -625,7 +637,7 @@ export const CustomEmojiView: React.FC<{
   }
 
   return <span className="inline-block">{fallback || '⭐'}</span>
-}
+})
 
 export const TelegramBlockquote: React.FC<{
   children: React.ReactNode
@@ -1426,6 +1438,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const previousChatIdRef = useRef<string | null>(null)
   const prevLastMessageIdRef = useRef<number | null>(null)
   const prevMessagesLengthRef = useRef<number>(0)
+  const autoDownloadedIdsRef = useRef<Set<number>>(new Set())
 
   // Multi-line input ref
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -1826,6 +1839,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setReplyMessage(null)
       setStagedAttachments([])
       setDismissedComposerUrl(null)
+      autoDownloadedIdsRef.current.clear()
 
       setTimeout(() => {
         // If chat has unread messages, find the first unread message and scroll directly to it!
@@ -4522,9 +4536,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         return false
       })()
 
-      // Trigger lazy download ONLY if permitted by auto-download policy
-      if (!mediaUrl && shouldAutoDownloadPhoto) {
-        requestMediaDownload(msg, false)
+      // Trigger lazy download safely outside render cycle, deduplicated per message ID
+      if (!mediaUrl && shouldAutoDownloadPhoto && !autoDownloadedIdsRef.current.has(msg.id)) {
+        autoDownloadedIdsRef.current.add(msg.id)
+        setTimeout(() => {
+          requestMediaDownload(msg, false)
+        }, 50)
       }
 
       return (
@@ -6105,7 +6122,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
                   {/* Outgoing Message Action Bar - Floating Glassmorphic Pill (Takes 0px flex width) */}
                   {msg.isOutgoing && (
-                    <div className={`opacity-0 group-hover:opacity-100 ${activeReactionPickerMsgId === msg.id ? '!opacity-100 !pointer-events-auto !scale-100' : ''} absolute -top-3.5 end-0 z-30 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 bg-dark-850/95 backdrop-blur-md px-1.5 py-1 rounded-xl border border-white/15 shadow-xl scale-95 group-hover:scale-100 origin-top-right ${isSelectionMode ? '!hidden' : ''}`}>
+                    <div className={`opacity-0 group-hover:opacity-100 ${activeReactionPickerMsgId === msg.id ? '!opacity-100 !pointer-events-auto !scale-100' : ''} absolute -top-3.5 end-0 z-30 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 bg-dark-850 px-1.5 py-1 rounded-xl border border-white/15 group-hover:backdrop-blur-md group-hover:shadow-xl scale-95 group-hover:scale-100 origin-top-right ${isSelectionMode ? '!hidden' : ''}`}>
                       {/* Reaction Picker Button */}
                       {allowedReactions.length > 0 && (
                         <div className="relative">
@@ -6328,7 +6345,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <div className="flex flex-col min-w-0 max-w-full w-fit">
                     {/* Message Bubble (Stickers render transparently without bubble frame) */}
                     <div
-                      className={`transition-all bubble-haptic-spring ${
+                      className={`transition-colors bubble-haptic-spring ${
                       msg.isSticker || msg.mediaType === 'sticker'
                         ? 'bg-transparent p-0'
                         : `text-xs shadow-sm min-w-[76px] sm:min-w-[84px] break-words ${
@@ -6845,7 +6862,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
                   {/* Incoming Message Action Bar - Floating Glassmorphic Pill (Takes 0px flex width) */}
                   {!msg.isOutgoing && (
-                    <div className={`opacity-0 group-hover:opacity-100 ${activeReactionPickerMsgId === msg.id ? '!opacity-100 !pointer-events-auto !scale-100' : ''} absolute -top-3.5 start-0 z-30 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 bg-dark-850/95 backdrop-blur-md px-1.5 py-1 rounded-xl border border-white/15 shadow-xl scale-95 group-hover:scale-100 origin-top-left ${isSelectionMode ? '!hidden' : ''}`}>
+                    <div className={`opacity-0 group-hover:opacity-100 ${activeReactionPickerMsgId === msg.id ? '!opacity-100 !pointer-events-auto !scale-100' : ''} absolute -top-3.5 start-0 z-30 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto flex items-center gap-0.5 bg-dark-850 px-1.5 py-1 rounded-xl border border-white/15 group-hover:backdrop-blur-md group-hover:shadow-xl scale-95 group-hover:scale-100 origin-top-left ${isSelectionMode ? '!hidden' : ''}`}>
                       {/* Reaction Picker Button */}
                       {allowedReactions.length > 0 && (
                         <div className="relative">
