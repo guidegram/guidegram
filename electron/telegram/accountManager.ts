@@ -1872,7 +1872,7 @@ export class AccountManager {
   public async resolveInputPeer(accountId: string, peerId: string | number): Promise<tl.TypeInputPeer> {
     const holder = this.clients.get(accountId)
     const s = String(peerId).trim()
-    if (s === 'self' || s === 'me' || (holder?.info && s === holder.info.id)) return { _: 'inputPeerSelf' }
+    if (s === 'self' || s === 'me' || s === 'saved_messages' || (holder?.info && s === holder.info.id)) return { _: 'inputPeerSelf' }
 
     let normalized = s
     if (s.startsWith('-') && !s.startsWith('-100')) {
@@ -7628,7 +7628,8 @@ export class AccountManager {
         isWhenOnline: m.date === 0x7ffffffe,
         replyToMsgId: m.replyTo?.replyToMsgId,
       }))
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getScheduledMessages error for chat ${chatId}:`, err?.message || err)
       return []
     }
   }
@@ -7649,7 +7650,8 @@ export class AccountManager {
         id: [messageId],
       })
       return true
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] sendScheduledMessageNow error for chat ${chatId}, msg ${messageId}:`, err?.message || err)
       return false
     }
   }
@@ -7670,7 +7672,8 @@ export class AccountManager {
         id: messageIds,
       })
       return true
-    } catch (_) {
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] deleteScheduledMessages error for chat ${chatId}:`, err?.message || err)
       return false
     }
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Clock, Send, Trash2, X, AlertCircle, FileText, Image, Mic } from 'lucide-react'
+import { Clock, Send, Trash2, X, FileText, Image, Mic, Edit3, Copy, Check, Sparkles } from 'lucide-react'
 import { ScheduledMessageItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 import { isRTL } from '../utils/textUtils'
@@ -11,6 +11,8 @@ interface ScheduledMessagesModalProps {
   accountId: string
   chatId: string
   chatTitle: string
+  onEditMessage?: (text: string) => void
+  onScheduledChanged?: () => void
 }
 
 export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
@@ -19,15 +21,28 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
   accountId,
   chatId,
   chatTitle,
+  onEditMessage,
+  onScheduledChanged,
 }) => {
   const { t } = useI18n()
   const [messages, setMessages] = useState<ScheduledMessageItem[]>([])
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<number | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [now, setNow] = useState<number>(Date.now())
+
+  // Ticker for live countdown display
+  useEffect(() => {
+    if (!isOpen) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [isOpen])
 
   const loadScheduled = async () => {
     if (!accountId || !chatId) return
     setLoading(true)
+    setActionError(null)
     try {
       if (window.guidegram?.getScheduledMessages) {
         const res = await window.guidegram.getScheduledMessages(accountId, chatId)
@@ -52,13 +67,20 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
   const handleSendNow = async (messageId: number) => {
     if (processingId !== null) return
     setProcessingId(messageId)
+    setActionError(null)
     try {
       if (window.guidegram?.sendScheduledMessageNow) {
-        await window.guidegram.sendScheduledMessageNow(accountId, chatId, messageId)
-        setMessages((prev) => prev.filter((m) => m.id !== messageId))
+        const ok = await window.guidegram.sendScheduledMessageNow(accountId, chatId, messageId)
+        if (ok) {
+          setMessages((prev) => prev.filter((m) => m.id !== messageId))
+          onScheduledChanged?.()
+        } else {
+          setActionError('Could not send scheduled message now. Please verify connection.')
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to send scheduled message now:', err)
+      setActionError(err?.message || 'Failed to send message now.')
     } finally {
       setProcessingId(null)
     }
@@ -68,16 +90,36 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
     if (processingId !== null) return
     if (!window.confirm('Delete this scheduled message?')) return
     setProcessingId(messageId)
+    setActionError(null)
     try {
       if (window.guidegram?.deleteScheduledMessages) {
-        await window.guidegram.deleteScheduledMessages(accountId, chatId, [messageId])
-        setMessages((prev) => prev.filter((m) => m.id !== messageId))
+        const ok = await window.guidegram.deleteScheduledMessages(accountId, chatId, [messageId])
+        if (ok) {
+          setMessages((prev) => prev.filter((m) => m.id !== messageId))
+          onScheduledChanged?.()
+        } else {
+          setActionError('Failed to delete scheduled message.')
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete scheduled message:', err)
+      setActionError(err?.message || 'Failed to delete message.')
     } finally {
       setProcessingId(null)
     }
+  }
+
+  const handleCopy = (messageId: number, text?: string) => {
+    if (!text) return
+    navigator.clipboard.writeText(text)
+    setCopiedId(messageId)
+    setTimeout(() => setCopiedId(null), 1800)
+  }
+
+  const handleEditInComposer = (text?: string) => {
+    if (!text) return
+    onEditMessage?.(text)
+    onClose()
   }
 
   const formatScheduleDate = (timestamp: number) => {
@@ -91,8 +133,21 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
     })
   }
 
+  const formatCountdown = (timestamp: number, isWhenOnline?: boolean) => {
+    if (isWhenOnline) return 'When online'
+    const diff = timestamp - now
+    if (diff <= 0) return 'Sending now...'
+    const sec = Math.floor(diff / 1000)
+    const min = Math.floor(diff / 60000)
+    const hr = diff / 3600000
+
+    if (sec < 60) return `in ${sec}s`
+    if (min < 60) return `in ${min}m`
+    return `in ${hr.toFixed(1)}h`
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
       <motion.div
         initial={{ opacity: 0, scale: 0.94, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -129,6 +184,16 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
           </button>
         </div>
 
+        {/* Action Error Banner */}
+        {actionError && (
+          <div className="px-5 py-2.5 bg-rose-500/20 border-b border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
+            <span>{actionError}</span>
+            <button onClick={() => setActionError(null)} className="text-rose-400 hover:text-white font-bold ml-2">
+              ×
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {loading ? (
@@ -147,27 +212,60 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
               </p>
             </div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {messages.map((item) => (
                 <motion.div
                   key={item.id}
-                  whileHover={{ scale: 1.01 }}
+                  whileHover={{ scale: 1.008 }}
                   transition={{ type: 'spring', damping: 20, stiffness: 350 }}
                   className="p-3.5 rounded-2xl bg-dark-800/90 border border-white/5 hover:border-accent-violet/30 transition-all flex flex-col gap-2.5 shadow-sm group"
                 >
+                  {/* Top Bar with Time & Countdown */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-xs font-semibold text-accent-violet">
                       <Clock className="w-3.5 h-3.5" />
                       <span>{formatScheduleDate(item.scheduledDate)}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-violet/15 text-accent-violet border border-accent-violet/25">
+                        {formatCountdown(item.scheduledDate, item.isWhenOnline)}
+                      </span>
                     </div>
 
+                    {/* Actions */}
                     <div className="flex items-center gap-1">
+                      {item.text && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(item.id, item.text)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                            title="Copy message text"
+                          >
+                            {copiedId === item.id ? (
+                              <Check className="w-3.5 h-3.5 text-accent-emerald" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {onEditMessage && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditInComposer(item.text)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-accent-cyan hover:bg-white/10 transition-colors cursor-pointer"
+                              title="Edit text in chat composer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </>
+                      )}
+
                       <button
                         type="button"
                         disabled={processingId === item.id}
                         onClick={() => handleSendNow(item.id)}
                         className="px-2.5 py-1 rounded-lg bg-primary-600/20 hover:bg-primary-600 text-primary-300 hover:text-white text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        title="Send this message now"
+                        title="Send this scheduled message now"
                       >
                         <Send className="w-3 h-3" />
                         <span>Send Now</span>
@@ -177,7 +275,7 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
                         type="button"
                         disabled={processingId === item.id}
                         onClick={() => handleDelete(item.id)}
-                        className="p-1 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
                         title="Delete scheduled message"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -185,10 +283,15 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Message Text Content (Clicking places in composer if editable) */}
                   {item.text && (
                     <div
                       dir={isRTL(item.text) ? 'rtl' : 'ltr'}
-                      className="text-xs text-gray-200 bg-black/25 p-2.5 rounded-xl border border-white/5 leading-relaxed break-words"
+                      onClick={() => onEditMessage && handleEditInComposer(item.text)}
+                      title={onEditMessage ? 'Click to copy text into chat composer' : undefined}
+                      className={`text-xs text-gray-200 bg-black/25 p-2.5 rounded-xl border border-white/5 leading-relaxed break-words ${
+                        onEditMessage ? 'hover:border-accent-violet/40 cursor-pointer transition-colors' : ''
+                      }`}
                     >
                       {item.text}
                     </div>
@@ -214,7 +317,10 @@ export const ScheduledMessagesModal: React.FC<ScheduledMessagesModalProps> = ({
 
         {/* Footer */}
         <div className="p-3.5 bg-dark-900 border-t border-white/5 flex items-center justify-between text-xs text-gray-400">
-          <span>MTProto: messages.getScheduledHistory</span>
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <Sparkles className="w-3 h-3 text-accent-violet" />
+            <span>Click message text to edit in chat composer</span>
+          </div>
           <button
             type="button"
             onClick={onClose}

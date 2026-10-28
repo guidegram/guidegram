@@ -1095,6 +1095,59 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Scheduled Messages Modal (MTProto messages.getScheduledHistory)
   const [isScheduledListOpen, setIsScheduledListOpen] = useState(false)
+  const [chatScheduledMessages, setChatScheduledMessages] = useState<ScheduledMessageItem[]>([])
+  const [scheduledTickerNow, setScheduledTickerNow] = useState<number>(Date.now())
+
+  const refreshScheduledMessages = useCallback(async () => {
+    if (!chat?.accountId || !chat?.id || !window.guidegram?.getScheduledMessages) {
+      setChatScheduledMessages([])
+      return
+    }
+    try {
+      const res = await window.guidegram.getScheduledMessages(chat.accountId, chat.id)
+      setChatScheduledMessages(res || [])
+    } catch (err) {
+      console.warn('Failed to fetch chat scheduled messages:', err)
+      setChatScheduledMessages([])
+    }
+  }, [chat?.accountId, chat?.id])
+
+  useEffect(() => {
+    refreshScheduledMessages()
+    const syncTimer = setInterval(refreshScheduledMessages, 30000)
+    return () => clearInterval(syncTimer)
+  }, [refreshScheduledMessages])
+
+  // Live 1-second countdown ticker active only when scheduled messages exist
+  useEffect(() => {
+    if (chatScheduledMessages.length === 0) return
+    const ticker = setInterval(() => setScheduledTickerNow(Date.now()), 1000)
+    return () => clearInterval(ticker)
+  }, [chatScheduledMessages.length])
+
+  const formatScheduledRemaining = (targetMs: number, currentMs: number): string => {
+    const diff = targetMs - currentMs
+    if (diff <= 0) return '0s'
+    const sec = Math.floor(diff / 1000)
+    const min = Math.floor(diff / 60000)
+    const hr = diff / 3600000
+
+    if (sec < 60) return `${sec}s`
+    if (min < 60) return `${min}m`
+    return `${hr.toFixed(1)}h`
+  }
+
+  const nextScheduledItem = useMemo(() => {
+    if (!chatScheduledMessages || chatScheduledMessages.length === 0) return null
+    const future = chatScheduledMessages.filter(
+      (m) => m.scheduledDate && !m.isWhenOnline && m.scheduledDate > scheduledTickerNow
+    )
+    if (future.length > 0) {
+      return future.sort((a, b) => a.scheduledDate - b.scheduledDate)[0]
+    }
+    const online = chatScheduledMessages.find((m) => m.isWhenOnline)
+    return online || chatScheduledMessages[0] || null
+  }, [chatScheduledMessages, scheduledTickerNow])
 
   // Optimistic Message Reactions (MTProto messages.sendReaction)
   const [reactionOverrides, setReactionOverrides] = useState<Record<number, MessageReactionItem[]>>({})
@@ -3468,7 +3521,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           }
         }
         if (options?.silent) showToast('Attachment sent without sound')
-        else if (options?.scheduleDate) showToast('Attachment scheduled')
+        else if (options?.scheduleDate) {
+          showToast('Attachment scheduled')
+          setTimeout(() => refreshScheduledMessages(), 500)
+        }
         if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
           setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
         }
@@ -3489,6 +3545,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       showToast('Message sent without sound')
     } else if (options?.scheduleDate) {
       showToast(`Message scheduled for ${new Date(options.scheduleDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`)
+      setTimeout(() => refreshScheduledMessages(), 500)
     }
     if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
       setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
@@ -5483,10 +5540,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           {(!chat.isChannel || chat.isGroup || chatDetails?.isGroup || chat.isSavedMessages || chat.canSendMessages || chatDetails?.canSendMessages || chatDetails?.isCreator) && (
             <button
               onClick={() => setIsScheduledListOpen(true)}
-              title={t('chat.scheduled_messages')}
-              className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-violet border border-white/10 transition-colors cursor-pointer"
+              title={
+                chatScheduledMessages.length > 0 && nextScheduledItem
+                  ? `${t('chat.scheduled_messages')} (${chatScheduledMessages.length} pending • Next in ${formatScheduledRemaining(nextScheduledItem.scheduledDate, scheduledTickerNow)})`
+                  : t('chat.scheduled_messages')
+              }
+              className={`p-2 rounded-xl border transition-colors cursor-pointer relative ${
+                chatScheduledMessages.length > 0
+                  ? 'bg-accent-violet/20 hover:bg-accent-violet/30 text-accent-violet border-accent-violet/40 shadow-xs'
+                  : 'bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-accent-violet border-white/10'
+              }`}
             >
               <Clock className="w-4 h-4 text-accent-violet" />
+              {chatScheduledMessages.length > 0 && (
+                <span className="absolute -top-1 -end-1 px-1 min-w-[16px] h-4 rounded-full bg-accent-violet text-[9px] font-bold text-white flex items-center justify-center">
+                  {chatScheduledMessages.length}
+                </span>
+              )}
             </button>
           )}
 
@@ -8173,6 +8243,40 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   )}
                 </div>
 
+                {/* Scheduled Messages Badge & Quick Trigger next to chat composer */}
+                {chatScheduledMessages.length > 0 && nextScheduledItem && (
+                  <button
+                    type="button"
+                    onClick={() => setIsScheduledListOpen(true)}
+                    title={
+                      nextScheduledItem.isWhenOnline
+                        ? `${t('chat.scheduled_messages')} (When online) • Click to view`
+                        : `${t('chat.scheduled_messages')}: In ${formatScheduledRemaining(nextScheduledItem.scheduledDate, scheduledTickerNow)} (${chatScheduledMessages.length} pending) • Click to view`
+                    }
+                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-2xl border transition-all cursor-pointer select-none shrink-0 touch-hit-slop min-h-[40px] animate-in fade-in zoom-in-95 duration-200 ${
+                      nextScheduledItem.scheduledDate - scheduledTickerNow < 60000 && !nextScheduledItem.isWhenOnline
+                        ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40 shadow-xs'
+                        : 'bg-accent-violet/20 hover:bg-accent-violet/30 text-accent-violet border-accent-violet/40 hover:border-accent-violet/60 shadow-xs'
+                    }`}
+                  >
+                    <Clock
+                      className={`w-4 h-4 shrink-0 ${
+                        nextScheduledItem.scheduledDate - scheduledTickerNow < 60000 && !nextScheduledItem.isWhenOnline
+                          ? 'animate-pulse text-amber-400'
+                          : 'text-accent-violet'
+                      }`}
+                    />
+                    <span className="text-xs font-mono font-bold tracking-tight">
+                      {nextScheduledItem.isWhenOnline
+                        ? 'Online'
+                        : formatScheduledRemaining(nextScheduledItem.scheduledDate, scheduledTickerNow)}
+                    </span>
+                    {chatScheduledMessages.length > 1 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-violet shrink-0" />
+                    )}
+                  </button>
+                )}
+
                 {/* Send or Voice Record Trigger */}
                 {/* Send or Voice Record Trigger */}
                 {inputText.trim() || stagedAttachments.length > 0 ? (
@@ -10157,7 +10261,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           onClose={() => setIsScheduledListOpen(false)}
           accountId={chat.accountId}
           chatId={chat.id}
-          chatTitle={chat.title}
+          chatTitle={chatDetails?.title || chat.title}
+          onEditMessage={(text) => {
+            setInputText(text)
+            setTimeout(() => textareaRef.current?.focus(), 80)
+          }}
+          onScheduledChanged={refreshScheduledMessages}
         />
       )}
 
