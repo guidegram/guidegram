@@ -418,6 +418,14 @@ function createWindow() {
     }
   })
 
+  mainWindow.on('minimize', () => {
+    mainWindow?.webContents.send('app:clear-active-chat')
+  })
+
+  mainWindow.on('hide', () => {
+    mainWindow?.webContents.send('app:clear-active-chat')
+  })
+
   mainWindow.webContents.on('did-finish-load', () => {
     Logger.info('[Renderer] Main HTML content loaded successfully.')
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
@@ -495,6 +503,7 @@ function createWindow() {
 
     if (action === 'minimize') {
       event.preventDefault()
+      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
       Logger.info('[Window] Close event intercepted: window minimized to taskbar.')
       return
@@ -1021,6 +1030,7 @@ async function scrapeLinkPreview(targetUrl: string): Promise<WebPagePreview | nu
 function setupIpcHandlers() {
   // Window Controls
   ipcMain.handle('window:minimize', () => {
+    mainWindow?.webContents.send('app:clear-active-chat')
     mainWindow?.minimize()
   })
 
@@ -1038,6 +1048,7 @@ function setupIpcHandlers() {
   ipcMain.handle('window:request-close', () => {
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
+      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
       return { action: 'minimize' }
     } else if (cfg.closeAction === 'quit') {
@@ -1058,6 +1069,7 @@ function setupIpcHandlers() {
       })
     }
     if (action === 'minimize') {
+      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
     } else {
       isQuitting = true
@@ -1068,6 +1080,7 @@ function setupIpcHandlers() {
   ipcMain.handle('window:close', () => {
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
+      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
     } else if (cfg.closeAction === 'quit') {
       isQuitting = true

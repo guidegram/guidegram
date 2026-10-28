@@ -319,8 +319,13 @@ export const App: React.FC = () => {
     let unsubscribeMsgEdited: (() => void) | undefined
     let unsubscribeReadOutbox: (() => void) | undefined
     let unsubscribeAvatarUpdated: (() => void) | undefined
+    let unsubscribeClearChat: (() => void) | undefined
 
     if (window.guidegram?.on) {
+      unsubscribeClearChat = window.guidegram.on('app:clear-active-chat', () => {
+        setActiveChatId(null)
+      })
+
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
         const { accountId, chatId, message } = payload
         setMessagesByChat((prev) => {
@@ -419,8 +424,8 @@ export const App: React.FC = () => {
                   lastMessageId: message?.id ?? d.lastMessageId,
                   lastMessageIsOutgoing: isOutgoing,
                   lastMessageRead: isOutgoing ? false : true,
-                  lastMessageMediaType: message?.mediaType ?? d.lastMessageMediaType,
-                  lastMessageThumb: message?.strippedThumb ?? d.lastMessageThumb,
+                  lastMessageMediaType: message ? message.mediaType : d.lastMessageMediaType,
+                  lastMessageThumb: message ? message.strippedThumb : d.lastMessageThumb,
                 }
               }
               return d
@@ -757,6 +762,7 @@ export const App: React.FC = () => {
         unsubscribeReadOutbox?.()
         unsubscribeAvatarUpdated?.()
         unsubscribeDeepLink?.()
+        unsubscribeClearChat?.()
       }
     }
   }, [])
