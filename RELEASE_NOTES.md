@@ -28,14 +28,14 @@
   * Port of `history_view_media_grouped.cpp` with residual width allocation eliminating fractional rounding artifacts.
   * Automatically groups multi-photo/video messages into unified album bubbles.
 
-* ✨ **Procedural 60fps Noise Spoiler Mask (`spoiler_mask.cpp` Parity):**
+* ✨ **Procedural 60fps Noise Spoiler Mask & Atomic Particle Dissolve:**
   * Replaces static CSS blur with hardware-accelerated 60fps quantum noise and interactive ripple reveal dynamics on click.
+  * **Child Click Quarantine:** Intercepts clicks in the capture phase so hashtags, mentions, and URLs inside hidden spoilers never trigger prematurely on reveal.
+  * **Atomic Boundary Preservation:** Entire spoiler regions from start to end dissolve cohesively in a single radiant dust burst (`@keyframes spoiler-burst`).
 
-* 🌊 **Material Fluid Ripple Physics (`ripple_animation.cpp` Parity):**
-  * Spring-eased expanding circular fluid wave on mouse clicks across buttons and interactive elements.
-
-* 📅 **Jump to Date Calendar Navigation (`history_search.cpp` Parity):**
-  * Date picker integrated inside the chat search bar for instantaneous jumping and scrolling to messages on any historical calendar day.
+* 📅 **Floating Sticky Date Badge & Advanced Date Navigator:**
+  * Floating date pill appearing dynamically when scrolling up, displaying dual Shamsi (Persian) and Gregorian localized date formatting.
+  * Glassmorphic Date Navigator popover featuring 6 one-tap quick jump shortcuts (Today, Yesterday, 1 Week, 1 Month, 3 Months, Beginning of Chat) and direct calendar picker.
 
 * 👁️ **Channel Views & Forwards Counter:**
   * Real-time message view counts and forward/share badges in channel message metadata.
