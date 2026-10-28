@@ -87,6 +87,98 @@ function formatClockTimeWithSeconds(timestamp: number): string {
   return `${h}:${m}:${s}`
 }
 
+const isHdPhoto = (url?: string | null): boolean => {
+  if (!url || typeof url !== 'string') return false
+  if (url.endsWith('base64,')) return false
+  if (!url.startsWith('data:image/')) return url.length > 20
+  return url.length >= 2000
+}
+
+interface ContactChangePhotoItemProps {
+  accountId: string
+  userId: string
+  photoUrl?: string
+  fallbackAvatar?: string
+  onClick: () => void
+  isNew?: boolean
+}
+
+const ContactChangePhotoItem: React.FC<ContactChangePhotoItemProps> = ({
+  accountId,
+  userId,
+  photoUrl,
+  fallbackAvatar,
+  onClick,
+  isNew = false,
+}) => {
+  const isHd = isHdPhoto(photoUrl)
+  const [displayUrl, setDisplayUrl] = useState<string | null>(
+    isHd ? (photoUrl || null) : (photoUrl || fallbackAvatar || null)
+  )
+
+  useEffect(() => {
+    if (isHdPhoto(photoUrl)) {
+      setDisplayUrl(photoUrl!)
+      return
+    }
+
+    let isMounted = true
+    if (window.guidegram?.getProfilePhoto && accountId && userId) {
+      window.guidegram
+        .getProfilePhoto(accountId, userId, false, false)
+        .then((url) => {
+          if (isMounted && url && isHdPhoto(url)) {
+            setDisplayUrl(url)
+          }
+        })
+        .catch(() => {})
+    }
+
+    const unsub = window.guidegram?.on?.(
+      'telegram:user-avatar-updated',
+      (payload: { accountId: string; userId?: string; peerId?: string; avatarUrl?: string }) => {
+        const targetId = payload?.peerId || payload?.userId
+        if (payload?.accountId === accountId && (targetId === userId || String(targetId) === String(userId))) {
+          if (payload.avatarUrl && isHdPhoto(payload.avatarUrl) && isMounted) {
+            setDisplayUrl(payload.avatarUrl)
+          }
+        }
+      }
+    )
+
+    return () => {
+      isMounted = false
+      unsub?.()
+    }
+  }, [accountId, userId, photoUrl, fallbackAvatar])
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative rounded-2xl overflow-hidden border-2 shadow-lg cursor-pointer hover:scale-105 transition-all group bg-dark-800 shrink-0 ${
+        isNew
+          ? 'w-20 h-20 border-emerald-500/50 hover:border-emerald-400'
+          : 'w-12 h-12 border-white/10 hover:border-white/30'
+      }`}
+    >
+      {displayUrl ? (
+        <img
+          src={displayUrl}
+          alt={isNew ? 'عکس جدید' : 'عکس قبلی'}
+          className="w-full h-full object-cover group-hover:brightness-110 transition-all"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px]">
+          بدون عکس
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+        <ZoomIn className={isNew ? 'w-5 h-5 text-white/90 drop-shadow' : 'w-3.5 h-3.5 text-white/90 drop-shadow'} />
+      </div>
+    </div>
+  )
+}
+
 export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   isOpen,
   accountId,
@@ -111,11 +203,11 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null)
   const [loadingPreviewHd, setLoadingPreviewHd] = useState(false)
 
-  const handleOpenPhotoPreview = async (userId: string, currentUrl?: string) => {
+  const handleOpenPhotoPreview = async (userId: string, currentUrl?: string, isOldPhoto = false) => {
     if (currentUrl) {
       setPreviewPhotoUrl(currentUrl)
     }
-    if (window.guidegram?.getProfilePhoto && accountId && userId) {
+    if (!isOldPhoto && window.guidegram?.getProfilePhoto && accountId && userId) {
       setLoadingPreviewHd(true)
       try {
         const hdUrl = await window.guidegram.getProfilePhoto(accountId, userId, true, false)
@@ -1392,37 +1484,23 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                               </div>
                             ) : (
                               <div className="flex items-center justify-between gap-4 py-1">
-                                {/* Left/Main: New Profile Photo (High Quality) */}
+                                {/* Left/Main: New Profile Photo */}
                                 <div className="flex items-center gap-3.5">
-                                  <div
-                                    onClick={() => handleOpenPhotoPreview(evt.userId, evt.newPhotoUrl || evt.userAvatarUrl)}
-                                    className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-lg cursor-pointer hover:scale-105 hover:border-emerald-400 transition-all group bg-dark-800 shrink-0"
-                                  >
-                                    {evt.newPhotoUrl || evt.userAvatarUrl ? (
-                                      <img
-                                        src={evt.newPhotoUrl || evt.userAvatarUrl}
-                                        alt="عکس جدید"
-                                        className="w-full h-full object-cover group-hover:brightness-110 transition-all"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
-                                        بدون عکس
-                                      </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
-                                      بزرگنمایی
-                                    </div>
-                                  </div>
+                                  <ContactChangePhotoItem
+                                    accountId={accountId}
+                                    userId={evt.userId}
+                                    photoUrl={evt.newPhotoUrl}
+                                    fallbackAvatar={evt.userAvatarUrl}
+                                    isNew={true}
+                                    onClick={() => handleOpenPhotoPreview(evt.userId, evt.newPhotoUrl || evt.userAvatarUrl, false)}
+                                  />
 
                                   <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-1.5">
                                       <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold text-[10px]">
-                                        عکس جدید با کیفیت
+                                        عکس جدید
                                       </span>
                                     </div>
-                                    <span className="text-gray-400 text-[11px]">
-                                      برای مشاهده سایز کامل و HD کلیک کنید
-                                    </span>
                                   </div>
                                 </div>
 
@@ -1430,16 +1508,13 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                 {evt.oldPhotoUrl && evt.oldPhotoUrl !== evt.newPhotoUrl && (
                                   <div className="flex flex-col items-center gap-1 opacity-75 hover:opacity-100 transition-opacity shrink-0">
                                     <span className="text-[9px] text-gray-400">عکس قبلی</span>
-                                    <div
-                                      onClick={() => handleOpenPhotoPreview(evt.userId, evt.oldPhotoUrl)}
-                                      className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow cursor-pointer hover:scale-105 transition-transform"
-                                    >
-                                      <img
-                                        src={evt.oldPhotoUrl}
-                                        alt="عکس قبلی"
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
+                                    <ContactChangePhotoItem
+                                      accountId={accountId}
+                                      userId={evt.userId}
+                                      photoUrl={evt.oldPhotoUrl}
+                                      isNew={false}
+                                      onClick={() => handleOpenPhotoPreview(evt.userId, evt.oldPhotoUrl, true)}
+                                    />
                                   </div>
                                 )}
                               </div>
@@ -1552,7 +1627,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative min-w-[320px] sm:min-w-[440px] max-w-2xl min-h-[320px] max-h-[85vh] rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-dark-900 flex flex-col items-center justify-center p-4 cursor-default"
+              className="relative min-w-[320px] sm:min-w-[440px] max-w-4xl min-h-[320px] max-h-[85vh] rounded-3xl overflow-hidden border border-white/20 shadow-2xl bg-dark-900 flex flex-col items-center justify-center p-4 cursor-default"
             >
               <button
                 type="button"

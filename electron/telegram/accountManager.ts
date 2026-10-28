@@ -2705,6 +2705,9 @@ export class AccountManager {
         if (c.photo?.small) {
           this.peerPhotos.set(`${accountId}_${id}`, c.photo.small)
         }
+        if (c.photo?.big) {
+          this.peerBigPhotos.set(`${accountId}_${id}`, c.photo.big)
+        }
         let avatarUrl: string | undefined = undefined
         const avatarCacheKey = `${accountId}_${id}`
         if (this.avatarCache.has(avatarCacheKey)) {
@@ -3546,14 +3549,21 @@ export class AccountManager {
         const baseName = `${accountId}_${peerId}${isBig ? '_big' : ''}.jpg`
         const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
         const markedPeerId = `-100${cleanPeerId}`
-        const candidateFiles = [
-          path.join(this.avatarsDir, `avatar_${baseName}`),
-          path.join(this.avatarsDir, baseName),
-          path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`),
-          path.join(this.avatarsDir, `avatar_${accountId}_${markedPeerId}.jpg`),
-          path.join(this.avatarsDir, `avatar_${accountId}_${cleanPeerId}.jpg`),
-          path.join(this.avatarsDir, `${accountId}_${peerId}.jpg`),
-        ]
+        const candidateFiles = isBig
+          ? [
+              path.join(this.avatarsDir, `avatar_${baseName}`),
+              path.join(this.avatarsDir, baseName),
+              path.join(this.avatarsDir, `avatar_${accountId}_${markedPeerId}_big.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_${cleanPeerId}_big.jpg`),
+            ]
+          : [
+              path.join(this.avatarsDir, `avatar_${baseName}`),
+              path.join(this.avatarsDir, baseName),
+              path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_${markedPeerId}.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_${cleanPeerId}.jpg`),
+              path.join(this.avatarsDir, `${accountId}_${peerId}.jpg`),
+            ]
 
         if (forceRefresh) {
           this.avatarCache.delete(cacheKey)
@@ -3597,9 +3607,7 @@ export class AccountManager {
         // Check if we have photo location cached
         let photoLoc = isBig
           ? this.peerBigPhotos.get(`${accountId}_${peerId}`) ||
-            this.peerBigPhotos.get(`${accountId}_${markedPeerId}`) ||
-            this.peerPhotos.get(`${accountId}_${peerId}`) ||
-            this.peerPhotos.get(`${accountId}_${markedPeerId}`)
+            this.peerBigPhotos.get(`${accountId}_${markedPeerId}`)
           : this.peerPhotos.get(`${accountId}_${peerId}`) ||
             this.peerPhotos.get(`${accountId}_${markedPeerId}`) ||
             this.peerBigPhotos.get(`${accountId}_${peerId}`) ||
@@ -3719,6 +3727,18 @@ export class AccountManager {
               avatarUrl: dataUrl,
             })
             return dataUrl
+          }
+        }
+
+        if (isBig && !fs.existsSync(avatarFile)) {
+          const smallAvatarFile = path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`)
+          if (fs.existsSync(smallAvatarFile)) {
+            try {
+              const data = await fs.promises.readFile(smallAvatarFile)
+              if (data.length > 0) {
+                return `data:image/jpeg;base64,${data.toString('base64')}`
+              }
+            } catch {}
           }
         }
 
