@@ -5617,6 +5617,41 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               </button>
             </div>
           )}
+          {/* Jump to Date (Calendar Picker - tdesktop history_search.cpp parity) */}
+          <div className="relative flex items-center shrink-0">
+            <input
+              type="date"
+              id="search-jump-to-date"
+              onChange={(e) => {
+                if (!e.target.value) return
+                const selectedTimestamp = new Date(e.target.value).getTime()
+                let closestMsg: MessageItem | null = null
+                let minDiff = Infinity
+                for (const m of messages) {
+                  const diff = Math.abs(m.date - selectedTimestamp)
+                  if (diff < minDiff) {
+                    minDiff = diff
+                    closestMsg = m
+                  }
+                }
+                if (closestMsg) {
+                  handleScrollToReply(closestMsg.id)
+                  showToast(`Jumped to ${new Date(closestMsg.date).toLocaleDateString()}`)
+                } else {
+                  showToast('No messages found around that date')
+                }
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+              title="Jump to date"
+            />
+            <button
+              type="button"
+              className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors pointer-events-none"
+              title="Jump to date"
+            >
+              <Calendar className="w-4 h-4 text-accent-cyan" />
+            </button>
+          </div>
           <button
             onClick={() => {
               setIsSearchOpen(false)
@@ -6718,6 +6753,34 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       {isMessagePinned(msg.id) && (
                         <span title="Pinned message" className="inline-flex items-center text-amber-400">
                           <Pin className="w-2.5 h-2.5 inline" />
+                        </span>
+                      )}
+
+                      {/* Channel Message Views & Forwards Counter (tdesktop parity) */}
+                      {typeof msg.views === 'number' && (
+                        <span
+                          title={`${msg.views.toLocaleString()} views`}
+                          className="inline-flex items-center gap-0.5 text-gray-400 opacity-80"
+                        >
+                          <Eye className="w-2.5 h-2.5 inline" />
+                          <span className="text-[9px] font-mono">
+                            {msg.views >= 1000000
+                              ? `${(msg.views / 1000000).toFixed(1)}M`
+                              : msg.views >= 1000
+                              ? `${(msg.views / 1000).toFixed(1)}K`
+                              : msg.views}
+                          </span>
+                        </span>
+                      )}
+                      {typeof msg.forwards === 'number' && msg.forwards > 0 && (
+                        <span
+                          title={`${msg.forwards.toLocaleString()} shares`}
+                          className="inline-flex items-center gap-0.5 text-gray-400 opacity-80"
+                        >
+                          <Forward className="w-2.5 h-2.5 inline" />
+                          <span className="text-[9px] font-mono">
+                            {msg.forwards >= 1000 ? `${(msg.forwards / 1000).toFixed(1)}K` : msg.forwards}
+                          </span>
                         </span>
                       )}
 

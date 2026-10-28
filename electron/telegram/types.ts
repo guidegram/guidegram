@@ -424,6 +424,8 @@ export interface MessageItem {
   entities?: MessageEntityItem[]
   postAuthor?: string
   senderRank?: string
+  views?: number
+  forwards?: number
   ttlSeconds?: number
   isSilent?: boolean
   senderEmojiStatusId?: string
