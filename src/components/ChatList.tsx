@@ -20,6 +20,7 @@ interface ChatListProps {
   showChatId?: boolean
   ghostMode?: boolean
   cloudFolders?: CloudFolderItem[]
+  isLoadingDialogs?: boolean
   isLoadingMoreDialogs?: boolean
   onSearchChange: (query: string) => void
   onSelectChat: (chatId: string, targetMsgId?: number, provisionalPeer?: Partial<DialogItem>) => void
@@ -51,6 +52,7 @@ export const ChatList = React.memo<ChatListProps>(({
   showChatId = true,
   ghostMode = false,
   cloudFolders,
+  isLoadingDialogs = false,
   isLoadingMoreDialogs = false,
   onSearchChange,
   onSelectChat,
@@ -1032,6 +1034,21 @@ export const ChatList = React.memo<ChatListProps>(({
                 {t('app.search_placeholder')}
               </div>
             )}
+          </div>
+        ) : isLoadingDialogs && filteredDialogs.length === 0 ? (
+          <div className="flex flex-col space-y-1 p-2">
+            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-white/5 shrink-0" />
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="flex justify-between items-center">
+                    <div className="h-3.5 bg-white/10 rounded-md w-28" />
+                    <div className="h-2.5 bg-white/5 rounded-md w-10" />
+                  </div>
+                  <div className="h-3 bg-white/5 rounded-md w-44" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredDialogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 text-center text-xs text-gray-400 gap-2 select-none my-auto">

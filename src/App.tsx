@@ -113,6 +113,7 @@ export const App: React.FC = () => {
     peerId: string
     initialDetails?: Partial<ChatDetails>
   } | null>(null)
+  const [isLoadingDialogs, setIsLoadingDialogs] = useState(false)
   const [isLoadingMoreDialogs, setIsLoadingMoreDialogs] = useState(false)
   const isLoadingMoreDialogsRef = useRef(false)
   const isBackgroundSyncingDialogsRef = useRef(false)
@@ -251,6 +252,23 @@ export const App: React.FC = () => {
           if (accs && accs.length > 0) {
             const firstConnected = (accs as AccountInfo[]).find((a: AccountInfo) => a.status === 'connected') || accs[0]
             setActiveAccountId(firstConnected.id)
+
+            // Pre-warm local cache for all accounts immediately so account switches are instant (0ms)
+            if (window.guidegram?.getCachedDialogs) {
+              const warmedMap: Record<string, DialogItem[]> = {}
+              for (const acc of (accs as AccountInfo[])) {
+                try {
+                  const cached = await window.guidegram.getCachedDialogs(acc.id)
+                  if (cached && cached.length > 0) {
+                    warmedMap[acc.id] = cached
+                  }
+                } catch (_) {}
+              }
+              if (Object.keys(warmedMap).length > 0) {
+                setDialogsByAccount((prev) => ({ ...warmedMap, ...prev }))
+              }
+            }
+
             if (firstConnected.status === 'connected') {
               loadDialogsForAccount(firstConnected.id)
             }
@@ -971,11 +989,14 @@ export const App: React.FC = () => {
     if (!window.guidegram?.getCloudFolders) return
     try {
       const folders = await window.guidegram.getCloudFolders(accountId)
-      if (Array.isArray(folders) && folders.length > 0) {
+      if (Array.isArray(folders)) {
         setCloudFolders(folders)
+      } else {
+        setCloudFolders([])
       }
     } catch (err) {
       console.error('Failed to load cloud folders:', err)
+      setCloudFolders([])
     }
   }
 
@@ -985,11 +1006,13 @@ export const App: React.FC = () => {
       hasMoreDialogsRef.current = true
       loadCloudFoldersForAccount(accountId)
 
+      let hasCached = false
       // Instant cache load (<10ms) from local disk
       if (window.guidegram.getCachedDialogs) {
         try {
           const cached = await window.guidegram.getCachedDialogs(accountId)
           if (cached && cached.length > 0) {
+            hasCached = true
             setDialogsByAccount((prev) => ({ ...prev, [accountId]: cached }))
           }
         } catch (cacheErr) {
@@ -997,7 +1020,13 @@ export const App: React.FC = () => {
         }
       }
 
-      const dialogs = await window.guidegram.getDialogs(accountId, 350)
+      if (!hasCached && (!dialogsByAccountRef.current[accountId] || dialogsByAccountRef.current[accountId].length === 0)) {
+        setIsLoadingDialogs(true)
+      }
+
+      // Snappy initial fetch (80 dialogs = 1 network chunk, <400ms)
+      const initialLimit = hasCached ? 150 : 80
+      const dialogs = await window.guidegram.getDialogs(accountId, initialLimit)
       const uniqueMap = new Map<string, DialogItem>()
       for (const d of dialogs) {
         if (!uniqueMap.has(d.id)) {
@@ -1015,6 +1044,8 @@ export const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load dialogs:', err)
+    } finally {
+      setIsLoadingDialogs(false)
     }
   }
 
@@ -1195,6 +1226,9 @@ export const App: React.FC = () => {
     setActiveAccountId(accountId)
     setIsUnifiedInboxOpen(false)
     setActiveChatId(null)
+    setActiveTab('all')
+    setSearchQuery('')
+    setCloudFolders([])
 
     loadDialogsForAccount(accountId)
   }
@@ -2146,6 +2180,7 @@ export const App: React.FC = () => {
                   showChatId={config?.showChatId ?? true}
                   ghostMode={ghostMode}
                   cloudFolders={cloudFolders}
+                  isLoadingDialogs={isLoadingDialogs}
                   onSearchChange={setSearchQuery}
                   onSelectChat={handleSelectChat}
                   onSelectPeer={handleSelectUserOrChat}
@@ -2261,6 +2296,7 @@ export const App: React.FC = () => {
                   showChatId={config?.showChatId ?? true}
                   ghostMode={ghostMode}
                   cloudFolders={cloudFolders}
+                  isLoadingDialogs={isLoadingDialogs}
                   onSearchChange={setSearchQuery}
                   onSelectChat={handleSelectChat}
                   onSelectPeer={handleSelectUserOrChat}

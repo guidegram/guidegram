@@ -61,7 +61,7 @@ export const ChatTabs: React.FC<ChatTabsProps> = ({
         window.guidegram
           .getCloudFolders(accountId)
           .then((folders) => {
-            if (isMounted && Array.isArray(folders) && folders.length > 0) {
+            if (isMounted && Array.isArray(folders)) {
               setCloudFolders(folders)
               onCloudFoldersLoaded?.(folders)
             }
