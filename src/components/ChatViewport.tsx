@@ -4038,8 +4038,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
-    // Helper to render inline entities inside a sub-range [startRange, endRange]
-    const renderInlineRange = (
+    // Helper to render basic inline entities inside a sub-range [startRange, endRange]
+    const renderBasicInlineRange = (
       startRange: number,
       endRange: number,
       inlineEnts: MessageEntityItem[],
@@ -4165,6 +4165,70 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         segments.push(<React.Fragment key={`seg-${start}-${end}`}>{node}</React.Fragment>)
       }
       return segments
+    }
+
+    // Helper to render inline entities with cohesive, unified Spoiler boundary preservation
+    const renderInlineRange = (
+      startRange: number,
+      endRange: number,
+      inlineEnts: MessageEntityItem[],
+      keyPrefix: string
+    ): React.ReactNode[] => {
+      // Find spoiler entities that intersect with [startRange, endRange]
+      const spoilerEnts = inlineEnts
+        .filter(
+          (e) =>
+            e.type === 'spoiler' &&
+            typeof e.offset === 'number' &&
+            typeof e.length === 'number' &&
+            e.offset < endRange &&
+            e.offset + e.length > startRange
+        )
+        .sort((a, b) => a.offset - b.offset)
+
+      if (spoilerEnts.length > 0) {
+        const nonSpoilerEnts = inlineEnts.filter((e) => e.type !== 'spoiler')
+        const result: React.ReactNode[] = []
+        let cursor = startRange
+
+        for (let sIdx = 0; sIdx < spoilerEnts.length; sIdx++) {
+          const sp = spoilerEnts[sIdx]
+          const spStart = Math.max(startRange, Math.min(endRange, sp.offset))
+          const spEnd = Math.max(startRange, Math.min(endRange, sp.offset + sp.length))
+
+          if (spStart > cursor) {
+            result.push(
+              ...renderBasicInlineRange(cursor, spStart, nonSpoilerEnts, `${keyPrefix}-pre-${cursor}`)
+            )
+          }
+
+          if (spEnd > spStart) {
+            const innerNodes = renderBasicInlineRange(
+              spStart,
+              spEnd,
+              nonSpoilerEnts,
+              `${keyPrefix}-sp-${spStart}`
+            )
+            result.push(
+              <InteractiveSpoiler key={`${keyPrefix}-spoiler-${spStart}-${spEnd}`}>
+                {innerNodes}
+              </InteractiveSpoiler>
+            )
+          }
+
+          cursor = spEnd
+        }
+
+        if (cursor < endRange) {
+          result.push(
+            ...renderBasicInlineRange(cursor, endRange, nonSpoilerEnts, `${keyPrefix}-post-${cursor}`)
+          )
+        }
+
+        return result
+      }
+
+      return renderBasicInlineRange(startRange, endRange, inlineEnts, keyPrefix)
     }
 
     // 1. If official Telegram entities are present, build rich element tree with unified block containers
@@ -4333,9 +4397,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         }
 
         if (part.startsWith('||') && part.endsWith('||') && part.length > 4) {
+          const inner = part.slice(2, -2)
           return (
             <InteractiveSpoiler key={partKey} title="Click to reveal spoiler">
-              {part.slice(2, -2)}
+              {renderInlineTokens(inner, `${partKey}-sp`)}
             </InteractiveSpoiler>
           )
         }
@@ -7423,6 +7488,183 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               </motion.span>
             )}
           </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Telegram Desktop Floating Sticky Date Badge & Advanced Date Navigator */}
+      <AnimatePresence>
+        {(showFloatingDate || isDateNavOpen) && floatingScrollDate && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+            onMouseEnter={() => {
+              isFloatingDateHoveredRef.current = true
+              if (floatingDateTimerRef.current) clearTimeout(floatingDateTimerRef.current)
+            }}
+            onMouseLeave={() => {
+              isFloatingDateHoveredRef.current = false
+              floatingDateTimerRef.current = setTimeout(() => {
+                if (!isDateNavOpen) setShowFloatingDate(false)
+              }, 1800)
+            }}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center select-none"
+          >
+            <button
+              type="button"
+              onClick={() => setIsDateNavOpen((prev) => !prev)}
+              className="px-3.5 py-1.5 rounded-full bg-dark-900/90 hover:bg-dark-800 text-gray-200 hover:text-white border border-white/10 hover:border-accent-cyan/40 shadow-2xl backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 group"
+              title="Click to jump to a specific date"
+            >
+              <Calendar className="w-3.5 h-3.5 text-accent-cyan group-hover:rotate-6 transition-transform" />
+              <span className="text-xs font-semibold tracking-wide">
+                {formatFloatingDate(floatingScrollDate)}
+              </span>
+              <ChevronDown
+                className={`w-3 h-3 text-gray-400 group-hover:text-cyan-400 transition-transform ${
+                  isDateNavOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Advanced Date Navigator Popover */}
+      <AnimatePresence>
+        {isDateNavOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-35 bg-black/20 backdrop-blur-[1px]"
+              onClick={() => setIsDateNavOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -12, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 25 }}
+              className="absolute top-14 left-1/2 -translate-x-1/2 z-40 w-84 p-4 rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col gap-3"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-accent-cyan" />
+                  <span className="text-xs font-bold text-white">پرش به تاریخ / Jump to Date</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDateNavOpen(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Current View Date Banner */}
+              {floatingScrollDate && (
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-0.5">
+                  <span className="text-[10px] text-gray-400 font-medium">تاریخ پیام فعلی در کادر:</span>
+                  <span className="text-xs font-bold text-accent-cyan">
+                    {new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    }).format(floatingScrollDate)}
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    {new Intl.DateTimeFormat('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    }).format(floatingScrollDate)}
+                  </span>
+                </div>
+              )}
+
+              {/* Quick Presets Grid */}
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleJumpToPreset('today')}
+                  className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Clock className="w-3 h-3 text-accent-cyan" />
+                  <span>امروز (Today)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToPreset('yesterday')}
+                  className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Clock className="w-3 h-3 text-amber-400" />
+                  <span>دیروز (Yesterday)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToPreset('week')}
+                  className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Calendar className="w-3 h-3 text-emerald-400" />
+                  <span>۱ هفته پیش</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToPreset('month')}
+                  className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Calendar className="w-3 h-3 text-indigo-400" />
+                  <span>۱ ماه پیش</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToPreset('threeMonths')}
+                  className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Calendar className="w-3 h-3 text-violet-400" />
+                  <span>۳ ماه پیش</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleJumpToPreset('first')}
+                  className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ChevronUp className="w-3 h-3 text-pink-400" />
+                  <span>اولین پیام چت</span>
+                </button>
+              </div>
+
+              {/* Custom Date Picker */}
+              <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5">
+                <label className="text-[10px] text-gray-400 font-medium">
+                  انتخاب تاریخ تقویم (Calendar Date):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={targetJumpDate}
+                    onChange={(e) => setTargetJumpDate(e.target.value)}
+                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-accent-cyan transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (targetJumpDate) {
+                        const tEpoch = new Date(targetJumpDate).getTime()
+                        handleJumpToTimestamp(tEpoch)
+                      }
+                    }}
+                    disabled={!targetJumpDate}
+                    className="px-3 py-1.5 rounded-xl bg-accent-cyan hover:bg-cyan-400 disabled:opacity-50 text-dark-950 font-bold text-xs transition-all cursor-pointer"
+                  >
+                    برو
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
