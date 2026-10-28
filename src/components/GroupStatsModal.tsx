@@ -40,7 +40,7 @@ interface GroupStatsModalProps {
   messages: MessageItem[]
 }
 
-type Timeframe = 'today' | 'yesterday' | 'week' | 'month' | 'all'
+type Timeframe = 'today' | 'yesterday' | 'week' | 'all'
 
 // Common Persian & English stopwords to exclude from top words
 const STOPWORDS = new Set([
@@ -336,6 +336,10 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
       : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
+  // Maximum safety ceiling for messages to analyze in client memory
+  const MAX_MESSAGES_CEILING = 50000
+  const BATCH_SIZE = 100
+
   // Compute required start timestamp for the selected timeframe
   const getTimeframeStartTime = (tf: Timeframe) => {
     const now = new Date()
@@ -343,7 +347,6 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     if (tf === 'today') return todayStart
     if (tf === 'yesterday') return todayStart - 24 * 3600 * 1000
     if (tf === 'week') return now.getTime() - 7 * 24 * 3600 * 1000
-    if (tf === 'month') return now.getTime() - 30 * 24 * 3600 * 1000
     return 0 // all
   }
 
@@ -355,19 +358,22 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const requiredStart = useMemo(() => getTimeframeStartTime(timeframe), [timeframe])
 
   const isTimeframeCovered = useMemo(() => {
+    if (allMessages.length >= MAX_MESSAGES_CEILING) return true
     if (timeframe === 'all') return !hasMoreHistory
     return oldestMessageDate <= requiredStart || !hasMoreHistory
-  }, [timeframe, oldestMessageDate, requiredStart, hasMoreHistory])
+  }, [timeframe, oldestMessageDate, requiredStart, hasMoreHistory, allMessages.length])
 
   const syncProgressPercent = useMemo(() => {
-    if (requiredStart === 0) return hasMoreHistory ? 60 : 100
+    if (requiredStart === 0) {
+      return Math.min(100, Math.round((allMessages.length / MAX_MESSAGES_CEILING) * 100))
+    }
     const now = Date.now()
     const totalSpan = now - requiredStart
     if (totalSpan <= 0) return 100
     const scannedSpan = Math.max(0, now - oldestMessageDate)
     const ratio = scannedSpan / totalSpan
     return Math.min(100, Math.max(8, Math.round(ratio * 100)))
-  }, [requiredStart, oldestMessageDate, hasMoreHistory])
+  }, [requiredStart, oldestMessageDate, allMessages.length])
 
   const abortSyncRef = useRef(false)
 
@@ -376,11 +382,11 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     setIsLoadingHistory(false)
   }
 
-  // Progressive Backward Crawler: fetches batches until target boundary is reached
+  // Progressive Backward Crawler: dynamically fetches batches until timeframe boundary or 50k ceiling is reached
   const ensureTimeframeHistory = async (tf: Timeframe) => {
     if (!window.guidegram?.getHistoricalMessages || !chat?.accountId || isLoadingHistory) return
     const targetStart = getTimeframeStartTime(tf)
-    if (targetStart === 0 && !hasMoreHistory) return
+    if (targetStart === 0 && (!hasMoreHistory || allMessages.length >= MAX_MESSAGES_CEILING)) return
 
     abortSyncRef.current = false
     setIsLoadingHistory(true)
@@ -391,17 +397,13 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         ? Math.min(...currentMessages.map((m) => normalizeTimestamp(m.date)))
         : Date.now()
 
-      let attempts = 0
-      // Deep history crawler: allows up to 300 batches (30,000+ messages) to cover busy groups
-      const maxBatches = tf === 'month' ? 500 : tf === 'week' ? 350 : tf === 'yesterday' ? 150 : 60
-
+      // Dynamic loop: crawls until oldest message reaches targetStart timestamp,
+      // or chat has no more history on server, or client reaches 50,000 message ceiling.
       while (
         (targetStart === 0 || oldestDate > targetStart) &&
-        attempts < maxBatches &&
+        currentMessages.length < MAX_MESSAGES_CEILING &&
         !abortSyncRef.current
       ) {
-        attempts++
-
         // Extract lowest message ID in current pool for reliable offsetId pagination
         const oldestMsg = currentMessages.length > 0
           ? currentMessages.reduce((min, m) => (m.id < min.id ? m : min), currentMessages[0])
@@ -411,7 +413,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         const older = await window.guidegram.getHistoricalMessages(
           chat.accountId,
           chat.id,
-          100,
+          BATCH_SIZE,
           0,
           offsetId
         )
@@ -440,7 +442,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         setAllMessages(currentMessages)
         oldestDate = Math.min(...currentMessages.map((m) => normalizeTimestamp(m.date)))
 
-        // Allow micro-render animation and avoid rate-limiting
+        // Adaptive pacing (100ms) to prevent Telegram flood-wait rate limits while streaming smooth updates
         await new Promise((r) => setTimeout(r, 100))
       }
     } catch (err) {
@@ -504,14 +506,12 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     const yesterdayStart = todayStart - 24 * 3600 * 1000
     const weekStart = now.getTime() - 7 * 24 * 3600 * 1000
-    const monthStart = now.getTime() - 30 * 24 * 3600 * 1000
 
     return allMessages.filter((m) => {
       const msgTime = normalizeTimestamp(m.date)
       if (timeframe === 'today') return msgTime >= todayStart
       if (timeframe === 'yesterday') return msgTime >= yesterdayStart && msgTime < todayStart
       if (timeframe === 'week') return msgTime >= weekStart
-      if (timeframe === 'month') return msgTime >= monthStart
       return true // all
     })
   }, [allMessages, timeframe])
@@ -731,14 +731,12 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     const yesterdayStart = todayStart - 24 * 3600 * 1000
     const weekStart = now.getTime() - 7 * 24 * 3600 * 1000
-    const monthStart = now.getTime() - 30 * 24 * 3600 * 1000
 
     return joins
       .filter((j) => {
         if (timeframe === 'today') return j.date >= todayStart
         if (timeframe === 'yesterday') return j.date >= yesterdayStart && j.date < todayStart
         if (timeframe === 'week') return j.date >= weekStart
-        if (timeframe === 'month') return j.date >= monthStart
         return true
       })
       .sort((a, b) => b.date - a.date)
@@ -986,18 +984,6 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             >
               {t('stats.week')}
             </button>
-            {/* 30-day option temporarily disabled */}
-            {/* <button
-              type="button"
-              onClick={() => handleTimeframeChange('month')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
-                timeframe === 'month'
-                  ? 'bg-primary-600 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              {t('stats.month')}
-            </button> */}
             <button
               type="button"
               onClick={() => handleTimeframeChange('all')}
@@ -1057,7 +1043,9 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             </div>
             <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
               <span>{t('stats.timeframe_coverage', { percent: formatNumber(syncProgressPercent) })}</span>
-              <span>{t('stats.fetching_batch', { count: formatNumber(allMessages.length) })}</span>
+              <span>
+                {formatNumber(allMessages.length)} / {formatNumber(MAX_MESSAGES_CEILING)} پیام
+              </span>
             </div>
           </div>
         ) : (
@@ -1076,6 +1064,11 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
               <span className="text-[11px] text-gray-500">
                 ({formatNumber(allMessages.length)} {t('stats.total_messages')})
               </span>
+              {allMessages.length >= MAX_MESSAGES_CEILING && (
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                  {isPersian ? 'سقف ۵۰,۰۰۰ پیام' : '50k cap'}
+                </span>
+              )}
               {oldestMessageDate > 0 && (
                 <span className="text-[11px] text-gray-500 hidden sm:inline">
                   • {t('stats.reached_date', { date: formatReachedDate(oldestMessageDate) })}
