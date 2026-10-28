@@ -31,6 +31,19 @@ const defaultAppConfig: AppConfig = {
   bubbleRadius: 16,
   bubblePadding: 10,
   markAllReadEnabled: true,
+  notificationsEnabled: true,
+  soundEnabled: true,
+  notificationTone: 'classic',
+  notificationPosition: 'bottom-right',
+  notificationMaxStack: 3,
+  notificationPrivateChats: true,
+  notificationGroups: true,
+  notificationChannels: false,
+  notificationPrivacyMode: 'full',
+  notificationQuickReply: true,
+  notificationBatching: true,
+  notificationVibrate: true,
+  notificationFlashTaskbar: true,
 }
 
 const defaultHarvestStatus: AutoHarvestStatus = {
@@ -90,6 +103,8 @@ export function initMobileBridge(): void {
     confirmClose: async () => {},
     isMaximized: async () => false,
     showTitlebarMenu: async () => {},
+    flashWindow: async () => true,
+    focusWindow: async () => true,
 
     // Accounts
     getAccounts: async (): Promise<AccountInfo[]> => {

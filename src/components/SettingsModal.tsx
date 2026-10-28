@@ -18,6 +18,8 @@ import {
   Activity,
   History,
   Users,
+  Megaphone,
+  CornerDownLeft,
   Bookmark,
   Trash2,
   Code,
@@ -281,10 +283,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   // Window Close Action Preference
   const [closeAction, setCloseAction] = useState<CloseAction>('ask')
 
-  // Notifications & Sound (Phase 72 Notification Tones Parity)
+  // Notifications & Sound (Advanced Pro Suite - Telegram Parity & Android HUD)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [notificationTone, setNotificationTone] = useState<string>('classic')
+  const [notificationPosition, setNotificationPosition] = useState<'bottom-right' | 'top-right' | 'bottom-left' | 'top-left'>('bottom-right')
+  const [notificationMaxStack, setNotificationMaxStack] = useState<number>(3)
+  const [notificationPrivateChats, setNotificationPrivateChats] = useState<boolean>(true)
+  const [notificationGroups, setNotificationGroups] = useState<boolean>(true)
+  const [notificationChannels, setNotificationChannels] = useState<boolean>(false)
+  const [notificationPrivacyMode, setNotificationPrivacyMode] = useState<'full' | 'hide-text' | 'hide-all'>('full')
+  const [notificationQuickReply, setNotificationQuickReply] = useState<boolean>(true)
+  const [notificationBatching, setNotificationBatching] = useState<boolean>(true)
+  const [notificationVibrate, setNotificationVibrate] = useState<boolean>(true)
+  const [notificationFlashTaskbar, setNotificationFlashTaskbar] = useState<boolean>(true)
   const [savedRingtones, setSavedRingtones] = useState<SavedRingtoneItem[]>([])
   const [isLoadingRingtones, setIsLoadingRingtones] = useState(false)
   const [isUploadingRingtone, setIsUploadingRingtone] = useState(false)
@@ -718,6 +730,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setNotificationsEnabled(cfg.notificationsEnabled ?? true)
         setSoundEnabled(cfg.soundEnabled ?? true)
         setNotificationTone(cfg.notificationTone || 'classic')
+        setNotificationPosition(cfg.notificationPosition || 'bottom-right')
+        setNotificationMaxStack(cfg.notificationMaxStack ?? 3)
+        setNotificationPrivateChats(cfg.notificationPrivateChats ?? true)
+        setNotificationGroups(cfg.notificationGroups ?? true)
+        setNotificationChannels(cfg.notificationChannels ?? false)
+        setNotificationPrivacyMode(cfg.notificationPrivacyMode || 'full')
+        setNotificationQuickReply(cfg.notificationQuickReply ?? true)
+        setNotificationBatching(cfg.notificationBatching ?? true)
+        setNotificationVibrate(cfg.notificationVibrate ?? true)
+        setNotificationFlashTaskbar(cfg.notificationFlashTaskbar ?? true)
         setDownloadsPath(cfg.downloadsPath || '')
         setAlwaysAskDownloadPath(cfg.alwaysAskDownloadPath ?? false)
         setChatFontSize(cfg.chatFontSize || 14)
@@ -898,6 +920,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       notificationsEnabled,
       soundEnabled,
       notificationTone,
+      notificationPosition,
+      notificationMaxStack,
+      notificationPrivateChats,
+      notificationGroups,
+      notificationChannels,
+      notificationPrivacyMode,
+      notificationQuickReply,
+      notificationBatching,
+      notificationVibrate,
+      notificationFlashTaskbar,
       downloadsPath,
       alwaysAskDownloadPath,
       chatFontSize,
@@ -1616,21 +1648,233 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>{t('settings.notifications')}</span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2.5">
+                {/* Live Test Notification Banner */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-primary-950/40 via-dark-800 to-accent-cyan/10 border border-primary-500/20 flex items-center justify-between gap-3 shadow-sm">
+                  <div>
+                    <div className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary-400" />
+                      <span>موتور اعلان اختصاصی گایدگرام (Pro HUD)</span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      پیش‌نمایش زنده کارت‌های اعلان شناور با پاسخ سریع و ژست‌های حرکتی اندروید
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('guidegram:test-notification'))
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <Bell className="w-3.5 h-3.5" />
+                    <span>تست اعلان</span>
+                  </button>
+                </div>
+
+                {/* Master Switches */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <ToggleItem
-                    title="Desktop Notifications"
-                    desc="Show toast notifications when new messages arrive"
-                    icon={<Bell className="w-3.5 h-3.5" />}
+                    title="نمایش اعلان‌ها (Notifications HUD)"
+                    desc="نمایش کارت‌های شناور در گوشه صفحه با انیمیشن نرم"
+                    icon={<Bell className="w-3.5 h-3.5 text-primary-400" />}
                     checked={notificationsEnabled}
                     onChange={setNotificationsEnabled}
                   />
                   <ToggleItem
-                    title="Sound Effects"
-                    desc="Play sound on incoming direct messages"
+                    title="جلوه‌های صوتی (Sound Effects)"
+                    desc="پخش آوای پیام‌های دریافتی با وب‌آدیو"
                     icon={<Volume2 className="w-3.5 h-3.5 text-accent-cyan" />}
                     checked={soundEnabled}
                     onChange={setSoundEnabled}
                   />
+                  <ToggleItem
+                    title="ویبره و هپتیک (Haptic Feedback)"
+                    desc="الگوی لرزش اختصاصی برای اندروید و تبلت"
+                    icon={<Smartphone className="w-3.5 h-3.5 text-emerald-400" />}
+                    checked={notificationVibrate}
+                    onChange={setNotificationVibrate}
+                  />
+                  <ToggleItem
+                    title="چشمک در تسک‌بار (Taskbar Flash)"
+                    desc="جلب توجه آیکون در نوار وظیفه هنگام دریافت پیام"
+                    icon={<Laptop className="w-3.5 h-3.5 text-amber-400" />}
+                    checked={notificationFlashTaskbar}
+                    onChange={setNotificationFlashTaskbar}
+                  />
+                </div>
+
+                {/* Chat Categories Matrix */}
+                <div className="p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="text-xs font-bold text-gray-200">تفکیک اعلان بر اساس نوع گفتگو</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNotificationPrivateChats(!notificationPrivateChats)}
+                      className={`p-2.5 rounded-xl text-left transition-all border flex items-center justify-between ${
+                        notificationPrivateChats
+                          ? 'bg-primary-600/20 text-primary-300 border-primary-500/40 shadow-sm'
+                          : 'bg-dark-900/60 text-gray-400 border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">چت‌های خصوصی</span>
+                      </div>
+                      {notificationPrivateChats && <Check className="w-3.5 h-3.5 text-primary-400" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNotificationGroups(!notificationGroups)}
+                      className={`p-2.5 rounded-xl text-left transition-all border flex items-center justify-between ${
+                        notificationGroups
+                          ? 'bg-primary-600/20 text-primary-300 border-primary-500/40 shadow-sm'
+                          : 'bg-dark-900/60 text-gray-400 border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">گروه‌ها</span>
+                      </div>
+                      {notificationGroups && <Check className="w-3.5 h-3.5 text-primary-400" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNotificationChannels(!notificationChannels)}
+                      className={`p-2.5 rounded-xl text-left transition-all border flex items-center justify-between ${
+                        notificationChannels
+                          ? 'bg-primary-600/20 text-primary-300 border-primary-500/40 shadow-sm'
+                          : 'bg-dark-900/60 text-gray-400 border-white/5 hover:border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Megaphone className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">کانال‌ها</span>
+                      </div>
+                      {notificationChannels && <Check className="w-3.5 h-3.5 text-primary-400" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* HUD Behaviors: Quick Reply & Batching */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <ToggleItem
+                    title="پاسخ مستقیم (Inline Quick Reply)"
+                    desc="امکان ارسال پاسخ از داخل همان کارت اعلان بدون باز کردن صفحه"
+                    icon={<CornerDownLeft className="w-3.5 h-3.5 text-primary-400" />}
+                    checked={notificationQuickReply}
+                    onChange={setNotificationQuickReply}
+                  />
+                  <ToggleItem
+                    title="تجمیع ضد اسپم (Anti-Spam Digest)"
+                    desc="ادغام پیام‌های پیاپی از یک گفتگو در یک کارت مشترک"
+                    icon={<CheckCheck className="w-3.5 h-3.5 text-cyan-400" />}
+                    checked={notificationBatching}
+                    onChange={setNotificationBatching}
+                  />
+                </div>
+
+                {/* HUD Screen Position & Stacking Count */}
+                <div className="p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-gray-200">موقعیت قرارگیری روی مانیتور</div>
+                      <div className="text-[11px] text-gray-400">گوشه مورد نظر جهت نمایش کارت‌های شناور را انتخاب کنید</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'bottom-right' as const, label: 'پایین - راست' },
+                      { id: 'top-right' as const, label: 'بالا - راست' },
+                      { id: 'bottom-left' as const, label: 'پایین - چپ' },
+                      { id: 'top-left' as const, label: 'بالا - چپ' },
+                    ].map((pos) => {
+                      const isSel = notificationPosition === pos.id
+                      return (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => setNotificationPosition(pos.id)}
+                          className={`p-2 rounded-xl text-center text-xs font-medium transition-all border ${
+                            isSel
+                              ? 'bg-primary-600/20 text-primary-300 border-primary-500/40 shadow-sm'
+                              : 'bg-dark-900/60 text-gray-400 hover:text-gray-200 border-white/5 hover:border-white/10'
+                          }`}
+                        >
+                          {pos.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-medium text-gray-200">حداکثر تعداد کارت‌های همزمان</div>
+                      <div className="text-[11px] text-gray-400">بین ۱ تا ۵ کارت روی صفحه استک می‌شوند</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {[1, 2, 3, 4, 5].map((num) => {
+                        const isSel = notificationMaxStack === num
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setNotificationMaxStack(num)}
+                            className={`w-7 h-7 rounded-xl text-xs font-bold transition-all border flex items-center justify-center ${
+                              isSel
+                                ? 'bg-primary-600 text-white border-primary-500 shadow-md'
+                                : 'bg-dark-900 text-gray-400 hover:text-gray-200 border-white/5'
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Privacy Shield */}
+                <div className="p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div>
+                    <div className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-accent-cyan" />
+                      <span>سپر حریم خصوصی پیش‌نمایش (Privacy Shield)</span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      میزان اطلاعات نمایش داده شده در کارت اعلان را مدیریت کنید
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'full' as const, label: 'نمایش کامل', desc: 'نام و متن کامل پیام' },
+                      { id: 'hide-text' as const, label: 'مخفی‌سازی متن', desc: 'فقط نمایش نام فرستنده' },
+                      { id: 'hide-all' as const, label: 'حریم خصوصی مطلق', desc: 'مخفی‌سازی نام و متن' },
+                    ].map((mode) => {
+                      const isSel = notificationPrivacyMode === mode.id
+                      return (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => setNotificationPrivacyMode(mode.id)}
+                          className={`p-2.5 rounded-xl text-left transition-all border flex flex-col gap-0.5 ${
+                            isSel
+                              ? 'bg-primary-600/20 text-primary-300 border-primary-500/40 shadow-sm'
+                              : 'bg-dark-900/60 text-gray-400 hover:text-gray-200 border-white/5'
+                          }`}
+                        >
+                          <div className="text-xs font-semibold flex items-center justify-between">
+                            <span>{mode.label}</span>
+                            {isSel && <Check className="w-3 h-3 text-primary-400" />}
+                          </div>
+                          <div className="text-[10px] text-gray-400">{mode.desc}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
 
                 {/* Notification Tones Picker (Telegram Desktop Parity - Phase 72) */}

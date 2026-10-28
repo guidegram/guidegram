@@ -998,10 +998,20 @@ export interface AppConfig {
   autoConnectOnVpnDrop?: boolean
   // Automatic Media & Data Download (Telegram Desktop Parity)
   autoDownload?: AutoDownloadConfig
-  // Notifications & Sound
+  // Notifications & Sound (Advanced Pro Suite - Telegram Parity & Android HUD)
   notificationsEnabled?: boolean
   soundEnabled?: boolean
   notificationTone?: string
+  notificationPosition?: 'bottom-right' | 'top-right' | 'bottom-left' | 'top-left'
+  notificationMaxStack?: number
+  notificationPrivateChats?: boolean
+  notificationGroups?: boolean
+  notificationChannels?: boolean
+  notificationPrivacyMode?: 'full' | 'hide-text' | 'hide-all'
+  notificationQuickReply?: boolean
+  notificationBatching?: boolean
+  notificationVibrate?: boolean
+  notificationFlashTaskbar?: boolean
   // Downloads Management
   downloadsPath?: string
   alwaysAskDownloadPath?: boolean

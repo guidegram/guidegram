@@ -43,6 +43,15 @@ import {
   discoverMethodsHandler,
   invokeRawMethodHandler,
 } from './tools/universalRpcTools.js'
+import {
+  eventToolsDefinitions,
+  waitForEventsHandler,
+  createWatcherHandler,
+  getWatcherFeedHandler,
+  listWatchersHandler,
+  deleteWatcherHandler,
+} from './tools/eventTools.js'
+import { McpEventBus, mcpEventBus } from './eventBus.js'
 import { safeJsonStringify } from './utils/safeJson.js'
 
 export class GuidegramMcpServer {
@@ -50,16 +59,49 @@ export class GuidegramMcpServer {
   private accountManager: AccountManager
   private sessionStore: SessionStore
   private config: McpServerConfig
+  private eventBus: McpEventBus
   private isRunning = false
   private activeConnections = new Set<http.ServerResponse>()
 
   constructor(
     accountManager: AccountManager,
     sessionStore: SessionStore,
-    initialConfig?: Partial<McpServerConfig>
+    initialConfig?: Partial<McpServerConfig>,
+    eventBus?: McpEventBus
   ) {
     this.accountManager = accountManager
     this.sessionStore = sessionStore
+    this.eventBus = eventBus || mcpEventBus
+
+    // Wire typing status callback so waiters can simulate typing in MTProto
+    this.eventBus.setSendTypingCallback(async (accountId: string, chatId: string) => {
+      try {
+        const targetAccount = accountId || this.accountManager.getAccounts()[0]?.id
+        if (targetAccount && chatId) {
+          await this.accountManager.sendTyping(targetAccount, chatId, 'typing' as any)
+        }
+      } catch (err) {
+        Logger.warn('[MCP] EventBus typing indicator callback error:', err)
+      }
+    })
+
+    // Wire auto-download callback for active background watchers
+    this.eventBus.setAutoDownloadCallback(
+      async (accountId: string, chatId: string, messageId: number, downloadDir?: string) => {
+        try {
+          const res = await downloadFileHandler(this.accountManager, {
+            accountId,
+            chatId,
+            messageId,
+            targetDirectory: downloadDir || this.config.defaultDownloadDir,
+          })
+          return res?.filePath || null
+        } catch (err) {
+          Logger.warn('[MCP] EventBus auto-download callback error:', err)
+          return null
+        }
+      }
+    )
 
     const savedConfig = this.sessionStore.getConfig()?.mcp
     this.config = {
@@ -70,6 +112,10 @@ export class GuidegramMcpServer {
       defaultDownloadDir: savedConfig?.defaultDownloadDir || initialConfig?.defaultDownloadDir || '',
       autoStartWithApp: savedConfig?.autoStartWithApp ?? true,
     }
+  }
+
+  public getEventBus(): McpEventBus {
+    return this.eventBus
   }
 
   public getConfig(): McpServerConfig {
@@ -175,6 +221,7 @@ export class GuidegramMcpServer {
       ...searchToolsDefinitions,
       ...channelToolsDefinitions,
       ...universalRpcToolsDefinitions,
+      ...eventToolsDefinitions,
     ]
   }
 
@@ -324,6 +371,12 @@ export class GuidegramMcpServer {
               name: 'guidegram-mcp',
               version: '2.0.0',
             },
+            instructions:
+              'You are an intelligent generative AI agent directly connected to Guidegram, a high-performance Telegram desktop client powered by native MTProto Layer 229+. ' +
+              'Guidegram is already authenticated with live Telegram accounts. Do not search for external API keys, bot tokens, or credentials. ' +
+              'You have full direct access to user accounts, dialogs, media, and MTProto methods. ' +
+              'For real-time interactive 2-way dialogs, call `telegram_wait_for_events` (which automatically supports typing simulation and smart burst message debouncing). ' +
+              'For asynchronous background monitoring, keyword triggers, or file auto-downloads, call `telegram_create_watcher` and `telegram_get_watcher_feed`.',
           },
         }
       }
@@ -483,6 +536,22 @@ export class GuidegramMcpServer {
         return await downloadFileHandler(this.accountManager, args, {
           defaultDownloadDir: this.config.defaultDownloadDir,
         })
+
+      // Event & Watcher Live Dual-Engine Tools
+      case 'telegram_wait_for_events':
+        return await waitForEventsHandler(this.accountManager, this.eventBus, args)
+
+      case 'telegram_create_watcher':
+        return await createWatcherHandler(this.eventBus, args)
+
+      case 'telegram_get_watcher_feed':
+        return await getWatcherFeedHandler(this.eventBus, args)
+
+      case 'telegram_list_watchers':
+        return await listWatchersHandler(this.eventBus)
+
+      case 'telegram_delete_watcher':
+        return await deleteWatcherHandler(this.eventBus, args)
 
       default:
         throw new Error(`Unrecognized MCP tool: ${name}`)

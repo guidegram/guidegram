@@ -14814,6 +14814,29 @@ export class AccountManager {
               pinned: Boolean(update.pinned),
             })
           }
+        } else if (
+          update._ === 'updateBotMessageReaction' ||
+          update._ === 'updateBotMessageReactions' ||
+          update._ === 'updateMessageReactions'
+        ) {
+          let peerId = ''
+          const peer = update.peer?.peer || update.peer
+          if (peer) {
+            if (peer.userId !== undefined || peer.user_id !== undefined) peerId = (peer.userId ?? peer.user_id).toString()
+            else if (peer.chatId !== undefined || peer.chat_id !== undefined) peerId = `-${peer.chatId ?? peer.chat_id}`
+            else if (peer.channelId !== undefined || peer.channel_id !== undefined) {
+              const chStr = (peer.channelId ?? peer.channel_id).toString()
+              peerId = chStr.startsWith('-100') ? chStr : `-100${chStr}`
+            }
+          }
+          const messageId = update.msgId ?? update.msg_id ?? update.id
+          this.onEventCallback?.('telegram:reaction-updated', {
+            accountId,
+            chatId: peerId,
+            messageId,
+            reactions: update.reactions || update.newReactions || [],
+            date: update.date || Math.floor(Date.now() / 1000),
+          })
         }
       } catch (_) {}
     })

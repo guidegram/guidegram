@@ -10,6 +10,7 @@ import { Logger } from './telegram/logger'
 import { UpdateManager } from './telegram/updateManager'
 import type { WebPagePreview, McpServerConfig, ProxyConfig } from './telegram/types'
 import { GuidegramMcpServer } from './mcp/mcpServer'
+import { mcpEventBus } from './mcp/eventBus'
 import { validateIpcPayload, BotAuthSchema, PhoneAuthSchema, CompletePhoneAuthSchema, AccountIdSchema } from './ipcValidation'
 import { globalIpcRateLimiter } from './rateLimiter'
 import { idempotencyManager } from './idempotency'
@@ -687,6 +688,11 @@ app.whenReady().then(async () => {
     return permission === 'media'
   })
   accountManager = new AccountManager(sessionStore, (event, payload) => {
+    try {
+      mcpEventBus.dispatch(event, payload)
+    } catch (err) {
+      Logger.warn('[MCP] Event bus dispatch warning:', err)
+    }
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send(event, payload)
     }
@@ -720,7 +726,7 @@ app.whenReady().then(async () => {
 
   // Initialize and start Guidegram MCP Server for AI Agents
   try {
-    mcpServer = new GuidegramMcpServer(accountManager, sessionStore)
+    mcpServer = new GuidegramMcpServer(accountManager, sessionStore, undefined, mcpEventBus)
     mcpServer.start().catch((err) => {
       Logger.warn('[Main] MCP Server startup warning:', err)
     })
@@ -1092,6 +1098,25 @@ function setupIpcHandlers() {
 
   ipcMain.handle('window:is-maximized', () => {
     return mainWindow?.isMaximized() || false
+  })
+
+  ipcMain.handle('window:flash', (_event, flag: boolean = true) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.flashFrame(flag)
+    }
+    return true
+  })
+
+  ipcMain.handle('window:focus', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      if (!mainWindow.isVisible()) mainWindow.show()
+      mainWindow.show()
+      mainWindow.focus()
+      mainWindow.webContents?.focus()
+      mainWindow.flashFrame(false)
+    }
+    return true
   })
 
   ipcMain.handle('window:show-titlebar-menu', (event) => {

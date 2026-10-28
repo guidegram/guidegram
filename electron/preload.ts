@@ -107,6 +107,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('window:confirm-close', { action, remember }),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
   showTitlebarMenu: () => ipcRenderer.invoke('window:show-titlebar-menu'),
+  flashWindow: (flag: boolean = true): Promise<boolean> =>
+    ipcRenderer.invoke('window:flash', flag),
+  focusWindow: (): Promise<boolean> =>
+    ipcRenderer.invoke('window:focus'),
 
   // MTProto Engine Status
   getMtprotoStatus: (): Promise<{

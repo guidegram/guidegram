@@ -43,6 +43,7 @@ import {
   CloudFolderItem,
 } from './types/telegram'
 import { playNotificationSound } from './utils/soundEffects'
+import { NotificationHUD, ActiveNotificationItem } from './components/NotificationHUD'
 import logoImg from './assets/logo.png'
 
 export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
@@ -68,6 +69,11 @@ export const App: React.FC = () => {
     dialogsByAccountRef.current = dialogsByAccount
   }, [dialogsByAccount])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const activeChatIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    activeChatIdRef.current = activeChatId
+  }, [activeChatId])
+  const [activeNotifications, setActiveNotifications] = useState<ActiveNotificationItem[]>([])
   const [initialScrollMsgId, setInitialScrollMsgId] = useState<number | null>(null)
   const [messagesByChat, setMessagesByChat] = useState<Record<string, MessageItem[]>>({})
 
@@ -347,9 +353,64 @@ export const App: React.FC = () => {
           (d) => d.id === String(chatId) || isPeerMatch(d.id, String(chatId))
         )
         const isChannel = Boolean(targetDialog?.isChannel || (payload as any)?.chatInfo?.isChannel)
+        const isGroup = Boolean(targetDialog?.isGroup || (payload as any)?.chatInfo?.isGroup)
         const isChatMuted = targetDialog ? Boolean(targetDialog.isMuted) : (isChannel ? true : false)
-        if (!message?.isOutgoing && !isChatMuted && configRef.current?.soundEnabled !== false) {
-          playNotificationSound(configRef.current?.notificationTone || 'classic') // playNotificationSound()
+        const currentCfg = configRef.current
+
+        const notifsAllowed = currentCfg?.notificationsEnabled !== false
+        const typeAllowed = isChannel
+          ? Boolean(currentCfg?.notificationChannels)
+          : isGroup
+          ? currentCfg?.notificationGroups !== false
+          : currentCfg?.notificationPrivateChats !== false
+
+        const isUserLookingAtChat = chatId === activeChatIdRef.current && document.hasFocus()
+
+        if (!message?.isOutgoing && !isChatMuted && notifsAllowed && typeAllowed && !isUserLookingAtChat) {
+          if (currentCfg?.soundEnabled !== false) {
+            playNotificationSound(currentCfg?.notificationTone || 'classic')
+          }
+          if (currentCfg?.notificationFlashTaskbar !== false && !document.hasFocus()) {
+            window.guidegram?.flashWindow?.(true)
+          }
+
+          setActiveNotifications((prev) => {
+            const maxStack = currentCfg?.notificationMaxStack || 3
+            const existingIdx = prev.findIndex((n) => n.chatId === chatId && n.accountId === accountId)
+            const sender = message?.senderName || targetDialog?.title || 'Someone'
+            const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
+
+            if (existingIdx !== -1 && currentCfg?.notificationBatching !== false) {
+              const updated = [...prev]
+              const old = updated[existingIdx]
+              updated[existingIdx] = {
+                ...old,
+                text: msgText,
+                messageId: message?.id,
+                date: Date.now(),
+                batchCount: (old.batchCount || 1) + 1,
+              }
+              return updated
+            } else {
+              const newItem: ActiveNotificationItem = {
+                id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                accountId,
+                chatId,
+                messageId: message?.id,
+                senderName: sender,
+                chatTitle: targetDialog?.title,
+                avatarUrl: targetDialog?.avatarUrl,
+                text: msgText,
+                mediaType: message?.mediaType,
+                date: Date.now(),
+                isGroup,
+                isChannel,
+                batchCount: 1,
+              }
+              const next = [newItem, ...prev.filter((n) => n.chatId !== chatId)]
+              return next.slice(0, maxStack)
+            }
+          })
         }
         if (!message?.isOutgoing) {
           const sender = message?.senderName || 'Someone'
@@ -917,10 +978,6 @@ export const App: React.FC = () => {
           const cached = await window.guidegram.getCachedDialogs(accountId)
           if (cached && cached.length > 0) {
             setDialogsByAccount((prev) => ({ ...prev, [accountId]: cached }))
-            if (!activeChatId) {
-              setActiveChatId(cached[0].id)
-              loadMessages(accountId, cached[0].id)
-            }
           }
         } catch (cacheErr) {
           console.warn('Failed to read cached dialogs:', cacheErr)
@@ -936,10 +993,6 @@ export const App: React.FC = () => {
       }
       const uniqueDialogs = Array.from(uniqueMap.values())
       setDialogsByAccount((prev) => ({ ...prev, [accountId]: uniqueDialogs }))
-      if (uniqueDialogs.length > 0 && !activeChatId) {
-        setActiveChatId(uniqueDialogs[0].id)
-        loadMessages(accountId, uniqueDialogs[0].id)
-      }
 
       // Progressive Background Dialog Hydration (Official Telegram UX parity: silently feeds chats in the background)
       if (uniqueDialogs.length >= 50) {
@@ -1641,6 +1694,112 @@ export const App: React.FC = () => {
     }
     await window.guidegram?.updateConfig({ theme: nextTheme })
   }
+
+  // Pro Notification HUD Interactions
+  const handleSelectFromNotification = (accountId: string, chatId: string, messageId?: number) => {
+    window.guidegram?.focusWindow?.()
+    if (activeAccountId !== accountId) {
+      setActiveAccountId(accountId)
+      loadDialogsForAccount(accountId)
+    }
+    handleSelectChat(chatId, messageId)
+    setActiveNotifications((prev) => prev.filter((n) => !(n.chatId === chatId && n.accountId === accountId)))
+  }
+
+  const handleQuickReplyFromNotification = async (
+    accountId: string,
+    chatId: string,
+    text: string,
+    replyToMsgId?: number
+  ) => {
+    if (!window.guidegram?.sendMessage) return
+    const sent = await window.guidegram.sendMessage(
+      accountId,
+      chatId,
+      text,
+      replyToMsgId
+    )
+    if (sent) {
+      setMessagesByChat((prev) => {
+        const list = prev[chatId] || []
+        return {
+          ...prev,
+          [chatId]: [...list, sent],
+        }
+      })
+      setDialogsByAccount((prev) => {
+        const list = prev[accountId] || []
+        return {
+          ...prev,
+          [accountId]: list.map((d) =>
+            d.id === chatId
+              ? {
+                  ...d,
+                  lastMessageText: text,
+                  lastMessageDate: Date.now(),
+                  lastMessageId: sent.id,
+                  lastMessageIsOutgoing: true,
+                  unreadCount: 0,
+                }
+              : d
+          ),
+        }
+      })
+    }
+  }
+
+  const handleMarkAsReadFromNotification = (accountId: string, chatId: string, messageId?: number) => {
+    window.guidegram?.markAsRead?.(accountId, chatId, messageId || 0)
+    setDialogsByAccount((prev) => {
+      const list = prev[accountId] || []
+      return {
+        ...prev,
+        [accountId]: list.map((d) => (d.id === chatId ? { ...d, unreadCount: 0 } : d)),
+      }
+    })
+    setActiveNotifications((prev) => prev.filter((n) => !(n.chatId === chatId && n.accountId === accountId)))
+  }
+
+  const handleMuteChatFromNotification = (accountId: string, chatId: string) => {
+    window.guidegram?.toggleChatNotifications?.(accountId, chatId, true)
+    setDialogsByAccount((prev) => {
+      const list = prev[accountId] || []
+      return {
+        ...prev,
+        [accountId]: list.map((d) => (d.id === chatId ? { ...d, isMuted: true } : d)),
+      }
+    })
+    setActiveNotifications((prev) => prev.filter((n) => !(n.chatId === chatId && n.accountId === accountId)))
+  }
+
+  const handleDismissNotification = (id: string) => {
+    setActiveNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  useEffect(() => {
+    const handleTestNotification = () => {
+      const testItem: ActiveNotificationItem = {
+        id: `test_${Date.now()}`,
+        accountId: activeAccountId || accounts[0]?.id || 'acc_test',
+        chatId: activeChatId || 'chat_test',
+        messageId: 9999,
+        senderName: 'پاول دورف (Telegram)',
+        chatTitle: 'راهنمای گایدگرام',
+        text: 'این یک اعلان آزمایشی از موتور اعلان فوق‌پیشرفته گایدگرامه! می‌تونی همین الان رپلای بزنی یا دکمه خوانده شد رو کلیک کنی 🚀',
+        date: Date.now(),
+        isGroup: false,
+      }
+      if (configRef.current?.soundEnabled !== false) {
+        playNotificationSound(configRef.current?.notificationTone || 'classic')
+      }
+      if (configRef.current?.notificationFlashTaskbar !== false) {
+        window.guidegram?.flashWindow?.(true)
+      }
+      setActiveNotifications((prev) => [testItem, ...prev.slice(0, 2)])
+    }
+    window.addEventListener('guidegram:test-notification', handleTestNotification)
+    return () => window.removeEventListener('guidegram:test-notification', handleTestNotification)
+  }, [activeAccountId, activeChatId, accounts])
 
   const handleAccountAdded = (newAccount: AccountInfo) => {
     setAccounts((prev) => {
@@ -2459,6 +2618,21 @@ export const App: React.FC = () => {
           }}
         />
       )}
+
+      {/* Telegram-Parity & Android Heads-Up Notification Engine */}
+      <NotificationHUD
+        notifications={activeNotifications}
+        onDismiss={handleDismissNotification}
+        onSelectChat={handleSelectFromNotification}
+        onQuickReply={handleQuickReplyFromNotification}
+        onMarkAsRead={handleMarkAsReadFromNotification}
+        onMuteChat={handleMuteChatFromNotification}
+        position={config?.notificationPosition || 'bottom-right'}
+        privacyMode={config?.notificationPrivacyMode || 'full'}
+        quickReplyEnabled={config?.notificationQuickReply !== false}
+        vibrateEnabled={config?.notificationVibrate !== false}
+        isMobile={isMobile}
+      />
     </div>
   )
 }
