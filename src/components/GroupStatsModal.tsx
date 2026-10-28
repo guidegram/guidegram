@@ -392,7 +392,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         : Date.now()
 
       let attempts = 0
-      const maxBatches = tf === 'month' ? 40 : tf === 'week' ? 25 : tf === 'yesterday' ? 20 : 15
+      // Deep history crawler: allows up to 300 batches (30,000+ messages) to cover busy groups
+      const maxBatches = tf === 'month' ? 500 : tf === 'week' ? 350 : tf === 'yesterday' ? 150 : 60
 
       while (
         (targetStart === 0 || oldestDate > targetStart) &&
@@ -841,7 +842,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
         onClick={(e) => e.stopPropagation()}
         dir={isRTL ? 'rtl' : 'ltr'}
-        className="glass-modal w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-white/10 shadow-2xl"
+        className="glass-modal w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-white/10 shadow-2xl font-sans"
       >
         {/* Header */}
         <div className="p-4 md:p-5 border-b border-white/10 flex items-center justify-between bg-dark-900/60">

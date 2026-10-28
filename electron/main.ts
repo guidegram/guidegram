@@ -1505,6 +1505,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-common-chats', async (_event, { accountId, userId, limit }) => {
+    try {
+      return await accountManager.getCommonChats(accountId, userId, limit)
+    } catch (err: any) {
+      Logger.error(`[IPC] getCommonChats failed:`, err)
+      return []
+    }
+  })
+
   // ==========================================
   // Guidegram User Activity & Contact Changes Tracking IPC
   // ==========================================

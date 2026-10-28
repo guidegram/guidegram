@@ -16,10 +16,13 @@ import {
   Radio,
   ExternalLink,
   Loader2,
+  Users,
+  Activity,
 } from 'lucide-react'
 import type { ChatDetails } from '../types/telegram'
 import { Avatar } from './Avatar'
 import { UserActivityRadar } from './UserActivityRadar'
+import { UserMutualGroupsActivity } from './UserMutualGroupsActivity'
 import { CustomEmojiView } from './ChatViewport'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL } from '../utils/textUtils'
@@ -32,7 +35,7 @@ export interface UserProfileDrawerProps {
   initialDetails?: Partial<ChatDetails> | null
   currentChatId?: string | null
   onClose: () => void
-  onSelectUserOrChat?: (target: string) => void
+  onSelectUserOrChat?: (target: string, targetMsgId?: number) => void
   onSearchFromUser?: (peerId: string, title?: string) => void
   onMentionUser?: (mentionText: string) => void
   onShowToast?: (message: string) => void
@@ -56,6 +59,15 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [isBlocking, setIsBlocking] = useState(false)
+  const [profileTab, setProfileTab] = useState<'activity_radar' | 'mutual_groups'>('mutual_groups')
+
+  useEffect(() => {
+    if (initialDetails?.isContact || details?.isContact) {
+      setProfileTab('activity_radar')
+    } else {
+      setProfileTab('mutual_groups')
+    }
+  }, [initialDetails?.isContact, details?.isContact])
 
   // Initialize or fetch details when peerId changes
   useEffect(() => {
@@ -439,16 +451,58 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
             </div>
           )}
 
-          {/* User Activity Radar Component */}
+          {/* Activity / Mutual Groups Tabs Switcher */}
           {peerId && (
-            <UserActivityRadar
-              accountId={accountId}
-              userId={peerId}
-              userName={displayTitle}
-              avatarUrl={displayAvatar}
-              currentStatus={details?.userStatus?.status}
-              lastSeen={details?.userStatus?.lastOnline}
-            />
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-dark-900 border border-white/10 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setProfileTab('mutual_groups')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    profileTab === 'mutual_groups'
+                      ? 'bg-primary-600 text-white shadow-xs'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>{isPersian ? 'گروه‌های مشترک و فعالیت' : 'Mutual Groups'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProfileTab('activity_radar')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    profileTab === 'activity_radar'
+                      ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40 shadow-xs'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>{isPersian ? 'رادار آنلاین مخاطب' : 'Online Radar'}</span>
+                </button>
+              </div>
+
+              {profileTab === 'mutual_groups' ? (
+                <UserMutualGroupsActivity
+                  accountId={accountId}
+                  userId={peerId}
+                  userName={displayTitle}
+                  currentChatId={currentChatId}
+                  onJumpToMessage={(chatId, msgId) => {
+                    onClose()
+                    onSelectUserOrChat?.(chatId, msgId)
+                  }}
+                />
+              ) : (
+                <UserActivityRadar
+                  accountId={accountId}
+                  userId={peerId}
+                  userName={displayTitle}
+                  avatarUrl={displayAvatar}
+                  currentStatus={details?.userStatus?.status}
+                  lastSeen={details?.userStatus?.lastOnline}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -551,17 +551,32 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                 )}:۰۰ (${formatDurationHuman(
                   hourlyData[hoveredHour]?.durationSeconds || 0
                 )})`
-              ) : (
-                'برای زوم و مشاهده دقیقه‌ها روی ساعت کلیک کنید'
-              )}
+              ) : null}
             </span>
           </div>
 
           {/* Chart Container - strictly LTR for chronological timeline 00:00 -> 23:59 */}
           <div
             dir="ltr"
-            className="h-20 flex items-end gap-1 bg-dark-900/90 p-2.5 rounded-xl border border-white/10 relative overflow-hidden"
+            onClick={() => onOpenFullTimeline?.(userId)}
+            className="group/chart h-20 flex items-end gap-1 bg-dark-900/90 p-2.5 rounded-xl border border-white/10 hover:border-accent-cyan/30 transition-all relative overflow-hidden cursor-pointer"
+            title="کلیک برای باز کردن در نقشه و تایم‌لاین تمام‌صفحه"
           >
+            {/* Top-Right Expand Icon Button */}
+            {onOpenFullTimeline && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onOpenFullTimeline(userId)
+                }}
+                title="نمایش تایم‌لاین بزرگ"
+                className="absolute top-2 right-2 z-30 p-1 rounded-lg bg-dark-800/80 hover:bg-accent-cyan/20 text-gray-400 hover:text-accent-cyan border border-white/10 hover:border-accent-cyan/40 backdrop-blur-xs transition-all shadow-xs cursor-pointer"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {/* Live "Now" Indicator line for Today */}
             {isToday && zoomedHour === null && currentDayProgressPercent !== null && (
               <div
@@ -618,12 +633,12 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               hourlyData.map((hItem) => {
                 const isHovered = hoveredHour === hItem.hour
                 const hasActivity = hItem.durationSeconds > 0
-                // Scaling: 3600s = 100%, 0s = 8% baseline
+                // Proportional Scaling: 60 minutes (3600s) = 100% height
                 const heightPercent = hItem.isFuture
-                  ? 8
+                  ? 4
                   : hasActivity
-                  ? Math.max(14, Math.round((hItem.durationSeconds / 3600) * 100))
-                  : 8
+                  ? Math.max(10, Math.min(100, Math.round((hItem.durationSeconds / 3600) * 100)))
+                  : 4
 
                 return (
                   <div
@@ -703,19 +718,19 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             )}
           </div>
 
-          {/* Chart Legend */}
-          <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] text-gray-400 pt-1 border-t border-white/5">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-xs bg-emerald-400" />
-              <span>فعالیت آنلاین (ارتفاع متناسب با دقیقه)</span>
+          {/* Chart Legend (Clean single-line minimal layout) */}
+          <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1.5 border-t border-white/5 font-sans px-1">
+            <span className="flex items-center gap-1.5 text-gray-300">
+              <span className="w-2 h-2 rounded-xs bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
+              <span>آنلاین (بر حسب دقیقه)</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-xs bg-white/5 border border-white/10" />
-              <span>آفلاین (پلتفرم متصل)</span>
+              <span className="w-2 h-2 rounded-xs bg-white/10 border border-white/20" />
+              <span>آفلاین</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-xs bg-white/15 border border-dashed border-white/30" />
-              <span>پلتفرم قطع / بسته بوده</span>
+            <span className="flex items-center gap-1.5 text-gray-500">
+              <span className="w-2 h-2 rounded-xs border border-dashed border-white/20" />
+              <span>عدم اتصال پلتفرم</span>
             </span>
           </div>
         </div>

@@ -1001,7 +1001,11 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                   </span>
                                 ) : totalSecs > 0 ? (
                                   <span className="text-accent-cyan font-sans font-medium" dir="rtl">
-                                    <bdi>{formatDurationHuman(totalSecs)} آنلاین</bdi>
+                                    <bdi>{formatDurationHuman(totalSecs)} مجموع آنلاین</bdi>
+                                  </span>
+                                ) : user.lastSeen ? (
+                                  <span className="text-gray-400 font-sans text-[10px]" dir="rtl">
+                                    <bdi>{formatDurationHuman(Math.max(1, nowSec - user.lastSeen))} پیش</bdi>
                                   </span>
                                 ) : (
                                   <span className="text-gray-500">نشستی ثبت نشده</span>

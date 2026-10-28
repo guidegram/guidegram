@@ -5198,6 +5198,38 @@ export class AccountManager {
     }
   }
 
+  public async getCommonChats(
+    accountId: string,
+    userId: string,
+    limit = 100
+  ): Promise<Array<{ id: string; title: string; avatarUrl?: string; memberCount?: number; username?: string }>> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const res = await this.messagingService.getCommonChats(holder as any, accountId, userId, undefined, limit)
+      if (!res?.chats || !Array.isArray(res.chats)) return []
+
+      const result: Array<{ id: string; title: string; avatarUrl?: string; memberCount?: number; username?: string }> = []
+      for (const chat of res.chats) {
+        const id = String(chat.id)
+        const title = chat.title || 'گروه'
+        const username = chat.username
+        const memberCount = chat.participantsCount || chat.participants_count
+        let avatarUrl: string | undefined = undefined
+        const diskFile = path.join(this.avatarsDir, `avatar_${accountId}_${id}.jpg`)
+        if (fs.existsSync(diskFile)) {
+          avatarUrl = `guidegram-media://${diskFile}`
+        }
+        result.push({ id, title, avatarUrl, memberCount, username })
+      }
+      return result
+    } catch (err) {
+      Logger.warn('[AccountManager] getCommonChats error:', err)
+      return []
+    }
+  }
+
   public async getSharedMedia(
     accountId: string,
     chatId: string,

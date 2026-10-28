@@ -504,6 +504,9 @@ export interface ChatDetails {
   isGroup: boolean
   isUser: boolean
   isBot: boolean
+  isContact?: boolean
+  isMutualContact?: boolean
+  participantsCount?: number
   isBlocked?: boolean
   avatarUrl?: string
   verified?: boolean

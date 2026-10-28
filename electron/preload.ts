@@ -295,6 +295,13 @@ const guidegramAPI = {
   getOnlineTimeline: (accountId: string): Promise<AccountOnlineTimelineData> =>
     ipcRenderer.invoke('telegram:get-online-timeline', { accountId }),
 
+  getCommonChats: (
+    accountId: string,
+    userId: string,
+    limit?: number
+  ): Promise<Array<{ id: string; title: string; avatarUrl?: string; memberCount?: number; username?: string }>> =>
+    ipcRenderer.invoke('telegram:get-common-chats', { accountId, userId, limit }),
+
   syncContactsAudit: (
     accountId: string
   ): Promise<{ totalContacts: number; newEventsCount: number }> =>

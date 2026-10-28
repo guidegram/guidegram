@@ -773,7 +773,7 @@ export class ActivityTrackerService {
         lastSeenTimestamp = offlineTime
 
         if (currentSessionStart != null) {
-          const duration = Math.max(30, offlineTime - currentSessionStart)
+          const duration = Math.max(15, offlineTime - currentSessionStart)
           sessions.push({
             id: `sess_${currentSessionStart}`,
             startTime: currentSessionStart,
@@ -781,16 +781,6 @@ export class ActivityTrackerService {
             durationSeconds: duration,
           })
           currentSessionStart = null
-        } else if (rec.wasOnline) {
-          // If no recorded start, synthesize a standard 3-minute session ending at wasOnline
-          const start = Math.max(rec.wasOnline - 180, rec.wasOnline - 300)
-          sessions.push({
-            id: `sess_${start}`,
-            startTime: start,
-            endTime: rec.wasOnline,
-            durationSeconds: rec.wasOnline - start,
-            isApproximate: true,
-          })
         }
       } else {
         // recently, within_week, within_month, etc.
@@ -1104,26 +1094,6 @@ export class ActivityTrackerService {
               sessionCountToday++
             }
             currentSessionStart = null
-          } else if (rec.wasOnline && rec.wasOnline >= rangeStart) {
-            const start = Math.max(rec.wasOnline - 180, rangeStart)
-            const dur = rec.wasOnline - start
-            allSessions.push({
-              id: `sess_${userId}_${start}`,
-              userId,
-              userName,
-              userUsername,
-              avatarUrl,
-              isMutualContact: isMutual,
-              isContact,
-              startTime: start,
-              endTime: rec.wasOnline,
-              durationSeconds: dur,
-              isCurrentSession: false,
-            })
-            if (rec.wasOnline >= dayStartSec) {
-              totalOnlineToday += dur
-              sessionCountToday++
-            }
           }
         } else {
           currentStatus = rec.status

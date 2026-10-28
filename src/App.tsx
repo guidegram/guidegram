@@ -2381,9 +2381,9 @@ export const App: React.FC = () => {
             initialDetails={viewingUserProfile.initialDetails}
             currentChatId={activeChatId}
             onClose={() => setViewingUserProfile(null)}
-            onSelectUserOrChat={(target) => {
+            onSelectUserOrChat={(target, targetMsgId) => {
               setViewingUserProfile(null)
-              handleSelectUserOrChat(target, undefined, viewingUserProfile.initialDetails)
+              handleSelectUserOrChat(target, targetMsgId, viewingUserProfile.initialDetails)
             }}
             onSearchFromUser={(peerId) => {
               setViewingUserProfile(null)
