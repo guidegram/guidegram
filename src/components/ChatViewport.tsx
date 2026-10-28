@@ -140,6 +140,7 @@ import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverl
 import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
 import { MediaViewerModal } from './MediaViewerModal'
+import { ImageEditorModal } from './media/ImageEditorModal'
 
 interface ChatViewportProps {
   chat: DialogItem | null
@@ -277,7 +278,7 @@ interface LinkPreviewCardProps {
   onOpenInstantView?: (url: string, preview?: WebPagePreview) => void
 }
 
-const LinkPreviewCard = React.memo<LinkPreviewCardProps>(({ url, existingPreview, accountId, onSafeOpen, onOpenInstantView }) => {
+const LinkPreviewCard: React.FC<LinkPreviewCardProps> = React.memo(({ url, existingPreview, accountId, onSafeOpen, onOpenInstantView }) => {
   const [preview, setPreview] = useState<WebPagePreview | null>(
     existingPreview || rendererPreviewCache.get(url) || null
   )
@@ -1410,6 +1411,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
   const [stagedAttachments, setStagedAttachments] = useState<StagedAttachment[]>([])
+  const [editingAttachment, setEditingAttachment] = useState<{ index: number; attachment: StagedAttachment } | null>(null)
   const [uploadProgress, setUploadProgress] = useState<{
     isUploading: boolean
     percent: number
@@ -3189,6 +3191,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   const handleRemoveStagedAttachment = (index: number) => {
     setStagedAttachments((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSaveEditedImage = (editedPath: string, newName: string) => {
+    if (editingAttachment === null) return
+    setStagedAttachments((prev) =>
+      prev.map((att, i) =>
+        i === editingAttachment.index
+          ? { ...att, path: editedPath, name: newName }
+          : att
+      )
+    )
+    setEditingAttachment(null)
+    showToast('Photo edited and updated')
   }
 
   // Voice message recording handlers (Feature 18)
@@ -7330,6 +7345,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <FileText className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
                 )}
                 <span className="max-w-[140px] truncate font-medium">{item.name}</span>
+                {item.type === 'media' && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingAttachment({ index: idx, attachment: item })}
+                    className="p-0.5 text-gray-400 hover:text-primary-400 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Edit photo (Crop, Rotate, Draw)"
+                  >
+                    <Wand2 className="w-3 h-3" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleRemoveStagedAttachment(idx)}
@@ -10539,6 +10564,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         <ThanosDisintegrationOverlay
           targetRect={thanosTarget.rect}
           onComplete={() => setThanosTarget(null)}
+        />
+      )}
+
+      {/* 28. In-App Photo & Media Editor Modal (editor/ parity) */}
+      {editingAttachment && (
+        <ImageEditorModal
+          isOpen={Boolean(editingAttachment)}
+          imageSrc={
+            editingAttachment.attachment.path.startsWith('data:') ||
+            editingAttachment.attachment.path.startsWith('blob:') ||
+            editingAttachment.attachment.path.startsWith('guidegram-media://')
+              ? editingAttachment.attachment.path
+              : `guidegram-media://local/${encodeURIComponent(editingAttachment.attachment.path)}`
+          }
+          fileName={editingAttachment.attachment.name}
+          onClose={() => setEditingAttachment(null)}
+          onSave={handleSaveEditedImage}
         />
       )}
     </div>

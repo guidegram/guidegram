@@ -29,6 +29,7 @@ const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardSho
 const ContactChangesModal = React.lazy(() => import('./components/ContactChangesModal').then((m) => ({ default: m.ContactChangesModal })))
 const FolderManagerModal = React.lazy(() => import('./components/FolderManagerModal').then((m) => ({ default: m.FolderManagerModal })))
 const UserProfileDrawer = React.lazy(() => import('./components/UserProfileDrawer').then((m) => ({ default: m.UserProfileDrawer })))
+const TonWalletModal = React.lazy(() => import('./components/TonWalletModal').then((m) => ({ default: m.TonWalletModal })))
 import {
   AccountInfo,
   DialogItem,
@@ -90,6 +91,7 @@ export const App: React.FC = () => {
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false)
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false)
   const [isAccountExportOpen, setIsAccountExportOpen] = useState(false)
+  const [isTonWalletOpen, setIsTonWalletOpen] = useState(false)
   const [isContactsOpen, setIsContactsOpen] = useState(false)
   const [isCallsOpen, setIsCallsOpen] = useState(false)
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
@@ -1860,6 +1862,7 @@ export const App: React.FC = () => {
               onOpenSavedMessages={handleOpenSavedMessages}
               isSavedMessagesActive={isSavedMessagesActive}
               onOpenAccountExport={() => setIsAccountExportOpen(true)}
+              onOpenTonWallet={() => setIsTonWalletOpen(true)}
             />
           </nav>
           <React.Suspense fallback={<div className="flex-1 flex items-center justify-center bg-dark-900 text-gray-400 text-sm">Loading Unified Inbox...</div>}>
@@ -1983,6 +1986,7 @@ export const App: React.FC = () => {
               onOpenSavedMessages={handleOpenSavedMessages}
               isSavedMessagesActive={isSavedMessagesActive}
               onOpenAccountExport={() => setIsAccountExportOpen(true)}
+              onOpenTonWallet={() => setIsTonWalletOpen(true)}
             />
           </nav>
 
@@ -2163,6 +2167,7 @@ export const App: React.FC = () => {
             isNightMode={config?.theme !== 'light'}
             onToggleNightMode={handleToggleNightMode}
             onOpenAccountExport={() => setIsAccountExportOpen(true)}
+            onOpenTonWallet={() => setIsTonWalletOpen(true)}
           />
         )}
 
@@ -2180,6 +2185,21 @@ export const App: React.FC = () => {
             onClose={() => setIsAccountExportOpen(false)}
             accounts={accounts}
           />
+        )}
+
+        {isTonWalletOpen && (
+          <React.Suspense fallback={null}>
+            <TonWalletModal
+              isOpen={isTonWalletOpen}
+              accountId={activeAccountId || accounts[0]?.id || 'default'}
+              accountName={
+                accounts.find((a) => a.id === activeAccountId)?.firstName ||
+                accounts[0]?.firstName ||
+                'My Account'
+              }
+              onClose={() => setIsTonWalletOpen(false)}
+            />
+          </React.Suspense>
         )}
 
         {isContactsOpen && (

@@ -24,6 +24,7 @@ import {
   Bot,
   History,
   Smartphone,
+  Wallet,
 } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -61,6 +62,7 @@ interface MainMenuDrawerProps {
   ghostMode?: boolean
   onToggleGhostMode?: () => void
   onOpenAccountExport?: () => void
+  onOpenTonWallet?: () => void
 }
 
 export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
@@ -90,6 +92,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
   ghostMode = false,
   onToggleGhostMode,
   onOpenAccountExport,
+  onOpenTonWallet,
 }) => {
   const { t, isRTL, formatNumber } = useI18n()
   const [isAccountsExpanded, setIsAccountsExpanded] = useState(true)
@@ -486,6 +489,22 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
                   <span>{isRTL ? 'انتقال و پشتیبان‌گیری اکانت‌ها' : 'Transfer & Backup Accounts'}</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 font-bold">QR</span>
+              </button>
+
+              {/* TON Blockchain & Wallet (wallet/ and gram/ parity) */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenTonWallet?.()
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-white/5 text-gray-200 hover:text-white transition-colors text-xs font-medium cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <Wallet className="w-4 h-4 text-[#00c2ff] group-hover:scale-110 transition-transform" />
+                  <span>{isRTL ? 'کیف پول و بلاکچین TON' : 'TON Wallet & TonConnect'}</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#0098ea]/15 text-[#00c2ff] border border-[#0098ea]/30 font-bold">TON</span>
               </button>
 
               {/* AI & Telegram MCP Hub */}

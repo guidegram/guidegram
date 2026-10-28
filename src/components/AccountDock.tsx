@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Shield, Inbox, Settings, Bot, Smartphone } from 'lucide-react'
+import { Plus, Shield, Inbox, Settings, Bot, Smartphone, Wallet } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
 
@@ -16,6 +16,7 @@ interface AccountDockProps {
   onOpenSavedMessages?: () => void
   isSavedMessagesActive?: boolean
   onOpenAccountExport?: () => void
+  onOpenTonWallet?: () => void
 }
 
 export const AccountDock: React.FC<AccountDockProps> = ({
@@ -31,6 +32,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
   onOpenSavedMessages,
   isSavedMessagesActive = false,
   onOpenAccountExport,
+  onOpenTonWallet,
 }) => {
   return (
     <aside className="w-[72px] shrink-0 h-full bg-dark-900 border-r border-white/5 flex flex-col items-center py-3 select-none z-20 titlebar-no-drag">
@@ -189,6 +191,16 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         >
           <Smartphone className="w-4 h-4 group-hover:scale-110 transition-transform" />
         </button>
+
+        {onOpenTonWallet && (
+          <button
+            onClick={onOpenTonWallet}
+            title="TON Blockchain & Wallet (TonConnect 2.0)"
+            className="w-10 h-10 rounded-xl bg-dark-800 text-[#00c2ff] hover:text-white hover:bg-[#0098ea]/30 flex items-center justify-center transition-colors cursor-pointer group"
+          >
+            <Wallet className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          </button>
+        )}
 
         <button
           onClick={onOpenSettings}
