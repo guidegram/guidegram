@@ -323,7 +323,7 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
             {/* Search Box */}
             <div className="px-4 py-2.5 border-b border-white/5 bg-dark-800/30">
               <div className="relative flex items-center">
-                <Search className="w-4 h-4 text-gray-500 absolute left-3 pointer-events-none" />
+                <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
@@ -335,7 +335,7 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 text-gray-500 hover:text-gray-300"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 p-0.5 rounded cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

@@ -300,19 +300,19 @@ const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       {commands.length > 4 && (
         <div className="p-2 border-b border-white/5 bg-dark-900/40">
           <div className="relative flex items-center">
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search commands..."
-              className="w-full bg-dark-800 border border-white/5 rounded-xl pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+              className="w-full bg-dark-800 border border-white/5 rounded-xl pl-8 pr-7 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 text-gray-400 hover:text-white cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer p-0.5"
               >
                 <X className="w-3 h-3" />
               </button>

@@ -247,7 +247,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
         <div className="px-5 py-3 bg-dark-850/50 border-b border-white/5 flex flex-col gap-2.5 shrink-0">
           {/* Search Input */}
           <div className="relative flex items-center">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
@@ -259,7 +259,7 @@ export const AdminLogModal: React.FC<AdminLogModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 text-gray-400 hover:text-white p-0.5"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
