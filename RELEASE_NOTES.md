@@ -1,10 +1,16 @@
 # 🚀 Guidegram v2.4.6 — The Sovereign Parity & Quantum Polish Edition
 
-> **Official Telegram Desktop 100% Milestone Release** featuring In-App Photo & Media Editor, Native TON Blockchain & TonConnect 2.0 Hub, Thanos Dust Particle Disintegration, 0px-Delta Grouped Media Albums, 60fps Noise Spoiler Masks, Fluid Material Ripple Physics, Jump to Date Calendar Navigation, Channel Views & Forwards Counter, Air-Gapped Optical QR Sync, and Rock-Solid CI Pipeline Stabilization.
+> **Official Telegram Desktop 100% Milestone Release** featuring Full MTProto Server-Side In-Chat Search with Telegram Desktop Drawer & Context Jump, In-App Photo & Media Editor, Native TON Blockchain & TonConnect 2.0 Hub, Thanos Dust Particle Disintegration, 0px-Delta Grouped Media Albums, 60fps Noise Spoiler Masks, Fluid Material Ripple Physics, Jump to Date Calendar Navigation, Channel Views & Forwards Counter, Air-Gapped Optical QR Sync, and Rock-Solid CI Pipeline Stabilization.
 
 ---
 
 ### 🌟 Release v2.4.6 Highlights
+
+* 🔍 **MTProto Server-Side In-Chat Search & Telegram Desktop Drawer:**
+  * **Zero-Lag Server History Indexing:** Replaces naive in-memory array filtering with direct MTProto `messages.search` requests, querying entire server-side group and channel archives in milliseconds.
+  * **Telegram Desktop Search Drawer:** Dedicated results panel presenting sender avatars, names, timestamps, highlighted match snippets, and total match count (`totalCount` parity).
+  * **Continuous Context Preservation:** In-chat search no longer destroys or hides surrounding messages; full conversation context is preserved with instant jump navigation (`handleScrollToReply`) and missing historical chunks loaded automatically.
+  * **Keyboard & Header Navigation:** `Enter` / `Shift+Enter` and Up/Down chevron controls to smoothly cycle through remote search results across years of history.
 
 * 🎨 **In-App Photo & Media Editor (`editor/` Parity):**
   * **Interactive Aspect Ratio Cropping:** Free, 1:1 (Square), 4:3, 16:9, and 9:16 (Story) aspect ratio constraints.
