@@ -403,6 +403,7 @@ export interface MessageItem {
   isRoundVideo?: boolean
   voiceWaveform?: number[]
   reactions?: MessageReactionItem[]
+  groupedId?: string
   mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'poll' | 'paid_media' | 'audio'
   mediaTitle?: string
   mediaPerformer?: string
@@ -984,6 +985,7 @@ export interface AppConfig {
   markAllReadEnabled: boolean
   copyCallbackData: boolean
   disableAnimations?: boolean
+  enableThanosDust?: boolean
   suppressLinkWarning?: boolean
   // Device & Privacy Spoofing
   antiFingerprinting?: boolean

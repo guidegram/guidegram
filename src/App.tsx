@@ -1929,6 +1929,8 @@ export const App: React.FC = () => {
                   quickForwardToSaved={config?.quickForwardToSaved ?? true}
                   alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
                   copyCallbackData={config?.copyCallbackData ?? true}
+                  disableAnimations={config?.disableAnimations ?? false}
+                  enableThanosDust={config?.enableThanosDust ?? true}
                   suppressLinkWarning={config?.suppressLinkWarning ?? false}
                   autoDownload={config?.autoDownload}
                   chatFontSize={config?.chatFontSize || 14}
@@ -2052,6 +2054,8 @@ export const App: React.FC = () => {
                   quickForwardToSaved={config?.quickForwardToSaved ?? true}
                   alwaysDeleteBoth={config?.alwaysDeleteBoth ?? true}
                   copyCallbackData={config?.copyCallbackData ?? true}
+                  disableAnimations={config?.disableAnimations ?? false}
+                  enableThanosDust={config?.enableThanosDust ?? true}
                   suppressLinkWarning={config?.suppressLinkWarning ?? false}
                   autoDownload={config?.autoDownload}
                   chatFontSize={config?.chatFontSize || 14}

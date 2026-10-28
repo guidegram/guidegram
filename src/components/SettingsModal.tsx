@@ -253,6 +253,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [markAllReadEnabled, setMarkAllReadEnabled] = useState(true)
   const [copyCallbackData, setCopyCallbackData] = useState(true)
   const [disableAnimations, setDisableAnimations] = useState(false)
+  const [enableThanosDust, setEnableThanosDust] = useState(true)
   const [suppressLinkWarning, setSuppressLinkWarning] = useState(false)
   const [antiFingerprinting, setAntiFingerprinting] = useState(true)
 
@@ -710,6 +711,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setMarkAllReadEnabled(cfg.markAllReadEnabled ?? true)
         setCopyCallbackData(cfg.copyCallbackData ?? true)
         setDisableAnimations(cfg.disableAnimations ?? false)
+        setEnableThanosDust(cfg.enableThanosDust ?? true)
         setSuppressLinkWarning(cfg.suppressLinkWarning ?? false)
         setAntiFingerprinting(cfg.antiFingerprinting ?? true)
         setCloseAction(cfg.closeAction || 'ask')
@@ -889,6 +891,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       markAllReadEnabled,
       copyCallbackData,
       disableAnimations,
+      enableThanosDust,
       suppressLinkWarning,
       antiFingerprinting,
       autoDownload,
@@ -2462,6 +2465,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       checked={keepDeletedMessagesLocally}
                       onChange={setKeepDeletedMessagesLocally}
                     />
+                    <ToggleItem
+                      title="Thanos Dust Particle Deletion"
+                      desc="Disintegrate deleted messages into wind-swept dust particles (Telegram Desktop parity)"
+                      icon={<Sparkles className="w-3.5 h-3.5 text-purple-400" />}
+                      checked={enableThanosDust}
+                      onChange={setEnableThanosDust}
+                    />
+                    <ToggleItem
+                      title="Disable Animations"
+                      desc="Turn off transitions and particle effects for maximum low-spec performance"
+                      icon={<Zap className="w-3.5 h-3.5 text-amber-400" />}
+                      checked={disableAnimations}
+                      onChange={setDisableAnimations}
+                    />
                   </div>
 
                   {/* Message Font Size (Text Scaling) */}
@@ -3708,6 +3725,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'انیمیشن پودر شدن پیام‌ها (Thanos Dust)' : 'Thanos Dust Deletion Effect'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'تجزیه ذرات پیام حذف شده با الگوریتم باد شبیه‌ساز تلگرام اصلی'
+                            : 'Disintegrate deleted message bubbles with progressive wind drift math'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={enableThanosDust}
+                          onChange={(e) => setEnableThanosDust(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
                           {isPersian ? 'پیش‌فرض حذف دوطرفه پیام‌ها' : 'Always Delete for Both by Default'}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
@@ -3721,6 +3760,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           type="checkbox"
                           checked={alwaysDeleteBoth}
                           onChange={(e) => setAlwaysDeleteBoth(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {isPersian ? 'انیمیشن پودر شدن پیام‌ها (Thanos Dust)' : 'Thanos Dust Deletion Effect'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'تجزیه ذرات پیام حذف شده با الگوریتم باد شبیه‌ساز تلگرام اصلی'
+                            : 'Disintegrate deleted message bubbles with progressive wind drift math'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={enableThanosDust}
+                          onChange={(e) => setEnableThanosDust(e.target.checked)}
                           className="sr-only peer"
                         />
                         <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
