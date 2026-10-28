@@ -140,6 +140,12 @@ export interface DialogItem {
   lastMessageRead?: boolean
   lastMessageMediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'round_video' | 'audio'
   lastMessageThumb?: string
+  lastMessageSticker?: {
+    id: string
+    accessHash: string
+    fileReferenceHex: string
+    alt?: string
+  }
   avatarInitials?: string
   avatarUrl?: string
   username?: string

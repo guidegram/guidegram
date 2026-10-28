@@ -1094,6 +1094,70 @@ export const ChatList = React.memo<ChatListProps>(({
   )
 })
 
+const stickerThumbCache = new Map<string, string>()
+
+const StickerMiniThumbnail: React.FC<{ dialog: DialogItem }> = React.memo(({ dialog }) => {
+  const initialThumb =
+    dialog.lastMessageThumb ||
+    (dialog.lastMessageSticker?.id ? stickerThumbCache.get(dialog.lastMessageSticker.id) : undefined)
+  const [thumb, setThumb] = useState<string | undefined>(initialThumb)
+
+  useEffect(() => {
+    if (dialog.lastMessageThumb) {
+      setThumb(dialog.lastMessageThumb)
+      if (dialog.lastMessageSticker?.id) {
+        stickerThumbCache.set(dialog.lastMessageSticker.id, dialog.lastMessageThumb)
+      }
+      return
+    }
+
+    const st = dialog.lastMessageSticker
+    if (!st?.id || !window.guidegram?.getStickerData) return
+
+    const cached = stickerThumbCache.get(st.id)
+    if (cached) {
+      setThumb(cached)
+      return
+    }
+
+    let isMounted = true
+    window.guidegram
+      .getStickerData(dialog.accountId, st.id, st.accessHash, st.fileReferenceHex)
+      .then((res: any) => {
+        if (!isMounted || !res) return
+        const url = res.url || (res.format === 'image' ? res.data : undefined)
+        if (url) {
+          stickerThumbCache.set(st.id, url)
+          setThumb(url)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      isMounted = false
+    }
+  }, [dialog.accountId, dialog.lastMessageThumb, dialog.lastMessageSticker?.id])
+
+  if (thumb) {
+    return (
+      <img
+        src={thumb}
+        alt={dialog.lastMessageText || 'Sticker'}
+        className="w-5 h-5 object-contain shrink-0 rounded transition-transform group-hover:scale-105"
+      />
+    )
+  }
+
+  return (
+    <span
+      className="w-5 h-5 flex items-center justify-center text-xs shrink-0 select-none"
+      title={dialog.lastMessageText || 'Sticker'}
+    >
+      {dialog.lastMessageText && /^\p{Emoji}/u.test(dialog.lastMessageText) ? dialog.lastMessageText : '🎨'}
+    </span>
+  )
+})
+
 interface DialogListItemProps {
   dialog: DialogItem
   isSelected: boolean
@@ -1230,17 +1294,28 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                       </span>
                     )}
 
-                    {dialog.lastMessageThumb && (
-                      <img
-                        src={dialog.lastMessageThumb}
-                        alt=""
-                        className="w-4 h-4 rounded object-cover shrink-0 border border-white/10"
-                      />
-                    )}
+                    {dialog.lastMessageMediaType === 'sticker' ? (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <StickerMiniThumbnail dialog={dialog} />
+                        <span className="truncate font-persian text-gray-400" dir="auto">
+                          {t('chat.sticker') || 'Sticker'}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        {dialog.lastMessageThumb && (
+                          <img
+                            src={dialog.lastMessageThumb}
+                            alt=""
+                            className="w-4 h-4 rounded object-cover shrink-0 border border-white/10"
+                          />
+                        )}
 
-                    <span className="truncate font-persian" dir="auto">
-                      {dialog.lastMessageText || '...'}
-                    </span>
+                        <span className="truncate font-persian" dir="auto">
+                          {dialog.lastMessageText || '...'}
+                        </span>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -1302,6 +1377,9 @@ export const DialogListItem = React.memo<DialogListItemProps>(
       prev.dialog.lastMessageText === next.dialog.lastMessageText &&
       prev.dialog.lastMessageRead === next.dialog.lastMessageRead &&
       prev.dialog.lastMessageIsOutgoing === next.dialog.lastMessageIsOutgoing &&
+      prev.dialog.lastMessageMediaType === next.dialog.lastMessageMediaType &&
+      prev.dialog.lastMessageThumb === next.dialog.lastMessageThumb &&
+      prev.dialog.lastMessageSticker?.id === next.dialog.lastMessageSticker?.id &&
       prev.dialog.draft?.text === next.dialog.draft?.text &&
       prev.dialog.avatarUrl === next.dialog.avatarUrl &&
       prev.dialog.title === next.dialog.title &&

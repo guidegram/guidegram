@@ -340,6 +340,10 @@ export function strippedThumbToDataUrl(bytes: Uint8Array | Buffer): string | nul
       return `data:image/jpeg;base64,${Buffer.concat([header, b.subarray(3), JPEG_FOOTER]).toString('base64')}`
     } else if (b[0] === 0xff && b[1] === 0xd8) {
       return `data:image/jpeg;base64,${b.toString('base64')}`
+    } else if (b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') {
+      return `data:image/webp;base64,${b.toString('base64')}`
+    } else if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
+      return `data:image/png;base64,${b.toString('base64')}`
     }
     return null
   } catch (_) {
@@ -353,20 +357,31 @@ export function extractStrippedThumb(mediaObj: any): string | undefined {
   if (mediaObj.stripped_thumb) return strippedThumbToDataUrl(mediaObj.stripped_thumb) || undefined
   if (Array.isArray(mediaObj.sizes)) {
     for (const s of mediaObj.sizes) {
-      if (s._ === 'photoStrippedSize' && s.bytes) return strippedThumbToDataUrl(s.bytes) || undefined
+      if ((s._ === 'photoStrippedSize' || s._ === 'photoCachedSize') && s.bytes) {
+        const u = strippedThumbToDataUrl(s.bytes)
+        if (u) return u
+      }
     }
   }
   if (Array.isArray(mediaObj.thumbs)) {
     for (const t of mediaObj.thumbs) {
-      if (t._ === 'photoStrippedSize' && t.bytes) return strippedThumbToDataUrl(t.bytes) || undefined
+      if ((t._ === 'photoStrippedSize' || t._ === 'photoCachedSize') && t.bytes) {
+        const u = strippedThumbToDataUrl(t.bytes)
+        if (u) return u
+      }
     }
   }
   if (Array.isArray(mediaObj.videoThumbs)) {
     for (const t of mediaObj.videoThumbs) {
-      if (t._ === 'photoStrippedSize' && t.bytes) return strippedThumbToDataUrl(t.bytes) || undefined
+      if ((t._ === 'photoStrippedSize' || t._ === 'photoCachedSize') && t.bytes) {
+        const u = strippedThumbToDataUrl(t.bytes)
+        if (u) return u
+      }
     }
   }
-  if (mediaObj._ === 'photoStrippedSize' && mediaObj.bytes) return strippedThumbToDataUrl(mediaObj.bytes) || undefined
+  if ((mediaObj._ === 'photoStrippedSize' || mediaObj._ === 'photoCachedSize') && mediaObj.bytes) {
+    return strippedThumbToDataUrl(mediaObj.bytes) || undefined
+  }
   return undefined
 }
 
@@ -2379,6 +2394,7 @@ export class AccountManager {
         let lastMessageRead = false
         let lastMessageMediaType: DialogItem['lastMessageMediaType'] = undefined
         let lastMessageThumb: string | undefined = undefined
+        let lastMessageSticker: DialogItem['lastMessageSticker'] = undefined
 
         if (d.lastMessage) {
           lastMessageId = d.lastMessage.id
@@ -2399,6 +2415,23 @@ export class AccountManager {
                   for (const attr of doc.attributes) {
                     if (attr._ === 'documentAttributeSticker') {
                       lastMessageMediaType = 'sticker'
+                      const docIdStr = doc.id?.toString ? doc.id.toString() : String(doc.id || '')
+                      const accessHashStr = doc.accessHash?.toString ? doc.accessHash.toString() : String(doc.accessHash || '')
+                      const fileRefHex = doc.fileReference ? Buffer.from(doc.fileReference).toString('hex') : ''
+                      if (docIdStr) {
+                        lastMessageSticker = {
+                          id: docIdStr,
+                          accessHash: accessHashStr,
+                          fileReferenceHex: fileRefHex,
+                          alt: attr.alt || '',
+                        }
+                        const webpCache = path.join(this.mediaDir, `sticker_${docIdStr}.webp`)
+                        if (fs.existsSync(webpCache)) {
+                          lastMessageThumb = `guidegram-media://${webpCache.replace(/\\/g, '/')}`
+                        } else if (!lastMessageThumb && holder?.client) {
+                          this.getStickerData(accountId, docIdStr, accessHashStr, fileRefHex).catch(() => {})
+                        }
+                      }
                       if (attr.alt) {
                         lastMessageText = attr.alt
                       }
@@ -2527,6 +2560,7 @@ export class AccountManager {
           lastMessageRead,
           lastMessageMediaType,
           lastMessageThumb,
+          lastMessageSticker,
           avatarInitials: initials,
           avatarUrl,
           username: (peer as any).username,
@@ -11930,6 +11964,8 @@ export class AccountManager {
     })
 
     const msgId = res.id || res.updates?.[0]?.id || Math.floor(Date.now() / 1000)
+    const webpCache = path.join(this.mediaDir, `sticker_${stickerId}.webp`)
+    const thumbUrl = fs.existsSync(webpCache) ? `guidegram-media://${webpCache.replace(/\\/g, '/')}` : undefined
     return {
       id: msgId,
       chatId,
@@ -11938,6 +11974,9 @@ export class AccountManager {
       date: Math.floor(Date.now() / 1000),
       isOutgoing: true,
       isSticker: true,
+      mediaType: 'sticker',
+      mediaThumbnailUrl: thumbUrl,
+      strippedThumb: thumbUrl,
     }
   }
 

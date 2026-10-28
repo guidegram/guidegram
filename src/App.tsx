@@ -459,7 +459,13 @@ export const App: React.FC = () => {
               lastMessageIsOutgoing: isOutgoing,
               lastMessageRead: isOutgoing ? false : true,
               lastMessageMediaType: message?.mediaType,
-              lastMessageThumb: message?.strippedThumb,
+              lastMessageThumb: message?.mediaThumbnailUrl || message?.strippedThumb,
+              lastMessageSticker: message?.mediaType === 'sticker' && (message as any)?.stickerId ? {
+                id: (message as any).stickerId,
+                accessHash: (message as any).stickerAccessHash || '',
+                fileReferenceHex: (message as any).stickerFileReferenceHex || '',
+                alt: message.text || '',
+              } : undefined,
               avatarInitials: (chatInfo?.title || message?.senderName || 'C').slice(0, 2).toUpperCase(),
             }
             updatedList = [newDialog, ...list]
@@ -487,7 +493,13 @@ export const App: React.FC = () => {
                   lastMessageIsOutgoing: isOutgoing,
                   lastMessageRead: isOutgoing ? false : true,
                   lastMessageMediaType: message ? message.mediaType : d.lastMessageMediaType,
-                  lastMessageThumb: message ? message.strippedThumb : d.lastMessageThumb,
+                  lastMessageThumb: message ? (message.mediaThumbnailUrl || message.strippedThumb || d.lastMessageThumb) : d.lastMessageThumb,
+                  lastMessageSticker: message?.mediaType === 'sticker' && (message as any)?.stickerId ? {
+                    id: (message as any).stickerId,
+                    accessHash: (message as any).stickerAccessHash || '',
+                    fileReferenceHex: (message as any).stickerFileReferenceHex || '',
+                    alt: message.text || '',
+                  } : d.lastMessageSticker,
                 }
               }
               return d
@@ -1866,12 +1878,14 @@ export const App: React.FC = () => {
       .reduce((acc, d) => acc + (d.unreadCount || 0), 0)
   }, [currentDialogs])
 
-  // Compute unread counts per account for multi-account switcher
+  // Compute unread counts per account for multi-account switcher (excluding muted chats)
   const unreadCountsByAccount = useMemo(() => {
     const map: Record<string, number> = {}
     for (const acc of accounts) {
       const dList = dialogsByAccount[acc.id] || []
-      map[acc.id] = dList.reduce((sum, d) => sum + (d.unreadCount || 0), 0)
+      map[acc.id] = dList
+        .filter((d) => !d.isMuted && !d.isSavedMessages && d.folderId !== 1 && !(d as any).archived)
+        .reduce((sum, d) => sum + (d.unreadCount || 0), 0)
     }
     return map
   }, [accounts, dialogsByAccount])
@@ -2074,6 +2088,7 @@ export const App: React.FC = () => {
             <AccountDock
               accounts={accounts}
               activeAccountId={activeAccountId}
+              unreadCountsByAccount={unreadCountsByAccount}
               isUnifiedInboxOpen={isUnifiedInboxOpen}
               onSelectAccount={handleSelectAccount}
               onOpenAddAccount={() => setIsAddAccountOpen(true)}
@@ -2198,6 +2213,7 @@ export const App: React.FC = () => {
             <AccountDock
               accounts={accounts}
               activeAccountId={activeAccountId}
+              unreadCountsByAccount={unreadCountsByAccount}
               isUnifiedInboxOpen={isUnifiedInboxOpen}
               onSelectAccount={handleSelectAccount}
               onOpenAddAccount={() => setIsAddAccountOpen(true)}

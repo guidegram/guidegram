@@ -6,6 +6,7 @@ import { Avatar } from './Avatar'
 interface AccountDockProps {
   accounts: AccountInfo[]
   activeAccountId: string | null
+  unreadCountsByAccount?: Record<string, number>
   isUnifiedInboxOpen: boolean
   onSelectAccount: (accountId: string) => void
   onOpenAddAccount: () => void
@@ -22,6 +23,7 @@ interface AccountDockProps {
 export const AccountDock: React.FC<AccountDockProps> = ({
   accounts,
   activeAccountId,
+  unreadCountsByAccount = {},
   isUnifiedInboxOpen,
   onSelectAccount,
   onOpenAddAccount,
@@ -42,7 +44,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         onClick={onOpenSavedMessages}
         title="Saved Messages (پیام‌های ذخیره‌شده)"
         aria-label="Saved Messages"
-        className={`group relative w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
+        className={`group relative w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
           isSavedMessagesActive
             ? 'bg-gradient-to-tr from-cyan-500 via-primary-500 to-blue-600 text-white shadow-glow ring-2 ring-primary-400 ring-offset-2 ring-offset-dark-900'
             : 'bg-gradient-to-tr from-cyan-600/90 via-primary-600/90 to-blue-600/90 hover:from-cyan-500 hover:via-primary-500 hover:to-blue-500 text-white shadow-md hover:shadow-glow border border-white/10 hover:border-white/20'
@@ -69,7 +71,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
       <button
         onClick={onToggleUnifiedInbox}
         title="Unified Inbox (All Accounts)"
-        className={`relative w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-all cursor-pointer ${
+        className={`relative w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all cursor-pointer ${
           isUnifiedInboxOpen
             ? 'bg-primary-600 text-white shadow-glow'
             : 'bg-dark-800/80 text-gray-400 hover:text-white hover:bg-dark-750'
@@ -77,11 +79,18 @@ export const AccountDock: React.FC<AccountDockProps> = ({
       >
         <Inbox className="w-5 h-5" />
         {/* Total Unread across all accounts badge */}
-        {accounts.reduce((acc, a) => acc + (a.unreadTotal || 0), 0) > 0 && (
-          <span className="absolute -top-1 -right-1 bg-accent-rose text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-dark-900">
-            {accounts.reduce((acc, a) => acc + (a.unreadTotal || 0), 0)}
-          </span>
-        )}
+        {(() => {
+          const totalUnread = accounts.reduce(
+            (sum, a) => sum + (unreadCountsByAccount[a.id] ?? a.unreadTotal ?? 0),
+            0
+          )
+          if (totalUnread <= 0) return null
+          return (
+            <span className="absolute -top-1 -right-1 bg-accent-rose text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-dark-900 shadow-md">
+              {totalUnread > 99 ? '99+' : totalUnread}
+            </span>
+          )
+        })()}
       </button>
 
       <div className="w-8 h-[1px] bg-white/10 my-1"></div>
@@ -92,13 +101,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           const isActive = !isUnifiedInboxOpen && acc.id === activeAccountId
           const safeFirst = acc.firstName || 'User'
           const initials = `${safeFirst.charAt(0)}${acc.lastName ? acc.lastName.charAt(0) : ''}`
+          const unreadCount = unreadCountsByAccount[acc.id] ?? acc.unreadTotal ?? 0
 
           return (
             <div key={acc.id} className="relative group">
               <button
                 onClick={() => onSelectAccount(acc.id)}
                 title={`${safeFirst} (${acc.isBot ? 'Bot' : acc.phone || 'No phone'})`}
-                className={`relative w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-200 cursor-pointer ${
+                className={`relative w-12 h-12 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-dark-900 shadow-glow'
                     : 'hover:opacity-90 border border-white/5'
@@ -111,7 +121,8 @@ export const AccountDock: React.FC<AccountDockProps> = ({
                   initials={initials}
                   avatarUrl={acc.avatarUrl}
                   size="lg"
-                  className="w-full h-full rounded-2xl"
+                  shape="circle"
+                  className="w-full h-full rounded-full"
                 />
 
                 {/* Status dot */}
@@ -145,9 +156,12 @@ export const AccountDock: React.FC<AccountDockProps> = ({
               </button>
 
               {/* Unread badge per account */}
-              {acc.unreadTotal > 0 && (
-                <span className="absolute -top-1 -right-1 bg-accent-cyan text-dark-950 font-black text-[10px] px-1.5 py-0.2 rounded-full ring-2 ring-dark-900">
-                  {acc.unreadTotal}
+              {unreadCount > 0 && (
+                <span
+                  title={`${unreadCount} unread messages`}
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-rose text-white font-bold text-[10px] rounded-full ring-2 ring-dark-900 flex items-center justify-center shadow-md z-10 animate-in zoom-in duration-150"
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </div>
@@ -158,7 +172,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         <button
           onClick={onOpenAddAccount}
           title="Add New Account (No limit!)"
-          className="w-12 h-12 rounded-2xl border border-dashed border-white/20 hover:border-primary-500 text-gray-400 hover:text-primary-400 flex items-center justify-center transition-colors bg-dark-850/50 hover:bg-primary-500/10 cursor-pointer shrink-0"
+          className="w-12 h-12 rounded-full border border-dashed border-white/20 hover:border-primary-500 text-gray-400 hover:text-primary-400 flex items-center justify-center transition-colors bg-dark-850/50 hover:bg-primary-500/10 cursor-pointer shrink-0"
         >
           <Plus className="w-5 h-5" />
         </button>
