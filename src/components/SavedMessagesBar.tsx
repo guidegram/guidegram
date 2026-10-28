@@ -34,7 +34,7 @@ export interface SavedMessagesBarProps {
   inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
-export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
+export const SavedMessagesBar = React.memo<SavedMessagesBarProps>(({
   accountId,
   messages,
   selectedSourceId,
@@ -156,7 +156,7 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
   }
 
   return (
-    <div className="bg-dark-850/95 backdrop-blur-md border-b border-white/10 px-4 py-2.5 transition-all text-xs select-none">
+    <div className="bg-dark-850 border-b border-white/10 px-4 py-2.5 text-xs select-none shadow-xs">
       {/* Top Search & Media Filter Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5">
         {/* Search Bar */}
@@ -385,4 +385,4 @@ export const SavedMessagesBar: React.FC<SavedMessagesBarProps> = ({
       </div>
     </div>
   )
-}
+})

@@ -137,6 +137,7 @@ import { isRTL, formatFileSize, formatDuration, formatUserStatus } from '../util
 import { parseTelegramUrl } from '../utils/telegramLink'
 import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
 import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverlay'
+import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
 import { MediaViewerModal } from './MediaViewerModal'
 
@@ -153,6 +154,8 @@ interface ChatViewportProps {
   quickForwardToSaved?: boolean
   alwaysDeleteBoth?: boolean
   copyCallbackData?: boolean
+  disableAnimations?: boolean
+  enableThanosDust?: boolean
   suppressLinkWarning?: boolean
   autoDownload?: AutoDownloadConfig
   chatFontSize?: number
@@ -720,6 +723,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   alwaysDeleteBoth = true,
   copyCallbackData = true,
   suppressLinkWarning = false,
+  disableAnimations = false,
+  enableThanosDust = true,
   autoDownload,
   chatFontSize = 14,
   bubbleRadius = 16,
@@ -746,21 +751,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null)
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(new Set())
   const isSelectionMode = selectedMessageIds.size > 0
-  const [hoveredMessage, setHoveredMessage] = useState<MessageItem | null>(null)
+  const hoveredMessageRef = useRef<MessageItem | null>(null)
   const { t, formatNumber: formatLocalizedNumber } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
   const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
   const [thanosTarget, setThanosTarget] = useState<{ id: number; rect: DOMRect } | null>(null)
 
   const handleDeleteWithThanos = async (msg: MessageItem, e?: React.MouseEvent) => {
-    try {
-      const el = document.getElementById(`msg-${msg.id}`) || document.getElementById(`message-bubble-${msg.id}`) || (e?.currentTarget as HTMLElement)?.closest('.message-bubble-container')
-      if (el) {
-        const rect = el.getBoundingClientRect()
-        setThanosTarget({ id: msg.id, rect })
+    if (enableThanosDust && !disableAnimations) {
+      try {
+        const el = document.getElementById(`msg-${msg.id}`) || document.getElementById(`message-bubble-${msg.id}`) || (e?.currentTarget as HTMLElement)?.closest('.message-bubble-container')
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          setThanosTarget({ id: msg.id, rect })
+        }
+      } catch (err) {
+        console.error('Error measuring bubble for Thanos effect:', err)
       }
-    } catch (err) {
-      console.error('Error measuring bubble for Thanos effect:', err)
     }
     if (onDeleteMessage) {
       return await onDeleteMessage(msg)
@@ -1417,6 +1424,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [unreadScrollCount, setUnreadScrollCount] = useState(0)
   const isScrollingRef = useRef(false)
   const previousChatIdRef = useRef<string | null>(null)
+  const prevLastMessageIdRef = useRef<number | null>(null)
+  const prevMessagesLengthRef = useRef<number>(0)
 
   // Multi-line input ref
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -1807,6 +1816,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     // 1. Detect Chat Switch
     if (chat?.id !== previousChatIdRef.current) {
       previousChatIdRef.current = chat?.id || null
+      prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : null
+      prevMessagesLengthRef.current = messages.length
       hasMoreOlderRef.current = true
       isLoadingOlderRef.current = false
       setIsLoadingOlder(false)
@@ -1848,8 +1859,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       return
     }
 
-    // 2. Outgoing Message by Current User
-    const lastMsg = messages[messages.length - 1]
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null
+    const prevLastId = prevLastMessageIdRef.current
+    const prevLen = prevMessagesLengthRef.current
+
+    // Update refs for tracking
+    prevLastMessageIdRef.current = lastMsg ? lastMsg.id : null
+    prevMessagesLengthRef.current = messages.length
+
+    // Critical fix: Only auto-scroll down if a genuinely NEW message was appended to the bottom
+    const isNewAppendedMessage = Boolean(
+      lastMsg &&
+      prevLastId !== null &&
+      lastMsg.id > prevLastId &&
+      messages.length > prevLen
+    )
+
+    if (!isNewAppendedMessage) {
+      // Historical messages loaded from top or message updated in place -> DO NOT force scroll to bottom!
+      return
+    }
+
+    // 2. Outgoing Message by Current User (new outgoing message just sent)
     if (lastMsg?.isOutgoing) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       setShowScrollBottom(false)
@@ -2292,6 +2323,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     savedMediaFilter,
     savedSearchResults,
   ])
+
+  // Telegram Desktop Grouped Media Album grouping (0px delta layout parity)
+  const groupedAlbums = React.useMemo(() => {
+    const map = new Map<string, MessageItem[]>()
+    for (const m of filteredMessages) {
+      if (m.groupedId && (m.mediaType === 'photo' || m.mediaType === 'video')) {
+        const existing = map.get(m.groupedId) || []
+        existing.push(m)
+        map.set(m.groupedId, existing)
+      }
+    }
+    return map
+  }, [filteredMessages])
 
   // Remote Telegram MTProto search for Saved Messages across entire server history
   useEffect(() => {
@@ -3069,7 +3113,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       if (e.altKey && (e.key === 'f' || e.key === 'F')) {
         const target =
           selectedMessage ||
-          hoveredMessage ||
+          hoveredMessageRef.current ||
           (messages.length > 0 ? messages[messages.length - 1] : null)
         if (!target) return
         e.preventDefault()
@@ -3079,7 +3123,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
         const target =
           selectedMessage ||
-          hoveredMessage ||
+          hoveredMessageRef.current ||
           (messages.length > 0 ? messages[messages.length - 1] : null)
         if (!target) return
         e.preventDefault()
@@ -3102,7 +3146,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedMessage, hoveredMessage, messages, onOpenDirectForward, lightboxUrl, isInfoOpen, replyMessage, isAttachMenuOpen, isSelectionMode, clearSelection, selectAllMessages, filteredMessages])
+  }, [selectedMessage, messages, onOpenDirectForward, lightboxUrl, isInfoOpen, replyMessage, isAttachMenuOpen, isSelectionMode, clearSelection, selectAllMessages, filteredMessages])
 
   // Attachment picking handlers (Feature 17)
   const handlePickAttachment = async (category: 'media' | 'document' | 'audio') => {
@@ -4316,6 +4360,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Render media cards (Photo, Video, Document, Voice, Web Preview)
   const renderMediaCard = (msg: MessageItem) => {
+    // 0. Telegram Desktop Grouped Media Album (0px delta layout parity)
+    if (msg.groupedId) {
+      const album = groupedAlbums.get(msg.groupedId)
+      if (album && album.length > 1) {
+        if (album[0].id === msg.id) {
+          return (
+            <GroupedMediaAlbum
+              messages={album}
+              containerWidth={380}
+              downloadedMedia={downloadedMedia}
+              onOpenViewer={(m, url) => handleOpenMediaViewer(m, url)}
+              onRequestDownload={(m) => requestMediaDownload(m, false, true)}
+            />
+          )
+        } else {
+          return null
+        }
+      }
+    }
+
     const mediaUrl = downloadedMedia[msg.id] || msg.mediaUrl
 
     // 1. Photo Card
@@ -5768,21 +5832,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
       {/* 2. Messages Feed Outer Relative Wrapper */}
       <div
-        className={`flex-1 min-h-0 relative flex flex-col ${activeThemeObj ? `bg-gradient-to-b ${activeThemeObj.gradient}` : ''}`}
-        style={{
-          backgroundImage: chatDetails?.chatWallpaper || chat?.chatWallpaper ? `url(${chatDetails?.chatWallpaper || chat?.chatWallpaper})` : 'var(--chat-wallpaper, none)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-        }}
+        className={`flex-1 min-h-0 relative flex flex-col overflow-hidden ${activeThemeObj ? `bg-gradient-to-b ${activeThemeObj.gradient}` : ''}`}
       >
+        {/* Hardware-Accelerated Static Wallpaper Layer (Zero scroll repaint overhead) */}
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: chatDetails?.chatWallpaper || chat?.chatWallpaper ? `url(${chatDetails?.chatWallpaper || chat?.chatWallpaper})` : 'var(--chat-wallpaper, none)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+
         <div
           ref={messagesContainerRef}
           role="log"
           aria-label="Messages stream"
           aria-live="polite"
           onScroll={handleScroll}
-          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
+          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 relative z-10 overscroll-contain"
+          style={{ willChange: 'scroll-position' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) clearSelection()
           }}
@@ -5858,6 +5927,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           </div>
         ) : (
           filteredMessages.map((msg, index) => {
+            // Grouped album trailing items without separate text are rendered inside the album grid
+            const isTrailingAlbumItem = Boolean(
+              msg.groupedId &&
+              (groupedAlbums.get(msg.groupedId)?.length ?? 0) > 1 &&
+              groupedAlbums.get(msg.groupedId)?.[0]?.id !== msg.id &&
+              !msg.text
+            )
+            if (isTrailingAlbumItem) {
+              return null
+            }
+
             const isSelected = selectedMessageIds.has(msg.id) || selectedMessage?.id === msg.id
             const isFirstUnread = msg.id === firstUnreadMessageId
             const prevMsg = index > 0 ? filteredMessages[index - 1] : null
@@ -5905,8 +5985,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 )}
                 <div
                   id={`msg-${msg.id}`}
-                onMouseEnter={() => setHoveredMessage(msg)}
-                onMouseLeave={() => setHoveredMessage(null)}
+                  onMouseEnter={() => {
+                    hoveredMessageRef.current = msg
+                  }}
+                  onMouseLeave={() => {
+                    if (hoveredMessageRef.current?.id === msg.id) {
+                      hoveredMessageRef.current = null
+                    }
+                  }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
