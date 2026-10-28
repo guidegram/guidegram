@@ -14,8 +14,17 @@ interface AvatarProps {
   onClick?: (e: React.MouseEvent<HTMLDivElement | HTMLImageElement>) => void
 }
 
-// In-memory module cache to avoid refetching avatars across renders
+// In-memory module cache to avoid refetching avatars across renders (only holds crystal-clear HD photos)
 const avatarMemoryCache = new Map<string, string>()
+// Module-level deduplicator for in-flight photo requests
+const pendingAvatarRequests = new Map<string, Promise<string | null>>()
+
+const isHdPhoto = (url?: string | null): boolean => {
+  if (!url || typeof url !== 'string') return false
+  if (url.endsWith('base64,')) return false
+  if (!url.startsWith('data:image/')) return url.length > 20
+  return url.length >= 2000
+}
 
 export const Avatar: React.FC<AvatarProps> = ({
   peerId,
@@ -40,7 +49,11 @@ export const Avatar: React.FC<AvatarProps> = ({
       !avatarUrl.endsWith('base64,')
   )
 
-  const resolvedInitialUrl = isPropValid ? avatarUrl! : cachedUrl
+  const resolvedInitialUrl = isHdPhoto(cachedUrl)
+    ? cachedUrl
+    : isHdPhoto(avatarUrl)
+      ? avatarUrl!
+      : (avatarUrl || cachedUrl)
 
   const [currentUrl, setCurrentUrl] = useState<string | null>(resolvedInitialUrl)
   const [hasError, setHasError] = useState(false)
@@ -51,9 +64,13 @@ export const Avatar: React.FC<AvatarProps> = ({
   if (cacheKey !== prevIdentity || avatarUrl !== prevAvatarUrlProp) {
     setPrevIdentity(cacheKey)
     setPrevAvatarUrlProp(avatarUrl)
-    if (isPropValid) {
+    if (isHdPhoto(avatarUrl)) {
       setCurrentUrl(avatarUrl!)
       if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl!)
+    } else if (cachedUrl && isHdPhoto(cachedUrl)) {
+      setCurrentUrl(cachedUrl)
+    } else if (isPropValid) {
+      setCurrentUrl(avatarUrl!) // Progressive thumbnail preview
     } else if (avatarUrl === undefined || avatarUrl === null || avatarUrl === '') {
       if (cacheKey && prevAvatarUrlProp) {
         avatarMemoryCache.delete(cacheKey)
@@ -77,13 +94,18 @@ export const Avatar: React.FC<AvatarProps> = ({
 
     const unsubAvatarUpdated = window.guidegram.on(
       'telegram:user-avatar-updated',
-      (payload: { accountId: string; userId: string; avatarUrl?: string }) => {
-        if (payload?.accountId === accountId && payload?.userId === peerId) {
-          if (payload.avatarUrl) {
+      (payload: { accountId: string; userId?: string; peerId?: string; avatarUrl?: string }) => {
+        const targetId = payload?.peerId || payload?.userId
+        const cleanTarget = typeof targetId === 'string' ? targetId.replace(/^-100/, '').replace(/^-/, '') : ''
+        const cleanPeer = typeof peerId === 'string' ? peerId.replace(/^-100/, '').replace(/^-/, '') : ''
+        const isMatch = targetId === peerId || (cleanTarget && cleanPeer && cleanTarget === cleanPeer)
+
+        if (payload?.accountId === accountId && isMatch) {
+          if (payload.avatarUrl && isHdPhoto(payload.avatarUrl)) {
             avatarMemoryCache.set(cacheKey, payload.avatarUrl)
             setCurrentUrl(payload.avatarUrl)
             setHasError(false)
-          } else {
+          } else if (payload.avatarUrl === '' || payload.avatarUrl === null) {
             avatarMemoryCache.delete(cacheKey)
             setCurrentUrl(null)
           }
@@ -97,24 +119,29 @@ export const Avatar: React.FC<AvatarProps> = ({
   }, [cacheKey, accountId, peerId])
 
   useEffect(() => {
-    // 1. If avatarUrl prop is already valid and non-empty, use it immediately
-    if (isPropValid && avatarUrl) {
-      setCurrentUrl(avatarUrl)
-      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl)
+    // 1. If avatarUrl prop is already a crystal-clear HD photo, use and cache it
+    if (isHdPhoto(avatarUrl)) {
+      setCurrentUrl(avatarUrl!)
+      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl!)
       setHasError(false)
       return
     }
 
-    // 2. If we already have the full avatar in memory cache, use it immediately
+    // 2. If we already have the full HD avatar in memory cache, use it immediately
     if (cacheKey && avatarMemoryCache.has(cacheKey)) {
       const cached = avatarMemoryCache.get(cacheKey)!
-      if (cached && cached.length > 2000 && !cached.endsWith('base64,')) {
+      if (isHdPhoto(cached)) {
         setCurrentUrl(cached)
         setHasError(false)
         return
       }
+    }
+
+    // If we have a progressive thumbnail, display it immediately as placeholder
+    if (isPropValid && avatarUrl) {
+      setCurrentUrl(avatarUrl)
+      setHasError(false)
     } else if (!cachedUrl) {
-      // Identity has no photo in props or cache -> explicitly clear previous avatar
       setCurrentUrl(null)
     }
 
@@ -124,29 +151,28 @@ export const Avatar: React.FC<AvatarProps> = ({
     }
 
     let isMounted = true
-    window.guidegram
-      .getProfilePhoto(accountId, peerId)
-      .then((photoDataUrl) => {
-        if (!isMounted) return
-        if (
-          photoDataUrl &&
-          typeof photoDataUrl === 'string' &&
-          photoDataUrl.length > 50 &&
-          !photoDataUrl.endsWith('base64,')
-        ) {
-          if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)
-          setCurrentUrl(photoDataUrl)
-          setHasError(false)
-        } else if (!isPropValid) {
-          setCurrentUrl(null)
-        }
-      })
-      .catch(() => {
-        if (!isMounted) return
-        if (!isPropValid) {
-          setCurrentUrl(null)
-        }
-      })
+    const reqKey = `${accountId}_${peerId}`
+    let fetchPromise = pendingAvatarRequests.get(reqKey)
+    if (!fetchPromise) {
+      fetchPromise = window.guidegram
+        .getProfilePhoto(accountId, peerId)
+        .catch(() => null)
+        .finally(() => {
+          pendingAvatarRequests.delete(reqKey)
+        })
+      pendingAvatarRequests.set(reqKey, fetchPromise)
+    }
+
+    fetchPromise.then((photoDataUrl) => {
+      if (!isMounted) return
+      if (photoDataUrl && isHdPhoto(photoDataUrl)) {
+        if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)
+        setCurrentUrl(photoDataUrl)
+        setHasError(false)
+      } else if (!isPropValid && (!photoDataUrl || photoDataUrl.length < 50)) {
+        setCurrentUrl(null)
+      }
+    })
 
     return () => {
       isMounted = false

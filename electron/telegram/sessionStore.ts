@@ -848,7 +848,30 @@ export class SessionStore {
         const raw = fs.readFileSync(filePath, 'utf-8')
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
-          return parsed
+          const avatarsDir = path.join(this.dataDir, 'avatars')
+          return parsed.map((d: DialogItem) => {
+            if (!d.avatarUrl || d.avatarUrl.length < 2000) {
+              const cleanId = String(d.id).replace(/^-100/, '').replace(/^-/, '')
+              const candidates = [
+                path.join(avatarsDir, `avatar_${accountId}_${d.id}.jpg`),
+                path.join(avatarsDir, `avatar_${accountId}_-100${cleanId}.jpg`),
+                path.join(avatarsDir, `avatar_${accountId}_${cleanId}.jpg`),
+              ]
+              for (const p of candidates) {
+                if (fs.existsSync(p)) {
+                  try {
+                    const stat = fs.statSync(p)
+                    if (stat.size > 500) {
+                      const data = fs.readFileSync(p)
+                      d.avatarUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+                      break
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+            return d
+          })
         }
       }
     } catch (err) {

@@ -972,6 +972,8 @@ export class AccountManager {
   private botButtonCache = new Map<string, Buffer>()
   private peerPhotos = new Map<string, any>()
   private peerBigPhotos = new Map<string, any>()
+  private peerPhotoIds = new Map<string, string>()
+  private pendingPhotoDownloads = new Map<string, Promise<string | null>>()
   private peerAccessHashes = new Map<string, Long>()
   private rawMessagesCache = new Map<string, any>()
   private savePeerHashesTimer?: NodeJS.Timeout
@@ -2283,20 +2285,58 @@ export class AccountManager {
 
         let avatarUrl: string | undefined = undefined
         const avatarCacheKey = `${accountId}_${peerId}`
-        // Prioritize full high-res avatar from cache if already downloaded
+        // 1. Prioritize full high-res avatar from in-memory cache
         if (this.avatarCache.has(avatarCacheKey)) {
           avatarUrl = this.avatarCache.get(avatarCacheKey)
-        } else if (peer.photo?.thumb) {
-          try {
-            avatarUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
-            // Note: DO NOT set into this.avatarCache so getProfilePhoto can fetch the crystal-clear 160x160 photo
-          } catch (_) {}
-        } else if (peer.photo?.raw?.strippedThumb) {
-          const thumb = strippedThumbToDataUrl(peer.photo.raw.strippedThumb)
-          if (thumb) {
-            avatarUrl = thumb
-            // Note: DO NOT set into this.avatarCache so getProfilePhoto can fetch the crystal-clear 160x160 photo
+        } else {
+          // 2. Check disk for existing crystal-clear HD avatar
+          const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+          const diskCandidates = [
+            path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`),
+            path.join(this.avatarsDir, `avatar_${accountId}_-100${cleanId}.jpg`),
+            path.join(this.avatarsDir, `avatar_${accountId}_${cleanId}.jpg`),
+          ]
+          for (const cand of diskCandidates) {
+            if (fs.existsSync(cand)) {
+              try {
+                const stat = fs.statSync(cand)
+                if (stat.size > 500) {
+                  const fileData = fs.readFileSync(cand)
+                  avatarUrl = `data:image/jpeg;base64,${fileData.toString('base64')}`
+                  this.avatarCache.set(avatarCacheKey, avatarUrl)
+                  break
+                }
+              } catch (_) {}
+            }
           }
+        }
+        // 3. Fallback to progressive preview thumbnail if HD photo is not on disk yet
+        if (!avatarUrl) {
+          if (peer.photo?.thumb) {
+            try {
+              avatarUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
+            } catch (_) {}
+          } else if (peer.photo?.raw?.strippedThumb) {
+            const thumb = strippedThumbToDataUrl(peer.photo.raw.strippedThumb)
+            if (thumb) {
+              avatarUrl = thumb
+            }
+          }
+        }
+
+        // Photo staleness / change detection from Telegram MTProto
+        const rawPhoto = (peer.photo?.raw as any) || (peer.raw?.photo as any)
+        const currentPhotoId = rawPhoto?.photoId ? rawPhoto.photoId.toString() : ''
+        if (currentPhotoId) {
+          const prevPhotoId = this.peerPhotoIds.get(`${accountId}_${peerId}`)
+          if (prevPhotoId && prevPhotoId !== currentPhotoId) {
+            this.avatarCache.delete(avatarCacheKey)
+            this.avatarCache.delete(`${avatarCacheKey}_big`)
+            const diskFile = path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`)
+            try { if (fs.existsSync(diskFile)) fs.unlinkSync(diskFile) } catch (_) {}
+            this.getProfilePhoto(accountId, peerId, false, true).catch(() => {})
+          }
+          this.peerPhotoIds.set(`${accountId}_${peerId}`, currentPhotoId)
         }
 
         const isUser = peer._ === 'user' || typeof peer.firstName === 'string'
@@ -2609,7 +2649,7 @@ export class AccountManager {
         try {
           const baseName = `${accountId}_${d.id}.jpg`
           const avatarFile = path.join(this.avatarsDir, `avatar_${baseName}`)
-          if (!fs.existsSync(avatarFile)) {
+          if (!fs.existsSync(avatarFile) || !d.avatarUrl || d.avatarUrl.length < 2000) {
             await this.getProfilePhoto(accountId, d.id, false).catch(() => {})
           }
         } catch (_) {}
@@ -3459,164 +3499,210 @@ export class AccountManager {
       }
     }
 
-    try {
-      const isSelf = peerId === accountId || peerId === 'self' || peerId === 'me'
-      const baseName = `${accountId}_${peerId}${isBig ? '_big' : ''}.jpg`
-      const candidateFiles = [
-        path.join(this.avatarsDir, `avatar_${baseName}`),
-        path.join(this.avatarsDir, baseName),
-      ]
+    if (!forceRefresh && this.pendingPhotoDownloads.has(cacheKey)) {
+      return this.pendingPhotoDownloads.get(cacheKey)!
+    }
 
-      if (forceRefresh) {
-        this.avatarCache.delete(cacheKey)
-        if (isSelf) {
-          this.peerPhotos.delete(`${accountId}_${peerId}`)
-          this.peerBigPhotos.delete(`${accountId}_${peerId}`)
-        }
-        for (const p of candidateFiles) {
-          try {
-            if (fs.existsSync(p)) fs.unlinkSync(p)
-          } catch {}
-        }
-      } else {
-        for (const p of candidateFiles) {
-          if (fs.existsSync(p)) {
+    const fetchPromise = (async (): Promise<string | null> => {
+      const client = holder?.client
+      if (!client) return null
+
+      try {
+        const isSelf = peerId === accountId || peerId === 'self' || peerId === 'me'
+        const baseName = `${accountId}_${peerId}${isBig ? '_big' : ''}.jpg`
+        const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
+        const markedPeerId = `-100${cleanPeerId}`
+        const candidateFiles = [
+          path.join(this.avatarsDir, `avatar_${baseName}`),
+          path.join(this.avatarsDir, baseName),
+          path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`),
+          path.join(this.avatarsDir, `avatar_${accountId}_${markedPeerId}.jpg`),
+          path.join(this.avatarsDir, `avatar_${accountId}_${cleanPeerId}.jpg`),
+          path.join(this.avatarsDir, `${accountId}_${peerId}.jpg`),
+        ]
+
+        if (forceRefresh) {
+          this.avatarCache.delete(cacheKey)
+          if (isSelf) {
+            this.peerPhotos.delete(`${accountId}_${peerId}`)
+            this.peerBigPhotos.delete(`${accountId}_${peerId}`)
+          }
+          for (const p of candidateFiles) {
             try {
-              const stat = fs.statSync(p)
-              if (stat.size === 0) {
-                fs.unlinkSync(p)
-              } else {
-                const data = await fs.promises.readFile(p)
-                if (data.length > 0) {
-                  const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
-                  this.avatarCache.set(cacheKey, dataUrl)
-                  return dataUrl
-                }
-              }
+              if (fs.existsSync(p)) fs.unlinkSync(p)
             } catch {}
           }
-        }
-      }
-
-      const avatarFile = candidateFiles[0]
-
-      // Check if we have photo location cached
-      let photoLoc = isBig
-        ? this.peerBigPhotos.get(`${accountId}_${peerId}`) || this.peerPhotos.get(`${accountId}_${peerId}`)
-        : this.peerPhotos.get(`${accountId}_${peerId}`)
-
-      if (photoLoc) {
-        await holder.client.downloadToFile(avatarFile, photoLoc).catch(() => {})
-      }
-
-      if (!fs.existsSync(avatarFile) && isSelf) {
-        // 1. Check getMe() for self user/bot photo
-        const me: any = await holder.client.getMe().catch(() => null)
-        if (me?.photo) {
-          if (me.photo.small) this.peerPhotos.set(`${accountId}_${peerId}`, me.photo.small)
-          if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${peerId}`, me.photo.big)
-          const targetLoc = isBig ? (me.photo.big || me.photo.small) : (me.photo.small || me.photo.big)
-          if (targetLoc) {
-            await holder.client.downloadToFile(avatarFile, targetLoc).catch(() => {})
+        } else {
+          for (const p of candidateFiles) {
+            if (fs.existsSync(p)) {
+              try {
+                const stat = fs.statSync(p)
+                if (stat.size === 0) {
+                  fs.unlinkSync(p)
+                } else if (stat.size > 500) {
+                  const data = await fs.promises.readFile(p)
+                  if (data.length > 0) {
+                    const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+                    this.avatarCache.set(cacheKey, dataUrl)
+                    this.onEventCallback?.('telegram:user-avatar-updated', {
+                      accountId,
+                      userId: peerId,
+                      peerId,
+                      avatarUrl: dataUrl,
+                    })
+                    return dataUrl
+                  }
+                }
+              } catch {}
+            }
           }
         }
 
-        // 2. If not downloaded and NOT a bot, try photos.getUserPhotos (bots will error with BOT_METHOD_INVALID)
-        if (!fs.existsSync(avatarFile) && !holder.info.isBot) {
-          const userPhotos: any = await holder.client.call({
-            _: 'photos.getUserPhotos',
-            userId: { _: 'inputUserSelf' },
-            offset: 0,
-            maxId: Long.ZERO,
-            limit: 1,
-          }).catch(() => null)
-          const firstPhoto = userPhotos?.photos?.[0]
-          if (firstPhoto && firstPhoto._ === 'photo') {
-            await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
-          }
+        const avatarFile = candidateFiles[0]
+
+        // Check if we have photo location cached
+        let photoLoc = isBig
+          ? this.peerBigPhotos.get(`${accountId}_${peerId}`) ||
+            this.peerBigPhotos.get(`${accountId}_${markedPeerId}`) ||
+            this.peerPhotos.get(`${accountId}_${peerId}`) ||
+            this.peerPhotos.get(`${accountId}_${markedPeerId}`)
+          : this.peerPhotos.get(`${accountId}_${peerId}`) ||
+            this.peerPhotos.get(`${accountId}_${markedPeerId}`) ||
+            this.peerBigPhotos.get(`${accountId}_${peerId}`) ||
+            this.peerBigPhotos.get(`${accountId}_${markedPeerId}`)
+
+        if (photoLoc) {
+          await client.downloadToFile(avatarFile, photoLoc).catch(() => {})
         }
 
-        // 3. If still not downloaded (works for bots and users), fetch full user profile photo
-        if (!fs.existsSync(avatarFile)) {
-          const fullRes: any = await holder.client.call({
-            _: 'users.getFullUser',
-            id: { _: 'inputUserSelf' },
-          }).catch(() => null)
-          const photo = fullRes?.fullUser?.profilePhoto || fullRes?.fullUser?.profile_photo || fullRes?.fullUser?.fallbackPhoto
-          if (photo && (photo._ === 'photo' || (photo as any).sizes)) {
-            await holder.client.downloadToFile(avatarFile, photo).catch(() => {})
+        if (!fs.existsSync(avatarFile) && isSelf) {
+          // 1. Check getMe() for self user/bot photo
+          const me: any = await client.getMe().catch(() => null)
+          if (me?.photo) {
+            if (me.photo.small) this.peerPhotos.set(`${accountId}_${peerId}`, me.photo.small)
+            if (me.photo.big) this.peerBigPhotos.set(`${accountId}_${peerId}`, me.photo.big)
+            const targetLoc = isBig ? (me.photo.big || me.photo.small) : (me.photo.small || me.photo.big)
+            if (targetLoc) {
+              await client.downloadToFile(avatarFile, targetLoc).catch(() => {})
+            }
           }
-        }
-      } else if (!fs.existsSync(avatarFile) && !isSelf) {
-        const inputPeer = await this.resolveInputPeer(accountId, peerId)
-        if (inputPeer._ === 'inputPeerUser') {
-          let accessHash = inputPeer.accessHash || Long.ZERO
-          if (accessHash.isZero()) {
-            const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.userId}`)
-            if (cachedHash) accessHash = cachedHash
+
+          // 2. If not downloaded and NOT a bot, try photos.getUserPhotos (bots will error with BOT_METHOD_INVALID)
+          if (!fs.existsSync(avatarFile) && !holder.info.isBot) {
+            const userPhotos: any = await client.call({
+              _: 'photos.getUserPhotos',
+              userId: { _: 'inputUserSelf' },
+              offset: 0,
+              maxId: Long.ZERO,
+              limit: 1,
+            }).catch(() => null)
+            const firstPhoto = userPhotos?.photos?.[0]
+            if (firstPhoto && firstPhoto._ === 'photo') {
+              await client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+            }
           }
-          const userPhotos: any = await holder.client.call({
-            _: 'photos.getUserPhotos',
-            userId: { _: 'inputUser', userId: inputPeer.userId, accessHash },
-            offset: 0,
-            maxId: Long.ZERO,
-            limit: 1,
-          }).catch(() => null)
-          const firstPhoto = userPhotos?.photos?.[0]
-          if (firstPhoto && firstPhoto._ === 'photo') {
-            await holder.client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
-          }
+
+          // 3. If still not downloaded (works for bots and users), fetch full user profile photo
           if (!fs.existsSync(avatarFile)) {
-            const fullRes: any = await holder.client.call({
+            const fullRes: any = await client.call({
               _: 'users.getFullUser',
-              id: { _: 'inputUser', userId: inputPeer.userId, accessHash },
+              id: { _: 'inputUserSelf' },
             }).catch(() => null)
             const photo = fullRes?.fullUser?.profilePhoto || fullRes?.fullUser?.profile_photo || fullRes?.fullUser?.fallbackPhoto
             if (photo && (photo._ === 'photo' || (photo as any).sizes)) {
-              await holder.client.downloadToFile(avatarFile, photo).catch(() => {})
+              await client.downloadToFile(avatarFile, photo).catch(() => {})
             }
           }
-        } else if (inputPeer._ === 'inputPeerChannel') {
-          let accessHash = inputPeer.accessHash || Long.ZERO
-          if (accessHash.isZero()) {
-            const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.channelId}`)
-            if (cachedHash) accessHash = cachedHash
+        } else if (!fs.existsSync(avatarFile) && !isSelf) {
+          const inputPeer = await this.resolveInputPeer(accountId, peerId)
+          if (inputPeer._ === 'inputPeerUser') {
+            let accessHash = inputPeer.accessHash || Long.ZERO
+            if (accessHash.isZero()) {
+              const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.userId}`)
+              if (cachedHash) accessHash = cachedHash
+            }
+            const userPhotos: any = await client.call({
+              _: 'photos.getUserPhotos',
+              userId: { _: 'inputUser', userId: inputPeer.userId, accessHash },
+              offset: 0,
+              maxId: Long.ZERO,
+              limit: 1,
+            }).catch(() => null)
+            const firstPhoto = userPhotos?.photos?.[0]
+            if (firstPhoto && firstPhoto._ === 'photo') {
+              await client.downloadToFile(avatarFile, firstPhoto).catch(() => {})
+            }
+            if (!fs.existsSync(avatarFile)) {
+              const fullRes: any = await client.call({
+                _: 'users.getFullUser',
+                id: { _: 'inputUser', userId: inputPeer.userId, accessHash },
+              }).catch(() => null)
+              const photo = fullRes?.fullUser?.profilePhoto || fullRes?.fullUser?.profile_photo || fullRes?.fullUser?.fallbackPhoto
+              if (photo && (photo._ === 'photo' || (photo as any).sizes)) {
+                await client.downloadToFile(avatarFile, photo).catch(() => {})
+              }
+            }
+          } else if (inputPeer._ === 'inputPeerChannel') {
+            let accessHash = inputPeer.accessHash || Long.ZERO
+            if (accessHash.isZero()) {
+              const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.channelId}`)
+              if (cachedHash) accessHash = cachedHash
+            }
+            const res: any = await client.call({
+              _: 'channels.getFullChannel',
+              channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash },
+            }).catch(() => null)
+            const photo = res?.fullChat?.chatPhoto
+            if (photo && photo._ === 'photo') {
+              await client.downloadToFile(avatarFile, photo).catch(() => {})
+            }
+          } else if (inputPeer._ === 'inputPeerChat') {
+            const res: any = await client.call({
+              _: 'messages.getFullChat',
+              chatId: inputPeer.chatId,
+            }).catch(() => null)
+            const photo = res?.fullChat?.chatPhoto
+            if (photo && photo._ === 'photo') {
+              await client.downloadToFile(avatarFile, photo).catch(() => {})
+            }
           }
-          const res: any = await holder.client.call({
-            _: 'channels.getFullChannel',
-            channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash },
-          }).catch(() => null)
-          const photo = res?.fullChat?.chatPhoto
-          if (photo && photo._ === 'photo') {
-            await holder.client.downloadToFile(avatarFile, photo).catch(() => {})
+        }
+
+        if (fs.existsSync(avatarFile)) {
+          const stat = fs.statSync(avatarFile)
+          if (stat.size === 0) {
+            try { fs.unlinkSync(avatarFile) } catch {}
+            return null
+          }
+          const data = await fs.promises.readFile(avatarFile)
+          if (data.length > 0) {
+            const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
+            this.avatarCache.set(cacheKey, dataUrl)
+            this.onEventCallback?.('telegram:user-avatar-updated', {
+              accountId,
+              userId: peerId,
+              peerId,
+              avatarUrl: dataUrl,
+            })
+            return dataUrl
           }
         }
-      }
 
-      if (fs.existsSync(avatarFile)) {
-        const stat = fs.statSync(avatarFile)
-        if (stat.size === 0) {
-          try { fs.unlinkSync(avatarFile) } catch {}
-          return null
+        // Fast fallback to cached thumbnail if full photo is unavailable
+        const thumb = this.thumbCache.get(`${accountId}_${peerId}`)
+        if (thumb) {
+          return thumb
         }
-        const data = await fs.promises.readFile(avatarFile)
-        if (data.length > 0) {
-          const dataUrl = `data:image/jpeg;base64,${data.toString('base64')}`
-          this.avatarCache.set(cacheKey, dataUrl)
-          return dataUrl
-        }
+      } catch (err: any) {
+        Logger.warn(`[AccountManager] getProfilePhoto error for ${peerId}:`, err?.message || err)
       }
+      return null
+    })().finally(() => {
+      this.pendingPhotoDownloads.delete(cacheKey)
+    })
 
-      // Fast fallback to cached thumbnail if full photo is unavailable
-      const thumb = this.thumbCache.get(`${accountId}_${peerId}`)
-      if (thumb) {
-        return thumb
-      }
-    } catch (err: any) {
-      Logger.warn(`[AccountManager] getProfilePhoto error for ${peerId}:`, err?.message || err)
-    }
-
-    return null
+    this.pendingPhotoDownloads.set(cacheKey, fetchPromise)
+    return fetchPromise
   }
 
   public async downloadMedia(
