@@ -1,5 +1,5 @@
-import React from 'react'
-import { Plus, Shield, Inbox, Settings, Bot, Smartphone, Wallet } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Plus, Shield, Inbox, Settings, Bot, Smartphone, Wallet, ExternalLink, Copy, Check } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
 
@@ -36,6 +36,32 @@ export const AccountDock: React.FC<AccountDockProps> = ({
   onOpenAccountExport,
   onOpenTonWallet,
 }) => {
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    account: AccountInfo
+  } | null>(null)
+  const [copiedId, setCopiedId] = useState(false)
+
+  useEffect(() => {
+    const handleClose = () => {
+      setContextMenu(null)
+      setCopiedId(false)
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setContextMenu(null)
+        setCopiedId(false)
+      }
+    }
+    window.addEventListener('click', handleClose)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('click', handleClose)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
   return (
     <aside className="w-[72px] shrink-0 h-full bg-dark-900 border-r border-white/5 flex flex-col items-center py-3 select-none z-20 titlebar-no-drag">
       {/* Saved Messages Quick Access Button */}
@@ -106,8 +132,24 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           return (
             <div key={acc.id} className="relative group">
               <button
-                onClick={() => onSelectAccount(acc.id)}
-                title={`${safeFirst} (${acc.isBot ? 'Bot' : acc.phone || 'No phone'})`}
+                onClick={(e) => {
+                  if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault()
+                    window.guidegram?.openAccountWindow?.(acc.id)
+                    return
+                  }
+                  onSelectAccount(acc.id)
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setContextMenu({
+                    x: e.clientX,
+                    y: Math.min(e.clientY, window.innerHeight - 190),
+                    account: acc,
+                  })
+                }}
+                title={`${safeFirst} (${acc.isBot ? 'Bot' : acc.phone || 'No phone'})\n• کلیک: سوییچ به اکانت\n• Ctrl + کلیک: باز کردن در پنجره جدید`}
                 className={`relative w-12 h-12 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-dark-900 shadow-glow'
@@ -124,42 +166,42 @@ export const AccountDock: React.FC<AccountDockProps> = ({
                   shape="circle"
                   className="w-full h-full rounded-full"
                 />
-
-                {/* Status dot */}
-                <span
-                  className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full ring-2 ring-dark-900 ${
-                    acc.status === 'connected'
-                      ? 'bg-accent-emerald'
-                      : acc.status === 'connecting'
-                      ? 'bg-accent-amber animate-pulse'
-                      : 'bg-gray-500'
-                  }`}
-                />
-
-                {/* Bot Indicator */}
-                {acc.isBot && (
-                  <span
-                    title="Bot Account"
-                    className="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-primary-600 text-white ring-1 ring-dark-900 flex items-center justify-center text-[9px] leading-none select-none"
-                  >
-                    🤖
-                  </span>
-                )}
-
-                {/* Proxy Indicator */}
-                {acc.proxyConfig?.enabled && (
-                  <span
-                    title={`Proxy: ${(acc.proxyConfig.type || 'SOCKS5').toUpperCase()} (${acc.proxyConfig.host})`}
-                    className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-accent-cyan ring-1 ring-dark-900"
-                  />
-                )}
               </button>
+
+              {/* Status dot (Positioned outside the avatar circle!) */}
+              <span
+                className={`absolute bottom-0 right-0 z-10 w-3.5 h-3.5 rounded-full ring-2 ring-dark-900 pointer-events-none ${
+                  acc.status === 'connected'
+                    ? 'bg-accent-emerald'
+                    : acc.status === 'connecting'
+                    ? 'bg-accent-amber animate-pulse'
+                    : 'bg-gray-500'
+                }`}
+              />
+
+              {/* Bot Indicator (Outside the circle, at bottom-left corner with Bot icon) */}
+              {acc.isBot && (
+                <span
+                  title="Bot Account"
+                  className="absolute -bottom-0.5 -left-0.5 z-10 w-4 h-4 rounded-full bg-primary-600 text-white ring-2 ring-dark-900 flex items-center justify-center shadow-md pointer-events-none"
+                >
+                  <Bot className="w-2.5 h-2.5 text-white" />
+                </span>
+              )}
+
+              {/* Proxy Indicator (Floating outside the avatar circle at top-left) */}
+              {acc.proxyConfig?.enabled && (
+                <span
+                  title={`Proxy: ${(acc.proxyConfig.type || 'SOCKS5').toUpperCase()} (${acc.proxyConfig.host})`}
+                  className="absolute -top-0.5 -left-0.5 z-10 w-3 h-3 rounded-full bg-accent-cyan ring-2 ring-dark-900 pointer-events-none"
+                />
+              )}
 
               {/* Unread badge per account */}
               {unreadCount > 0 && (
                 <span
                   title={`${unreadCount} unread messages`}
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-rose text-white font-bold text-[10px] rounded-full ring-2 ring-dark-900 flex items-center justify-center shadow-md z-10 animate-in zoom-in duration-150"
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-rose text-white font-bold text-[10px] rounded-full ring-2 ring-dark-900 flex items-center justify-center shadow-md z-20 animate-in zoom-in duration-150 pointer-events-none"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
@@ -224,6 +266,90 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           <Settings className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Account Right-Click Context Menu */}
+      {contextMenu && (
+        <div
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x + 12}px` }}
+          className="fixed z-[999] min-w-[210px] bg-dark-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-1.5 border-b border-white/5 mb-1">
+            <div className="text-xs font-bold text-gray-200 truncate">
+              {contextMenu.account.firstName} {contextMenu.account.lastName || ''}
+            </div>
+            <div className="text-[10px] text-gray-400 font-mono truncate">
+              {contextMenu.account.isBot ? 'ربات تلگرام' : contextMenu.account.phone || contextMenu.account.id}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              window.guidegram?.openAccountWindow?.(contextMenu.account.id)
+              setContextMenu(null)
+            }}
+            className="flex items-center justify-between w-full px-2.5 py-1.5 text-xs text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-left"
+          >
+            <span className="flex items-center gap-2">
+              <ExternalLink className="w-3.5 h-3.5 text-accent-cyan" />
+              <span>باز کردن در پنجره جدید</span>
+            </span>
+            <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+              Ctrl+Click
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onSelectAccount(contextMenu.account.id)
+              setContextMenu(null)
+            }}
+            className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-left"
+          >
+            <Check className="w-3.5 h-3.5 text-accent-emerald" />
+            <span>سوییچ به این اکانت</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard?.writeText(contextMenu.account.id)
+              setCopiedId(true)
+              setTimeout(() => {
+                setContextMenu(null)
+                setCopiedId(false)
+              }, 600)
+            }}
+            className="flex items-center justify-between w-full px-2.5 py-1.5 text-xs text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Copy className="w-3.5 h-3.5 text-gray-400" />
+              <span>کپی شناسه (ID)</span>
+            </span>
+            {copiedId && (
+              <span className="text-[10px] text-accent-emerald font-bold animate-in fade-in">
+                کپی شد!
+              </span>
+            )}
+          </button>
+
+          {contextMenu.account.proxyConfig && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenProxyModal()
+                setContextMenu(null)
+              }}
+              className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-left border-t border-white/5 mt-0.5 pt-1.5"
+            >
+              <Shield className="w-3.5 h-3.5 text-accent-amber" />
+              <span>تنظیمات پروکسی</span>
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   )
 }

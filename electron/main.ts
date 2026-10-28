@@ -529,6 +529,76 @@ function createWindow() {
 }
 
 const activeMiniApps = new Set<BrowserWindow>()
+const accountWindows = new Map<string, BrowserWindow>()
+
+function broadcastToAllWindows(event: string, payload: any) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      try {
+        win.webContents.send(event, payload)
+      } catch (_) {}
+    }
+  }
+}
+
+function openAccountWindow(accountId: string) {
+  Logger.info(`[Window] Opening dedicated window for account: ${accountId}`)
+  const existing = accountWindows.get(accountId)
+  if (existing && !existing.isDestroyed()) {
+    if (existing.isMinimized()) existing.restore()
+    existing.show()
+    existing.focus()
+    existing.webContents?.focus()
+    return existing
+  }
+
+  const appIcon = getAppIcon()
+  const accWin = new BrowserWindow({
+    width: 1260,
+    height: 840,
+    minWidth: 960,
+    minHeight: 640,
+    center: true,
+    show: false,
+    backgroundColor: '#08090C',
+    title: `Guidegram - Account ${accountId}`,
+    frame: false,
+    icon: appIcon,
+    webPreferences: SecurityGuardrails.getHardenedWebPreferences({
+      preload: path.join(__dirname, 'preload.cjs'),
+      sandbox: true,
+    }) as any,
+  })
+
+  SecurityGuardrails.attachSecureWindowHandlers(accWin, true)
+  privacyProtectionGuard.attachWindow(accWin)
+  dragDropSanitizer.attachToWebContents(accWin.webContents)
+
+  accountWindows.set(accountId, accWin)
+
+  accWin.once('ready-to-show', () => {
+    Logger.info(`[Window] Dedicated account window for ${accountId} ready to show.`)
+    if (!accWin.isDestroyed()) {
+      accWin.show()
+      accWin.focus()
+      accWin.webContents?.focus()
+    }
+  })
+
+  accWin.on('closed', () => {
+    Logger.info(`[Window] Dedicated window for account ${accountId} closed.`)
+    accountWindows.delete(accountId)
+  })
+
+  if (process.env.VITE_DEV_SERVER_URL) {
+    accWin.loadURL(`${process.env.VITE_DEV_SERVER_URL}?accountId=${encodeURIComponent(accountId)}`)
+  } else {
+    const htmlPath = path.join(__dirname, '../dist/index.html')
+    accWin.loadFile(htmlPath, { query: { accountId } })
+  }
+
+  return accWin
+}
 
 function openMiniAppWindow(url: string, title = 'Telegram Mini App') {
   const win = new BrowserWindow({
@@ -693,9 +763,7 @@ app.whenReady().then(async () => {
     } catch (err) {
       Logger.warn('[MCP] Event bus dispatch warning:', err)
     }
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(event, payload)
-    }
+    broadcastToAllWindows(event, payload)
   })
 
   ProxyManager.init(
@@ -1035,23 +1103,30 @@ async function scrapeLinkPreview(targetUrl: string): Promise<WebPagePreview | nu
 
 function setupIpcHandlers() {
   // Window Controls
-  ipcMain.handle('window:minimize', () => {
-    mainWindow?.webContents.send('app:clear-active-chat')
-    mainWindow?.minimize()
+  ipcMain.handle('window:minimize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    win?.webContents.send('app:clear-active-chat')
+    win?.minimize()
   })
 
-  ipcMain.handle('window:maximize', () => {
-    if (!mainWindow) return false
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize()
+  ipcMain.handle('window:maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    if (!win) return false
+    if (win.isMaximized()) {
+      win.unmaximize()
       return false
     } else {
-      mainWindow.maximize()
+      win.maximize()
       return true
     }
   })
 
-  ipcMain.handle('window:request-close', () => {
+  ipcMain.handle('window:request-close', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    if (win && win !== mainWindow) {
+      win.close()
+      return { action: 'quit' }
+    }
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
       mainWindow?.webContents.send('app:clear-active-chat')
@@ -1066,7 +1141,12 @@ function setupIpcHandlers() {
     return { action: 'ask' }
   })
 
-  ipcMain.handle('window:confirm-close', (_event, { action, remember }: { action: 'minimize' | 'quit'; remember: boolean }) => {
+  ipcMain.handle('window:confirm-close', (event, { action, remember }: { action: 'minimize' | 'quit'; remember: boolean }) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    if (win && win !== mainWindow) {
+      win.close()
+      return
+    }
     Logger.info(`[IPC] window:confirm-close action=${action} remember=${remember}`)
     if (remember) {
       sessionStore.updateConfig({
@@ -1083,7 +1163,12 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('window:close', () => {
+  ipcMain.handle('window:close', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    if (win && win !== mainWindow) {
+      win.close()
+      return
+    }
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
       mainWindow?.webContents.send('app:clear-active-chat')
@@ -1096,8 +1181,15 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('window:is-maximized', () => {
-    return mainWindow?.isMaximized() || false
+  ipcMain.handle('window:is-maximized', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
+    return win?.isMaximized() || false
+  })
+
+  ipcMain.handle('window:open-account-window', (_event, { accountId }: { accountId: string }) => {
+    if (!accountId) return { success: false, error: 'Account ID required' }
+    openAccountWindow(accountId)
+    return { success: true }
   })
 
   ipcMain.handle('window:flash', (_event, flag: boolean = true) => {

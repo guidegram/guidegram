@@ -102,6 +102,7 @@ export function initMobileBridge(): void {
     requestClose: async () => ({ action: 'quit' as const }),
     confirmClose: async () => {},
     isMaximized: async () => false,
+    openAccountWindow: async () => ({ success: true }),
     showTitlebarMenu: async () => {},
     flashWindow: async () => true,
     focusWindow: async () => true,

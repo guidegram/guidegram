@@ -250,7 +250,16 @@ export const App: React.FC = () => {
           setAccounts(accs || [])
 
           if (accs && accs.length > 0) {
-            const firstConnected = (accs as AccountInfo[]).find((a: AccountInfo) => a.status === 'connected') || accs[0]
+            let targetAccount: AccountInfo | undefined = undefined
+            try {
+              const urlParams = new URLSearchParams(window.location.search)
+              const queryAccountId = urlParams.get('accountId')
+              if (queryAccountId) {
+                targetAccount = (accs as AccountInfo[]).find((a) => a.id === queryAccountId)
+              }
+            } catch (_) {}
+
+            const firstConnected = targetAccount || (accs as AccountInfo[]).find((a: AccountInfo) => a.status === 'connected') || accs[0]
             setActiveAccountId(firstConnected.id)
 
             // Pre-warm local cache for all accounts immediately so account switches are instant (0ms)

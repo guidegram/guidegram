@@ -106,6 +106,8 @@ const guidegramAPI = {
   confirmClose: (action: 'minimize' | 'quit', remember: boolean): Promise<void> =>
     ipcRenderer.invoke('window:confirm-close', { action, remember }),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  openAccountWindow: (accountId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('window:open-account-window', { accountId }),
   showTitlebarMenu: () => ipcRenderer.invoke('window:show-titlebar-menu'),
   flashWindow: (flag: boolean = true): Promise<boolean> =>
     ipcRenderer.invoke('window:flash', flag),
