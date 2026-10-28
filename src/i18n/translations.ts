@@ -174,6 +174,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     'search.public_chats': 'Public Chats & Channels',
     'search.messages_found': '{count} messages found',
     'search.no_results': 'No results found for "{query}"',
+    'search.searching_chat': 'Searching messages...',
+    'search.this_chat': 'This Chat',
     'search.recent': 'Recent Searches',
     'search.clear_all': 'Clear All',
 
@@ -1108,6 +1110,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     'search.public_chats': 'کانال‌ها و چت‌های عمومی',
     'search.messages_found': '{count} پیام یافت شد',
     'search.no_results': 'نتیجه‌ای برای «{query}» یافت نشد',
+    'search.searching_chat': 'در حال جستجو در پیام‌های این گفتگو...',
+    'search.this_chat': 'این گفتگو',
     'search.recent': 'جستجوهای اخیر',
     'search.clear_all': 'پاکسازی همه',
 

@@ -568,6 +568,7 @@ const guidegramAPI = {
       offsetId?: number
       minDate?: number
       maxDate?: number
+      fromId?: string
     }
   ): Promise<MessageItem[]> =>
     ipcRenderer.invoke('telegram:search-messages', { accountId, chatId, query, options }),

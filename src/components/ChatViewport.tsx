@@ -101,6 +101,7 @@ import { ForumTopicsModal } from './ForumTopicsModal'
 import { ScheduledMessagesModal } from './ScheduledMessagesModal'
 import { StickerPickerDrawer } from './StickerPickerDrawer'
 import { SharedMediaDrawer } from './SharedMediaDrawer'
+import { ChatSearchResultsDrawer } from './ChatSearchResultsDrawer'
 import { PollWidget } from './PollWidget'
 import { CreatePollModal } from './CreatePollModal'
 import { MiniAppModal } from './MiniAppModal'
@@ -1234,6 +1235,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   } | null>(null)
   const [pendingExternalUrl, setPendingExternalUrl] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [chatSearchResults, setChatSearchResults] = useState<MessageItem[] | null>(null)
+  const [isChatSearching, setIsChatSearching] = useState(false)
+  const [isSearchResultsDrawerOpen, setIsSearchResultsDrawerOpen] = useState(false)
 
   // Voice playback state
   const [playingVoiceId, setPlayingVoiceId] = useState<number | null>(null)
@@ -2346,27 +2350,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       })
     }
 
-    // 2. Filter by text query if present
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      if (q.startsWith('from:')) {
-        const fromTarget = q.slice(5).trim()
-        if (fromTarget) {
-          result = result.filter(
-            (m) =>
-              (m.senderName && m.senderName.toLowerCase().includes(fromTarget)) ||
-              (m.senderId && m.senderId.includes(fromTarget))
-          )
-        }
-      } else {
-        result = result.filter(
-          (m) =>
-            (m.text && m.text.toLowerCase().includes(q)) ||
-            (m.senderName && m.senderName.toLowerCase().includes(q)) ||
-            (m.mediaFileName && m.mediaFileName.toLowerCase().includes(q))
-        )
-      }
-    }
+    // 2. Note: In Telegram Desktop, searching within a chat does NOT destroy or hide surrounding messages;
+    // instead, it highlights matching words in-place, jumps via handleScrollToReply across full server history,
+    // and displays the comprehensive results list in the Search Drawer.
+    // (Saved Messages 2.0 still applies its own dedicated filters below).
 
     // 3. Filter by active Forum Topic
     if (activeTopicId !== null) {
@@ -2516,25 +2503,95 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     savedMediaFilter,
   ])
 
+  // Remote Telegram MTProto search for Chat messages across entire server history
+  useEffect(() => {
+    if (!isSearchOpen || chat?.isSavedMessages) {
+      setChatSearchResults(null)
+      setIsChatSearching(false)
+      return
+    }
+
+    const query = searchQuery.trim()
+    if (!query && !searchSenderFilter) {
+      setChatSearchResults(null)
+      setIsChatSearching(false)
+      return
+    }
+
+    let cancelled = false
+    setIsChatSearching(true)
+
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      if (window.guidegram?.searchMessages && chat) {
+        window.guidegram.searchMessages(chat.accountId, chat.id, query, {
+          fromId: searchSenderFilter?.id,
+          limit: 100,
+        }).then((results) => {
+          if (!cancelled) {
+            setChatSearchResults(results || [])
+            setSearchMatchIndex(0)
+            if (results && results.length > 0) {
+              handleScrollToReply(results[0].id)
+            }
+          }
+        }).catch((err) => {
+          if (!cancelled) {
+            console.warn('[ChatViewport] in-chat searchMessages error:', err)
+            setChatSearchResults([])
+          }
+        }).finally(() => {
+          if (!cancelled) {
+            setIsChatSearching(false)
+          }
+        })
+      } else {
+        setIsChatSearching(false)
+      }
+    }, 280)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [isSearchOpen, chat?.accountId, chat?.id, chat?.isSavedMessages, searchQuery, searchSenderFilter])
+
+  // Active search matches: prioritize server results, fallback to in-memory matches
+  const activeSearchMatches = React.useMemo(() => {
+    if (chatSearchResults !== null) return chatSearchResults
+    if (!searchQuery.trim()) return []
+    const q = searchQuery.toLowerCase()
+    return messages.filter(
+      (m) =>
+        (m.text && m.text.toLowerCase().includes(q)) ||
+        (m.senderName && m.senderName.toLowerCase().includes(q)) ||
+        (m.mediaFileName && m.mediaFileName.toLowerCase().includes(q))
+    )
+  }, [chatSearchResults, searchQuery, messages])
+
+  const totalSearchCount = chatSearchResults !== null
+    ? ((chatSearchResults as any).totalCount || chatSearchResults.length)
+    : activeSearchMatches.length
+
   useEffect(() => {
     setSearchMatchIndex(0)
   }, [searchQuery, searchSenderFilter])
 
   const handleNextSearchMatch = () => {
-    if (filteredMessages.length === 0) return
-    const nextIdx = (searchMatchIndex + 1) % filteredMessages.length
+    if (activeSearchMatches.length === 0) return
+    const nextIdx = (searchMatchIndex + 1) % activeSearchMatches.length
     setSearchMatchIndex(nextIdx)
-    const targetMsg = filteredMessages[nextIdx]
+    const targetMsg = activeSearchMatches[nextIdx]
     if (targetMsg) {
       handleScrollToReply(targetMsg.id)
     }
   }
 
   const handlePrevSearchMatch = () => {
-    if (filteredMessages.length === 0) return
-    const prevIdx = (searchMatchIndex - 1 + filteredMessages.length) % filteredMessages.length
+    if (activeSearchMatches.length === 0) return
+    const prevIdx = (searchMatchIndex - 1 + activeSearchMatches.length) % activeSearchMatches.length
     setSearchMatchIndex(prevIdx)
-    const targetMsg = filteredMessages[prevIdx]
+    const targetMsg = activeSearchMatches[prevIdx]
     if (targetMsg) {
       handleScrollToReply(targetMsg.id)
     }
@@ -5835,19 +5892,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               } else if (e.key === 'Escape') {
                 setIsSearchOpen(false)
                 setSearchQuery('')
+                setChatSearchResults(null)
+                setIsSearchResultsDrawerOpen(false)
               }
             }}
             className="flex-1 bg-dark-750 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
           />
           {searchQuery && (
-            <div className="flex items-center gap-1 text-[11px] text-gray-300 font-mono shrink-0 bg-dark-750 px-2 py-0.5 rounded-lg border border-white/5">
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-300 font-mono shrink-0 bg-dark-750 px-2 py-0.5 rounded-lg border border-white/5">
+              {isChatSearching && <RefreshCw className="w-3 h-3 animate-spin text-primary-400 shrink-0" />}
               <span>
-                {filteredMessages.length > 0 ? `${searchMatchIndex + 1} of ${filteredMessages.length}` : '0 of 0'}
+                {activeSearchMatches.length > 0
+                  ? `${searchMatchIndex + 1} of ${totalSearchCount}`
+                  : isChatSearching
+                  ? '...'
+                  : '0 of 0'}
               </span>
               <button
                 type="button"
                 onClick={handlePrevSearchMatch}
-                disabled={filteredMessages.length === 0}
+                disabled={activeSearchMatches.length === 0}
                 title="Previous match (Shift+Enter)"
                 className="p-0.5 rounded hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-30 cursor-pointer"
               >
@@ -5856,11 +5920,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <button
                 type="button"
                 onClick={handleNextSearchMatch}
-                disabled={filteredMessages.length === 0}
+                disabled={activeSearchMatches.length === 0}
                 title="Next match (Enter)"
                 className="p-0.5 rounded hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-30 cursor-pointer"
               >
                 <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSearchResultsDrawerOpen((prev) => !prev)}
+                className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ml-0.5 ${
+                  isSearchResultsDrawerOpen ? 'text-primary-400 bg-white/10' : 'text-gray-400 hover:text-white'
+                }`}
+                title="Open results list (Telegram style)"
+              >
+                <List className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
@@ -5905,6 +5979,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             onClick={() => {
               setIsSearchOpen(false)
               setSearchQuery('')
+              setChatSearchResults(null)
+              setIsSearchResultsDrawerOpen(false)
             }}
             className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 cursor-pointer"
             title="Close Search (Esc)"
@@ -10653,6 +10729,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           isOpen={isSharedMediaOpen}
           onClose={() => setIsSharedMediaOpen(false)}
           chat={chat}
+        />
+      )}
+
+      {/* Telegram Desktop Style In-Chat Search Results Drawer */}
+      {isSearchResultsDrawerOpen && chat && !chat.isSavedMessages && (
+        <ChatSearchResultsDrawer
+          isOpen={isSearchResultsDrawerOpen}
+          onClose={() => setIsSearchResultsDrawerOpen(false)}
+          chat={chat}
+          searchQuery={searchQuery}
+          onSearchQueryChange={(q) => setSearchQuery(q)}
+          results={chatSearchResults || []}
+          totalCount={chatSearchResults ? ((chatSearchResults as any).totalCount || chatSearchResults.length) : 0}
+          isLoading={isChatSearching}
+          activeMessageId={chatSearchResults && chatSearchResults[searchMatchIndex] ? chatSearchResults[searchMatchIndex].id : undefined}
+          onSelectMessage={(msgId) => {
+            const idx = (chatSearchResults || []).findIndex((m) => m.id === msgId)
+            if (idx !== -1) setSearchMatchIndex(idx)
+            handleScrollToReply(msgId)
+          }}
         />
       )}
 

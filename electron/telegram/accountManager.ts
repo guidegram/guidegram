@@ -4717,6 +4717,7 @@ export class AccountManager {
       offsetId?: number
       minDate?: number
       maxDate?: number
+      fromId?: string
     }
   ): Promise<MessageItem[]> {
     const holder = this.clients.get(accountId)
@@ -4776,6 +4777,15 @@ export class AccountManager {
       if (savedPeer) {
         callPayload.saved_peer_id = savedPeer
         callPayload.savedPeerId = savedPeer
+      }
+      if (options?.fromId) {
+        try {
+          const fromPeer = await this.resolveInputPeer(accountId, options.fromId)
+          callPayload.from_id = fromPeer
+          callPayload.fromId = fromPeer
+        } catch (fromErr) {
+          Logger.warn('[AccountManager] searchMessages resolve fromId error:', fromErr)
+        }
       }
       if (savedReactionList && savedReactionList.length > 0) {
         callPayload.saved_reaction = savedReactionList
@@ -4927,13 +4937,52 @@ export class AccountManager {
         }
 
         if (!senderName) {
-          if (forwardFromName) {
+          if (m.peerId) {
+            if (m.peerId._ === 'peerChannel') {
+              const cid = m.peerId.channelId?.toString()
+              senderId = `-100${cid}`
+              const c = chats.get(cid)
+              if (c) {
+                senderName = formatEntityName(c)
+                senderUsername = c.username
+                senderAvatarUrl =
+                  this.avatarCache.get(`${accountId}_${senderId}`) ||
+                  this.avatarCache.get(`${accountId}_-${cid}`) ||
+                  this.thumbCache.get(`${accountId}_${senderId}`) ||
+                  extractStrippedThumb(c.photo)
+              }
+            } else if (m.peerId._ === 'peerChat') {
+              const cid = m.peerId.chatId?.toString()
+              senderId = `-${cid}`
+              const c = chats.get(cid)
+              if (c) {
+                senderName = formatEntityName(c)
+                senderAvatarUrl =
+                  this.avatarCache.get(`${accountId}_-${cid}`) ||
+                  this.thumbCache.get(`${accountId}_-${cid}`) ||
+                  extractStrippedThumb(c.photo)
+              }
+            } else if (m.peerId._ === 'peerUser') {
+              const uid = m.peerId.userId?.toString()
+              senderId = uid
+              const u = users.get(uid)
+              if (u) {
+                senderName = formatEntityName(u)
+                senderUsername = u.username
+                senderAvatarUrl =
+                  this.avatarCache.get(`${accountId}_${uid}`) ||
+                  this.thumbCache.get(`${accountId}_${uid}`) ||
+                  extractStrippedThumb(u.photo)
+              }
+            }
+          }
+          if (!senderName && forwardFromName) {
             senderName = forwardFromName
             senderId = forwardFromId || ''
-          } else if (isOutgoing) {
+          } else if (!senderName && isOutgoing) {
             senderName = holder.info?.firstName || 'You'
             senderId = holder.info?.id || ''
-          } else {
+          } else if (!senderName) {
             senderName = 'Telegram User'
           }
         }
@@ -5055,6 +5104,7 @@ export class AccountManager {
         })
       }
 
+      (items as any).totalCount = typeof res?.count === 'number' ? res.count : items.length
       return items
     } catch (err) {
       Logger.error('[AccountManager] searchMessages error:', err)
