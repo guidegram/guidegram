@@ -783,7 +783,7 @@ export class SessionStore {
     if (!accountId || !chatId) return []
     const audit = this.loadAccountAudit(accountId)
     const msgs = audit[chatId] || {}
-    return Object.values(msgs).sort((a, b) => a.date - b.date)
+    return Object.values(msgs).sort((a, b) => (a.date - b.date) || (a.id - b.id))
   }
 
   public mergeAuditLogIntoMessages(
@@ -825,7 +825,7 @@ export class SessionStore {
     }
 
     const result = Array.from(map.values())
-    result.sort((a, b) => a.date - b.date)
+    result.sort((a, b) => (a.date - b.date) || (a.id - b.id))
     return result
   }
 

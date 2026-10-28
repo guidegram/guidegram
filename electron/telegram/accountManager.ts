@@ -2556,7 +2556,7 @@ export class AccountManager {
         for (const [cId, msgs] of Object.entries(audit)) {
           if (seenIds.has(cId)) continue
           seenIds.add(cId)
-          const msgList = Object.values(msgs).sort((a, b) => b.date - a.date)
+          const msgList = Object.values(msgs).sort((a, b) => (b.date - a.date) || (b.id - a.id))
           const topMsg = msgList[0]
           if (!topMsg) continue
 
@@ -13720,7 +13720,7 @@ export class AccountManager {
       }
 
       // Sort chronological (oldest to newest)
-      fetchedMessages.sort((a, b) => a.date - b.date)
+      fetchedMessages.sort((a, b) => (a.date - b.date) || (a.id - b.id))
 
       let content = ''
       if (options.format === 'json') {

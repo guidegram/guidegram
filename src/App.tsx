@@ -344,6 +344,7 @@ export const App: React.FC = () => {
           } else {
             nextList = [...list, message]
           }
+          nextList.sort((a, b) => (a.date - b.date) || (a.id - b.id))
           return {
             ...prev,
             [chatId]: nextList,
@@ -1148,7 +1149,10 @@ export const App: React.FC = () => {
       const unreadCount = dialog?.unreadCount || 0
       const fetchLimit = Math.min(100, Math.max(60, unreadCount + 20))
       const msgs = await window.guidegram.getMessages(accountId, chatId, fetchLimit)
-      setMessagesByChat((prev) => ({ ...prev, [chatId]: msgs }))
+      const sortedMsgs = Array.isArray(msgs)
+        ? [...msgs].sort((a, b) => (a.date - b.date) || (a.id - b.id))
+        : []
+      setMessagesByChat((prev) => ({ ...prev, [chatId]: sortedMsgs }))
 
       if (unreadCount === 0 && msgs.length > 0) {
         const lastMsgId = Math.max(...msgs.map((m) => m.id))
@@ -1170,7 +1174,7 @@ export const App: React.FC = () => {
       for (const m of newMsgs) {
         existingMap.set(m.id, m)
       }
-      const merged = Array.from(existingMap.values()).sort((a, b) => a.id - b.id)
+      const merged = Array.from(existingMap.values()).sort((a, b) => (a.date - b.date) || (a.id - b.id))
       return { ...prev, [activeChatId]: merged }
     })
   }
@@ -1269,6 +1273,7 @@ export const App: React.FC = () => {
         } else {
           nextList = [...list, enrichedSent]
         }
+        nextList.sort((a, b) => (a.date - b.date) || (a.id - b.id))
         return {
           ...prev,
           [activeChatId]: nextList,
@@ -1366,6 +1371,7 @@ export const App: React.FC = () => {
         } else {
           nextList = [...list, enrichedSent]
         }
+        nextList.sort((a, b) => (a.date - b.date) || (a.id - b.id))
         return {
           ...prev,
           [activeChatId]: nextList,
