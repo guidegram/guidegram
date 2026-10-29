@@ -20,7 +20,7 @@ export class SessionStore {
   private isSavingAudit: Map<string, boolean> = new Map()
   private pendingSaveAudit: Map<string, boolean> = new Map()
   private messageChatIndex: Map<string, Map<number, string>> = new Map()
-  private recentMessagesCache: Map<string, Map<number, MessageItem>> = new Map()
+  private recentMessagesCache: Map<string, Map<string, MessageItem>> = new Map()
 
   constructor(baseDataDir: string) {
     this.dataDir = baseDataDir
@@ -473,6 +473,13 @@ export class SessionStore {
         const isDeleted = Boolean(m.isDeletedLocally)
         const isEdited = Boolean(m.editHistory && m.editHistory.length > 0)
 
+        // Drop empty ghost tombstones that have no real content or media
+        const isGhost = (!m.text || m.text === '[Message deleted]') && !m.mediaType && (!m.editHistory || m.editHistory.length === 0)
+        if (isGhost) {
+          wasPruned = true
+          continue
+        }
+
         if (isDeleted || isEdited) {
           let item = m
           // Strip bloated base64 data URLs in avatars that inflate audit logs to tens of MBs
@@ -480,6 +487,15 @@ export class SessionStore {
             item = { ...item }
             delete item.senderAvatarUrl
             wasPruned = true
+          }
+          // Also strip duplicate strippedThumb from editHistory revisions if redundant
+          if (item.editHistory && Array.isArray(item.editHistory)) {
+            for (const rev of item.editHistory) {
+              if (rev.strippedThumb && (rev.strippedThumb === item.strippedThumb || rev.strippedThumb.length > 500)) {
+                delete rev.strippedThumb
+                wasPruned = true
+              }
+            }
           }
           keepMsgs[mId] = item
         } else {
@@ -675,6 +691,12 @@ export class SessionStore {
 
   public indexMessageChat(accountId: string, chatId: string, messageId: number): void {
     if (!accountId || !chatId || !messageId) return
+    // CRITICAL: Channels and supergroups (-100...) ALWAYS provide update.channelId in MTProto
+    // UpdateDeleteChannelMessages. They have an independent message ID space (starts at 1)
+    // that collides with user mailbox message IDs. Never index channels here so they don't
+    // hijack private chat deletion resolution!
+    if (chatId.startsWith('-100')) return
+
     let accMap = this.messageChatIndex.get(accountId)
     if (!accMap) {
       accMap = new Map()
@@ -685,6 +707,10 @@ export class SessionStore {
       const keys = Array.from(accMap.keys()).slice(0, 2000)
       for (const k of keys) accMap.delete(k)
     }
+  }
+
+  private getRecentCacheKey(chatId: string, messageId: number): string {
+    return `${chatId}:${messageId}`
   }
 
   public storeRecentMessage(accountId: string, chatId: string, msg: MessageItem): void {
@@ -699,17 +725,34 @@ export class SessionStore {
     if (clone.senderAvatarUrl && clone.senderAvatarUrl.startsWith('data:')) {
       delete clone.senderAvatarUrl
     }
-    accMap.set(msg.id, clone)
-    if (accMap.size > 3000) {
-      const keys = Array.from(accMap.keys()).slice(0, 1000)
+    const key = this.getRecentCacheKey(chatId, msg.id)
+    accMap.set(key, clone)
+    if (accMap.size > 5000) {
+      const keys = Array.from(accMap.keys()).slice(0, 1500)
       for (const k of keys) accMap.delete(k)
     }
   }
 
-  public getRecentMessage(accountId: string, messageId: number): MessageItem | null {
+  public getRecentMessage(accountId: string, messageId: number, chatId?: string): MessageItem | null {
     if (!accountId || !messageId) return null
     const accMap = this.recentMessagesCache.get(accountId)
-    return accMap?.get(messageId) || null
+    if (!accMap) return null
+    if (chatId) {
+      const exact = accMap.get(this.getRecentCacheKey(chatId, messageId))
+      if (exact) return exact
+    }
+    // Fallback if chatId is not known: search for matching messageId, preferring non-channels
+    const suffix = `:${messageId}`
+    let fallbackChannelItem: MessageItem | null = null
+    for (const [k, v] of accMap.entries()) {
+      if (k.endsWith(suffix)) {
+        if (!k.startsWith('-100')) {
+          return v
+        }
+        if (!fallbackChannelItem) fallbackChannelItem = v
+      }
+    }
+    return fallbackChannelItem
   }
 
   public recordMessages(accountId: string, chatId: string, msgs: MessageItem[]): void {
@@ -815,14 +858,14 @@ export class SessionStore {
     if (existing) {
       const priorHistory = existing.editHistory ? [...existing.editHistory] : []
       const priorText = existing.text
-      if (priorText && priorText !== newText && !priorHistory.some((h) => h.text === priorText)) {
+      const lastRev = priorHistory.length > 0 ? priorHistory[priorHistory.length - 1] : null
+      if (priorText && priorText !== newText && (!lastRev || lastRev.text !== priorText)) {
         priorHistory.push({
           text: priorText,
           date: existing.editDate || existing.date || Math.floor(Date.now() / 1000),
           entities: existing.entities,
           mediaType: existing.mediaType,
           mediaThumbnailUrl: existing.mediaThumbnailUrl,
-          strippedThumb: existing.strippedThumb,
         })
       }
 
@@ -831,10 +874,11 @@ export class SessionStore {
       if (entities) existing.entities = entities
       existing.editHistory = priorHistory
       this.saveAccountAudit(accountId, audit)
+      this.storeRecentMessage(accountId, targetChatId, existing)
       return existing
     } else {
       // Message was not previously in audit log. Capture original text from recent in-memory cache
-      const recent = this.getRecentMessage(accountId, messageId)
+      const recent = this.getRecentMessage(accountId, messageId, targetChatId)
       const priorHistory: MessageEditRevision[] = []
       if (recent?.text && recent.text !== newText) {
         priorHistory.push({
@@ -843,7 +887,6 @@ export class SessionStore {
           entities: recent.entities,
           mediaType: recent.mediaType,
           mediaThumbnailUrl: recent.mediaThumbnailUrl,
-          strippedThumb: recent.strippedThumb,
         })
       }
 
@@ -861,6 +904,7 @@ export class SessionStore {
       }
       audit[targetChatId][messageId] = item
       this.saveAccountAudit(accountId, audit)
+      this.storeRecentMessage(accountId, targetChatId, item)
       return item
     }
   }
@@ -870,6 +914,7 @@ export class SessionStore {
     const audit = this.loadAccountAudit(accountId)
     const deletedItems: MessageItem[] = []
     const now = Math.floor(Date.now() / 1000)
+    let auditModified = false
 
     for (const msgId of messageIds) {
       let targetChatId = chatId
@@ -878,24 +923,30 @@ export class SessionStore {
       }
       if (!targetChatId) continue
 
-      if (!audit[targetChatId]) {
-        audit[targetChatId] = {}
-      }
-
-      let existing = audit[targetChatId][msgId]
+      let existing = audit[targetChatId]?.[msgId]
       if (existing) {
         existing.isDeletedLocally = true
         existing.deletedAt = existing.deletedAt || now
+        deletedItems.push(existing)
+        auditModified = true
       } else {
-        const recent = this.getRecentMessage(accountId, msgId)
+        const recent = this.getRecentMessage(accountId, msgId, targetChatId)
         if (recent) {
+          if (!audit[targetChatId]) {
+            audit[targetChatId] = {}
+          }
           existing = {
             ...recent,
             isDeletedLocally: true,
             deletedAt: now,
           }
+          audit[targetChatId][msgId] = existing
+          deletedItems.push(existing)
+          auditModified = true
         } else {
-          existing = {
+          // Untracked message deletion (never in recent memory or audit store).
+          // Do NOT persist empty ghost [Message deleted] tombstones to disk!
+          deletedItems.push({
             id: msgId,
             chatId: targetChatId,
             accountId,
@@ -904,14 +955,14 @@ export class SessionStore {
             isOutgoing: false,
             isDeletedLocally: true,
             deletedAt: now,
-          }
+          })
         }
-        audit[targetChatId][msgId] = existing
       }
-      deletedItems.push(existing)
     }
 
-    this.saveAccountAudit(accountId, audit)
+    if (auditModified) {
+      this.saveAccountAudit(accountId, audit)
+    }
     return deletedItems
   }
 
@@ -921,10 +972,16 @@ export class SessionStore {
     if (indexed) return indexed
 
     const audit = this.loadAccountAudit(accountId)
+    let fallbackChannelId: string | null = null
     for (const [cId, msgs] of Object.entries(audit)) {
-      if (msgs[messageId]) return cId
+      if (msgs[messageId]) {
+        if (!cId.startsWith('-100')) {
+          return cId
+        }
+        if (!fallbackChannelId) fallbackChannelId = cId
+      }
     }
-    return null
+    return fallbackChannelId
   }
 
   public getAuditLog(accountId: string, chatId: string): MessageItem[] {
