@@ -37,8 +37,8 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
-    // v2.5.2: Ultra-Low Memory & Zero-Bloat Audit Engine, Single Active Chat, Granular Anti-Delete Scoping & GPU Sleep
-    if (gte(cleanVer, '2.5.2')) {
+    // v2.5.3: Ultra-Low Memory, Profile Photo Carousel, Custom Emoji ID & Zero-Idle GPU
+    if (gte(cleanVer, '2.5.3')) {
       return [
         {
           icon: Zap,
@@ -59,10 +59,10 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'بهینه‌سازی کامل گرافیک و توقف انیمیشن‌های پس‌زمینه' : 'Zero-Idle GPU & Background Sleep Mode',
+          title: isRTL ? 'گالری چندعکس پروفایل، کپی شناسه ایموجی و خواب گرافیک' : 'Multi-Photo Gallery, Emoji ID & GPU Sleep',
           desc: isRTL
-            ? 'حالت خواب خودکار پنجره در پس‌زمینه جهت حذف مصرف اضافه CPU/GPU، سبک‌سازی افکت‌های هاله نوری و توقف کامل انیمیشن‌ها خارج از دید.'
-            : 'Native background window sleep mode to eliminate idle CPU/GPU load, lightweight ambient lighting, and intersection-observed viewport animations.',
+            ? 'مشاهده تمام عکس‌های پروفایل کاربران در گالری ورق‌زن، کپی شناسه ایموجی‌های پریمیوم، بهینه‌سازی کامل گرافیک و اصلاح پنجره امکانات جدید.'
+            : 'Browse full profile photo history in a carousel gallery, copy custom emoji IDs, native GPU occlusion sleep, and dynamic version highlights.',
         },
       ]
     }
