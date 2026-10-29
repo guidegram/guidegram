@@ -606,12 +606,18 @@ export const CustomEmojiView = React.memo<{
     }
   }, [payload])
 
+  const emojiTitle = fallback
+    ? `${fallback} (ID: ${documentId})`
+    : `Custom Emoji (ID: ${documentId})`
+
   if (payload?.format === 'lottie') {
     return (
       <span
         ref={animContainerRef}
         className={className}
-        title={fallback || 'Custom Emoji'}
+        title={emojiTitle}
+        data-custom-emoji-id={documentId}
+        data-custom-emoji-char={fallback || '✨'}
       />
     )
   }
@@ -625,6 +631,9 @@ export const CustomEmojiView = React.memo<{
         muted
         playsInline
         className={className}
+        title={emojiTitle}
+        data-custom-emoji-id={documentId}
+        data-custom-emoji-char={fallback || '✨'}
       />
     )
   }
@@ -637,12 +646,24 @@ export const CustomEmojiView = React.memo<{
         className={className}
         loading="lazy"
         draggable={false}
+        title={emojiTitle}
+        data-custom-emoji-id={documentId}
+        data-custom-emoji-char={fallback || '✨'}
         onError={() => setHasError(true)}
       />
     )
   }
 
-  return <span className="inline-block">{fallback || '⭐'}</span>
+  return (
+    <span
+      className="inline-block"
+      title={emojiTitle}
+      data-custom-emoji-id={documentId}
+      data-custom-emoji-char={fallback || '⭐'}
+    >
+      {fallback || '⭐'}
+    </span>
+  )
 })
 
 export const TelegramBlockquote: React.FC<{
@@ -2105,6 +2126,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     message: MessageItem
     selectedText?: string
     linkUrl?: string
+    clickedCustomEmoji?: { emoji: string; documentId: string }
+    selectedCustomEmojis?: Array<{ emoji: string; documentId: string }>
+    messageCustomEmojis?: Array<{ emoji: string; documentId: string }>
   } | null>(null)
 
   // Close context menu & send menu on global click or Escape
@@ -6449,7 +6473,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 onContextMenu={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  const selection = window.getSelection()?.toString()
+                  const selection = window.getSelection()
+                  const selectionStr = selection?.toString()
 
                   // Detect clicked link
                   const targetEl = e.target as HTMLElement | null
@@ -6464,16 +6489,79 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     }
                   }
 
-                  if (!clickedLinkUrl && selection && (selection.trim().startsWith('http://') || selection.trim().startsWith('https://') || selection.trim().startsWith('t.me/'))) {
-                    clickedLinkUrl = selection.trim().startsWith('t.me/') ? `https://${selection.trim()}` : selection.trim()
+                  if (!clickedLinkUrl && selectionStr && (selectionStr.trim().startsWith('http://') || selectionStr.trim().startsWith('https://') || selectionStr.trim().startsWith('t.me/'))) {
+                    clickedLinkUrl = selectionStr.trim().startsWith('t.me/') ? `https://${selectionStr.trim()}` : selectionStr.trim()
+                  }
+
+                  // 1. Detect directly clicked custom emoji
+                  const emojiEl = targetEl?.closest('[data-custom-emoji-id]') as HTMLElement | null
+                  const clickedCustomEmoji = emojiEl?.dataset?.customEmojiId
+                    ? {
+                        documentId: emojiEl.dataset.customEmojiId,
+                        emoji: emojiEl.dataset.customEmojiChar || '✨',
+                      }
+                    : undefined
+
+                  // 2. Detect all custom emojis belonging to this message
+                  const currentBubble = e.currentTarget as HTMLElement
+                  const messageCustomEmojis: Array<{ emoji: string; documentId: string }> = []
+                  const seenMsgDocIds = new Set<string>()
+
+                  // Source of truth: message entities
+                  if (Array.isArray(msg.entities) && msg.text) {
+                    for (const ent of msg.entities) {
+                      if (ent.type === 'custom_emoji' && ent.documentId) {
+                        const char = msg.text.slice(ent.offset, ent.offset + ent.length).trim() || '✨'
+                        if (!seenMsgDocIds.has(ent.documentId)) {
+                          seenMsgDocIds.add(ent.documentId)
+                          messageCustomEmojis.push({ emoji: char, documentId: ent.documentId })
+                        }
+                      }
+                    }
+                  }
+
+                  // DOM fallback/addition (e.g. sender custom emoji status, custom media captions, etc.)
+                  if (currentBubble) {
+                    currentBubble.querySelectorAll<HTMLElement>('[data-custom-emoji-id]').forEach((node) => {
+                      const docId = node.dataset.customEmojiId
+                      const char = node.dataset.customEmojiChar || '✨'
+                      if (docId && !seenMsgDocIds.has(docId)) {
+                        seenMsgDocIds.add(docId)
+                        messageCustomEmojis.push({ emoji: char, documentId: docId })
+                      }
+                    })
+                  }
+
+                  // 3. Detect selected custom emojis (if user highlighted text/emojis)
+                  const selectedCustomEmojis: Array<{ emoji: string; documentId: string }> = []
+                  const seenSelDocIds = new Set<string>()
+                  if (selection && !selection.isCollapsed && selection.rangeCount > 0 && currentBubble) {
+                    try {
+                      const range = selection.getRangeAt(0)
+                      currentBubble.querySelectorAll<HTMLElement>('[data-custom-emoji-id]').forEach((node) => {
+                        if (range.intersectsNode(node)) {
+                          const docId = node.dataset.customEmojiId
+                          const char = node.dataset.customEmojiChar || '✨'
+                          if (docId && !seenSelDocIds.has(docId)) {
+                            seenSelDocIds.add(docId)
+                            selectedCustomEmojis.push({ emoji: char, documentId: docId })
+                          }
+                        }
+                      })
+                    } catch {
+                      // ignore range intersection error
+                    }
                   }
 
                   setContextMenu({
                     x: e.clientX,
                     y: e.clientY,
                     message: msg,
-                    selectedText: selection && selection.trim() ? selection.trim() : undefined,
+                    selectedText: selectionStr && selectionStr.trim() ? selectionStr.trim() : undefined,
                     linkUrl: clickedLinkUrl,
+                    clickedCustomEmoji,
+                    selectedCustomEmojis: selectedCustomEmojis.length > 0 ? selectedCustomEmojis : undefined,
+                    messageCustomEmojis: messageCustomEmojis.length > 0 ? messageCustomEmojis : undefined,
                   })
                 }}
                 onClick={async (e) => {
@@ -10307,6 +10395,92 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <div className="h-px bg-white/10 my-1 -mx-1" />
             </>
           )}
+
+          {/* Custom Emoji Specific Actions */}
+          {(() => {
+            const clicked = contextMenu.clickedCustomEmoji
+            const selectedList = contextMenu.selectedCustomEmojis
+            const messageList = contextMenu.messageCustomEmojis
+
+            // Effective single emoji to show details for (either clicked directly, or only 1 emoji in message when no specific selection)
+            const singleEmoji = clicked || (!selectedList?.length && messageList?.length === 1 ? messageList[0] : null)
+
+            // Multiple emojis to copy as batch (either selected subset or all in message)
+            const batchEmojis = selectedList && selectedList.length > 1
+              ? selectedList
+              : (messageList && messageList.length > 1 ? messageList : null)
+
+            if (!singleEmoji && !batchEmojis) return null
+
+            return (
+              <>
+                {/* Single Emoji Preview & Actions */}
+                {singleEmoji && (
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan text-xs font-mono select-none">
+                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                      <span className="font-sans font-bold text-sm leading-none">{singleEmoji.emoji}</span>
+                      <span className="text-gray-300 truncate font-mono text-[11px]">ID: {singleEmoji.documentId}</span>
+                    </div>
+
+                    {/* Copy Emoji & ID (e.g. 💎:5888771578702861554) */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const textToCopy = `${singleEmoji.emoji}:${singleEmoji.documentId}`
+                        await copyTextToClipboard(textToCopy)
+                        setContextMenu(null)
+                        showToast(`Copied: ${textToCopy}`)
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-accent-cyan hover:text-white hover:bg-accent-cyan/20 transition-colors text-left cursor-pointer font-medium"
+                    >
+                      <Copy className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                      <span className="truncate">
+                        Copy Emoji ID ({singleEmoji.emoji}:{singleEmoji.documentId.length > 10 ? `${singleEmoji.documentId.slice(0, 10)}…` : singleEmoji.documentId})
+                      </span>
+                    </button>
+
+                    {/* Copy Raw Document ID */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await copyTextToClipboard(singleEmoji.documentId)
+                        setContextMenu(null)
+                        showToast(`Copied Emoji ID: ${singleEmoji.documentId}`)
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                    >
+                      <Hash className="w-3.5 h-3.5 shrink-0 text-primary-400" />
+                      <span className="truncate">Copy Raw ID ({singleEmoji.documentId})</span>
+                    </button>
+                  </>
+                )}
+
+                {/* Batch Copy All / Selected Emoji IDs */}
+                {batchEmojis && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const formatted = batchEmojis.map((e) => `${e.emoji}:${e.documentId}`).join('\n')
+                      await copyTextToClipboard(formatted)
+                      setContextMenu(null)
+                      showToast(`Copied ${batchEmojis.length} Emoji IDs`)
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-amber-300 hover:text-white hover:bg-amber-500/20 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Copy className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <span className="truncate">
+                      {selectedList && selectedList.length > 1
+                        ? `Copy Selected Emoji IDs (${batchEmojis.length})`
+                        : `Copy All Emoji IDs (${batchEmojis.length})`}
+                    </span>
+                  </button>
+                )}
+
+                <div className="h-px bg-white/10 my-1 -mx-1" />
+              </>
+            )
+          })()}
 
           {/* Reply to message */}
           <button

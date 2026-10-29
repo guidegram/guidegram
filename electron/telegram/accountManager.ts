@@ -482,7 +482,7 @@ export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] |
       length: ent.length ?? 0,
       url: ent.url,
       language: ent.language,
-      documentId: ent.documentId?.toString(),
+      documentId: (ent.documentId ?? (ent as any).document_id)?.toString(),
     })
   }
   return result.length > 0 ? result : undefined
