@@ -501,13 +501,15 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
         </div>
 
         {/* Center: Counter Indicator */}
-        {allPhotoMessages.length > 1 && currentIndex >= 0 && (
+        {((allPhotoMessages.length > 1 && currentIndex >= 0) || (isCustomGalleryMode && customGallery && customGallery.length > 1)) && (
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium text-gray-200 backdrop-blur-md">
             <span>
-              {t('chat.image_counter', {
-                current: currentIndex + 1,
-                total: allPhotoMessages.length,
-              }) || `${currentIndex + 1} of ${allPhotoMessages.length}`}
+              {isCustomGalleryMode && customGallery
+                ? `${galleryIndex + 1} / ${customGallery.length}`
+                : t('chat.image_counter', {
+                    current: currentIndex + 1,
+                    total: allPhotoMessages.length,
+                  }) || `${currentIndex + 1} of ${allPhotoMessages.length}`}
             </span>
           </div>
         )}

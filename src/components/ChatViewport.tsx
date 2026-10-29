@@ -822,6 +822,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [lightboxScale, setLightboxScale] = useState(1)
   const [activeViewerMessage, setActiveViewerMessage] = useState<MessageItem | null>(null)
+  const [activeCustomGallery, setActiveCustomGallery] = useState<string[]>([])
 
   // Filter all photo messages in current chat for gallery navigation
   const allPhotoMessages = useMemo(() => {
