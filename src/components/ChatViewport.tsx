@@ -2988,6 +2988,40 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
 
+  // Open profile photo with multi-photo gallery support
+  const handleOpenProfileAvatar = async (peerId?: string, currentPhotoUrl?: string) => {
+    if (!chat || !peerId) return
+    try {
+      if (window.guidegram?.getUserProfilePhotos) {
+        showToast('Loading profile photos...')
+        const photos = await window.guidegram.getUserProfilePhotos(chat.accountId, peerId)
+        if (photos && photos.length > 0) {
+          setActiveCustomGallery(photos)
+          setLightboxUrl(photos[0])
+          setActiveViewerMessage(null)
+          return
+        }
+      }
+      if (currentPhotoUrl) {
+        setActiveCustomGallery([currentPhotoUrl])
+        setLightboxUrl(currentPhotoUrl)
+        setActiveViewerMessage(null)
+      } else if (window.guidegram?.getProfilePhoto) {
+        showToast('Loading full profile photo...')
+        const big = await window.guidegram.getProfilePhoto(chat.accountId, peerId, true)
+        if (big) {
+          setActiveCustomGallery([big])
+          setLightboxUrl(big)
+          setActiveViewerMessage(null)
+        } else {
+          showToast('No profile photo available')
+        }
+      }
+    } catch {
+      showToast('Could not load profile photo')
+    }
+  }
+
   // Toggle notifications (Mute / Unmute)
   const handleToggleNotifications = async () => {
     if (!chat || !window.guidegram?.toggleChatNotifications) return
@@ -9217,21 +9251,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         isChannel={chat.isChannel}
                         isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
                         className="cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={async () => {
-                          const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
-                          if (currentPhoto) {
-                            setLightboxUrl(currentPhoto)
-                          } else if (window.guidegram?.getProfilePhoto) {
-                            try {
-                              showToast('Loading full profile photo...')
-                              const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
-                              if (big) setLightboxUrl(big)
-                              else showToast('No profile photo available')
-                            } catch {
-                              showToast('Could not load profile photo')
-                            }
-                          }
-                        }}
+                        onClick={() => handleOpenProfileAvatar(chat.id, chatDetails?.avatarUrl || chat.avatarUrl)}
                       />
                     </LiquidGiftOrbit>
                   ) : (
@@ -9245,21 +9265,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       isChannel={chat.isChannel}
                       isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
                       className="cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={async () => {
-                        const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
-                        if (currentPhoto) {
-                          setLightboxUrl(currentPhoto)
-                        } else if (window.guidegram?.getProfilePhoto) {
-                          try {
-                            showToast('Loading full profile photo...')
-                            const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
-                            if (big) setLightboxUrl(big)
-                            else showToast('No profile photo available')
-                          } catch {
-                            showToast('Could not load profile photo')
-                          }
-                        }
-                      }}
+                      onClick={() => handleOpenProfileAvatar(chat.id, chatDetails?.avatarUrl || chat.avatarUrl)}
                     />
                   )}
                 </div>
@@ -9967,20 +9973,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   avatarUrl={userProfileDetails?.avatarUrl}
                   size="xl"
                   className="mb-3 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={async () => {
-                    if (userProfileDetails?.avatarUrl) {
-                      setLightboxUrl(userProfileDetails.avatarUrl)
-                    } else if (window.guidegram?.getProfilePhoto && userProfilePeerId) {
-                      try {
-                        showToast('Loading full profile photo...')
-                        const big = await window.guidegram.getProfilePhoto(chat.accountId, userProfilePeerId, true)
-                        if (big) setLightboxUrl(big)
-                        else showToast('No profile photo available')
-                      } catch {
-                        showToast('Could not load profile photo')
-                      }
-                    }
-                  }}
+                  onClick={() => handleOpenProfileAvatar(userProfilePeerId, userProfileDetails?.avatarUrl)}
                 />
 
                 <div className="flex items-center justify-center gap-1.5 mb-1 px-2">
@@ -10238,10 +10231,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         url={lightboxUrl || ''}
         message={activeViewerMessage}
         allPhotoMessages={allPhotoMessages}
+        customGallery={activeCustomGallery.length > 0 ? activeCustomGallery : undefined}
+        onNavigateGallery={(idx) => {
+          if (activeCustomGallery[idx]) {
+            setLightboxUrl(activeCustomGallery[idx])
+          }
+        }}
         currentChat={chat}
         onClose={() => {
           setLightboxUrl(null)
           setActiveViewerMessage(null)
+          setActiveCustomGallery([])
         }}
         onNavigate={handleNavigatePhoto}
         onForward={(msg) => onOpenDirectForward(msg)}
