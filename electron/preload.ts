@@ -114,6 +114,16 @@ const guidegramAPI = {
   focusWindow: (): Promise<boolean> =>
     ipcRenderer.invoke('window:focus'),
 
+  // Desktop Corner Notifications
+  syncDesktopNotifications: (payload: {
+    notifications: any[]
+    position?: 'bottom-right' | 'top-right' | 'bottom-left' | 'top-left'
+    privacyMode?: 'full' | 'hide-text' | 'hide-all'
+    quickReplyEnabled?: boolean
+  }): Promise<boolean> => ipcRenderer.invoke('notifications:sync', payload),
+  dispatchNotificationAction: (action: string, payload: any): Promise<any> =>
+    ipcRenderer.invoke('notifications:dispatch-action', { action, payload }),
+
   // MTProto Engine Status
   getMtprotoStatus: (): Promise<{
     layer: number

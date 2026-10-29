@@ -32,15 +32,18 @@ window.addEventListener('unhandledrejection', (event) => {
 
 import { I18nProvider } from './i18n'
 import { initFontManager } from './utils/fontManager'
+import { DesktopNotificationOverlay } from './components/DesktopNotificationOverlay'
 
 // Initialize offline/cached font manager
 initFontManager().catch((err) => console.warn('[FontManager] init failed:', err))
+
+const isNotificationPopup = typeof window !== 'undefined' && window.location.search.includes('window=notifications')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <I18nProvider>
-        <App />
+        {isNotificationPopup ? <DesktopNotificationOverlay /> : <App />}
       </I18nProvider>
     </ErrorBoundary>
   </React.StrictMode>

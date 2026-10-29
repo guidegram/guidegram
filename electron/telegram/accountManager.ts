@@ -1054,7 +1054,7 @@ export class AccountManager {
     // Start periodic background contact changes auditor (every 15 minutes)
     this.contactAuditInterval = setInterval(() => {
       for (const [accId, holder] of this.clients.entries()) {
-        if (holder?.info?.status === 'connected') {
+        if (holder?.info?.status === 'connected' && !holder?.info?.isBot) {
           this.syncAndAuditContacts(accId).catch(() => {})
         }
       }
@@ -1066,7 +1066,7 @@ export class AccountManager {
       this.syncAllActiveAccountsProfile().catch(() => {})
     }, 60 * 1000)
 
-    // Start active-targeted throttled profile audit queue processor (every 3.5 seconds)
+    // Start active-targeted throttled profile audit queue processor (every 30 seconds to prevent event-loop wakeups)
     this.startAuditQueueProcessor()
   }
 
@@ -2178,6 +2178,11 @@ export class AccountManager {
       const dialogs: DialogItem[] = []
       const chatIds = Object.keys(audit || {})
       const botSelfName = holder.info?.firstName || ''
+      const cachedDialogs = this.store.loadDialogsCache(accountId) || []
+      const cachedMap = new Map<string, DialogItem>()
+      for (const cd of cachedDialogs) {
+        if (cd.id) cachedMap.set(cd.id, cd)
+      }
 
       for (const chatId of chatIds) {
         const chatMsgs = audit[chatId] || {}
@@ -2218,6 +2223,17 @@ export class AccountManager {
           }
         }
 
+        // Check if cached dialogs previously resolved this peer
+        if (!contactName) {
+          const cachedItem = cachedMap.get(chatId)
+          if (cachedItem?.title && !cachedItem.title.startsWith('کاربر ') && !cachedItem.title.startsWith('Group ')) {
+            contactName = cachedItem.title
+            if (!contactAvatarUrl && cachedItem.avatarUrl) {
+              contactAvatarUrl = cachedItem.avatarUrl
+            }
+          }
+        }
+
         const avatarCacheKey = `${accountId}_${chatId}`
         if (!contactAvatarUrl) {
           contactAvatarUrl = this.avatarCache.get(avatarCacheKey) || this.thumbCache.get(avatarCacheKey)
@@ -2242,6 +2258,37 @@ export class AccountManager {
           isPinned: false,
         })
       }
+
+      // Asynchronously resolve missing user profile names and avatars for bot dialogs via MTProto
+      if (holder?.client) {
+        const unresolved = dialogs.filter((d) => !d.title || d.title.startsWith('کاربر ') || d.title.startsWith('Group '))
+        if (unresolved.length > 0) {
+          await Promise.allSettled(
+            unresolved.slice(0, 50).map(async (d) => {
+              try {
+                const peerNum = Number(d.id)
+                const targetPeer = !isNaN(peerNum) ? peerNum : d.id
+                const chatObj: any = await holder.client.getChat(targetPeer)
+                if (chatObj) {
+                  const resolvedName = formatEntityName(chatObj, '')
+                  if (resolvedName && !resolvedName.startsWith('Unknown')) {
+                    d.title = resolvedName
+                  }
+                  if (!d.avatarUrl && chatObj.photo) {
+                    const thumb = extractStrippedThumb(chatObj.photo)
+                    if (thumb) {
+                      d.avatarUrl = thumb
+                      this.thumbCache.set(`${accountId}_${d.id}`, thumb)
+                    }
+                  }
+                }
+              } catch (_) {}
+            })
+          )
+        }
+      }
+
+      this.store.saveDialogsCache(accountId, dialogs)
       return dialogs.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
     }
 
@@ -2827,7 +2874,7 @@ export class AccountManager {
       if (cfg.profileChangeAuditorEnabled === false) return
 
       for (const [accId, holder] of this.clients.entries()) {
-        if (holder?.info?.status !== 'connected' || !holder.client) continue
+        if (holder?.info?.status !== 'connected' || !holder.client || holder?.info?.isBot) continue
 
         // Check if account is in FloodWait cooldown
         const now = Math.floor(Date.now() / 1000)
@@ -2896,6 +2943,29 @@ export class AccountManager {
 
     if (this.auditQueueInterval.unref) {
       this.auditQueueInterval.unref()
+    }
+  }
+
+  public purgeStaleCaches(): void {
+    if (this.rawMessagesCache.size > 200) {
+      const keys = Array.from(this.rawMessagesCache.keys()).slice(0, this.rawMessagesCache.size - 100)
+      for (const k of keys) this.rawMessagesCache.delete(k)
+    }
+    if (this.peerPhotos.size > 200) {
+      const keys = Array.from(this.peerPhotos.keys()).slice(0, this.peerPhotos.size - 100)
+      for (const k of keys) this.peerPhotos.delete(k)
+    }
+    if (this.peerBigPhotos.size > 200) {
+      const keys = Array.from(this.peerBigPhotos.keys()).slice(0, this.peerBigPhotos.size - 100)
+      for (const k of keys) this.peerBigPhotos.delete(k)
+    }
+    if (this.avatarCache.size > 200) {
+      const keys = Array.from(this.avatarCache.keys()).slice(0, this.avatarCache.size - 100)
+      for (const k of keys) this.avatarCache.delete(k)
+    }
+    if (this.mediaCache.size > 100) {
+      const keys = Array.from(this.mediaCache.keys()).slice(0, this.mediaCache.size - 50)
+      for (const k of keys) this.mediaCache.delete(k)
     }
   }
 
@@ -6745,7 +6815,8 @@ export class AccountManager {
       messageId,
       edited?.text ?? text,
       editDate,
-      entities
+      entities,
+      true
     )
 
     return stored || {
@@ -14543,7 +14614,7 @@ export class AccountManager {
         const senderAvatarUrl = senderIdStr
           ? this.avatarCache.get(`${accountId}_${senderIdStr}`) || this.thumbCache.get(`${accountId}_${senderIdStr}`) || extractStrippedThumb(msg.sender?.photo)
           : undefined
-        const senderName = msg.sender?.displayName || msg.sender?.title || msg.sender?.firstName || ''
+        const senderName = formatEntityName(msg.sender || chat, '')
 
         const isService = msg.raw?._ === 'messageService' || Boolean(msg.action)
         let text = msg.text || ''
@@ -14647,7 +14718,9 @@ export class AccountManager {
           msg.id,
           msg.text || '',
           editDate,
-          entities
+          entities,
+          msg.isOutgoing,
+          formatEntityName(msg.sender, '')
         )
 
         const item: MessageItem = updated || {

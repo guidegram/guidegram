@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, protocol, net, dialog, session, clipboard, powerMonitor } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, protocol, net, dialog, session, clipboard, powerMonitor, screen } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { Readable } from 'node:stream'
@@ -68,7 +68,6 @@ app.setAppUserModelId('com.guidegram.desktop')
 app.commandLine.appendSwitch('enable-gpu-rasterization')
 app.commandLine.appendSwitch('enable-zero-copy')
 app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization')
-app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
 
 // WebRTC Media & Calling IP Leak Prevention (MM-015 / Layer 08)
 WebrtcSecurityGuard.applyCommandLineSwitches(app, false)
@@ -529,6 +528,94 @@ function createWindow() {
 
 const activeMiniApps = new Set<BrowserWindow>()
 const accountWindows = new Map<string, BrowserWindow>()
+let notificationWindow: BrowserWindow | null = null
+
+function getOrCreateNotificationWindow(position: string = 'bottom-right'): BrowserWindow {
+  if (notificationWindow && !notificationWindow.isDestroyed()) {
+    repositionNotificationWindow(position)
+    return notificationWindow
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { workArea } = primaryDisplay
+  const width = 400
+  const height = 520
+
+  let x = workArea.x + workArea.width - width - 16
+  let y = workArea.y + workArea.height - height - 16
+
+  if (position === 'top-right') {
+    x = workArea.x + workArea.width - width - 16
+    y = workArea.y + 16
+  } else if (position === 'top-left') {
+    x = workArea.x + 16
+    y = workArea.y + 16
+  } else if (position === 'bottom-left') {
+    x = workArea.x + 16
+    y = workArea.y + workArea.height - height - 16
+  }
+
+  notificationWindow = new BrowserWindow({
+    width,
+    height,
+    x,
+    y,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    show: false,
+    hasShadow: false,
+    focusable: true,
+    backgroundColor: '#00000000',
+    webPreferences: SecurityGuardrails.getHardenedWebPreferences({
+      preload: path.join(__dirname, 'preload.cjs'),
+      sandbox: true,
+    }) as any,
+  })
+
+  notificationWindow.setAlwaysOnTop(true, 'screen-saver')
+  notificationWindow.setVisibleOnAllWorkspaces(true)
+  SecurityGuardrails.attachSecureWindowHandlers(notificationWindow, false)
+
+  if (process.env.VITE_DEV_SERVER_URL) {
+    notificationWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}?window=notifications`)
+  } else {
+    const htmlPath = path.join(__dirname, '../dist/index.html')
+    notificationWindow.loadFile(htmlPath, { query: { window: 'notifications' } })
+  }
+
+  notificationWindow.on('closed', () => {
+    notificationWindow = null
+  })
+
+  return notificationWindow
+}
+
+function repositionNotificationWindow(position: string = 'bottom-right') {
+  if (!notificationWindow || notificationWindow.isDestroyed()) return
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { workArea } = primaryDisplay
+  const width = 400
+  const height = 520
+
+  let x = workArea.x + workArea.width - width - 16
+  let y = workArea.y + workArea.height - height - 16
+
+  if (position === 'top-right') {
+    x = workArea.x + workArea.width - width - 16
+    y = workArea.y + 16
+  } else if (position === 'top-left') {
+    x = workArea.x + 16
+    y = workArea.y + 16
+  } else if (position === 'bottom-left') {
+    x = workArea.x + 16
+    y = workArea.y + workArea.height - height - 16
+  }
+
+  notificationWindow.setBounds({ x, y, width, height })
+}
 
 function broadcastToAllWindows(event: string, payload: any) {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -1248,6 +1335,124 @@ function setupIpcHandlers() {
 
     menu.popup({ window: win })
   })
+
+  // Desktop Corner Notification System
+  let lastSyncedNotifications: any[] = []
+
+  ipcMain.handle(
+    'notifications:sync',
+    async (
+      _event,
+      payload: {
+        notifications: any[]
+        position?: 'bottom-right' | 'top-right' | 'bottom-left' | 'top-left'
+        privacyMode?: 'full' | 'hide-text' | 'hide-all'
+        quickReplyEnabled?: boolean
+      }
+    ) => {
+      const { notifications, position = 'bottom-right', privacyMode = 'full', quickReplyEnabled = true } = payload || {}
+      lastSyncedNotifications = notifications || []
+
+      if (lastSyncedNotifications.length === 0) {
+        if (notificationWindow && !notificationWindow.isDestroyed() && notificationWindow.isVisible()) {
+          notificationWindow.hide()
+        }
+        return true
+      }
+
+      const win = getOrCreateNotificationWindow(position)
+      repositionNotificationWindow(position)
+
+      const sendPayload = () => {
+        if (!win.isDestroyed() && win.webContents) {
+          win.webContents.send('notifications:render', {
+            notifications: lastSyncedNotifications,
+            position,
+            privacyMode,
+            quickReplyEnabled,
+          })
+          if (!win.isVisible()) {
+            win.showInactive()
+          }
+        }
+      }
+
+      if (win.webContents.isLoading()) {
+        win.webContents.once('did-finish-load', sendPayload)
+      } else {
+        sendPayload()
+      }
+
+      return true
+    }
+  )
+
+  ipcMain.handle(
+    'notifications:dispatch-action',
+    async (_event, { action, payload }: { action: string; payload: any }) => {
+      switch (action) {
+        case 'dismiss': {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('notification:action:dismiss', payload)
+          }
+          break
+        }
+        case 'select': {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            if (!mainWindow.isVisible()) mainWindow.show()
+            mainWindow.show()
+            mainWindow.focus()
+            mainWindow.webContents.send('notification:action:select', payload)
+          }
+          break
+        }
+        case 'read': {
+          const { accountId, chatId, messageId } = payload || {}
+          if (accountId && chatId) {
+            try {
+              await accountManager.markAsRead(accountId, chatId, messageId ? [messageId] : [])
+            } catch (err) {
+              Logger.warn('[Notification] markAsRead action error:', err)
+            }
+          }
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('notification:action:read', payload)
+          }
+          break
+        }
+        case 'reply': {
+          const { accountId, chatId, text, replyToMsgId } = payload || {}
+          if (accountId && chatId && text) {
+            try {
+              await accountManager.sendMessage(accountId, chatId, text, { replyToMsgId })
+            } catch (err) {
+              Logger.warn('[Notification] quick reply action error:', err)
+            }
+          }
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('notification:action:reply', payload)
+          }
+          break
+        }
+        case 'mute': {
+          const { accountId, chatId } = payload || {}
+          if (accountId && chatId) {
+            try {
+              await accountManager.toggleChatNotifications(accountId, chatId, true)
+            } catch (err) {
+              Logger.warn('[Notification] mute chat action error:', err)
+            }
+          }
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('notification:action:mute', payload)
+          }
+          break
+        }
+      }
+      return true
+    }
+  )
 
   // Update System Handlers
   ipcMain.handle('app:get-version', () => {
@@ -2444,6 +2649,14 @@ function setupIpcHandlers() {
   memoryMonitor.registerIpc()
   memoryPressureManager.registerHandler('elevated', 'swr_cache', () => {
     swrCache.clear()
+  })
+  memoryPressureManager.registerHandler('elevated', 'account_manager', () => {
+    accountManager.purgeStaleCaches()
+  })
+  memoryPressureManager.registerHandler('critical', 'all_caches', () => {
+    swrCache.clear()
+    accountManager.purgeStaleCaches()
+    session.defaultSession.clearCache().catch(() => {})
   })
   memoryPressureManager.start(30_000)
 

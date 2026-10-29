@@ -85,6 +85,14 @@ export class SessionStore {
       quickForwardToSaved: true,
       alwaysDeleteBoth: true,
       keepDeletedMessagesLocally: true,
+      auditTrackDeletedPrivate: true,
+      auditTrackEditedPrivate: true,
+      auditTrackDeletedGroups: true,
+      auditTrackEditedGroups: true,
+      auditTrackDeletedChannels: false,
+      auditTrackEditedChannels: false,
+      auditMaxTrackedGroups: 25,
+      auditMaxTrackedChannels: 10,
       markAllReadEnabled: true,
       copyCallbackData: true,
       disableAnimations: false,
@@ -832,13 +840,48 @@ export class SessionStore {
     this.saveAccountAudit(accountId, audit)
   }
 
+  public shouldAuditChat(accountId: string, chatId: string, isEdit: boolean): boolean {
+    if (!chatId) return false
+    const cfg = this.getConfig()
+    const isChannel = chatId.startsWith('-100')
+    const isGroup = chatId.startsWith('-') && !isChannel
+    const isPrivate = !chatId.startsWith('-')
+
+    if (isPrivate) {
+      return isEdit ? (cfg.auditTrackEditedPrivate !== false) : (cfg.auditTrackDeletedPrivate !== false)
+    }
+
+    const audit = this.loadAccountAudit(accountId)
+    if (isGroup) {
+      const allowed = isEdit ? (cfg.auditTrackEditedGroups !== false) : (cfg.auditTrackDeletedGroups !== false)
+      if (!allowed) return false
+      if (audit[chatId]) return true
+      const maxGroups = cfg.auditMaxTrackedGroups ?? 25
+      const currentGroupCount = Object.keys(audit).filter((id) => id.startsWith('-') && !id.startsWith('-100')).length
+      return currentGroupCount < maxGroups
+    }
+
+    if (isChannel) {
+      const allowed = isEdit ? Boolean(cfg.auditTrackEditedChannels) : Boolean(cfg.auditTrackDeletedChannels)
+      if (!allowed) return false
+      if (audit[chatId]) return true
+      const maxChannels = cfg.auditMaxTrackedChannels ?? 10
+      const currentChannelCount = Object.keys(audit).filter((id) => id.startsWith('-100')).length
+      return currentChannelCount < maxChannels
+    }
+
+    return true
+  }
+
   public recordMessageEdit(
     accountId: string,
     chatId: string,
     messageId: number,
     newText: string,
     editDate: number,
-    entities?: MessageEntityItem[]
+    entities?: MessageEntityItem[],
+    isOutgoing?: boolean,
+    senderName?: string
   ): MessageItem | null {
     if (!accountId || !messageId) return null
     let targetChatId = chatId
@@ -848,6 +891,10 @@ export class SessionStore {
     if (!targetChatId) return null
 
     this.indexMessageChat(accountId, targetChatId, messageId)
+
+    if (!this.shouldAuditChat(accountId, targetChatId, true)) {
+      return null
+    }
 
     const audit = this.loadAccountAudit(accountId)
     if (!audit[targetChatId]) {
@@ -872,6 +919,8 @@ export class SessionStore {
       existing.text = newText
       existing.editDate = editDate
       if (entities) existing.entities = entities
+      if (typeof isOutgoing === 'boolean') existing.isOutgoing = isOutgoing
+      if (senderName && !existing.senderName) existing.senderName = senderName
       existing.editHistory = priorHistory
       this.saveAccountAudit(accountId, audit)
       this.storeRecentMessage(accountId, targetChatId, existing)
@@ -898,7 +947,8 @@ export class SessionStore {
         text: newText,
         date: recent?.date || editDate,
         editDate,
-        isOutgoing: recent?.isOutgoing ?? false,
+        isOutgoing: typeof isOutgoing === 'boolean' ? isOutgoing : (recent?.isOutgoing ?? false),
+        senderName: senderName || recent?.senderName,
         entities,
         editHistory: priorHistory,
       }
@@ -922,6 +972,7 @@ export class SessionStore {
         targetChatId = this.findChatIdForMessageId(accountId, msgId) || ''
       }
       if (!targetChatId) continue
+      if (!this.shouldAuditChat(accountId, targetChatId, false)) continue
 
       let existing = audit[targetChatId]?.[msgId]
       if (existing) {

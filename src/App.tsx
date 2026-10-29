@@ -44,6 +44,7 @@ import {
 } from './types/telegram'
 import { playNotificationSound } from './utils/soundEffects'
 import { NotificationHUD, ActiveNotificationItem } from './components/NotificationHUD'
+import { NotificationHistoryDrawer, NotificationHistoryItem } from './components/NotificationHistoryDrawer'
 import logoImg from './assets/logo.png'
 
 export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
@@ -74,8 +75,21 @@ export const App: React.FC = () => {
     activeChatIdRef.current = activeChatId
   }, [activeChatId])
   const [activeNotifications, setActiveNotifications] = useState<ActiveNotificationItem[]>([])
+  const [notificationHistory, setNotificationHistory] = useState<NotificationHistoryItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('guidegram_notif_history')
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  })
+  const [isNotificationHistoryOpen, setIsNotificationHistoryOpen] = useState(false)
   const [initialScrollMsgId, setInitialScrollMsgId] = useState<number | null>(null)
   const [messagesByChat, setMessagesByChat] = useState<Record<string, MessageItem[]>>({})
+  const messagesByChatRef = useRef<Record<string, MessageItem[]>>({})
+  useEffect(() => {
+    messagesByChatRef.current = messagesByChat
+  }, [messagesByChat])
 
   const [activeTab, setActiveTab] = useState<TabCategory>('all')
   const [cloudFolders, setCloudFolders] = useState<CloudFolderItem[]>([])
@@ -184,6 +198,25 @@ export const App: React.FC = () => {
       clearInterval(intervalTimer)
     }
   }, [])
+
+  // Persist notification history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('guidegram_notif_history', JSON.stringify(notificationHistory.slice(0, 150)))
+    } catch (_) {}
+  }, [notificationHistory])
+
+  // Sync active notifications with Electron dedicated monitor corner window
+  useEffect(() => {
+    if (window.guidegram?.syncDesktopNotifications) {
+      window.guidegram.syncDesktopNotifications({
+        notifications: activeNotifications,
+        position: config?.notificationPosition || 'bottom-right',
+        privacyMode: config?.notificationPrivacyMode || 'full',
+        quickReplyEnabled: config?.notificationQuickReply !== false,
+      }).catch(() => {})
+    }
+  }, [activeNotifications, config?.notificationPosition, config?.notificationPrivacyMode, config?.notificationQuickReply])
 
   const handleManualCheckUpdate = async () => {
     const now = Date.now()
@@ -356,22 +389,35 @@ export const App: React.FC = () => {
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
         const { accountId, chatId, message } = payload
-        setMessagesByChat((prev) => {
-          const list = prev[chatId] || []
-          const existingIdx = list.findIndex((m) => m.id === message?.id)
-          let nextList: MessageItem[]
-          if (existingIdx !== -1) {
-            nextList = [...list]
-            nextList[existingIdx] = { ...nextList[existingIdx], ...message }
-          } else {
-            nextList = [...list, message]
-          }
-          nextList.sort((a, b) => (a.date - b.date) || (a.id - b.id))
-          return {
-            ...prev,
-            [chatId]: nextList,
-          }
-        })
+        const isCurrentActive = Boolean(
+          activeChatIdRef.current && (
+            chatId === activeChatIdRef.current ||
+            isPeerMatch(String(chatId), String(activeChatIdRef.current))
+          )
+        )
+
+        // Telegram Desktop Resource Optimization:
+        // Only load and allocate messages in React state if the user is currently viewing this chat!
+        // Unopened chats only receive unreadCount and topMessage updates in dialogsByAccount,
+        // preventing thousands of background group/channel messages from filling up RAM.
+        if (isCurrentActive) {
+          setMessagesByChat((prev) => {
+            const list = prev[chatId] || []
+            const existingIdx = list.findIndex((m) => m.id === message?.id)
+            let nextList: MessageItem[]
+            if (existingIdx !== -1) {
+              nextList = [...list]
+              nextList[existingIdx] = { ...nextList[existingIdx], ...message }
+            } else {
+              nextList = [...list, message]
+            }
+            nextList.sort((a, b) => (a.date - b.date) || (a.id - b.id))
+            return {
+              ...prev,
+              [chatId]: nextList,
+            }
+          })
+        }
         const targetDialog = dialogsByAccountRef.current[accountId]?.find(
           (d) => d.id === String(chatId) || isPeerMatch(d.id, String(chatId))
         )
@@ -389,7 +435,71 @@ export const App: React.FC = () => {
 
         const isUserLookingAtChat = chatId === activeChatIdRef.current && document.hasFocus()
 
-        if (!message?.isOutgoing && !isChatMuted && notifsAllowed && typeAllowed && !isUserLookingAtChat) {
+        // --- SMART NOISE & SPAM NOTIFICATION FILTER ---
+        // 1. Service messages (user join/leave, chat title/photo edits, pin events, calls, etc.)
+        const isServiceMsg = Boolean(message?.isService || message?.actionType)
+
+        // 2. Silent messages (sender chose 'Send without sound')
+        const isSilentMsg = Boolean(message?.isSilent)
+
+        // 3. Bot and spam filtering in groups
+        const msgText = (message?.text || '').trim()
+        const senderUsername = (message?.senderUsername || '').toLowerCase()
+        const senderName = (message?.senderName || '').toLowerCase()
+        const isSenderBot =
+          senderUsername.endsWith('bot') ||
+          senderName.includes(' bot') ||
+          Boolean((payload as any)?.chatInfo?.isBot) ||
+          Boolean(targetDialog?.isBot)
+
+        const currentAcc = accounts.find((a) => a.id === accountId)
+        const myUsername = currentAcc?.username?.toLowerCase().replace(/^@/, '')
+        const myId = currentAcc?.id
+
+        // Direct mention check: @myUsername or text_mention with myId
+        const isMentioned = Boolean(
+          myUsername && msgText.toLowerCase().includes(`@${myUsername}`)
+        ) || Boolean(
+          (message?.entities || []).some(
+            (e: any) =>
+              (e.type === 'mention' && myUsername && msgText.substring(e.offset, e.offset + e.length).toLowerCase() === `@${myUsername}`) ||
+              (e.type === 'text_mention' && myId && String(e.userId) === String(myId))
+          )
+        )
+
+        // Reply check: replying to my message
+        const repliedMsg = message?.replyToMsgId
+          ? (messagesByChatRef.current[chatId] || []).find((m) => m.id === message.replyToMsgId)
+          : null
+        const isRepliedToMe = Boolean(
+          (myId && message?.replyTo?.senderId && String(message.replyTo.senderId) === String(myId)) ||
+          repliedMsg?.isOutgoing
+        )
+
+        // Bot welcome patterns (bots welcoming new members in groups)
+        const isWelcomeMessage = /خوش\s*آمد|خوش\s*اومد|welcome\b|joined\s+the\s+group|به\s+گروه.*خوش/i.test(msgText)
+
+        // Commands sent to bots in groups by other users (e.g. /song, /help, !ban, #filter)
+        const isBotCommandInGroup = isGroup && /^[/!#][a-zA-Z0-9_]{2,}/.test(msgText) && !isMentioned && !isRepliedToMe
+
+        // Bot messages in groups not addressed to user (bot replies to others, broadcasts, auto-messages)
+        const isBotNoiseInGroup = isGroup && isSenderBot && !isMentioned && !isRepliedToMe
+
+        const isNoiseNotification =
+          isServiceMsg ||
+          isSilentMsg ||
+          (isGroup && isWelcomeMessage) ||
+          isBotCommandInGroup ||
+          isBotNoiseInGroup
+
+        if (
+          !message?.isOutgoing &&
+          !isChatMuted &&
+          notifsAllowed &&
+          typeAllowed &&
+          !isUserLookingAtChat &&
+          !isNoiseNotification
+        ) {
           if (currentCfg?.soundEnabled !== false) {
             playNotificationSound(currentCfg?.notificationTone || 'classic')
           }
@@ -397,18 +507,39 @@ export const App: React.FC = () => {
             window.guidegram?.flashWindow?.(true)
           }
 
+          const sender = message?.senderName || targetDialog?.title || 'Someone'
+          const summaryText = msgText || (message?.mediaType ? `[${message.mediaType}]` : '')
+
+          // Record in Notification History
+          setNotificationHistory((prev) => {
+            const histItem: NotificationHistoryItem = {
+              id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              accountId,
+              chatId,
+              messageId: message?.id,
+              senderName: sender,
+              chatTitle: targetDialog?.title,
+              avatarUrl: targetDialog?.avatarUrl,
+              text: summaryText,
+              mediaType: message?.mediaType,
+              date: Date.now(),
+              isRead: false,
+              isGroup,
+              isChannel,
+            }
+            return [histItem, ...prev].slice(0, 150)
+          })
+
           setActiveNotifications((prev) => {
             const maxStack = currentCfg?.notificationMaxStack || 3
             const existingIdx = prev.findIndex((n) => n.chatId === chatId && n.accountId === accountId)
-            const sender = message?.senderName || targetDialog?.title || 'Someone'
-            const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
 
             if (existingIdx !== -1 && currentCfg?.notificationBatching !== false) {
               const updated = [...prev]
               const old = updated[existingIdx]
               updated[existingIdx] = {
                 ...old,
-                text: msgText,
+                text: summaryText,
                 messageId: message?.id,
                 date: Date.now(),
                 batchCount: (old.batchCount || 1) + 1,
@@ -423,7 +554,7 @@ export const App: React.FC = () => {
                 senderName: sender,
                 chatTitle: targetDialog?.title,
                 avatarUrl: targetDialog?.avatarUrl,
-                text: msgText,
+                text: summaryText,
                 mediaType: message?.mediaType,
                 date: Date.now(),
                 isGroup,
@@ -1198,7 +1329,18 @@ export const App: React.FC = () => {
       const sortedMsgs = Array.isArray(msgs)
         ? [...msgs].sort((a, b) => (a.date - b.date) || (a.id - b.id))
         : []
-      setMessagesByChat((prev) => ({ ...prev, [chatId]: sortedMsgs }))
+      setMessagesByChat((prev) => {
+        const next: Record<string, MessageItem[]> = { ...prev, [chatId]: sortedMsgs }
+        const keys = Object.keys(next)
+        // Keep at most 3 recently opened chats in memory (active + 2 previous for snappy back-navigation)
+        if (keys.length > 3) {
+          const toEvict = keys.filter((k) => k !== chatId).slice(0, keys.length - 3)
+          for (const k of toEvict) {
+            delete next[k]
+          }
+        }
+        return next
+      })
 
       if (unreadCount === 0 && msgs.length > 0) {
         const lastMsgId = Math.max(...msgs.map((m) => m.id))
@@ -1831,6 +1973,89 @@ export const App: React.FC = () => {
     setActiveNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 
+  // Listen to actions originating from the floating desktop notification window
+  useEffect(() => {
+    if (window.guidegram?.on) {
+      const unsubDismiss = window.guidegram.on('notification:action:dismiss', (payload: any) => {
+        if (payload?.id) {
+          handleDismissNotification(payload.id)
+        }
+      })
+      const unsubSelect = window.guidegram.on('notification:action:select', (payload: any) => {
+        if (payload?.accountId && payload?.chatId) {
+          setActiveAccountId(payload.accountId)
+          setActiveChatId(payload.chatId)
+          loadMessages(payload.accountId, payload.chatId)
+          if (payload.messageId) {
+            setInitialScrollMsgId(payload.messageId)
+          }
+          if (payload.id) {
+            handleDismissNotification(payload.id)
+          }
+          window.guidegram?.focusWindow?.()
+        }
+      })
+      const unsubRead = window.guidegram.on('notification:action:read', (payload: any) => {
+        if (payload?.accountId && payload?.chatId) {
+          handleMarkAsReadFromNotification(payload.accountId, payload.chatId, payload.messageId)
+        }
+      })
+      const unsubReply = window.guidegram.on('notification:action:reply', (payload: any) => {
+        if (payload?.id) {
+          handleDismissNotification(payload.id)
+        }
+      })
+      const unsubMute = window.guidegram.on('notification:action:mute', (payload: any) => {
+        if (payload?.accountId && payload?.chatId) {
+          handleMuteChatFromNotification(payload.accountId, payload.chatId)
+        }
+      })
+
+      return () => {
+        unsubDismiss()
+        unsubSelect()
+        unsubRead()
+        unsubReply()
+        unsubMute()
+      }
+    }
+  }, [])
+
+  // Notification History Management Handlers
+  const handleSelectFromHistory = (item: NotificationHistoryItem) => {
+    setActiveAccountId(item.accountId)
+    setActiveChatId(item.chatId)
+    loadMessages(item.accountId, item.chatId)
+    if (item.messageId) {
+      setInitialScrollMsgId(item.messageId)
+    }
+    setNotificationHistory((prev) =>
+      prev.map((h) => (h.id === item.id ? { ...h, isRead: true } : h))
+    )
+    window.guidegram?.focusWindow?.()
+  }
+
+  const handleMarkAllHistoryRead = () => {
+    setNotificationHistory((prev) => prev.map((h) => ({ ...h, isRead: true })))
+  }
+
+  const handleClearHistory = () => {
+    setNotificationHistory([])
+    try {
+      localStorage.removeItem('guidegram_notif_history')
+    } catch (_) {}
+  }
+
+  const handleDeleteHistoryItem = (id: string) => {
+    setNotificationHistory((prev) => prev.filter((h) => h.id !== id))
+  }
+
+  const handleMarkHistoryItemRead = (id: string) => {
+    setNotificationHistory((prev) =>
+      prev.map((h) => (h.id === id ? { ...h, isRead: true } : h))
+    )
+  }
+
   useEffect(() => {
     const handleTestNotification = () => {
       const testItem: ActiveNotificationItem = {
@@ -1850,6 +2075,21 @@ export const App: React.FC = () => {
       if (configRef.current?.notificationFlashTaskbar !== false) {
         window.guidegram?.flashWindow?.(true)
       }
+      setNotificationHistory((prev) => {
+        const histItem: NotificationHistoryItem = {
+          id: testItem.id,
+          accountId: testItem.accountId,
+          chatId: testItem.chatId,
+          messageId: testItem.messageId,
+          senderName: testItem.senderName,
+          chatTitle: testItem.chatTitle,
+          text: testItem.text,
+          date: testItem.date,
+          isRead: false,
+          isGroup: false,
+        }
+        return [histItem, ...prev].slice(0, 150)
+      })
       setActiveNotifications((prev) => [testItem, ...prev.slice(0, 2)])
     }
     window.addEventListener('guidegram:test-notification', handleTestNotification)
@@ -2102,6 +2342,8 @@ export const App: React.FC = () => {
         onCheckUpdate={handleManualCheckUpdate}
         isCheckingUpdate={isCheckingUpdate}
         onOpenProxyModal={() => setIsProxyModalOpen(true)}
+        onOpenNotificationHistory={() => setIsNotificationHistoryOpen(true)}
+        unreadNotificationsCount={notificationHistory.filter((i) => !i.isRead).length}
       />
 
       {/* Floating System Notification Toast */}
@@ -2680,20 +2922,34 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Telegram-Parity & Android Heads-Up Notification Engine */}
-      <NotificationHUD
-        notifications={activeNotifications}
-        onDismiss={handleDismissNotification}
-        onSelectChat={handleSelectFromNotification}
-        onQuickReply={handleQuickReplyFromNotification}
-        onMarkAsRead={handleMarkAsReadFromNotification}
-        onMuteChat={handleMuteChatFromNotification}
-        position={config?.notificationPosition || 'bottom-right'}
-        privacyMode={config?.notificationPrivacyMode || 'full'}
-        quickReplyEnabled={config?.notificationQuickReply !== false}
-        vibrateEnabled={config?.notificationVibrate !== false}
-        isMobile={isMobile}
+      {/* Notification History Drawer */}
+      <NotificationHistoryDrawer
+        isOpen={isNotificationHistoryOpen}
+        onClose={() => setIsNotificationHistoryOpen(false)}
+        history={notificationHistory}
+        onSelectNotification={handleSelectFromHistory}
+        onMarkAllAsRead={handleMarkAllHistoryRead}
+        onClearHistory={handleClearHistory}
+        onDeleteItem={handleDeleteHistoryItem}
+        onMarkItemAsRead={handleMarkHistoryItemRead}
       />
+
+      {/* In-App Notification HUD (Fallback for Mobile/Web where dedicated desktop corner window is unavailable) */}
+      {!window.guidegram?.syncDesktopNotifications && (
+        <NotificationHUD
+          notifications={activeNotifications}
+          onDismiss={handleDismissNotification}
+          onSelectChat={handleSelectFromNotification}
+          onQuickReply={handleQuickReplyFromNotification}
+          onMarkAsRead={handleMarkAsReadFromNotification}
+          onMuteChat={handleMuteChatFromNotification}
+          position={config?.notificationPosition || 'bottom-right'}
+          privacyMode={config?.notificationPrivacyMode || 'full'}
+          quickReplyEnabled={config?.notificationQuickReply !== false}
+          vibrateEnabled={config?.notificationVibrate !== false}
+          isMobile={isMobile}
+        />
+      )}
     </div>
   )
 }

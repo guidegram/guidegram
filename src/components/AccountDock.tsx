@@ -42,16 +42,38 @@ export const AccountDock: React.FC<AccountDockProps> = ({
     account: AccountInfo
   } | null>(null)
   const [copiedId, setCopiedId] = useState(false)
+  const [hoveredTooltip, setHoveredTooltip] = useState<{
+    y: number
+    title: string
+    subtitle?: string
+    badge?: string
+    hotkey?: string
+  } | null>(null)
+
+  const showTooltip = (
+    el: HTMLElement,
+    info: { title: string; subtitle?: string; badge?: string; hotkey?: string }
+  ) => {
+    const rect = el.getBoundingClientRect()
+    setHoveredTooltip({
+      y: rect.top + rect.height / 2,
+      ...info,
+    })
+  }
+
+  const hideTooltip = () => setHoveredTooltip(null)
 
   useEffect(() => {
     const handleClose = () => {
       setContextMenu(null)
       setCopiedId(false)
+      setHoveredTooltip(null)
     }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setContextMenu(null)
         setCopiedId(false)
+        setHoveredTooltip(null)
       }
     }
     window.addEventListener('click', handleClose)
@@ -68,7 +90,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
       <button
         type="button"
         onClick={onOpenSavedMessages}
-        title="Saved Messages (پیام‌های ذخیره‌شده)"
+        onMouseEnter={(e) =>
+          showTooltip(e.currentTarget, {
+            title: 'پیام‌های ذخیره‌شده (Saved Messages)',
+            subtitle: 'دسترسی سریع به یادداشت‌ها و فایل‌های شخصی',
+          })
+        }
+        onMouseLeave={hideTooltip}
         aria-label="Saved Messages"
         className={`group relative w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 ${
           isSavedMessagesActive
@@ -96,7 +124,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
       {/* Unified Inbox Button */}
       <button
         onClick={onToggleUnifiedInbox}
-        title="Unified Inbox (All Accounts)"
+        onMouseEnter={(e) =>
+          showTooltip(e.currentTarget, {
+            title: 'صندوق یکپارچه (Unified Inbox)',
+            subtitle: 'مشاهده پیام‌های تمام اکانت‌ها در یکجا',
+          })
+        }
+        onMouseLeave={hideTooltip}
         className={`relative w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all cursor-pointer ${
           isUnifiedInboxOpen
             ? 'bg-primary-600 text-white shadow-glow'
@@ -143,13 +177,24 @@ export const AccountDock: React.FC<AccountDockProps> = ({
                 onContextMenu={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
+                  hideTooltip()
                   setContextMenu({
                     x: e.clientX,
                     y: Math.min(e.clientY, window.innerHeight - 190),
                     account: acc,
                   })
                 }}
-                title={`${safeFirst} (${acc.isBot ? 'Bot' : acc.phone || 'No phone'})\n• کلیک: سوییچ به اکانت\n• Ctrl + کلیک: باز کردن در پنجره جدید`}
+                onMouseEnter={(e) =>
+                  showTooltip(e.currentTarget, {
+                    title: `${safeFirst}${acc.lastName ? ` ${acc.lastName}` : ''}`,
+                    subtitle: acc.isBot
+                      ? 'ربات تلگرام'
+                      : acc.phone || (acc.username ? `@${acc.username}` : `ID: ${acc.id}`),
+                    badge: acc.isBot ? 'Bot' : undefined,
+                    hotkey: 'Ctrl+کلیک: پنجره جدید',
+                  })
+                }
+                onMouseLeave={hideTooltip}
                 className={`relative w-12 h-12 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-dark-900 shadow-glow'
@@ -181,28 +226,19 @@ export const AccountDock: React.FC<AccountDockProps> = ({
 
               {/* Bot Indicator (Outside the circle, at bottom-left corner with Bot icon) */}
               {acc.isBot && (
-                <span
-                  title="Bot Account"
-                  className="absolute -bottom-0.5 -left-0.5 z-10 w-4 h-4 rounded-full bg-primary-600 text-white ring-2 ring-dark-900 flex items-center justify-center shadow-md pointer-events-none"
-                >
+                <span className="absolute -bottom-0.5 -left-0.5 z-10 w-4 h-4 rounded-full bg-primary-600 text-white ring-2 ring-dark-900 flex items-center justify-center shadow-md pointer-events-none">
                   <Bot className="w-2.5 h-2.5 text-white" />
                 </span>
               )}
 
               {/* Proxy Indicator (Floating outside the avatar circle at top-left) */}
               {acc.proxyConfig?.enabled && (
-                <span
-                  title={`Proxy: ${(acc.proxyConfig.type || 'SOCKS5').toUpperCase()} (${acc.proxyConfig.host})`}
-                  className="absolute -top-0.5 -left-0.5 z-10 w-3 h-3 rounded-full bg-accent-cyan ring-2 ring-dark-900 pointer-events-none"
-                />
+                <span className="absolute -top-0.5 -left-0.5 z-10 w-3 h-3 rounded-full bg-accent-cyan ring-2 ring-dark-900 pointer-events-none" />
               )}
 
               {/* Unread badge per account */}
               {unreadCount > 0 && (
-                <span
-                  title={`${unreadCount} unread messages`}
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-rose text-white font-bold text-[10px] rounded-full ring-2 ring-dark-900 flex items-center justify-center shadow-md z-20 animate-in zoom-in duration-150 pointer-events-none"
-                >
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-accent-rose text-white font-bold text-[10px] rounded-full ring-2 ring-dark-900 flex items-center justify-center shadow-md z-20 animate-in zoom-in duration-150 pointer-events-none">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -213,7 +249,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         {/* Add Account Button */}
         <button
           onClick={onOpenAddAccount}
-          title="Add New Account (No limit!)"
+          onMouseEnter={(e) =>
+            showTooltip(e.currentTarget, {
+              title: 'افزودن اکانت جدید',
+              subtitle: 'اتصال نامحدود اکانت و ربات تلگرام',
+            })
+          }
+          onMouseLeave={hideTooltip}
           className="w-12 h-12 rounded-full border border-dashed border-white/20 hover:border-primary-500 text-gray-400 hover:text-primary-400 flex items-center justify-center transition-colors bg-dark-850/50 hover:bg-primary-500/10 cursor-pointer shrink-0"
         >
           <Plus className="w-5 h-5" />
@@ -226,7 +268,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
       <div className="flex flex-col gap-2 pt-2">
         <button
           onClick={onOpenMcpHub}
-          title="AI & Telegram MCP Assistant Hub (Claude / Cursor)"
+          onMouseEnter={(e) =>
+            showTooltip(e.currentTarget, {
+              title: 'هاب هوش مصنوعی و پروتکل MCP',
+              subtitle: 'اتصال Claude و ابزارهای تحلیلی',
+            })
+          }
+          onMouseLeave={hideTooltip}
           className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600/20 via-accent-cyan/15 to-purple-600/20 border border-primary-500/40 hover:border-accent-cyan text-accent-cyan hover:text-white flex items-center justify-center transition-all cursor-pointer group shadow-glow"
         >
           <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -234,7 +282,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
 
         <button
           onClick={onOpenProxyModal}
-          title="Proxy Settings & Latency"
+          onMouseEnter={(e) =>
+            showTooltip(e.currentTarget, {
+              title: 'تنظیمات پروکسی و پینگ',
+              subtitle: 'مدیریت MTProto و SOCKS5',
+            })
+          }
+          onMouseLeave={hideTooltip}
           className="w-10 h-10 rounded-xl bg-dark-800 text-gray-400 hover:text-white hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer"
         >
           <Shield className="w-4 h-4" />
@@ -242,7 +296,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
 
         <button
           onClick={onOpenAccountExport}
-          title="Transfer Accounts to Mobile (Air-Gap QR Sync)"
+          onMouseEnter={(e) =>
+            showTooltip(e.currentTarget, {
+              title: 'انتقال اکانت به موبایل (Air-Gap)',
+              subtitle: 'همگام‌سازی امن بدون اینترنت با QR',
+            })
+          }
+          onMouseLeave={hideTooltip}
           className="w-10 h-10 rounded-xl bg-dark-800 text-cyan-400 hover:text-cyan-300 hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer group"
         >
           <Smartphone className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -251,7 +311,13 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         {onOpenTonWallet && (
           <button
             onClick={onOpenTonWallet}
-            title="TON Blockchain & Wallet (TonConnect 2.0)"
+            onMouseEnter={(e) =>
+              showTooltip(e.currentTarget, {
+                title: 'کیف پول بلاکچین TON',
+                subtitle: 'مدیریت دارایی‌ها و TonConnect 2.0',
+              })
+            }
+            onMouseLeave={hideTooltip}
             className="w-10 h-10 rounded-xl bg-dark-800 text-[#00c2ff] hover:text-white hover:bg-[#0098ea]/30 flex items-center justify-center transition-colors cursor-pointer group"
           >
             <Wallet className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -260,12 +326,44 @@ export const AccountDock: React.FC<AccountDockProps> = ({
 
         <button
           onClick={onOpenSettings}
-          title="Settings & Portable Config"
+          onMouseEnter={(e) =>
+            showTooltip(e.currentTarget, {
+              title: 'تنظیمات گایدگرام',
+              subtitle: 'شخصی‌سازی، تم و امنیت سیستم',
+            })
+          }
+          onMouseLeave={hideTooltip}
           className="w-10 h-10 rounded-xl bg-dark-800 text-gray-400 hover:text-white hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer"
         >
           <Settings className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Floating In-DOM Tooltip (Zero Native Win32 Z-Order Glitches) */}
+      {hoveredTooltip && !contextMenu && (
+        <div
+          style={{ top: `${hoveredTooltip.y}px`, left: '80px' }}
+          className="fixed z-[998] -translate-y-1/2 pointer-events-none px-3 py-2 rounded-xl bg-dark-900/95 backdrop-blur-xl border border-white/10 shadow-2xl flex flex-col gap-0.5 min-w-[150px] max-w-[280px] animate-in fade-in zoom-in-95 duration-100 select-none"
+        >
+          <div className="flex items-center gap-2 justify-between">
+            <span className="text-xs font-bold text-gray-100 truncate">{hoveredTooltip.title}</span>
+            {hoveredTooltip.badge && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-primary-600/80 text-white rounded">
+                {hoveredTooltip.badge}
+              </span>
+            )}
+          </div>
+          {hoveredTooltip.subtitle && (
+            <span className="text-[11px] text-gray-400 font-mono truncate">{hoveredTooltip.subtitle}</span>
+          )}
+          {hoveredTooltip.hotkey && (
+            <div className="text-[10px] text-accent-cyan/90 border-t border-white/5 pt-1 mt-0.5 flex items-center gap-1">
+              <span>💡</span>
+              <span>{hoveredTooltip.hotkey}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Account Right-Click Context Menu */}
       {contextMenu && (

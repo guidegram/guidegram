@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { Minus, Square, X, Sparkles, Menu } from 'lucide-react'
+import { Minus, Square, X, Sparkles, Menu, Bell } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { useIsMobile } from '../utils/useIsMobile'
 import logoImg from '../assets/logo.png'
@@ -16,6 +16,8 @@ interface TitleBarProps {
   onCheckUpdate?: () => void
   isCheckingUpdate?: boolean
   onOpenProxyModal?: () => void
+  onOpenNotificationHistory?: () => void
+  unreadNotificationsCount?: number
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -29,6 +31,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onCheckUpdate,
   isCheckingUpdate = false,
   onOpenProxyModal,
+  onOpenNotificationHistory,
+  unreadNotificationsCount = 0,
 }) => {
   const [isMax, setIsMax] = useState(false)
   const isMobile = useIsMobile(768)
@@ -126,6 +130,23 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           >
             <Sparkles className="w-4 h-4 text-accent-cyan" />
           </motion.button>
+
+          {onOpenNotificationHistory && (
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              type="button"
+              onClick={onOpenNotificationHistory}
+              title="تاریخچه اعلان‌ها (Notification History)"
+              className="relative p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white cursor-pointer"
+            >
+              <Bell className="w-4 h-4 text-accent-cyan" />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full bg-accent-rose text-[9px] font-bold text-white flex items-center justify-center">
+                  {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                </span>
+              )}
+            </motion.button>
+          )}
         </div>
       </header>
     )
@@ -235,6 +256,25 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
       {/* Right Window Controls */}
       <div className="flex items-center gap-1 titlebar-no-drag">
+        {/* Notification History Trigger */}
+        {onOpenNotificationHistory && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="button"
+            onClick={onOpenNotificationHistory}
+            title="تاریخچه اعلان‌ها (Notification History)"
+            className="relative p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer mr-1 titlebar-no-drag"
+          >
+            <Bell className="w-4 h-4 text-gray-300 hover:text-accent-cyan transition-colors" />
+            {unreadNotificationsCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-accent-rose text-[9px] font-bold text-white flex items-center justify-center shadow-sm">
+                {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+              </span>
+            )}
+          </motion.button>
+        )}
+
         {/* AI & Telegram MCP Hub Trigger */}
         <motion.button
           whileHover={{ scale: 1.04 }}

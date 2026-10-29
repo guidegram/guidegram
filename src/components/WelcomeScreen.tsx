@@ -40,22 +40,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           : '2rem',
       }}
     >
-      {/* Dynamic Background Ambient Aura Glows */}
-      <motion.div
-        animate={{
-          scale: [1, 1.15, 1],
-          opacity: [0.15, 0.25, 0.15],
+      {/* Static Ambient Radial Glows (Zero GPU / Composite Repaint Overhead) */}
+      <div
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] rounded-full pointer-events-none opacity-20"
+        style={{
+          background: 'radial-gradient(circle, rgba(14, 165, 233, 0.45) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 70%)',
         }}
-        transition={{ repeat: Infinity, duration: 8, ease: 'easeInOut' }}
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary-500/20 blur-[130px] rounded-full pointer-events-none"
       />
-      <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.1, 0.2, 0.1],
+      <div
+        className="absolute bottom-10 right-10 w-[280px] h-[280px] rounded-full pointer-events-none opacity-15"
+        style={{
+          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, transparent 70%)',
         }}
-        transition={{ repeat: Infinity, duration: 10, delay: 2, ease: 'easeInOut' }}
-        className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-accent-cyan/15 blur-[110px] rounded-full pointer-events-none"
       />
 
       {/* Hero Container */}

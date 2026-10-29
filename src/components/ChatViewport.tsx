@@ -3208,11 +3208,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           thumb
         )
         if (dataUrl) {
-          setDownloadedMedia((prev) => ({
-            ...prev,
-            [cacheKey]: dataUrl,
-            [msg.id]: dataUrl,
-          }))
+          setDownloadedMedia((prev) => {
+            const next = {
+              ...prev,
+              [cacheKey]: dataUrl,
+              [msg.id]: dataUrl,
+            }
+            const keys = Object.keys(next)
+            if (keys.length > 60) {
+              const toRemove = keys.slice(0, keys.length - 60)
+              for (const k of toRemove) delete (next as Record<string, any>)[k]
+            }
+            return next
+          })
           failedMediaKeysRef.current.delete(cacheKey)
           failedMediaKeysRef.current.delete(`${msg.id}`)
           return dataUrl
@@ -3302,7 +3310,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         const dl = await window.guidegram.downloadMedia(msg.accountId, msg.chatId, msg.id, false)
         if (dl) {
           audioSrc = dl
-          setDownloadedMedia((prev) => ({ ...prev, [msg.id]: dl }))
+          setDownloadedMedia((prev) => {
+            const next: Record<string, string> = { ...prev, [msg.id]: dl }
+            const keys = Object.keys(next)
+            if (keys.length > 60) {
+              const toRemove = keys.slice(0, keys.length - 60)
+              for (const k of toRemove) delete next[k]
+            }
+            return next
+          })
         }
       } catch (err) {
         console.warn('Failed to load voice audio:', err)

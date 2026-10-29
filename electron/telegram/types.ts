@@ -993,6 +993,15 @@ export interface AppConfig {
   quickForwardToSaved: boolean
   alwaysDeleteBoth: boolean
   keepDeletedMessagesLocally?: boolean
+  // Anti-Delete & Edit Tracking Scoping (Granular Resource Guard)
+  auditTrackDeletedPrivate?: boolean
+  auditTrackEditedPrivate?: boolean
+  auditTrackDeletedGroups?: boolean
+  auditTrackEditedGroups?: boolean
+  auditTrackDeletedChannels?: boolean
+  auditTrackEditedChannels?: boolean
+  auditMaxTrackedGroups?: number
+  auditMaxTrackedChannels?: number
   markAllReadEnabled: boolean
   copyCallbackData: boolean
   disableAnimations?: boolean

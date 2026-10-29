@@ -33,8 +33,8 @@ export const SpoilerNoiseOverlay: React.FC<SpoilerNoiseOverlayProps> = ({
     let width = (canvas.width = canvas.parentElement?.clientWidth || 120)
     let height = (canvas.height = canvas.parentElement?.clientHeight || 24)
 
-    // Pre-allocated noise buffer for performance
-    const particleCount = Math.max(80, Math.min(300, Math.floor((width * height) / 18)))
+    // Pre-allocated noise buffer for performance (capped to 60 for low-end hardware)
+    const particleCount = Math.max(30, Math.min(60, Math.floor((width * height) / 36)))
     const particles = Array.from({ length: particleCount }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
@@ -45,8 +45,10 @@ export const SpoilerNoiseOverlay: React.FC<SpoilerNoiseOverlayProps> = ({
     }))
 
     let time = 0
+    let isVisible = false
 
     const render = () => {
+      if (!isVisible) return
       time += 0.05
       ctx.clearRect(0, 0, width, height)
 
@@ -65,9 +67,26 @@ export const SpoilerNoiseOverlay: React.FC<SpoilerNoiseOverlayProps> = ({
       animFrameRef.current = requestAnimationFrame(render)
     }
 
-    animFrameRef.current = requestAnimationFrame(render)
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0]
+      if (entry?.isIntersecting) {
+        if (!isVisible) {
+          isVisible = true
+          animFrameRef.current = requestAnimationFrame(render)
+        }
+      } else {
+        isVisible = false
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current)
+          animFrameRef.current = null
+        }
+      }
+    }, { threshold: 0.05 })
+
+    observer.observe(canvas)
 
     return () => {
+      observer.disconnect()
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
     }
   }, [isRevealed])

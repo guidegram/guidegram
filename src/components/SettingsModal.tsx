@@ -252,6 +252,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [quickForwardToSaved, setQuickForwardToSaved] = useState(true)
   const [alwaysDeleteBoth, setAlwaysDeleteBoth] = useState(true)
   const [keepDeletedMessagesLocally, setKeepDeletedMessagesLocally] = useState(true)
+  // Anti-Delete & Edit Tracking Scoping
+  const [auditTrackDeletedPrivate, setAuditTrackDeletedPrivate] = useState(true)
+  const [auditTrackEditedPrivate, setAuditTrackEditedPrivate] = useState(true)
+  const [auditTrackDeletedGroups, setAuditTrackDeletedGroups] = useState(true)
+  const [auditTrackEditedGroups, setAuditTrackEditedGroups] = useState(true)
+  const [auditTrackDeletedChannels, setAuditTrackDeletedChannels] = useState(false)
+  const [auditTrackEditedChannels, setAuditTrackEditedChannels] = useState(false)
+  const [auditMaxTrackedGroups, setAuditMaxTrackedGroups] = useState(25)
+  const [auditMaxTrackedChannels, setAuditMaxTrackedChannels] = useState(10)
   const [markAllReadEnabled, setMarkAllReadEnabled] = useState(true)
   const [copyCallbackData, setCopyCallbackData] = useState(true)
   const [disableAnimations, setDisableAnimations] = useState(false)
@@ -720,6 +729,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setQuickForwardToSaved(cfg.quickForwardToSaved ?? true)
         setAlwaysDeleteBoth(cfg.alwaysDeleteBoth ?? true)
         setKeepDeletedMessagesLocally(cfg.keepDeletedMessagesLocally ?? true)
+        setAuditTrackDeletedPrivate(cfg.auditTrackDeletedPrivate ?? true)
+        setAuditTrackEditedPrivate(cfg.auditTrackEditedPrivate ?? true)
+        setAuditTrackDeletedGroups(cfg.auditTrackDeletedGroups ?? true)
+        setAuditTrackEditedGroups(cfg.auditTrackEditedGroups ?? true)
+        setAuditTrackDeletedChannels(cfg.auditTrackDeletedChannels ?? false)
+        setAuditTrackEditedChannels(cfg.auditTrackEditedChannels ?? false)
+        setAuditMaxTrackedGroups(cfg.auditMaxTrackedGroups ?? 25)
+        setAuditMaxTrackedChannels(cfg.auditMaxTrackedChannels ?? 10)
         setMarkAllReadEnabled(cfg.markAllReadEnabled ?? true)
         setCopyCallbackData(cfg.copyCallbackData ?? true)
         setDisableAnimations(cfg.disableAnimations ?? false)
@@ -910,6 +927,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       quickForwardToSaved,
       alwaysDeleteBoth,
       keepDeletedMessagesLocally,
+      auditTrackDeletedPrivate,
+      auditTrackEditedPrivate,
+      auditTrackDeletedGroups,
+      auditTrackEditedGroups,
+      auditTrackDeletedChannels,
+      auditTrackEditedChannels,
+      auditMaxTrackedGroups,
+      auditMaxTrackedChannels,
       markAllReadEnabled,
       copyCallbackData,
       disableAnimations,
@@ -2709,6 +2734,74 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       checked={keepDeletedMessagesLocally}
                       onChange={setKeepDeletedMessagesLocally}
                     />
+
+                    {/* Anti-Delete & Edit Tracking Scope Granular Card */}
+                    <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-3">
+                      <div className="text-xs font-bold text-gray-200 flex items-center justify-between">
+                        <span>Anti-Delete & Edit Tracking Scope</span>
+                        <span className="text-[10px] text-emerald-400 font-normal">Private Chats: 100% Active</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={auditTrackDeletedGroups}
+                            onChange={(e) => setAuditTrackDeletedGroups(e.target.checked)}
+                            className="rounded bg-dark-700 border-white/10 text-primary-500 focus:ring-0"
+                          />
+                          <span>Deleted in Groups</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={auditTrackEditedGroups}
+                            onChange={(e) => setAuditTrackEditedGroups(e.target.checked)}
+                            className="rounded bg-dark-700 border-white/10 text-primary-500 focus:ring-0"
+                          />
+                          <span>Edits in Groups</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={auditTrackDeletedChannels}
+                            onChange={(e) => setAuditTrackDeletedChannels(e.target.checked)}
+                            className="rounded bg-dark-700 border-white/10 text-primary-500 focus:ring-0"
+                          />
+                          <span>Deleted in Channels</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={auditTrackEditedChannels}
+                            onChange={(e) => setAuditTrackEditedChannels(e.target.checked)}
+                            className="rounded bg-dark-700 border-white/10 text-primary-500 focus:ring-0"
+                          />
+                          <span>Edits in Channels</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 text-[11px] text-gray-400">
+                        <span>Max Tracked Groups:</span>
+                        <input
+                          type="number"
+                          min={5}
+                          max={100}
+                          value={auditMaxTrackedGroups}
+                          onChange={(e) => setAuditMaxTrackedGroups(Number(e.target.value) || 25)}
+                          className="w-16 px-2 py-0.5 rounded bg-dark-800 border border-white/10 text-right text-white font-mono text-xs focus:border-primary-500"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-400">
+                        <span>Max Tracked Channels:</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={auditMaxTrackedChannels}
+                          onChange={(e) => setAuditMaxTrackedChannels(Number(e.target.value) || 10)}
+                          className="w-16 px-2 py-0.5 rounded bg-dark-800 border border-white/10 text-right text-white font-mono text-xs focus:border-primary-500"
+                        />
+                      </div>
+                    </div>
                     <ToggleItem
                       title="Thanos Dust Particle Deletion"
                       desc="Disintegrate deleted messages into wind-swept dust particles (Telegram Desktop parity)"
