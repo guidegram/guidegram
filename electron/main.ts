@@ -2077,6 +2077,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-user-profile-photos', async (_event, { accountId, peerId }: { accountId: string; peerId: string }) => {
+    try {
+      return await accountManager.getUserProfilePhotos(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getUserProfilePhotos error:`, err)
+      return []
+    }
+  })
+
   ipcMain.handle('telegram:download-media', async (_event, { accountId, chatId, messageId, thumb }) => {
     try {
       return await accountManager.downloadMedia(accountId, chatId, messageId, thumb)

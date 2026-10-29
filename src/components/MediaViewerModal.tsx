@@ -30,9 +30,11 @@ export interface MediaViewerModalProps {
   url: string
   message?: MessageItem | null
   allPhotoMessages?: MessageItem[]
+  customGallery?: string[]
   currentChat?: DialogItem | null
   onClose: () => void
   onNavigate?: (msg: MessageItem, url?: string) => void
+  onNavigateGallery?: (index: number) => void
   onForward?: (msg: MessageItem) => void
   onDeleteMessage?: (msg: MessageItem) => Promise<boolean | void>
   onEditMessage?: (msg: MessageItem) => void
@@ -44,9 +46,11 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
   url,
   message,
   allPhotoMessages = [],
+  customGallery,
   currentChat,
   onClose,
   onNavigate,
+  onNavigateGallery,
   onForward,
   onDeleteMessage,
   onEditMessage,

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
   ChevronLeft,
+  ChevronRight,
   Sparkles,
   User,
   MessageSquare,
@@ -162,18 +163,57 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
     }
   }
 
+  const [photoGallery, setPhotoGallery] = useState<string[]>([])
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
+
+  // Carousel keyboard navigation (ArrowLeft / ArrowRight)
+  useEffect(() => {
+    if (!lightboxUrl || photoGallery.length <= 1) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        setActivePhotoIndex((prev) => (prev - 1 + photoGallery.length) % photoGallery.length)
+      } else if (e.key === 'ArrowRight') {
+        setActivePhotoIndex((prev) => (prev + 1) % photoGallery.length)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [lightboxUrl, photoGallery.length])
+
   const handleOpenPhoto = async () => {
-    if (details?.avatarUrl) {
-      setLightboxUrl(details.avatarUrl)
-    } else if (window.guidegram?.getProfilePhoto) {
-      try {
+    try {
+      // 1. Try fetching all profile photos (active and historical)
+      if (window.guidegram?.getUserProfilePhotos) {
+        onShowToast?.(isPersian ? 'در حال دریافت عکس‌های پروفایل...' : 'Loading profile photos...')
+        const photos = await window.guidegram.getUserProfilePhotos(accountId, peerId)
+        if (photos && photos.length > 0) {
+          setPhotoGallery(photos)
+          setActivePhotoIndex(0)
+          setLightboxUrl(photos[0])
+          return
+        }
+      }
+
+      // 2. Fallback to single photo
+      if (details?.avatarUrl) {
+        setPhotoGallery([details.avatarUrl])
+        setActivePhotoIndex(0)
+        setLightboxUrl(details.avatarUrl)
+      } else if (window.guidegram?.getProfilePhoto) {
         onShowToast?.(isPersian ? 'در حال بارگذاری عکس باکیفیت...' : 'Loading full profile photo...')
         const big = await window.guidegram.getProfilePhoto(accountId, peerId, true)
-        if (big) setLightboxUrl(big)
-        else onShowToast?.(isPersian ? 'عکس پروفایلی موجود نیست' : 'No profile photo available')
-      } catch {
-        onShowToast?.(isPersian ? 'خطا در بارگذاری عکس پروفایل' : 'Could not load profile photo')
+        if (big) {
+          setPhotoGallery([big])
+          setActivePhotoIndex(0)
+          setLightboxUrl(big)
+        } else {
+          onShowToast?.(isPersian ? 'عکس پروفایلی یافت نشد' : 'No profile photo found')
+        }
+      } else {
+        onShowToast?.(isPersian ? 'عکس پروفایلی یافت نشد' : 'No profile photo found')
       }
+    } catch {
+      onShowToast?.(isPersian ? 'خطا در بارگذاری عکس پروفایل' : 'Could not load profile photo')
     }
   }
 
@@ -507,26 +547,66 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
         </div>
       </div>
 
-      {/* Fullscreen Lightbox Modal */}
+      {/* Fullscreen Lightbox Modal with Multi-Photo Gallery Support */}
       <AnimatePresence>
         {lightboxUrl && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setLightboxUrl(null)}
-            className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => {
+              setLightboxUrl(null)
+              setPhotoGallery([])
+            }}
+            className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 select-none"
           >
-            <div className="relative max-w-3xl max-h-[85vh] flex flex-col items-center">
+            <div
+              className="relative max-w-3xl max-h-[85vh] flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
               <img
-                src={lightboxUrl}
+                src={photoGallery[activePhotoIndex] || lightboxUrl}
                 alt={displayTitle}
-                className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain border border-white/10"
-                onClick={(e) => e.stopPropagation()}
+                className="max-w-full max-h-[80vh] rounded-2xl shadow-2xl object-contain border border-white/10"
               />
+
+              {/* Multi-Photo Carousel Navigation */}
+              {photoGallery.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setActivePhotoIndex((prev) => (prev - 1 + photoGallery.length) % photoGallery.length)
+                    }}
+                    className="absolute -left-14 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-dark-900/80 hover:bg-dark-900 text-white/90 hover:text-white transition-all cursor-pointer border border-white/10 shadow-xl"
+                    title={isPersian ? 'عکس قبلی' : 'Previous photo'}
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setActivePhotoIndex((prev) => (prev + 1) % photoGallery.length)
+                    }}
+                    className="absolute -right-14 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-dark-900/80 hover:bg-dark-900 text-white/90 hover:text-white transition-all cursor-pointer border border-white/10 shadow-xl"
+                    title={isPersian ? 'عکس بعدی' : 'Next photo'}
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                  <div className="mt-3 px-3.5 py-1 rounded-full bg-dark-900/90 border border-white/10 text-xs font-mono text-gray-200 shadow-md">
+                    {activePhotoIndex + 1} / {photoGallery.length}
+                  </div>
+                </>
+              )}
+
               <button
                 type="button"
-                onClick={() => setLightboxUrl(null)}
+                onClick={() => {
+                  setLightboxUrl(null)
+                  setPhotoGallery([])
+                }}
                 className="absolute top-4 right-4 p-2 rounded-full bg-dark-900/80 hover:bg-dark-900 text-white/80 hover:text-white transition-colors cursor-pointer border border-white/10 shadow-lg"
               >
                 <X className="w-5 h-5" />

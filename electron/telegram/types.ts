@@ -434,6 +434,8 @@ export interface MessageItem {
   forwards?: number
   ttlSeconds?: number
   isSilent?: boolean
+  isMention?: boolean
+  isChannelPost?: boolean
   senderEmojiStatusId?: string
   senderColor?: number
   senderIsPremium?: boolean

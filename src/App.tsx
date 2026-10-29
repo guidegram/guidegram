@@ -423,9 +423,17 @@ export const App: React.FC = () => {
         )
         const isChannel = Boolean(targetDialog?.isChannel || (payload as any)?.chatInfo?.isChannel)
         const isGroup = Boolean(targetDialog?.isGroup || (payload as any)?.chatInfo?.isGroup)
-        const isChatMuted = targetDialog ? Boolean(targetDialog.isMuted) : (isChannel ? true : false)
-        const currentCfg = configRef.current
 
+        // MTProto Chat Mute Status
+        const isChatMuted = typeof (payload as any)?.chatInfo?.isMuted === 'boolean'
+          ? Boolean((payload as any).chatInfo.isMuted)
+          : targetDialog
+          ? Boolean(targetDialog.isMuted)
+          : isChannel
+          ? true
+          : false
+
+        const currentCfg = configRef.current
         const notifsAllowed = currentCfg?.notificationsEnabled !== false
         const typeAllowed = isChannel
           ? Boolean(currentCfg?.notificationChannels)
@@ -435,71 +443,51 @@ export const App: React.FC = () => {
 
         const isUserLookingAtChat = chatId === activeChatIdRef.current && document.hasFocus()
 
-        // --- SMART NOISE & SPAM NOTIFICATION FILTER ---
-        // 1. Service messages (user join/leave, chat title/photo edits, pin events, calls, etc.)
-        const isServiceMsg = Boolean(message?.isService || message?.actionType)
+        // -------------------------------------------------------------
+        // Telegram Official Client Specification Notification Gate:
+        // -------------------------------------------------------------
+        // 1. Never notify for outgoing messages (sent by self on any session)
+        // 2. Never notify for Telegram service messages (messageService: joins, leaves, pins, call status)
+        // 3. Never notify for silent messages (MTProto silent flag)
+        // 4. Never notify if user is currently looking at this chat and window is focused
+        // 5. In muted chats (groups, channels, or private chats with muteUntil > now):
+        //    ONLY notify if the message is an authentic mention (msg.isMention) or reply to me
+        // 6. In unmuted chats: notify if chat category is allowed, or if mentioned
+        // -------------------------------------------------------------
+        const isOutgoing = Boolean(message?.isOutgoing)
+        const isService = Boolean(message?.isService || message?.actionType)
+        const isSilent = Boolean(message?.isSilent)
 
-        // 2. Silent messages (sender chose 'Send without sound')
-        const isSilentMsg = Boolean(message?.isSilent)
-
-        // 3. Bot and spam filtering in groups
-        const msgText = (message?.text || '').trim()
-        const senderUsername = (message?.senderUsername || '').toLowerCase()
-        const senderName = (message?.senderName || '').toLowerCase()
-        const isSenderBot =
-          senderUsername.endsWith('bot') ||
-          senderName.includes(' bot') ||
-          Boolean((payload as any)?.chatInfo?.isBot) ||
-          Boolean(targetDialog?.isBot)
-
+        // Authentic Telegram mention: MTProto server-calculated isMention flag,
+        // or entity mention matching current account username/id
         const currentAcc = accounts.find((a) => a.id === accountId)
         const myUsername = currentAcc?.username?.toLowerCase().replace(/^@/, '')
         const myId = currentAcc?.id
+        const rawText = message?.text || ''
 
-        // Direct mention check: @myUsername or text_mention with myId
-        const isMentioned = Boolean(
-          myUsername && msgText.toLowerCase().includes(`@${myUsername}`)
-        ) || Boolean(
+        const isMention = Boolean(
+          message?.isMention ||
+          (myUsername && rawText.toLowerCase().includes(`@${myUsername}`)) ||
           (message?.entities || []).some(
             (e: any) =>
-              (e.type === 'mention' && myUsername && msgText.substring(e.offset, e.offset + e.length).toLowerCase() === `@${myUsername}`) ||
+              (e.type === 'mention' && myUsername && rawText.substring(e.offset, e.offset + e.length).toLowerCase() === `@${myUsername}`) ||
               (e.type === 'text_mention' && myId && String(e.userId) === String(myId))
-          )
+          ) ||
+          (myId && message?.replyTo?.senderId && String(message.replyTo.senderId) === String(myId))
         )
 
-        // Reply check: replying to my message
-        const repliedMsg = message?.replyToMsgId
-          ? (messagesByChatRef.current[chatId] || []).find((m) => m.id === message.replyToMsgId)
-          : null
-        const isRepliedToMe = Boolean(
-          (myId && message?.replyTo?.senderId && String(message.replyTo.senderId) === String(myId)) ||
-          repliedMsg?.isOutgoing
-        )
+        let shouldNotify = false
+        if (!isOutgoing && !isService && !isSilent && !isUserLookingAtChat && notifsAllowed) {
+          if (isChatMuted) {
+            // Muted chats in Telegram ONLY notify on direct mentions/replies
+            shouldNotify = isMention
+          } else {
+            // Unmuted chats notify if the category is allowed, or if mentioned
+            shouldNotify = typeAllowed || isMention
+          }
+        }
 
-        // Bot welcome patterns (bots welcoming new members in groups)
-        const isWelcomeMessage = /خوش\s*آمد|خوش\s*اومد|welcome\b|joined\s+the\s+group|به\s+گروه.*خوش/i.test(msgText)
-
-        // Commands sent to bots in groups by other users (e.g. /song, /help, !ban, #filter)
-        const isBotCommandInGroup = isGroup && /^[/!#][a-zA-Z0-9_]{2,}/.test(msgText) && !isMentioned && !isRepliedToMe
-
-        // Bot messages in groups not addressed to user (bot replies to others, broadcasts, auto-messages)
-        const isBotNoiseInGroup = isGroup && isSenderBot && !isMentioned && !isRepliedToMe
-
-        const isNoiseNotification =
-          isServiceMsg ||
-          isSilentMsg ||
-          (isGroup && isWelcomeMessage) ||
-          isBotCommandInGroup ||
-          isBotNoiseInGroup
-
-        if (
-          !message?.isOutgoing &&
-          !isChatMuted &&
-          notifsAllowed &&
-          typeAllowed &&
-          !isUserLookingAtChat &&
-          !isNoiseNotification
-        ) {
+        if (shouldNotify) {
           if (currentCfg?.soundEnabled !== false) {
             playNotificationSound(currentCfg?.notificationTone || 'classic')
           }
@@ -508,7 +496,7 @@ export const App: React.FC = () => {
           }
 
           const sender = message?.senderName || targetDialog?.title || 'Someone'
-          const summaryText = msgText || (message?.mediaType ? `[${message.mediaType}]` : '')
+          const summaryText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
 
           // Record in Notification History
           setNotificationHistory((prev) => {

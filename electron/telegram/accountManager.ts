@@ -978,6 +978,7 @@ export class AccountManager {
   private onEventCallback?: (event: string, payload: any) => void
   private avatarsDir: string
   private mediaDir: string
+  private peerNotifySettings = new Map<string, { isMuted: boolean; muteUntil?: number }>()
   private avatarCache = new Map<string, string>()
   private thumbCache = new Map<string, string>()
   private mediaCache = new Map<string, string>()
@@ -2452,6 +2453,10 @@ export class AccountManager {
           }
         }
 
+        const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
+        this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
+        this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted })
+
         let lastMessageText = ''
         let lastMessageDate = 0
         let lastMessageId: number | undefined = undefined
@@ -3798,6 +3803,38 @@ export class AccountManager {
           }
         }
 
+        // Direct fallback: resolve peer object directly via mtcute and download photo location
+        if (!fs.existsSync(avatarFile) && client) {
+          try {
+            const peerNum = Number(peerId)
+            const targetPeer = !isNaN(peerNum) ? peerNum : peerId
+            let peerObj: any = null
+            if (typeof (client as any).getPeer === 'function') {
+              peerObj = await (client as any).getPeer(targetPeer).catch(() => null)
+            }
+            if (!peerObj) {
+              peerObj = await (peerId.startsWith('-')
+                ? client.getChat(targetPeer as any).catch(() => null)
+                : client.getUser(targetPeer as any).catch(() => null))
+            }
+            if (peerObj?.photo) {
+              const targetLoc = isBig
+                ? (peerObj.photo.big || peerObj.photo.small)
+                : (peerObj.photo.small || peerObj.photo.big)
+              if (targetLoc) {
+                await client.downloadToFile(avatarFile, targetLoc).catch(() => {})
+              }
+              if (!fs.existsSync(avatarFile)) {
+                const thumb = extractStrippedThumb(peerObj.photo)
+                if (thumb) {
+                  this.avatarCache.set(cacheKey, thumb)
+                  return thumb
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
         if (fs.existsSync(avatarFile)) {
           const stat = fs.statSync(avatarFile)
           if (stat.size === 0) {
@@ -3845,6 +3882,74 @@ export class AccountManager {
 
     this.pendingPhotoDownloads.set(cacheKey, fetchPromise)
     return fetchPromise
+  }
+
+  public async getUserProfilePhotos(accountId: string, peerId: string): Promise<string[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    const client = holder.client
+    const results: string[] = []
+
+    // 1. Current active high-res photo
+    const currentPhoto = await this.getProfilePhoto(accountId, peerId, true)
+    if (currentPhoto) {
+      results.push(currentPhoto)
+    }
+
+    // 2. Fetch past profile photos via photos.getUserPhotos (if not a bot)
+    if (!holder.info?.isBot) {
+      try {
+        const isSelf = peerId === accountId || peerId === 'self' || peerId === 'me'
+        const inputPeer = await this.resolveInputPeer(accountId, peerId)
+        let inputUser: any = null
+        if (isSelf) {
+          inputUser = { _: 'inputUserSelf' }
+        } else if (inputPeer._ === 'inputPeerUser') {
+          let accessHash = inputPeer.accessHash || Long.ZERO
+          if (accessHash.isZero()) {
+            const cachedHash = this.peerAccessHashes.get(`${accountId}_${inputPeer.userId}`)
+            if (cachedHash) accessHash = cachedHash
+          }
+          inputUser = { _: 'inputUser', userId: inputPeer.userId, accessHash }
+        }
+
+        if (inputUser) {
+          const res: any = await client.call({
+            _: 'photos.getUserPhotos',
+            userId: inputUser,
+            offset: 0,
+            maxId: Long.ZERO,
+            limit: 20,
+          }).catch(() => null)
+
+          if (res?.photos && Array.isArray(res.photos)) {
+            for (const p of res.photos) {
+              if (p._ === 'photo' && p.id) {
+                const photoFile = path.join(this.avatarsDir, `photo_${accountId}_${peerId}_${p.id}.jpg`)
+                if (!fs.existsSync(photoFile)) {
+                  await client.downloadToFile(photoFile, p).catch(() => {})
+                }
+                if (fs.existsSync(photoFile)) {
+                  try {
+                    const buf = await fs.promises.readFile(photoFile)
+                    if (buf.length > 500) {
+                      const dataUrl = `data:image/jpeg;base64,${buf.toString('base64')}`
+                      if (!results.includes(dataUrl)) {
+                        results.push(dataUrl)
+                      }
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        Logger.warn('[AccountManager] getUserProfilePhotos error:', err?.message || err)
+      }
+    }
+
+    return results
   }
 
   public async downloadMedia(
@@ -6709,6 +6814,9 @@ export class AccountManager {
           muteUntil: mute ? 2147483647 : 0,
         },
       })
+      const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
+      this.peerNotifySettings.set(`${accountId}_${chatId}`, { isMuted: mute })
+      this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted: mute })
       return true
     } catch (err) {
       Logger.error('[AccountManager] toggleChatNotifications error:', err)
@@ -14635,6 +14743,25 @@ export class AccountManager {
         const senderName = formatEntityName(msg.sender || chat, '')
 
         const isService = msg.raw?._ === 'messageService' || Boolean(msg.action)
+        const isSilent = Boolean(msg.isSilent || (msg.raw as any)?.silent)
+        const isMention = Boolean(msg.isMention || (msg.raw as any)?.mentioned)
+        const isChannelPost = Boolean(msg.isChannelPost || (msg.raw as any)?.post)
+        const isOutgoing = Boolean(msg.isOutgoing || (msg.raw as any)?.out || msg.sender?.isSelf)
+
+        const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
+        const cachedNotify =
+          this.peerNotifySettings.get(`${accountId}_${chatId}`) ||
+          this.peerNotifySettings.get(`${accountId}_${cleanChatId}`)
+        let isChatMuted = cachedNotify ? cachedNotify.isMuted : chat?.chatType === 'channel'
+
+        if (!cachedNotify && (msg.raw as any)?.notifySettings) {
+          const muteUntil = (msg.raw as any).notifySettings.muteUntil
+          const silent = (msg.raw as any).notifySettings.silent
+          if (silent || (muteUntil && muteUntil > Date.now() / 1000)) {
+            isChatMuted = true
+          }
+        }
+
         let text = msg.text || ''
         let actionType: ServiceActionType | undefined = undefined
         let actionData: ServiceActionData | undefined = undefined
@@ -14664,7 +14791,10 @@ export class AccountManager {
           accountId,
           text,
           date: msg.date ? Math.floor(msg.date.getTime() / 1000) : Math.floor(Date.now() / 1000),
-          isOutgoing: msg.isOutgoing,
+          isOutgoing,
+          isSilent,
+          isMention,
+          isChannelPost,
           senderName,
           senderUsername: msg.sender?.username,
           senderId: senderIdStr,
@@ -14707,6 +14837,7 @@ export class AccountManager {
                 isBroadcast: chat.chatType === 'channel',
                 isBot: chat.chatType === 'bot',
                 isContact: Boolean(chat.isContact || chat.contact || (chat as any).raw?.contact || msg.sender?.isContact),
+                isMuted: isChatMuted,
               }
             : undefined,
         })
