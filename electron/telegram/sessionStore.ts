@@ -19,6 +19,8 @@ export class SessionStore {
   private saveAuditTimers: Map<string, NodeJS.Timeout> = new Map()
   private isSavingAudit: Map<string, boolean> = new Map()
   private pendingSaveAudit: Map<string, boolean> = new Map()
+  private messageChatIndex: Map<string, Map<number, string>> = new Map()
+  private recentMessagesCache: Map<string, Map<number, MessageItem>> = new Map()
 
   constructor(baseDataDir: string) {
     this.dataDir = baseDataDir
@@ -35,6 +37,7 @@ export class SessionStore {
 
     this.ensureDirectories()
     this.config = this.loadConfig()
+    this.sanitizeAllExistingAuditFiles()
   }
 
   private ensureDirectories(): void {
@@ -451,6 +454,80 @@ export class SessionStore {
     return path.join(this.backupAuditLogsDir, `audit_${accountId}.json`)
   }
 
+  public sanitizeAuditData(data: Record<string, Record<number, MessageItem>>): { data: Record<string, Record<number, MessageItem>>; wasPruned: boolean } {
+    let wasPruned = false
+    const cleanChats: Record<string, Record<number, MessageItem>> = {}
+
+    for (const [cId, msgs] of Object.entries(data || {})) {
+      if (!msgs || typeof msgs !== 'object') {
+        wasPruned = true
+        continue
+      }
+      const keepMsgs: Record<number, MessageItem> = {}
+      for (const [mIdStr, m] of Object.entries(msgs)) {
+        if (!m || typeof m !== 'object') {
+          wasPruned = true
+          continue
+        }
+        const mId = Number(mIdStr)
+        const isDeleted = Boolean(m.isDeletedLocally)
+        const isEdited = Boolean(m.editHistory && m.editHistory.length > 0)
+
+        if (isDeleted || isEdited) {
+          let item = m
+          // Strip bloated base64 data URLs in avatars that inflate audit logs to tens of MBs
+          if (item.senderAvatarUrl && item.senderAvatarUrl.startsWith('data:')) {
+            item = { ...item }
+            delete item.senderAvatarUrl
+            wasPruned = true
+          }
+          keepMsgs[mId] = item
+        } else {
+          // Normal, unedited and non-deleted message found in audit logs - PRUNE IT!
+          wasPruned = true
+        }
+      }
+      if (Object.keys(keepMsgs).length > 0) {
+        cleanChats[cId] = keepMsgs
+      } else {
+        // Chat had only normal messages - entirely drop this empty chat
+        wasPruned = true
+      }
+    }
+
+    return { data: cleanChats, wasPruned }
+  }
+
+  public sanitizeAllExistingAuditFiles(): void {
+    const sanitizeDirectory = (dirPath: string) => {
+      if (!fs.existsSync(dirPath)) return
+      try {
+        const files = fs.readdirSync(dirPath)
+        for (const file of files) {
+          if (!file.startsWith('audit_') || !file.endsWith('.json')) continue
+          const fullPath = path.join(dirPath, file)
+          try {
+            const raw = fs.readFileSync(fullPath, 'utf-8')
+            const parsed = JSON.parse(raw)
+            const chats = parsed.chats || parsed || {}
+            const { data: cleanChats, wasPruned } = this.sanitizeAuditData(chats)
+            if (wasPruned) {
+              const payload = JSON.stringify({ chats: cleanChats })
+              fs.writeFileSync(fullPath, payload, 'utf-8')
+            }
+          } catch (e) {
+            console.error(`[SessionStore] Failed to sanitize ${fullPath}:`, e)
+          }
+        }
+      } catch (err) {
+        console.error(`[SessionStore] Failed reading directory for sanitation ${dirPath}:`, err)
+      }
+    }
+
+    sanitizeDirectory(this.auditLogsDir)
+    sanitizeDirectory(this.backupAuditLogsDir)
+  }
+
   public loadAccountAudit(accountId: string): Record<string, Record<number, MessageItem>> {
     if (this.auditCache.has(accountId)) {
       return this.auditCache.get(accountId)!
@@ -481,7 +558,15 @@ export class SessionStore {
       }
     }
 
-    this.auditCache.set(accountId, data)
+    const { data: cleanData, wasPruned } = this.sanitizeAuditData(data)
+    if (wasPruned) {
+      data = cleanData
+      this.auditCache.set(accountId, data)
+      this.flushSaveAccountAuditSync(accountId)
+    } else {
+      this.auditCache.set(accountId, data)
+    }
+
     return data
   }
 
@@ -588,15 +673,65 @@ export class SessionStore {
     this.saveAuditTimers.clear()
   }
 
+  public indexMessageChat(accountId: string, chatId: string, messageId: number): void {
+    if (!accountId || !chatId || !messageId) return
+    let accMap = this.messageChatIndex.get(accountId)
+    if (!accMap) {
+      accMap = new Map()
+      this.messageChatIndex.set(accountId, accMap)
+    }
+    accMap.set(messageId, chatId)
+    if (accMap.size > 10000) {
+      const keys = Array.from(accMap.keys()).slice(0, 2000)
+      for (const k of keys) accMap.delete(k)
+    }
+  }
+
+  public storeRecentMessage(accountId: string, chatId: string, msg: MessageItem): void {
+    if (!accountId || !chatId || !msg?.id) return
+    let accMap = this.recentMessagesCache.get(accountId)
+    if (!accMap) {
+      accMap = new Map()
+      this.recentMessagesCache.set(accountId, accMap)
+    }
+    // Store lightweight version without giant base64 payloads to keep memory usage minimal
+    const clone = { ...msg }
+    if (clone.senderAvatarUrl && clone.senderAvatarUrl.startsWith('data:')) {
+      delete clone.senderAvatarUrl
+    }
+    accMap.set(msg.id, clone)
+    if (accMap.size > 3000) {
+      const keys = Array.from(accMap.keys()).slice(0, 1000)
+      for (const k of keys) accMap.delete(k)
+    }
+  }
+
+  public getRecentMessage(accountId: string, messageId: number): MessageItem | null {
+    if (!accountId || !messageId) return null
+    const accMap = this.recentMessagesCache.get(accountId)
+    return accMap?.get(messageId) || null
+  }
+
   public recordMessages(accountId: string, chatId: string, msgs: MessageItem[]): void {
     if (!accountId || !chatId || !Array.isArray(msgs) || msgs.length === 0) return
+
+    for (const msg of msgs) {
+      if (msg?.id) {
+        this.indexMessageChat(accountId, chatId, msg.id)
+        this.storeRecentMessage(accountId, chatId, msg)
+      }
+    }
+
+    // CRITICAL: Normal unedited and non-deleted messages must NEVER be persisted to audit logs!
+    const auditableMsgs = msgs.filter((m) => m?.id && (m.isDeletedLocally || (m.editHistory && m.editHistory.length > 0)))
+    if (auditableMsgs.length === 0) return
+
     const audit = this.loadAccountAudit(accountId)
     if (!audit[chatId]) {
       audit[chatId] = {}
     }
 
-    for (const msg of msgs) {
-      if (!msg?.id) continue
+    for (const msg of auditableMsgs) {
       const existing = audit[chatId][msg.id]
       if (existing) {
         audit[chatId][msg.id] = {
@@ -615,29 +750,20 @@ export class SessionStore {
       }
     }
 
-    // Prune unedited/non-deleted messages when chat exceeds 500 records
-    const messageKeys = Object.keys(audit[chatId])
-    if (messageKeys.length > 500) {
-      const normalIds = messageKeys
-        .map(Number)
-        .filter((id) => {
-          const item = audit[chatId][id]
-          return !item.isDeletedLocally && (!item.editHistory || item.editHistory.length === 0)
-        })
-        .sort((a, b) => a - b)
-
-      const excessCount = messageKeys.length - 500
-      const toPrune = normalIds.slice(0, excessCount)
-      for (const pruneId of toPrune) {
-        delete audit[chatId][pruneId]
-      }
-    }
-
     this.saveAccountAudit(accountId, audit)
   }
 
   public recordMessage(accountId: string, chatId: string, msg: MessageItem): void {
     if (!accountId || !chatId || !msg?.id) return
+
+    this.indexMessageChat(accountId, chatId, msg.id)
+    this.storeRecentMessage(accountId, chatId, msg)
+
+    // CRITICAL: Normal unedited and non-deleted messages must NEVER be persisted to audit logs!
+    if (!msg.isDeletedLocally && (!msg.editHistory || msg.editHistory.length === 0)) {
+      return
+    }
+
     const audit = this.loadAccountAudit(accountId)
     if (!audit[chatId]) {
       audit[chatId] = {}
@@ -660,24 +786,6 @@ export class SessionStore {
       audit[chatId][msg.id] = { ...msg }
     }
 
-    // Prune unedited/non-deleted messages when chat exceeds 500 records
-    const messageKeys = Object.keys(audit[chatId])
-    if (messageKeys.length > 500) {
-      const normalIds = messageKeys
-        .map(Number)
-        .filter((id) => {
-          const item = audit[chatId][id]
-          return !item.isDeletedLocally && (!item.editHistory || item.editHistory.length === 0)
-        })
-        .sort((a, b) => a - b)
-
-      const excessCount = messageKeys.length - 500
-      const toPrune = normalIds.slice(0, excessCount)
-      for (const pruneId of toPrune) {
-        delete audit[chatId][pruneId]
-      }
-    }
-
     this.saveAccountAudit(accountId, audit)
   }
 
@@ -690,14 +798,15 @@ export class SessionStore {
     entities?: MessageEntityItem[]
   ): MessageItem | null {
     if (!accountId || !messageId) return null
-    const audit = this.loadAccountAudit(accountId)
-
     let targetChatId = chatId
     if (!targetChatId) {
       targetChatId = this.findChatIdForMessageId(accountId, messageId) || ''
     }
     if (!targetChatId) return null
 
+    this.indexMessageChat(accountId, targetChatId, messageId)
+
+    const audit = this.loadAccountAudit(accountId)
     if (!audit[targetChatId]) {
       audit[targetChatId] = {}
     }
@@ -724,16 +833,31 @@ export class SessionStore {
       this.saveAccountAudit(accountId, audit)
       return existing
     } else {
+      // Message was not previously in audit log. Capture original text from recent in-memory cache
+      const recent = this.getRecentMessage(accountId, messageId)
+      const priorHistory: MessageEditRevision[] = []
+      if (recent?.text && recent.text !== newText) {
+        priorHistory.push({
+          text: recent.text,
+          date: recent.editDate || recent.date || Math.floor(Date.now() / 1000),
+          entities: recent.entities,
+          mediaType: recent.mediaType,
+          mediaThumbnailUrl: recent.mediaThumbnailUrl,
+          strippedThumb: recent.strippedThumb,
+        })
+      }
+
       const item: MessageItem = {
+        ...(recent || {}),
         id: messageId,
         chatId: targetChatId,
         accountId,
         text: newText,
-        date: editDate,
+        date: recent?.date || editDate,
         editDate,
-        isOutgoing: false,
+        isOutgoing: recent?.isOutgoing ?? false,
         entities,
-        editHistory: [],
+        editHistory: priorHistory,
       }
       audit[targetChatId][messageId] = item
       this.saveAccountAudit(accountId, audit)
@@ -758,12 +882,33 @@ export class SessionStore {
         audit[targetChatId] = {}
       }
 
-      const existing = audit[targetChatId][msgId]
+      let existing = audit[targetChatId][msgId]
       if (existing) {
         existing.isDeletedLocally = true
         existing.deletedAt = existing.deletedAt || now
-        deletedItems.push(existing)
+      } else {
+        const recent = this.getRecentMessage(accountId, msgId)
+        if (recent) {
+          existing = {
+            ...recent,
+            isDeletedLocally: true,
+            deletedAt: now,
+          }
+        } else {
+          existing = {
+            id: msgId,
+            chatId: targetChatId,
+            accountId,
+            text: '[Message deleted]',
+            date: now,
+            isOutgoing: false,
+            isDeletedLocally: true,
+            deletedAt: now,
+          }
+        }
+        audit[targetChatId][msgId] = existing
       }
+      deletedItems.push(existing)
     }
 
     this.saveAccountAudit(accountId, audit)
@@ -772,6 +917,9 @@ export class SessionStore {
 
   public findChatIdForMessageId(accountId: string, messageId: number): string | null {
     if (!accountId || !messageId) return null
+    const indexed = this.messageChatIndex.get(accountId)?.get(messageId)
+    if (indexed) return indexed
+
     const audit = this.loadAccountAudit(accountId)
     for (const [cId, msgs] of Object.entries(audit)) {
       if (msgs[messageId]) return cId

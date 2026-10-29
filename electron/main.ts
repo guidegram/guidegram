@@ -420,11 +420,11 @@ function createWindow() {
   })
 
   mainWindow.on('minimize', () => {
-    mainWindow?.webContents.send('app:clear-active-chat')
+    // Window minimized - preserve active chat and drafts
   })
 
   mainWindow.on('hide', () => {
-    mainWindow?.webContents.send('app:clear-active-chat')
+    // Window hidden - preserve active chat and drafts
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -504,7 +504,6 @@ function createWindow() {
 
     if (action === 'minimize') {
       event.preventDefault()
-      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
       Logger.info('[Window] Close event intercepted: window minimized to taskbar.')
       return
@@ -1105,7 +1104,6 @@ function setupIpcHandlers() {
   // Window Controls
   ipcMain.handle('window:minimize', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender) || mainWindow
-    win?.webContents.send('app:clear-active-chat')
     win?.minimize()
   })
 
@@ -1129,7 +1127,6 @@ function setupIpcHandlers() {
     }
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
-      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
       return { action: 'minimize' }
     } else if (cfg.closeAction === 'quit') {
@@ -1155,7 +1152,6 @@ function setupIpcHandlers() {
       })
     }
     if (action === 'minimize') {
-      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
     } else {
       isQuitting = true
@@ -1171,7 +1167,6 @@ function setupIpcHandlers() {
     }
     const cfg = sessionStore.getConfig()
     if (cfg.closeAction === 'minimize') {
-      mainWindow?.webContents.send('app:clear-active-chat')
       mainWindow?.minimize()
     } else if (cfg.closeAction === 'quit') {
       isQuitting = true
