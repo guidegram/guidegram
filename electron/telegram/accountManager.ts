@@ -2269,7 +2269,24 @@ export class AccountManager {
                 const peerNum = Number(d.id)
                 const targetPeer = !isNaN(peerNum) ? peerNum : d.id
                 if (!holder.client) return
-                const chatObj: any = await holder.client.getChat(targetPeer)
+                let chatObj: any = null
+                try {
+                  if (typeof (holder.client as any).getPeer === 'function') {
+                    chatObj = await (holder.client as any).getPeer(targetPeer)
+                  }
+                } catch (_) {}
+                if (!chatObj) {
+                  try {
+                    chatObj = await (d.id.startsWith('-')
+                      ? holder.client.getChat(targetPeer as any)
+                      : holder.client.getUser(targetPeer as any))
+                  } catch (_) {}
+                }
+                if (!chatObj) {
+                  try {
+                    chatObj = await holder.client.getChat(targetPeer as any)
+                  } catch (_) {}
+                }
                 if (chatObj) {
                   const resolvedName = formatEntityName(chatObj, '')
                   if (resolvedName && !resolvedName.startsWith('Unknown')) {
