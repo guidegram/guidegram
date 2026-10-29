@@ -9,6 +9,20 @@ interface WhatsNewModalProps {
   onClose: () => void
 }
 
+// Helper to safely parse and compare semver versions
+function parseSemver(ver: string): [number, number, number] {
+  const parts = ver.replace(/^v/, '').split('.').map((p) => parseInt(p, 10) || 0)
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0]
+}
+
+function gte(v1: string, v2: string): boolean {
+  const [a1, b1, c1] = parseSemver(v1)
+  const [a2, b2, c2] = parseSemver(v2)
+  if (a1 !== a2) return a1 > a2
+  if (b1 !== b2) return b1 > b2
+  return c1 >= c2
+}
+
 export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   isOpen,
   version,
@@ -23,122 +37,272 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
-    // v2.4.1: Full-Width Kinetic Tabs, Mouse-Wheel Horizontal Scroll & Zero-Fake MTProto Parity
-    if (cleanVer >= '2.4.1') {
+    // v2.5.2: Ultra-Low Memory & Zero-Bloat Audit Engine, Single Active Chat, Granular Anti-Delete Scoping & GPU Sleep
+    if (gte(cleanVer, '2.5.2')) {
       return [
-        {
-          icon: Sparkles,
-          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: 'Full-Width Kinetic Tabs & Mouse-Wheel Scroll',
-          desc: 'Tabs now span the entire top header with seamless mouse-wheel horizontal navigation, zero vertical clipping, and instant folder switching.',
-        },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: 'Zero-Fake & MTProto Layer 229 Hardening',
-          desc: '100% purged mock data, deterministic transaction IDs, live MTProto privacy querying, and real channel boost statistics.',
+          title: isRTL ? 'کاهش ۹۵٪ مصرف رم با معماری چت فعال منفرد' : 'Ultra-Low Memory & Single Active Chat Parity',
+          desc: isRTL
+            ? 'تطابق کامل با تلگرام دسکتاپ رسمی با نگهداری فقط چت فعال در رم، تخلیه خودکار کش پس‌زمینه و کاهش ۹۵٪ حجم لاگ‌های ادیت و دیلیت.'
+            : 'Official Telegram Desktop parity by maintaining only the active chat in memory, auto-evicting background cache, and reducing audit log overhead by 95%.',
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: 'Wired Interactive UI & Profile Color Parity',
-          desc: 'Avatar change dialog, proxy navigation shortcut, official Telegram peer color palettes, and automated chat navigation.',
+          title: isRTL ? 'تاریخچه نامحدود ادیت‌ها و کنترل اختصاصی چت‌ها' : 'Unlimited Edit History & Granular Tracking',
+          desc: isRTL
+            ? 'ثبت تمام نسخه‌های ویرایش‌شده پیام، تفکیک مستقل ردگیری پیام‌های دیلیت/ادیت در پی‌وی، گروه‌ها و کانال‌ها با سقف عددی سفارشی.'
+            : 'Track complete revision history per message with dedicated tracking scopes and adjustable limits for Private Chats, Groups, and Channels.',
+        },
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: isRTL ? 'بهینه‌سازی کامل گرافیک و توقف انیمیشن‌های پس‌زمینه' : 'Zero-Idle GPU & Background Sleep Mode',
+          desc: isRTL
+            ? 'حالت خواب خودکار پنجره در پس‌زمینه جهت حذف مصرف اضافه CPU/GPU، سبک‌سازی افکت‌های هاله نوری و توقف کامل انیمیشن‌ها خارج از دید.'
+            : 'Native background window sleep mode to eliminate idle CPU/GPU load, lightweight ambient lighting, and intersection-observed viewport animations.',
+        },
+      ]
+    }
+
+    // v2.5.1: Multi-Window Parallel Accounts, Outer Dock Badges & Instant Pre-Warming
+    if (gte(cleanVer, '2.5.1')) {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: isRTL ? 'پشتیبانی از چند پنجره همزمان برای اکانت‌ها' : 'Multi-Window Parallel Account Workspaces',
+          desc: isRTL
+            ? 'امکان باز کردن حساب‌های کاربری در پنجره‌های مستقل و همزمان با فرآیند رندرینگ ایزوله و نوار وظیفه اختصاصی.'
+            : 'Open multiple accounts simultaneously in dedicated standalone windows with isolated rendering contexts and custom taskbar badges.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: isRTL ? 'بج اعلان هوشمند روی داک و تسک‌بار' : 'Dynamic Dock Badges & Taskbar Parity',
+          desc: isRTL
+            ? 'نمایش تعداد پیام‌های خوانده‌نشده هر اکانت روی آیکون نوار وظیفه و داک با به‌روزرسانی آنی.'
+            : 'Accurate unread notification badge counts rendered directly on the taskbar icon and dock with zero latency.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: isRTL ? 'پیش‌گرمایش نشست‌ها و ورود فوق‌سریع' : 'Zero-Freeze Session Pre-Warming',
+          desc: isRTL
+            ? 'بارگذاری موازی سشن‌ها و سوکت‌های فعال در بک‌گراند برای سوییچ فوری و بدون تأخیر بین اکانت‌ها.'
+            : 'Background session and socket pre-warming engine for instantaneous account switching with zero frame drops.',
+        },
+      ]
+    }
+
+    // v2.5.0: Native WebRTC Voice & Video Calling & Turbo Multi-DC Media Pipeline
+    if (gte(cleanVer, '2.5.0')) {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: isRTL ? 'تماس صوتی و تصویری نیتیو WebRTC' : 'Native WebRTC Voice & Video Calling',
+          desc: isRTL
+            ? 'برقراری تماس‌های صوتی و تصویری با کیفیت بالا، رمزنگاری نقطه به نقطه و حداقل تأخیر در شبکه.'
+            : 'Full end-to-end encrypted high-fidelity voice and video calls powered by native WebRTC integration.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: isRTL ? 'موتور دانلود توربو و چند مسیره فایل‌ها' : 'Turbo Multi-DC Media Pipeline',
+          desc: isRTL
+            ? 'دانلود چند مسیره و همزمان فایل‌های حجیم، ویدیوها و اسناد با حداکثر پهنای باند و بدون افت سرعت.'
+            : 'High-speed multi-part parallel chunk downloading across Telegram DCs with zero buffer bottlenecks.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: isRTL ? 'انیمیشن‌های ستاره‌ای و هدایای تعاملی' : 'Interactive Telegram Star Gifts & 3D Visuals',
+          desc: isRTL
+            ? 'مشاهده و ارسال هدایای ستاره‌ای تلگرام با افکت‌های نوری سه‌بعدی و انیمیشن‌های روان فیزیک‌محور.'
+            : 'Full support for sending and viewing Telegram Star Gifts with rich interactive 3D particle animations.',
+        },
+      ]
+    }
+
+    // v2.4.6: Session Tamper Guard & Data Shield Mirroring
+    if (gte(cleanVer, '2.4.6')) {
+      return [
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: isRTL ? 'سپر امنیتی ضد دستکاری نشست‌ها' : 'Session Tamper Guard & Data Shield',
+          desc: isRTL
+            ? 'محافظت سخت‌افزاری و ایزوله‌سازی سشن‌ها برای جلوگیری از خروج ناخواسته یا تداخل در حالت پرتابل.'
+            : 'Hardware-isolated session protection and atomic data mirroring to prevent unexpected session termination.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: isRTL ? 'پایداری اتصال در نوسانات شدید اینترنت' : 'Deep MTProto Reconnect Resilience',
+          desc: isRTL
+            ? 'اتصال مجدد خودکار و هوشمند در اختلالات شبکه بدون ایجاد تداخل یا قطع شدن ارتباط کاربر.'
+            : 'Automatic socket health monitoring and silent reconnection fallback during heavy network disruptions.',
+        },
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: isRTL ? 'بهینه‌سازی مصرف حافظه و ذخیره‌سازی' : 'Zero-Leak Background Memory Management',
+          desc: isRTL
+            ? 'آزادسازی خودکار منابع پس‌زمینه و جلوگیری از انباشت کش پیام‌های غیرضروری.'
+            : 'Automated background garbage collection and stale cache purging to maintain smooth performance.',
+        },
+      ]
+    }
+
+    // v2.4.1: Full-Width Kinetic Tabs, Mouse-Wheel Horizontal Scroll & Zero-Fake MTProto Parity
+    if (gte(cleanVer, '2.4.1')) {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: isRTL ? 'تب‌های تمام‌عرض پوشه‌ها با اسکرول افقی ماوس' : 'Full-Width Kinetic Tabs & Mouse-Wheel Scroll',
+          desc: isRTL
+            ? 'تب‌های بالای صفحه حالا تمام عرض را پر کرده و با چرخش چرخ ماوس به نرمی اسکرول می‌شوند.'
+            : 'Tabs now span the entire top header with seamless mouse-wheel horizontal navigation, zero vertical clipping, and instant folder switching.',
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: isRTL ? 'پاکسازی کامل داده‌های ساختگی و لایه ۲۲۹' : 'Zero-Fake & MTProto Layer 229 Hardening',
+          desc: isRTL
+            ? 'حذف کامل داده‌های فرضی، اتصال مستقیم به تنظیمات حریم خصوصی MTProto و آمار زنده بوست کانال‌ها.'
+            : '100% purged mock data, deterministic transaction IDs, live MTProto privacy querying, and real channel boost statistics.',
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: isRTL ? 'رنگ‌بندی رسمی پروفایل و ناوبری خودکار' : 'Wired Interactive UI & Profile Color Parity',
+          desc: isRTL
+            ? 'تطابق کامل پالت رنگی مخاطبان با تلگرام رسمی، دیالوگ تغییر آواتار و دسترسی سریع به تنظیمات پروکسی.'
+            : 'Avatar change dialog, proxy navigation shortcut, official Telegram peer color palettes, and automated chat navigation.',
         },
       ]
     }
 
     // v2.4.0: Universal Guidegram MCP Architecture, Online Radar, Star Gifts & Persian AI Search
-    if (cleanVer.startsWith('2.4') || cleanVer >= '2.4.0') {
+    if (gte(cleanVer, '2.4.0')) {
       return [
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: 'Universal MCP Server & Persian AI Engine',
-          desc: '2-tier hybrid architecture with 21 high-level tools, full MTProto Layer 229 parity (859 methods), and fuzzy Persian name/message search.',
+          title: isRTL ? 'سرور جامع MCP و جستجوی هوشمند فارسی' : 'Universal MCP Server & Persian AI Engine',
+          desc: isRTL
+            ? 'پشتیبانی از دستیار هوش مصنوعی با ۲۱ ابزار عملیاتی، متدهای کامل لایه ۲۲۹ و جستجوی فازی نام‌ها و پیام‌های فارسی.'
+            : '2-tier hybrid architecture with 21 high-level tools, full MTProto Layer 229 parity (859 methods), and fuzzy Persian name/message search.',
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: 'Online Radar & Contact Audit Timeline',
-          desc: 'Track exact user status, live online transitions, contact profile/name change histories, and Star Gifts with 3D orbit visuals.',
+          title: isRTL ? 'رادار آنلاین و تاریخچه تغییرات مخاطبان' : 'Online Radar & Contact Audit Timeline',
+          desc: isRTL
+            ? 'نمایش دقیق زمان آنلاین بودن، ثبت تغییرات نام و تصویر پروفایل مخاطبان و تاریخچه کامل فعالیت‌ها.'
+            : 'Track exact user status, live online transitions, contact profile/name change histories, and Star Gifts with 3D orbit visuals.',
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: 'Hardened Media Streaming & Audio Fixes',
-          desc: 'Muted audio leak protection, BigInt-safe MCP serialization, and unread counter bi-directional sync across all Telegram sessions.',
+          title: isRTL ? 'پخش پایدار صوت و استریم مدیا' : 'Hardened Media Streaming & Audio Fixes',
+          desc: isRTL
+            ? 'رفع نشت صدا در حالت بی‌صدا، سریال‌سازی امن مقادیر عددی بزرگ و تطابق شمارنده پیام‌های خوانده‌نشده.'
+            : 'Muted audio leak protection, BigInt-safe MCP serialization, and unread counter bi-directional sync across all Telegram sessions.',
         },
       ]
     }
 
     // v2.2.0: Telegram Parity Attachments, Centered Channels, Clipboard Paste & TitleBar Hub
-    if (cleanVer.startsWith('2.2') || cleanVer >= '2.2.0') {
+    if (gte(cleanVer, '2.2.0')) {
       return [
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: 'Telegram Premium Attachment Suite',
-          desc: 'Docked popover right above the paperclip with Photos, Documents, Checklists, Articles, Live Location, Polls, and Audio.',
+          title: isRTL ? 'منوی پیوست پیشرفته تلگرام' : 'Telegram Premium Attachment Suite',
+          desc: isRTL
+            ? 'منوی شناور پیوست با دسترسی سریع به تصاویر، اسناد، چک‌لیست‌ها، مقالات، موقعیت زنده، نظرسنجی و فایل صوتی.'
+            : 'Docked popover right above the paperclip with Photos, Documents, Checklists, Articles, Live Location, Polls, and Audio.',
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: 'Centered Channel Feed & Dynamic Widths',
-          desc: 'Channels now center posts beautifully with wide cards, while bot forms expand smoothly without horizontal compression.',
+          title: isRTL ? 'پست‌های وسط‌چین در کانال‌ها' : 'Centered Channel Feed & Dynamic Widths',
+          desc: isRTL
+            ? 'چینش شکیل و خوانای پست‌های کانال در مرکز صفحه و باز شدن فرم‌های ربات بدون فشردگی افقی.'
+            : 'Channels now center posts beautifully with wide cards, while bot forms expand smoothly without horizontal compression.',
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: 'Clipboard Instant Paste & 60m Auto-Update',
-          desc: 'Paste screenshots directly with Ctrl+V, toggle Ghost Mode with a single click, and enjoy hands-free zero-data-loss background updates.',
+          title: isRTL ? 'پیست مستقیم تصویر با کلید میانبر' : 'Clipboard Instant Paste & 60m Auto-Update',
+          desc: isRTL
+            ? 'ارسال مستقیم اسکرین‌شات‌ها با Ctrl+V، فعال‌سازی حالت روح با یک کلیک و به‌روزرسانی ایمن پس‌زمینه.'
+            : 'Paste screenshots directly with Ctrl+V, toggle Ghost Mode with a single click, and enjoy hands-free zero-data-loss background updates.',
         },
       ]
     }
 
     // v2.1.0: Apple & Telegram iOS-Grade 50-Phase Visual & Fluid Motion Architecture
-    if (cleanVer.startsWith('2.1') || cleanVer >= '2.1.0') {
+    if (gte(cleanVer, '2.1.0')) {
       return [
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: 'Apple & Telegram Fluid Kinematics',
-          desc: '50-phase comprehensive visual evolution with high-fidelity spring physics, shared layout tabs, and ultra-fluid micro-interactions.',
+          title: isRTL ? 'انیمیشن‌ها و فیزیک سیال اپل و تلگرام' : 'Apple & Telegram Fluid Kinematics',
+          desc: isRTL
+            ? 'طراحی بصری پیشرفته با فیزیک فنری روان، جابجایی نرم بین تب‌ها و تعاملات میکرو دقیق.'
+            : '50-phase comprehensive visual evolution with high-fidelity spring physics, shared layout tabs, and ultra-fluid micro-interactions.',
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: 'Haptic Tactile Micro-Interactions',
-          desc: 'Tactile responsive feedback on all action buttons, dialogs, drawers, audio/video players, and unified inbox rows.',
+          title: isRTL ? 'بازخورد لمسی و هپتیک دکمه‌ها' : 'Haptic Tactile Micro-Interactions',
+          desc: isRTL
+            ? 'فیدبک حسی در هنگام کلیک روی دکمه‌ها، پنجره‌ها، پلیرهای صوتی و تصویری و لیست گفتگوها.'
+            : 'Tactile responsive feedback on all action buttons, dialogs, drawers, audio/video players, and unified inbox rows.',
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: 'MTProto Layer 229+ & Zero-Loss Vault',
-          desc: 'Complete Telegram protocol coverage with bulletproof session security and instant multi-DC media pipeline.',
+          title: isRTL ? 'سازگاری با پروتکل لایه ۲۲۹+' : 'MTProto Layer 229+ & Zero-Loss Vault',
+          desc: isRTL
+            ? 'پوشش کامل پروتکل تلگرام با امنیت فوق‌العاده سشن‌ها و پایپ‌لاین آنی دانلود رسانه‌ها.'
+            : 'Complete Telegram protocol coverage with bulletproof session security and instant multi-DC media pipeline.',
         },
       ]
     }
 
     // v2.0.0: MTProto Layer 229+ Full Parity (859 Methods), Turbo Multi-DC Media Engine, Session Vault
-    if (cleanVer.startsWith('2.0') || cleanVer >= '2.0.0') {
+    if (gte(cleanVer, '2.0.0')) {
       return [
         {
           icon: Zap,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: 'MTProto Layer 229+ Full Parity',
-          desc: 'Complete protocol parity with 859 methods connected across 28 namespaces (Channels, Stories, Payments, Stars, Bots & Security).',
+          title: isRTL ? 'سازگاری کامل با لایه ۲۲۹ تلگرام' : 'MTProto Layer 229+ Full Parity',
+          desc: isRTL
+            ? 'پشتیبانی از ۸۵۹ متد پروتکل در ۲۸ بخش مختلف شامل کانال‌ها، استوری‌ها، پرداخت‌ها، ستاره‌ها و بات‌ها.'
+            : 'Complete protocol parity with 859 methods connected across 28 namespaces (Channels, Stories, Payments, Stars, Bots & Security).',
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: 'Turbo Multi-DC Media Engine',
-          desc: 'Instant full-resolution download pipeline for photos, documents, and videos with native InputFileLocation translation.',
+          title: isRTL ? 'موتور دانلود پرسرعت چند مسیره' : 'Turbo Multi-DC Media Engine',
+          desc: isRTL
+            ? 'دانلود آنی و با کیفیت اصلی تصاویر، ویدیوها و اسناد با ترجمه محلی ساختار فایل‌ها.'
+            : 'Instant full-resolution download pipeline for photos, documents, and videos with native InputFileLocation translation.',
         },
         {
           icon: Sparkles,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: 'Multi-Account Session Vault',
-          desc: 'Bulletproof portable deployment with automatic session preservation across all authenticated accounts.',
+          title: isRTL ? 'محافظت از نشست‌های چندگانه' : 'Multi-Account Session Vault',
+          desc: isRTL
+            ? 'حفظ پایدار و بدون خطای تمام اکانت‌های لاگین‌شده در مهاجرت‌ها و به‌روزرسانی‌های نرم‌افزار.'
+            : 'Bulletproof portable deployment with automatic session preservation across all authenticated accounts.',
         },
       ]
     }
