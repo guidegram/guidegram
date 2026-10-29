@@ -2671,6 +2671,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-star-gift-media', async (_event, { accountId, documentId, rawDoc }) => {
+    try {
+      return await accountManager.getStarGiftMedia(accountId, documentId, rawDoc)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStarGiftMedia error:`, err)
+      return null
+    }
+  })
+
   ipcMain.handle('telegram:convert-star-gift', async (_event, { accountId, stargiftMsgId }) => {
     try {
       return await accountManager.convertStarGift(accountId, stargiftMsgId)

@@ -1177,6 +1177,23 @@ export interface StarGiftItem {
   availabilityTotal?: number
   canExportAt?: number
   transferStars?: number
+  documentId?: string
+  documentAccessHash?: string
+  fileReferenceHex?: string
+  mimeType?: string
+  isUnique?: boolean
+  slug?: string
+  num?: number
+  backdrop?: {
+    centerColor?: string
+    edgeColor?: string
+    patternColor?: string
+    textColor?: string
+  }
+  lottieData?: any
+  mediaUrl?: string
+  mediaFormat?: 'lottie' | 'video' | 'image'
+  rawDocument?: any
 }
 
 export interface ActiveSessionItem {

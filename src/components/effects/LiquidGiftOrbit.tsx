@@ -1,98 +1,121 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
-import { Sparkles } from 'lucide-react'
+import { StarGiftItem } from '../../types/telegram'
+import { StarGiftVisual } from '../StarGiftVisual'
 
 export interface GiftItem {
   id: string
   name: string
-  icon: string // emoji or image
-  color: string // dominant color for glow/tint
+  icon?: string
+  color: string
   bgGradient: string
   shadowColor: string
-  position: { x: number; y: number } // relative offset from center in px
+  position: { x: number; y: number }
   delay: number
   scale?: number
+  starGift?: StarGiftItem
 }
 
-const DEFAULT_GIFTS: GiftItem[] = [
-  {
-    id: 'shades',
-    name: 'Cyber Shades',
-    icon: '🕶️',
-    color: '#ec4899',
-    bgGradient: 'radial-gradient(circle at 35% 35%, rgba(244, 114, 182, 0.65), rgba(219, 39, 119, 0.45) 60%, rgba(157, 23, 77, 0.3))',
-    shadowColor: 'rgba(236, 72, 153, 0.55)',
-    position: { x: -84, y: -72 },
-    delay: 0,
-    scale: 0.95,
-  },
-  {
-    id: 'cyber-cat',
-    name: 'Neon Kitty',
-    icon: '🐱',
-    color: '#06b6d4',
-    bgGradient: 'radial-gradient(circle at 35% 35%, rgba(103, 232, 249, 0.65), rgba(6, 182, 212, 0.45) 60%, rgba(14, 116, 144, 0.3))',
-    shadowColor: 'rgba(6, 182, 212, 0.55)',
-    position: { x: 86, y: -74 },
-    delay: 0.6,
-    scale: 0.92,
-  },
-  {
-    id: 'warrior-helm',
-    name: 'Golden Spartan',
-    icon: '👑',
-    color: '#f59e0b',
-    bgGradient: 'radial-gradient(circle at 35% 35%, rgba(252, 211, 77, 0.7), rgba(245, 158, 11, 0.5) 60%, rgba(180, 83, 9, 0.35))',
-    shadowColor: 'rgba(245, 158, 11, 0.6)',
-    position: { x: 92, y: 16 },
-    delay: 1.2,
-    scale: 1.05,
-  },
-  {
-    id: 'green-frog',
-    name: 'Emerald Pepe',
-    icon: '🐸',
-    color: '#8b5cf6',
-    bgGradient: 'radial-gradient(circle at 35% 35%, rgba(196, 181, 253, 0.65), rgba(139, 92, 246, 0.45) 60%, rgba(109, 40, 217, 0.3))',
-    shadowColor: 'rgba(139, 92, 246, 0.55)',
-    position: { x: -92, y: 18 },
-    delay: 1.8,
-    scale: 1.0,
-  },
-  {
-    id: 'star-gem',
-    name: 'Star Box',
-    icon: '💎',
-    color: '#38bdf8',
-    bgGradient: 'radial-gradient(circle at 35% 35%, rgba(125, 211, 252, 0.7), rgba(56, 189, 248, 0.45) 60%, rgba(3, 105, 161, 0.35))',
-    shadowColor: 'rgba(56, 189, 248, 0.6)',
-    position: { x: 62, y: 88 },
-    delay: 2.4,
-    scale: 0.88,
-  },
+// Preset orbital layout coordinates for 1 to 5 gifts around avatar
+const ORBIT_LAYOUTS: Record<number, Array<{ x: number; y: number; delay: number; scale: number }>> = {
+  1: [{ x: 70, y: -46, delay: 0, scale: 1.15 }],
+  2: [
+    { x: -72, y: -44, delay: 0, scale: 1.05 },
+    { x: 74, y: 32, delay: 0.8, scale: 1.05 },
+  ],
+  3: [
+    { x: -76, y: -50, delay: 0, scale: 1.0 },
+    { x: 80, y: -20, delay: 0.6, scale: 1.05 },
+    { x: -24, y: 76, delay: 1.2, scale: 0.95 },
+  ],
+  4: [
+    { x: -78, y: -58, delay: 0, scale: 0.95 },
+    { x: 78, y: -54, delay: 0.5, scale: 0.95 },
+    { x: 84, y: 36, delay: 1.0, scale: 1.0 },
+    { x: -82, y: 38, delay: 1.5, scale: 1.0 },
+  ],
+  5: [
+    { x: -84, y: -72, delay: 0, scale: 0.95 },
+    { x: 86, y: -74, delay: 0.6, scale: 0.92 },
+    { x: 92, y: 16, delay: 1.2, scale: 1.05 },
+    { x: -92, y: 18, delay: 1.8, scale: 1.0 },
+    { x: 62, y: 88, delay: 2.4, scale: 0.88 },
+  ],
+}
+
+const DEFAULT_COLOR_PALETTES = [
+  { center: '#EC4899', edge: '#BE185D', shadow: 'rgba(236, 72, 153, 0.55)' }, // Pink/Neon
+  { center: '#06B6D4', edge: '#0284C7', shadow: 'rgba(6, 182, 212, 0.55)' }, // Cyan/Blue
+  { center: '#F59E0B', edge: '#D97706', shadow: 'rgba(245, 158, 11, 0.55)' }, // Amber/Gold
+  { center: '#10B981', edge: '#059669', shadow: 'rgba(16, 185, 129, 0.55)' }, // Emerald
+  { center: '#8B5CF6', edge: '#6D28D9', shadow: 'rgba(139, 92, 246, 0.55)' }, // Violet
 ]
 
 interface LiquidGiftOrbitProps {
+  accountId?: string
+  starGifts?: StarGiftItem[]
   gifts?: GiftItem[]
-  onSelectGift?: (gift: GiftItem) => void
-  children?: React.ReactNode // Center avatar component
+  onSelectGift?: (gift: GiftItem | StarGiftItem) => void
+  onOpenModal?: () => void
+  children?: React.ReactNode
 }
 
 export const LiquidGiftOrbit: React.FC<LiquidGiftOrbitProps> = ({
-  gifts = DEFAULT_GIFTS,
+  accountId = '',
+  starGifts,
+  gifts,
   onSelectGift,
+  onOpenModal,
   children,
 }) => {
   const [activeGift, setActiveGift] = useState<GiftItem | null>(null)
   const shouldReduceMotion = useReducedMotion()
+
+  // Convert real StarGiftItem[] to orbital render items
+  const itemsToRender: GiftItem[] = React.useMemo(() => {
+    if (starGifts && starGifts.length > 0) {
+      const count = Math.min(starGifts.length, 5)
+      const layout = ORBIT_LAYOUTS[count] || ORBIT_LAYOUTS[5]
+      const slicedGifts = starGifts.slice(0, count)
+
+      return slicedGifts.map((sg, idx) => {
+        const coords = layout[idx % layout.length]
+        const fallbackPal = DEFAULT_COLOR_PALETTES[idx % DEFAULT_COLOR_PALETTES.length]
+        const center = sg.backdrop?.centerColor || fallbackPal.center
+        const edge = sg.backdrop?.edgeColor || fallbackPal.edge
+        const shadow = `rgba(${parseInt(edge.slice(1, 3) || '245', 16)}, ${parseInt(
+          edge.slice(3, 5) || '158',
+          16
+        )}, ${parseInt(edge.slice(5, 7) || '11', 16)}, 0.55)`
+
+        return {
+          id: sg.id || `stargift_${idx}`,
+          name: sg.title || `${sg.stars} Stars Gift`,
+          color: center,
+          bgGradient: `radial-gradient(circle at 35% 35%, ${center}99, ${edge}77 60%, ${edge}44)`,
+          shadowColor: shadow,
+          position: { x: coords.x, y: coords.y },
+          delay: coords.delay,
+          scale: coords.scale,
+          starGift: sg,
+        }
+      })
+    }
+
+    if (gifts && gifts.length > 0) {
+      return gifts
+    }
+
+    return []
+  }, [starGifts, gifts])
 
   return (
     <div className="relative w-64 h-64 mx-auto flex items-center justify-center select-none">
       {/* Center Avatar Container */}
       <div className="relative z-10">{children}</div>
 
-      {/* Floating Organic Liquid Bubbles */}
-      {gifts.map((gift) => (
+      {/* Floating Organic Liquid Jelly Bubbles */}
+      {itemsToRender.map((gift) => (
         <motion.div
           key={gift.id}
           className="absolute z-20 cursor-pointer group"
@@ -137,16 +160,21 @@ export const LiquidGiftOrbit: React.FC<LiquidGiftOrbitProps> = ({
           }}
           onClick={() => {
             setActiveGift(gift)
-            onSelectGift?.(gift)
+            if (gift.starGift) {
+              onSelectGift?.(gift.starGift)
+            } else {
+              onSelectGift?.(gift)
+            }
+            onOpenModal?.()
           }}
         >
-          {/* Liquid Blob Body */}
+          {/* Liquid Jelly Blob Body with Organic Morphing */}
           <motion.div
-            className="w-14 h-14 relative flex items-center justify-center backdrop-blur-md transition-shadow duration-300"
+            className="w-13 h-13 relative flex items-center justify-center backdrop-blur-md transition-shadow duration-300"
             style={{
               background: gift.bgGradient,
               boxShadow: `0 8px 24px -4px ${gift.shadowColor}, inset 0 2px 4px rgba(255, 255, 255, 0.45)`,
-              border: '1px solid rgba(255, 255, 255, 0.35)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
             }}
             animate={{
               borderRadius: [
@@ -164,27 +192,44 @@ export const LiquidGiftOrbit: React.FC<LiquidGiftOrbitProps> = ({
             }}
           >
             {/* Top Specular Glint (Glass highlight) */}
-            <div className="absolute top-1.5 left-2.5 w-4 h-2 rounded-full bg-white/50 blur-[0.6px] -rotate-12 pointer-events-none" />
+            <div className="absolute top-1 left-2 w-4 h-2 rounded-full bg-white/60 blur-[0.6px] -rotate-12 pointer-events-none" />
 
-            {/* Inner Floating 3D Icon / Gift */}
-            <motion.div
-              className="text-xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] select-none pointer-events-none"
-              animate={{
-                rotate: [-3, 4, -4, 3, 0],
-                y: [-1, 1.5, -1],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            >
-              {gift.icon}
-            </motion.div>
+            {/* Inner Floating 3D Animated Gift Media */}
+            {gift.starGift ? (
+              <StarGiftVisual
+                gift={gift.starGift}
+                accountId={accountId}
+                size="sm"
+                showBackdrop={false}
+                className="w-full h-full object-contain pointer-events-none"
+              />
+            ) : (
+              <motion.div
+                className="text-xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] select-none pointer-events-none"
+                animate={{
+                  rotate: [-3, 4, -4, 3, 0],
+                  y: [-1, 1.5, -1],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              >
+                {gift.icon}
+              </motion.div>
+            )}
+
+            {/* Collectible Badge for Unique Gifts (#123) */}
+            {gift.starGift?.num !== undefined && (
+              <div className="absolute -bottom-1 -right-1 px-1 rounded-full bg-dark-950/90 text-[7px] font-mono font-bold text-amber-300 border border-amber-400/40 leading-none">
+                #{gift.starGift.num}
+              </div>
+            )}
           </motion.div>
 
           {/* Floating Tooltip on Hover */}
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-medium text-white shadow-lg border border-white/10 z-50">
+          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-semibold text-white shadow-lg border border-white/10 z-50">
             {gift.name}
           </div>
         </motion.div>

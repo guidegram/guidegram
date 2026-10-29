@@ -18,8 +18,9 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { AccountInfo, MyFullProfile } from '../types/telegram'
+import { AccountInfo, MyFullProfile, StarGiftItem } from '../types/telegram'
 import { Avatar } from './Avatar'
+import { StarGiftsModal } from './StarGiftsModal'
 import { copyTextToClipboard } from '../utils/clipboard'
 import QRCode from 'qrcode'
 import { AmbientAuraMesh } from './effects/AmbientAuraMesh'
@@ -89,6 +90,28 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
       },
     }).then(setQrDataUrl)
   }, [showQrModal, account])
+
+  const [isStarGiftsModalOpen, setIsStarGiftsModalOpen] = useState(false)
+  const [myStarGifts, setMyStarGifts] = useState<StarGiftItem[]>([])
+
+  useEffect(() => {
+    if (!isOpen || !account?.id || (profile?.stargiftsCount ?? 0) <= 0) {
+      setMyStarGifts([])
+      return
+    }
+    let isMounted = true
+    if (window.guidegram?.getSavedStarGifts) {
+      window.guidegram
+        .getSavedStarGifts(account.id)
+        .then((res) => {
+          if (isMounted) setMyStarGifts(res || [])
+        })
+        .catch(() => {})
+    }
+    return () => {
+      isMounted = false
+    }
+  }, [isOpen, account?.id, profile?.stargiftsCount])
 
   if (!isOpen || !account) return null
 
@@ -171,7 +194,37 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
             <AmbientAuraMesh intensity="vibrant" />
 
             {/* Liquid Floating Gift Orbit with Center Avatar */}
-            <LiquidGiftOrbit>
+            {giftsCount > 0 ? (
+              <LiquidGiftOrbit
+                accountId={account.id}
+                starGifts={myStarGifts}
+                onOpenModal={() => setIsStarGiftsModalOpen(true)}
+              >
+                <div
+                  onClick={async () => {
+                    if (window.guidegram?.openFileDialog) {
+                      await window.guidegram.openFileDialog({ type: 'media' })
+                    }
+                  }}
+                  title="Change profile photo"
+                  className="relative group cursor-pointer"
+                >
+                  <Avatar
+                    accountId={account.id}
+                    peerId={account.id}
+                    title={fullName}
+                    initials={fullName.charAt(0)}
+                    avatarUrl={profile?.avatarUrl || account.avatarUrl}
+                    size="xl"
+                    className="w-24 h-24 text-3xl shadow-2xl ring-4 ring-white/10 group-hover:ring-white/25 transition-all duration-300"
+                  />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg border-2 border-[#17212b] group-hover:scale-110 transition-transform">
+                    <span className="absolute inset-0 rounded-full bg-primary-400 opacity-0 group-hover:opacity-75 group-hover:animate-ping" />
+                    <Camera className="w-4 h-4 relative z-10" />
+                  </div>
+                </div>
+              </LiquidGiftOrbit>
+            ) : (
               <div
                 onClick={async () => {
                   if (window.guidegram?.openFileDialog) {
@@ -195,7 +248,7 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
                   <Camera className="w-4 h-4 relative z-10" />
                 </div>
               </div>
-            </LiquidGiftOrbit>
+            )}
 
             {/* User Full Name & Premium Star Badge */}
             <div className="relative z-10 text-lg font-bold text-white flex items-center gap-1.5 text-center mt-2">
@@ -387,6 +440,32 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
             <div className="px-5 py-1 text-[11px] text-gray-400 leading-tight">
               Only your contacts can see your birthday.
             </div>
+
+            {/* Star Gifts Shelf (Telegram Premium) */}
+            <div
+              onClick={() => setIsStarGiftsModalOpen(true)}
+              className="px-5 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer border-t border-white/5 mt-1"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <Gift className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm text-gray-100 font-medium">Star Gifts</div>
+                  <div className="text-[11px] text-gray-400">
+                    {giftsCount > 0 ? `${giftsCount} Gifts on Profile Shelf` : 'View received gifts & catalog'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {giftsCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-500/30">
+                    {giftsCount}
+                  </span>
+                )}
+                <ExternalLink className="w-4 h-4 text-gray-500" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -437,6 +516,16 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Star Gifts Shelf Modal */}
+      {isStarGiftsModalOpen && account && (
+        <StarGiftsModal
+          isOpen={isStarGiftsModalOpen}
+          onClose={() => setIsStarGiftsModalOpen(false)}
+          accountId={account.id}
+          userName={fullName}
+        />
       )}
     </div>
   )

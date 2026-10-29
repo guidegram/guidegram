@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Gift, Sparkles, X, Star, Calendar, User, EyeOff, ShoppingBag, ShieldCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
+import { StarGiftVisual } from './StarGiftVisual'
 import { useI18n } from '../i18n'
 import { isRTL, formatNumber } from '../utils/textUtils'
 import { copyTextToClipboard } from '../utils/clipboard'
@@ -197,28 +198,43 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     className="p-3.5 rounded-2xl bg-dark-800/80 hover:bg-dark-800 border border-white/5 hover:border-amber-500/30 transition-all flex flex-col justify-between gap-2.5 shadow-sm group"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
-                          🎁
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <StarGiftVisual
+                          gift={gift}
+                          accountId={accountId}
+                          size="md"
+                          interactive
+                        />
                         <div>
                           <div className="flex items-center gap-1.5 text-xs font-bold text-gray-100">
                             <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
                             <span>{gift.stars} Stars</span>
                           </div>
-                          {gift.convertStars && (
+                          {Boolean(gift.convertStars) && (
                             <div className="text-[10px] text-gray-400">
                               Convertible: {gift.convertStars} ⭐
+                            </div>
+                          )}
+                          {gift.title && (
+                            <div className="text-[11px] font-medium text-amber-300 truncate max-w-[130px]">
+                              {gift.title}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {gift.isSaved && (
-                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30">
-                          Profile Shelf
-                        </span>
-                      )}
+                      <div className="flex flex-col items-end gap-1">
+                        {gift.isSaved && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30">
+                            Profile Shelf
+                          </span>
+                        )}
+                        {gift.isUnique && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            Unique NFT
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {gift.message && (
@@ -279,10 +295,13 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     className="p-3.5 rounded-2xl bg-dark-800/80 hover:bg-dark-800 border border-white/5 hover:border-amber-500/30 transition-all flex flex-col justify-between gap-2.5 shadow-sm group"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-lg shrink-0 group-hover:scale-110 transition-transform">
-                          ✨
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <StarGiftVisual
+                          gift={gift}
+                          accountId={accountId}
+                          size="md"
+                          interactive
+                        />
                         <div>
                           <div className="text-xs font-bold text-gray-100 truncate max-w-[120px]">
                             {gift.title || `Star Gift #${gift.id.slice(-4)}`}

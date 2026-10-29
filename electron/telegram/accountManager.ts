@@ -11235,6 +11235,106 @@ export class AccountManager {
     }
   }
 
+  private intToHexColor(colorInt?: number): string | undefined {
+    if (colorInt === undefined || colorInt === null) return undefined
+    const hex = (colorInt >>> 0).toString(16).padStart(6, '0')
+    return '#' + hex.slice(-6)
+  }
+
+  public async getStarGiftMedia(
+    accountId: string,
+    documentId: string,
+    rawDoc?: any
+  ): Promise<{ format: 'lottie' | 'video' | 'image'; data?: any; url?: string } | null> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client || !documentId) return null
+
+    const lottieCache = path.join(this.mediaDir, `gift_${documentId}.json`)
+    const webmCache = path.join(this.mediaDir, `gift_${documentId}.webm`)
+    const webpCache = path.join(this.mediaDir, `gift_${documentId}.webp`)
+    const rawCache = path.join(this.mediaDir, `gift_${documentId}.bin`)
+
+    // 1. Check existing disk cache
+    if (fs.existsSync(lottieCache)) {
+      try {
+        const rawJson = fs.readFileSync(lottieCache, 'utf8')
+        return { format: 'lottie', data: JSON.parse(rawJson) }
+      } catch (_) {}
+    }
+    if (fs.existsSync(webmCache) && fs.statSync(webmCache).size > 0) {
+      return { format: 'video', url: `guidegram-media://${webmCache.replace(/\\/g, '/')}` }
+    }
+    if (fs.existsSync(webpCache) && fs.statSync(webpCache).size > 0) {
+      return { format: 'image', url: `guidegram-media://${webpCache.replace(/\\/g, '/')}` }
+    }
+
+    // 2. Fetch or reuse document
+    let doc = rawDoc
+    if (!doc || doc._ !== 'document') {
+      try {
+        const res: any = await holder.client.call({
+          _: 'messages.getCustomEmojiDocuments',
+          documentId: [toLong(documentId)],
+        })
+        doc = res?.[0]
+      } catch (_) {}
+    }
+
+    if (!doc || doc._ !== 'document') return null
+
+    const isLottie = doc.mimeType === 'application/x-tgsticker'
+    const isVideo = doc.mimeType === 'video/webm' || doc.mimeType === 'video/mp4'
+    const targetPath = isLottie ? rawCache : (isVideo ? webmCache : webpCache)
+
+    try {
+      if (!fs.existsSync(targetPath) || fs.statSync(targetPath).size === 0) {
+        await holder.client.downloadToFile(targetPath, doc as any)
+      }
+    } catch (err) {
+      if (doc.thumbs && doc.thumbs.length > 0) {
+        const thumb = doc.thumbs[doc.thumbs.length - 1]
+        if (thumb && (thumb as any).type) {
+          const thumbLoc = {
+            _: 'inputDocumentFileLocation',
+            id: doc.id,
+            accessHash: doc.accessHash,
+            fileReference: doc.fileReference || Buffer.alloc(0),
+            thumbSize: (thumb as any).type,
+          }
+          await holder.client.downloadToFile(webpCache, thumbLoc as any).catch(() => {})
+        }
+      }
+    }
+
+    // 3. Process downloaded payload
+    if (isLottie && fs.existsSync(rawCache) && fs.statSync(rawCache).size > 0) {
+      try {
+        const buffer = fs.readFileSync(rawCache)
+        let jsonStr = ''
+        if (buffer.length > 2 && buffer[0] === 0x1f && buffer[1] === 0x8b) {
+          const unzipped = zlib.gunzipSync(buffer)
+          jsonStr = unzipped.toString('utf8')
+        } else {
+          jsonStr = buffer.toString('utf8')
+        }
+        const parsed = JSON.parse(jsonStr)
+        fs.writeFileSync(lottieCache, jsonStr, 'utf8')
+        return { format: 'lottie', data: parsed }
+      } catch (err) {
+        Logger.warn('[AccountManager] Failed to parse Lottie for gift:', err)
+      }
+    }
+
+    if (fs.existsSync(webmCache) && fs.statSync(webmCache).size > 0) {
+      return { format: 'video', url: `guidegram-media://${webmCache.replace(/\\/g, '/')}` }
+    }
+    if (fs.existsSync(webpCache) && fs.statSync(webpCache).size > 0) {
+      return { format: 'image', url: `guidegram-media://${webpCache.replace(/\\/g, '/')}` }
+    }
+
+    return null
+  }
+
   public async getSavedStarGifts(accountId: string, userId?: string): Promise<StarGiftItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return []
@@ -11255,7 +11355,10 @@ export class AccountManager {
         }
       }
 
-      return (res.gifts || []).map((g: any, idx: number) => {
+      const giftsList: StarGiftItem[] = []
+
+      for (let idx = 0; idx < (res.gifts || []).length; idx++) {
+        const g = res.gifts[idx]
         let fromId = ''
         if (g.fromId?._ === 'peerUser') fromId = g.fromId.userId?.toString()
         else if (g.fromId?._ === 'peerChannel') fromId = `-${g.fromId.channelId}`
@@ -11264,7 +11367,65 @@ export class AccountManager {
         const fromUser = usersMap.get(fromId)
         const fromName = fromUser ? formatEntityName(fromUser) : undefined
 
-        return {
+        let doc: any = null
+        const isUnique = g.gift?._ === 'starGiftUnique'
+        let backdrop: any = undefined
+        const num: number | undefined = g.giftNum ?? g.gift_num ?? g.gift?.num
+        const slug: string | undefined = g.gift?.slug
+
+        if (g.gift?.sticker && g.gift.sticker._ === 'document') {
+          doc = g.gift.sticker
+        }
+
+        if (g.gift?.background) {
+          backdrop = {
+            centerColor: this.intToHexColor(g.gift.background.centerColor ?? g.gift.background.center_color),
+            edgeColor: this.intToHexColor(g.gift.background.edgeColor ?? g.gift.background.edge_color),
+            textColor: this.intToHexColor(g.gift.background.textColor ?? g.gift.background.text_color),
+          }
+        }
+
+        if (Array.isArray(g.gift?.attributes)) {
+          for (const attr of g.gift.attributes) {
+            if (attr._ === 'starGiftAttributeModel' && attr.document?._ === 'document') {
+              doc = attr.document
+            } else if (attr._ === 'starGiftAttributeBackdrop') {
+              backdrop = {
+                centerColor: this.intToHexColor(attr.centerColor ?? attr.center_color),
+                edgeColor: this.intToHexColor(attr.edgeColor ?? attr.edge_color),
+                patternColor: this.intToHexColor(attr.patternColor ?? attr.pattern_color),
+                textColor: this.intToHexColor(attr.textColor ?? attr.text_color),
+              }
+            }
+          }
+        }
+
+        const docId = doc?.id?.toString()
+        let lottieData: any = undefined
+        let mediaUrl: string | undefined = undefined
+        let mediaFormat: 'lottie' | 'video' | 'image' | undefined = undefined
+
+        // Quick check on local disk cache
+        if (docId) {
+          const lottieCache = path.join(this.mediaDir, `gift_${docId}.json`)
+          const webmCache = path.join(this.mediaDir, `gift_${docId}.webm`)
+          const webpCache = path.join(this.mediaDir, `gift_${docId}.webp`)
+
+          if (fs.existsSync(lottieCache)) {
+            try {
+              lottieData = JSON.parse(fs.readFileSync(lottieCache, 'utf8'))
+              mediaFormat = 'lottie'
+            } catch (_) {}
+          } else if (fs.existsSync(webmCache) && fs.statSync(webmCache).size > 0) {
+            mediaUrl = `guidegram-media://${webmCache.replace(/\\/g, '/')}`
+            mediaFormat = 'video'
+          } else if (fs.existsSync(webpCache) && fs.statSync(webpCache).size > 0) {
+            mediaUrl = `guidegram-media://${webpCache.replace(/\\/g, '/')}`
+            mediaFormat = 'image'
+          }
+        }
+
+        giftsList.push({
           id: g.gift?.id?.toString() || `saved_gift_${g.date || Date.now()}_${idx}`,
           stars: Number(g.gift?.stars || 0),
           convertStars: Number(g.convertStars || 0),
@@ -11277,8 +11438,29 @@ export class AccountManager {
           isSaved: Boolean(g.saved),
           canExportAt: g.canExportAt ? g.canExportAt * 1000 : undefined,
           transferStars: g.transferStars ? Number(g.transferStars) : undefined,
+          documentId: docId,
+          documentAccessHash: doc?.accessHash?.toString(),
+          fileReferenceHex: doc?.fileReference ? Buffer.from(doc.fileReference).toString('hex') : undefined,
+          mimeType: doc?.mimeType,
+          isUnique,
+          slug,
+          num,
+          backdrop,
+          lottieData,
+          mediaUrl,
+          mediaFormat,
+          rawDocument: doc,
+        })
+      }
+
+      // Pre-download first 3 gifts asynchronously so user sees them animated immediately
+      for (const item of giftsList.slice(0, 3)) {
+        if (item.documentId && !item.lottieData && !item.mediaUrl && item.rawDocument) {
+          this.getStarGiftMedia(accountId, item.documentId, item.rawDocument).catch(() => {})
         }
-      })
+      }
+
+      return giftsList
     } catch (err: any) {
       Logger.warn('[AccountManager] getSavedStarGifts error:', err?.message || err)
       return []
@@ -11295,17 +11477,75 @@ export class AccountManager {
         hash: 0,
       })
 
-      return (res.gifts || []).map((g: any, idx: number) => ({
-        id: g.id?.toString() || `catalog_gift_${idx}`,
-        stars: Number(g.stars || 0),
-        convertStars: Number(g.convertStars || 0),
-        title: g.title,
-        date: 0,
-        isLimited: Boolean(g.limited),
-        isSoldOut: Boolean(g.soldOut),
-        availabilityRemains: g.availabilityRemains,
-        availabilityTotal: g.availabilityTotal,
-      }))
+      const catalogList: StarGiftItem[] = []
+
+      for (let idx = 0; idx < (res.gifts || []).length; idx++) {
+        const g = res.gifts[idx]
+        const doc = g.sticker?._ === 'document' ? g.sticker : null
+        const docId = doc?.id?.toString()
+
+        let backdrop: any = undefined
+        if (g.background) {
+          backdrop = {
+            centerColor: this.intToHexColor(g.background.centerColor ?? g.background.center_color),
+            edgeColor: this.intToHexColor(g.background.edgeColor ?? g.background.edge_color),
+            textColor: this.intToHexColor(g.background.textColor ?? g.background.text_color),
+          }
+        }
+
+        let lottieData: any = undefined
+        let mediaUrl: string | undefined = undefined
+        let mediaFormat: 'lottie' | 'video' | 'image' | undefined = undefined
+
+        if (docId) {
+          const lottieCache = path.join(this.mediaDir, `gift_${docId}.json`)
+          const webmCache = path.join(this.mediaDir, `gift_${docId}.webm`)
+          const webpCache = path.join(this.mediaDir, `gift_${docId}.webp`)
+
+          if (fs.existsSync(lottieCache)) {
+            try {
+              lottieData = JSON.parse(fs.readFileSync(lottieCache, 'utf8'))
+              mediaFormat = 'lottie'
+            } catch (_) {}
+          } else if (fs.existsSync(webmCache) && fs.statSync(webmCache).size > 0) {
+            mediaUrl = `guidegram-media://${webmCache.replace(/\\/g, '/')}`
+            mediaFormat = 'video'
+          } else if (fs.existsSync(webpCache) && fs.statSync(webpCache).size > 0) {
+            mediaUrl = `guidegram-media://${webpCache.replace(/\\/g, '/')}`
+            mediaFormat = 'image'
+          }
+        }
+
+        catalogList.push({
+          id: g.id?.toString() || `catalog_gift_${idx}`,
+          stars: Number(g.stars || 0),
+          convertStars: Number(g.convertStars || 0),
+          title: g.title,
+          date: 0,
+          isLimited: Boolean(g.limited),
+          isSoldOut: Boolean(g.soldOut),
+          availabilityRemains: g.availabilityRemains,
+          availabilityTotal: g.availabilityTotal,
+          documentId: docId,
+          documentAccessHash: doc?.accessHash?.toString(),
+          fileReferenceHex: doc?.fileReference ? Buffer.from(doc.fileReference).toString('hex') : undefined,
+          mimeType: doc?.mimeType,
+          backdrop,
+          lottieData,
+          mediaUrl,
+          mediaFormat,
+          rawDocument: doc,
+        })
+      }
+
+      // Pre-download first 3 catalog items in background
+      for (const item of catalogList.slice(0, 3)) {
+        if (item.documentId && !item.lottieData && !item.mediaUrl && item.rawDocument) {
+          this.getStarGiftMedia(accountId, item.documentId, item.rawDocument).catch(() => {})
+        }
+      }
+
+      return catalogList
     } catch (err: any) {
       Logger.warn('[AccountManager] getStarGifts error:', err?.message || err)
       return []

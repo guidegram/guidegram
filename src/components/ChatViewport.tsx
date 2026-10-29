@@ -89,7 +89,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem } from '../types/telegram'
+import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem, StarGiftItem } from '../types/telegram'
 import lottie from 'lottie-web'
 import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
@@ -112,6 +112,7 @@ import { ChatSettingsModal } from './ChatSettingsModal'
 import { ChatInviteLinksModal } from './ChatInviteLinksModal'
 import { PaidReactionModal } from './PaidReactionModal'
 import { StarGiftsModal } from './StarGiftsModal'
+import { LiquidGiftOrbit } from './effects/LiquidGiftOrbit'
 import { SecretChatFingerprintModal } from './SecretChatFingerprintModal'
 import { GameScoreModal } from './GameScoreModal'
 import { AutoDeleteModal } from './AutoDeleteModal'
@@ -860,6 +861,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isBotMenuConfigModalOpen, setIsBotMenuConfigModalOpen] = useState(false)
   const [isPaidMediaComposerModalOpen, setIsPaidMediaComposerModalOpen] = useState(false)
   const [isStarGiftsModalOpen, setIsStarGiftsModalOpen] = useState(false)
+  const [peerStarGifts, setPeerStarGifts] = useState<StarGiftItem[]>([])
+
+  useEffect(() => {
+    if (!isInfoOpen || !chat?.accountId || !chat?.id || (chatDetails?.stargiftsCount ?? 0) <= 0) {
+      setPeerStarGifts([])
+      return
+    }
+    let isMounted = true
+    if (window.guidegram?.getSavedStarGifts) {
+      window.guidegram
+        .getSavedStarGifts(chat.accountId, chat.id)
+        .then((res) => {
+          if (isMounted) setPeerStarGifts(res || [])
+        })
+        .catch(() => {})
+    }
+    return () => {
+      isMounted = false
+    }
+  }, [isInfoOpen, chat?.accountId, chat?.id, chatDetails?.stargiftsCount])
 
   const handleSetChatTheme = async (emoticon: string, _forBoth: boolean) => {
     if (!chat) return
@@ -9063,65 +9084,79 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {/* Avatar & Title Hero */}
               <div className="flex flex-col items-center text-center">
                 <div className="relative mb-3 flex items-center justify-center">
-                  {/* Star Gifts Orbital Ring & Floating Badges */}
-                  {(chatDetails?.stargiftsCount ?? 0) > 0 && (
-                    <div
-                      onClick={() => setIsStarGiftsModalOpen(true)}
-                      className="absolute -inset-3 z-10 cursor-pointer pointer-events-auto group/orbit"
-                      title={`${chatDetails?.stargiftsCount} Star Gifts (Click to open gifts shelf)`}
-                    >
-                      {/* Outer subtle glowing dashed orbit */}
-                      <div className="absolute inset-0 rounded-full border border-amber-400/35 border-dashed star-gifts-orbit pointer-events-none shadow-[0_0_15px_rgba(245,158,11,0.25)]" />
-                      {/* Orbiting items container */}
-                      <div className="absolute inset-0 star-gifts-orbit pointer-events-none">
-                        {/* Top-right floating Gift badge */}
-                        <div className="absolute -top-1.5 right-1 pointer-events-auto">
-                          <div className="star-gifts-counter-orbit w-6 h-6 rounded-full bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-400 shadow-md shadow-amber-500/40 flex items-center justify-center text-white border-2 border-dark-900 group-hover/orbit:scale-125 transition-transform">
-                            <Gift className="w-3 h-3 text-white" />
-                          </div>
-                        </div>
-                        {/* Bottom-left floating Star badge */}
-                        <div className="absolute -bottom-1.5 left-1 pointer-events-auto">
-                          <div className="star-gifts-counter-orbit w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-500 to-amber-300 shadow-md shadow-yellow-500/30 flex items-center justify-center text-dark-900 border-2 border-dark-900 group-hover/orbit:scale-125 transition-transform">
-                            <Star className="w-2.5 h-2.5 text-dark-900 fill-current" />
-                          </div>
-                        </div>
-                        {/* Left-center floating sparkles badge */}
-                        <div className="absolute top-1/2 -left-2 -translate-y-1/2 pointer-events-auto">
-                          <div className="star-gifts-counter-orbit w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 shadow-md flex items-center justify-center text-white border-2 border-dark-900 group-hover/orbit:scale-125 transition-transform">
-                            <Sparkles className="w-2.5 h-2.5 text-white" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <Avatar
-                    accountId={chat.accountId}
-                    peerId={chat.id}
-                    title={chatDetails?.title || chat.title}
-                    initials={chat.avatarInitials}
-                    avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
-                    size="xl"
-                    isChannel={chat.isChannel}
-                    isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
-                    className="cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={async () => {
-                      const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
-                      if (currentPhoto) {
-                        setLightboxUrl(currentPhoto)
-                      } else if (window.guidegram?.getProfilePhoto) {
-                        try {
-                          showToast('Loading full profile photo...')
-                          const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
-                          if (big) setLightboxUrl(big)
-                          else showToast('No profile photo available')
-                        } catch {
-                          showToast('Could not load profile photo')
-                        }
+                  {/* Real Liquid Jelly Star Gifts Orbit (Video Parity) */}
+                  {(chatDetails?.stargiftsCount ?? 0) > 0 ? (
+                    <LiquidGiftOrbit
+                      accountId={chat.accountId}
+                      starGifts={
+                        peerStarGifts.length > 0
+                          ? peerStarGifts
+                          : Array.from(
+                              { length: Math.min(chatDetails?.stargiftsCount || 1, 3) },
+                              (_, i) => ({
+                                id: `placeholder_gift_${i}`,
+                                stars: 15,
+                                date: 0,
+                              })
+                            )
                       }
-                    }}
-                  />
+                      onOpenModal={() => setIsStarGiftsModalOpen(true)}
+                    >
+                      <Avatar
+                        accountId={chat.accountId}
+                        peerId={chat.id}
+                        title={chatDetails?.title || chat.title}
+                        initials={chat.avatarInitials}
+                        avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
+                        size="xl"
+                        isChannel={chat.isChannel}
+                        isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
+                        className="cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={async () => {
+                          const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
+                          if (currentPhoto) {
+                            setLightboxUrl(currentPhoto)
+                          } else if (window.guidegram?.getProfilePhoto) {
+                            try {
+                              showToast('Loading full profile photo...')
+                              const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
+                              if (big) setLightboxUrl(big)
+                              else showToast('No profile photo available')
+                            } catch {
+                              showToast('Could not load profile photo')
+                            }
+                          }
+                        }}
+                      />
+                    </LiquidGiftOrbit>
+                  ) : (
+                    <Avatar
+                      accountId={chat.accountId}
+                      peerId={chat.id}
+                      title={chatDetails?.title || chat.title}
+                      initials={chat.avatarInitials}
+                      avatarUrl={chatDetails?.avatarUrl || chat.avatarUrl}
+                      size="xl"
+                      isChannel={chat.isChannel}
+                      isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
+                      className="cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={async () => {
+                        const currentPhoto = chatDetails?.avatarUrl || chat.avatarUrl
+                        if (currentPhoto) {
+                          setLightboxUrl(currentPhoto)
+                        } else if (window.guidegram?.getProfilePhoto) {
+                          try {
+                            showToast('Loading full profile photo...')
+                            const big = await window.guidegram.getProfilePhoto(chat.accountId, chat.id, true)
+                            if (big) setLightboxUrl(big)
+                            else showToast('No profile photo available')
+                          } catch {
+                            showToast('Could not load profile photo')
+                          }
+                        }
+                      }}
+                    />
+                  )}
                 </div>
 
                 <div className="flex items-center justify-center gap-1.5 mb-1 px-2">

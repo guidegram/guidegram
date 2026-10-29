@@ -788,6 +788,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
   getStarGifts: (accountId: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gift-catalog', { accountId }),
+  getStarGiftMedia: (
+    accountId: string,
+    documentId: string,
+    rawDoc?: any
+  ): Promise<{ format: 'lottie' | 'video' | 'image'; data?: any; url?: string } | null> =>
+    ipcRenderer.invoke('telegram:get-star-gift-media', { accountId, documentId, rawDoc }),
   convertStarGift: (
     accountId: string,
     stargiftMsgId: number

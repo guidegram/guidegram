@@ -144,4 +144,11 @@ const connSave = await mockMgr.toggleSaveStarGift('acc1', 777, false)
 assert.equal(connSave.success, true)
 
 console.log('  ✅ [PASS] convertStarGift & toggleSaveStarGift RPC state validation passed')
+
+// 6. Inspection of new Star Gift Media & Visual features
+assert(accountManagerSource.includes('public async getStarGiftMedia('), 'accountManager must implement getStarGiftMedia')
+assert(mainSource.includes("'telegram:get-star-gift-media'"), 'main.ts must register telegram:get-star-gift-media')
+assert(preloadSource.includes('getStarGiftMedia:'), 'preload.ts must expose getStarGiftMedia')
+console.log('  ✅ [PASS] getStarGiftMedia IPC & bridge validation passed')
+
 console.log('🌟 All Phase 54 tests PASSED successfully!')
