@@ -91,25 +91,47 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
   }, [url])
 
   // Current photo index in gallery
+  const isCustomGalleryMode = Boolean(customGallery && customGallery.length > 0)
+
+  const galleryIndex = useMemo(() => {
+    if (!isCustomGalleryMode || !customGallery) return -1
+    const idx = customGallery.indexOf(url)
+    return idx >= 0 ? idx : 0
+  }, [isCustomGalleryMode, customGallery, url])
+
   const currentIndex = useMemo(() => {
+    if (isCustomGalleryMode) return galleryIndex
     if (!message || allPhotoMessages.length === 0) return -1
     return allPhotoMessages.findIndex((m) => m.id === message.id)
-  }, [message, allPhotoMessages])
+  }, [isCustomGalleryMode, galleryIndex, message, allPhotoMessages])
 
-  const hasPrev = currentIndex > 0
-  const hasNext = currentIndex >= 0 && currentIndex < allPhotoMessages.length - 1
+  const hasPrev = isCustomGalleryMode
+    ? Boolean(customGallery && customGallery.length > 1 && galleryIndex > 0)
+    : currentIndex > 0
+
+  const hasNext = isCustomGalleryMode
+    ? Boolean(customGallery && customGallery.length > 1 && galleryIndex < customGallery.length - 1)
+    : (currentIndex >= 0 && currentIndex < allPhotoMessages.length - 1)
 
   const handlePrev = useCallback(() => {
+    if (isCustomGalleryMode && onNavigateGallery && galleryIndex > 0) {
+      onNavigateGallery(galleryIndex - 1)
+      return
+    }
     if (!hasPrev || !onNavigate) return
     const prevMsg = allPhotoMessages[currentIndex - 1]
     onNavigate(prevMsg)
-  }, [hasPrev, onNavigate, allPhotoMessages, currentIndex])
+  }, [isCustomGalleryMode, onNavigateGallery, galleryIndex, hasPrev, onNavigate, allPhotoMessages, currentIndex])
 
   const handleNext = useCallback(() => {
+    if (isCustomGalleryMode && onNavigateGallery && customGallery && galleryIndex < customGallery.length - 1) {
+      onNavigateGallery(galleryIndex + 1)
+      return
+    }
     if (!hasNext || !onNavigate) return
     const nextMsg = allPhotoMessages[currentIndex + 1]
     onNavigate(nextMsg)
-  }, [hasNext, onNavigate, allPhotoMessages, currentIndex])
+  }, [isCustomGalleryMode, onNavigateGallery, customGallery, galleryIndex, hasNext, onNavigate, allPhotoMessages, currentIndex])
 
   // Zoom helpers
   const handleZoomIn = useCallback(() => {
