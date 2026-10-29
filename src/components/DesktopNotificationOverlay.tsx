@@ -70,21 +70,20 @@ export const DesktopNotificationOverlay: React.FC = () => {
   if (notifications.length === 0) return null
 
   return (
-    <div className="w-full h-full p-3 flex flex-col justify-end pointer-events-none select-none overflow-hidden">
-      <div className="w-full flex flex-col-reverse gap-2.5 pointer-events-auto">
-        <NotificationHUD
-          notifications={notifications}
-          onDismiss={handleDismiss}
-          onSelectChat={handleSelectChat}
-          onQuickReply={handleQuickReply}
-          onMarkAsRead={handleMarkAsRead}
-          onMuteChat={handleMuteChat}
-          position={position}
-          privacyMode={privacyMode}
-          quickReplyEnabled={quickReplyEnabled}
-          isMobile={false}
-        />
-      </div>
+    <div className="w-full h-full p-2 select-none overflow-hidden bg-transparent">
+      <NotificationHUD
+        notifications={notifications}
+        onDismiss={handleDismiss}
+        onSelectChat={handleSelectChat}
+        onQuickReply={handleQuickReply}
+        onMarkAsRead={handleMarkAsRead}
+        onMuteChat={handleMuteChat}
+        position={position}
+        privacyMode={privacyMode}
+        quickReplyEnabled={quickReplyEnabled}
+        isMobile={false}
+        isStandalone={true}
+      />
     </div>
   )
 }

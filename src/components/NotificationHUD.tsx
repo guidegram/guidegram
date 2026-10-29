@@ -41,6 +41,7 @@ export interface NotificationHUDProps {
   quickReplyEnabled?: boolean
   vibrateEnabled?: boolean
   isMobile?: boolean
+  isStandalone?: boolean
 }
 
 export const NotificationHUD: React.FC<NotificationHUDProps> = ({
@@ -55,6 +56,7 @@ export const NotificationHUD: React.FC<NotificationHUDProps> = ({
   quickReplyEnabled = true,
   vibrateEnabled = true,
   isMobile = false,
+  isStandalone = false,
 }) => {
   if (!notifications || notifications.length === 0) return null
 
@@ -69,8 +71,14 @@ export const NotificationHUD: React.FC<NotificationHUDProps> = ({
     }
   }, [notifications.length, vibrateEnabled])
 
-  // Placement styles for desktop vs mobile
+  // Placement styles for desktop vs mobile vs standalone overlay
   const getContainerPlacement = () => {
+    if (isStandalone) {
+      if (position.startsWith('top')) {
+        return 'w-full h-full p-2 flex flex-col gap-2.5 pointer-events-none justify-start'
+      }
+      return 'w-full h-full p-2 flex flex-col-reverse gap-2.5 pointer-events-none justify-start'
+    }
     if (isMobile) {
       return 'fixed top-3 inset-x-3 max-w-md mx-auto z-[9999] flex flex-col gap-2 pointer-events-none'
     }

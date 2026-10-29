@@ -1411,7 +1411,7 @@ function setupIpcHandlers() {
           const { accountId, chatId, messageId } = payload || {}
           if (accountId && chatId) {
             try {
-              await accountManager.markAsRead(accountId, chatId, messageId ? [messageId] : [])
+              await accountManager.markAsRead(accountId, chatId, messageId ? Number(messageId) : undefined)
             } catch (err) {
               Logger.warn('[Notification] markAsRead action error:', err)
             }
@@ -1425,7 +1425,12 @@ function setupIpcHandlers() {
           const { accountId, chatId, text, replyToMsgId } = payload || {}
           if (accountId && chatId && text) {
             try {
-              await accountManager.sendMessage(accountId, chatId, text, { replyToMsgId })
+              await accountManager.sendMessage(
+                accountId,
+                chatId,
+                text,
+                replyToMsgId ? Number(replyToMsgId) : undefined
+              )
             } catch (err) {
               Logger.warn('[Notification] quick reply action error:', err)
             }

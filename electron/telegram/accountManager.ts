@@ -2268,6 +2268,7 @@ export class AccountManager {
               try {
                 const peerNum = Number(d.id)
                 const targetPeer = !isNaN(peerNum) ? peerNum : d.id
+                if (!holder.client) return
                 const chatObj: any = await holder.client.getChat(targetPeer)
                 if (chatObj) {
                   const resolvedName = formatEntityName(chatObj, '')
