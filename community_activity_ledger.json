@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 39,
-    "githubIssuesCommented": 31,
+    "totalActivities": 40,
+    "githubIssuesCommented": 32,
     "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_ptb_5315",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "python-telegram-bot/python-telegram-bot",
+      "targetIssueNumber": 5315,
+      "targetTitle": "Add filters.IS_BOT — no filter exposes User.is_bot (needed for multi-bot group chats)",
+      "targetUser": "ShahadatTest",
+      "url": "https://github.com/python-telegram-bot/python-telegram-bot/issues/5315#issuecomment-6536118935",
+      "issueUrl": "https://github.com/python-telegram-bot/python-telegram-bot/issues/5315",
+      "status": "live_public",
+      "summary": "Prevented runtime AttributeError in IS_BOT PR by clarifying MessageFilter receives Message not Update, guarding from_user is None in channel posts, and addressing Bot API 8+ sender_business_bot routing.",
+      "timestamp": "2026-10-30T23:58:00Z"
+    },
     {
       "id": "gh_comment_aiogram_1889",
       "platform": "github",
