@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 33,
-    "githubIssuesCommented": 25,
+    "totalActivities": 34,
+    "githubIssuesCommented": 26,
     "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_30964",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 30964,
+      "targetTitle": "Push notifications do not appear after a new message in new monoforums (forums in PM with bots)",
+      "targetUser": "DasicPhilipp",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/30964#issuecomment-6535660156",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/30964",
+      "status": "live_public",
+      "summary": "Diagnosed monoforum notification loss in bot 1-on-1 topics due to topic-first dispatch assuming ChannelData fallback, and provided UserData direct notification settings inheritance pattern from Guidegram.",
+      "timestamp": "2026-10-30T23:26:00Z"
+    },
     {
       "id": "gh_pr_ebertti_412",
       "platform": "github",
