@@ -3813,6 +3813,7 @@ export class AccountManager {
         })
       }
 
+      let finalItems = items
       if (holder.info?.isBot) {
         if (items.length > 0) {
           this.store.recordBotMessages(accountId, chatId, items)
@@ -3821,14 +3822,14 @@ export class AccountManager {
         const mergedMap = new Map<number, MessageItem>()
         for (const m of localBotMsgs) mergedMap.set(m.id, m)
         for (const m of items) mergedMap.set(m.id, m)
-        items = Array.from(mergedMap.values()).sort((a, b) => (a.date - b.date) || (a.id - b.id))
+        finalItems = Array.from(mergedMap.values()).sort((a, b) => (a.date - b.date) || (a.id - b.id))
       } else {
         if (items.length > 0) {
           this.store.recordMessages(accountId, chatId, items)
         }
       }
       const keepDeleted = this.store.getConfig().keepDeletedMessagesLocally !== false
-      return this.store.mergeAuditLogIntoMessages(accountId, chatId, items, keepDeleted)
+      return this.store.mergeAuditLogIntoMessages(accountId, chatId, finalItems, keepDeleted)
     } catch (err: any) {
       Logger.error(`[AccountManager] getMessages error for ${chatId}:`, err)
       if (holder?.info?.isBot) {
