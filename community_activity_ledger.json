@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 24,
-    "githubIssuesCommented": 18,
+    "totalActivities": 25,
+    "githubIssuesCommented": 19,
     "githubPullRequests": 1,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_unigram_3212",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "UnigramDev/Unigram",
+      "targetIssueNumber": 3212,
+      "targetTitle": "Ability to auto-start in system tray",
+      "targetUser": "PeopleInside",
+      "url": "https://github.com/UnigramDev/Unigram/issues/3212#issuecomment-6535285646",
+      "issueUrl": "https://github.com/UnigramDev/Unigram/issues/3212",
+      "status": "live_public",
+      "summary": "Detailed Windows Shell DWM window registration vs Window.Current.Activate() trap, silent StartupTask daemon mode, Win32 ITaskbarList::DeleteTab, and Guidegram's zero-pop-in lazy hydration architecture.",
+      "timestamp": "2026-10-30T22:58:58Z"
+    },
     {
       "id": "gh_comment_grammy_669",
       "platform": "github",
