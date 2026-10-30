@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { Minus, Square, X, Sparkles, Menu, Bell } from 'lucide-react'
+import { Minus, Square, X, Sparkles, Menu, Bell, Lock } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { useIsMobile } from '../utils/useIsMobile'
 import logoImg from '../assets/logo.png'
@@ -15,6 +15,8 @@ interface TitleBarProps {
   onOpenMcpHub?: () => void
   onCheckUpdate?: () => void
   isCheckingUpdate?: boolean
+  isPasscodeSet?: boolean
+  onLockApp?: () => void
   onOpenProxyModal?: () => void
   onOpenNotificationHistory?: () => void
   unreadNotificationsCount?: number
@@ -23,6 +25,8 @@ interface TitleBarProps {
 export const TitleBar: React.FC<TitleBarProps> = ({
   activeAccount,
   ghostMode,
+  isPasscodeSet = false,
+  onLockApp,
   onToggleGhostMode,
   onRequestClose,
   onToggleMainMenu,
@@ -145,6 +149,18 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                   {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
                 </span>
               )}
+            </motion.button>
+          )}
+
+          {isPasscodeSet && onLockApp && (
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              type="button"
+              onClick={onLockApp}
+              title="قفل کردن فوری گایدگرام (Lock Now)"
+              className="p-2 rounded-xl text-gray-300 hover:text-accent-cyan bg-white/5 cursor-pointer"
+            >
+              <Lock className="w-4 h-4 text-accent-cyan" />
             </motion.button>
           )}
         </div>
@@ -272,6 +288,19 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                 {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
               </span>
             )}
+          </motion.button>
+        )}
+
+        {isPasscodeSet && onLockApp && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="button"
+            onClick={onLockApp}
+            title="قفل کردن فوری گایدگرام (Lock Guidegram Now)"
+            className="p-1.5 rounded-xl text-gray-400 hover:text-accent-cyan hover:bg-white/10 transition-colors cursor-pointer mr-1 titlebar-no-drag"
+          >
+            <Lock className="w-4 h-4 text-accent-cyan" />
           </motion.button>
         )}
 

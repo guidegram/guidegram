@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { TitleBar } from './components/TitleBar'
+import { PasscodeLockOverlay } from './components/PasscodeLockOverlay'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { AccountDock } from './components/AccountDock'
 import { ChatTabs, TabCategory } from './components/ChatTabs'
@@ -117,6 +118,53 @@ export const App: React.FC = () => {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [isFolderManagerOpen, setIsFolderManagerOpen] = useState(false)
+  // Master Passcode Lock & Security Shield
+  const [isAppLocked, setIsAppLocked] = useState(false)
+  const [isPasscodeConfigured, setIsPasscodeConfigured] = useState(false)
+
+  useEffect(() => {
+    const checkPasscode = async () => {
+      try {
+        if (window.guidegram?.passcode?.getStatus) {
+          const st = await window.guidegram.passcode.getStatus()
+          setIsPasscodeConfigured(Boolean(st.isPasscodeSet))
+          if (st.isPasscodeSet && st.isLocked) {
+            setIsAppLocked(true)
+          }
+        } else {
+          const local = localStorage.getItem('guidegram_local_passcode')
+          if (local) {
+            setIsPasscodeConfigured(true)
+            setIsAppLocked(true)
+          }
+        }
+      } catch (err) {
+        console.warn('[App] Passcode check error:', err)
+      }
+    }
+    checkPasscode()
+  }, [])
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      if (window.guidegram?.passcode?.getStatus) {
+        window.guidegram.passcode.getStatus().then((st) => {
+          setIsPasscodeConfigured(Boolean(st.isPasscodeSet))
+        }).catch(() => {})
+      } else {
+        setIsPasscodeConfigured(!!localStorage.getItem('guidegram_local_passcode'))
+      }
+    }
+  }, [isSettingsOpen])
+
+  const handleManualLockApp = async () => {
+    try {
+      if (window.guidegram?.passcode?.lock) {
+        await window.guidegram.passcode.lock()
+      }
+    } catch {}
+    setIsAppLocked(true)
+  }
   const [createChatState, setCreateChatState] = useState<{ isOpen: boolean; mode: 'group' | 'channel' }>({
     isOpen: false,
     mode: 'group',
@@ -2442,6 +2490,8 @@ export const App: React.FC = () => {
       <TitleBar
         activeAccount={currentAccount}
         ghostMode={ghostMode}
+        isPasscodeSet={isPasscodeConfigured}
+        onLockApp={handleManualLockApp}
         onToggleGhostMode={handleToggleGhostMode}
         onRequestClose={handleRequestClose}
         onToggleMainMenu={() => setIsMainMenuOpen(true)}
@@ -3054,6 +3104,13 @@ export const App: React.FC = () => {
           quickReplyEnabled={config?.notificationQuickReply !== false}
           vibrateEnabled={config?.notificationVibrate !== false}
           isMobile={isMobile}
+        />
+      )}
+
+      {/* Full-Screen Master Passcode Lock Guard */}
+      {isAppLocked && (
+        <PasscodeLockOverlay
+          onUnlockSuccess={() => setIsAppLocked(false)}
         />
       )}
     </div>
