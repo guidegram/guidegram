@@ -2817,6 +2817,7 @@ export class AccountManager {
           lastMessageSticker,
           avatarInitials: initials,
           avatarUrl,
+          photoId: currentPhotoId || undefined,
           username: (peer as any).username,
           customEmojiStatusId:
             (peer as any).emojiStatus?.emoji?.toString() ||
@@ -2952,10 +2953,20 @@ export class AccountManager {
     setTimeout(async () => {
       for (const d of dialogs) {
         try {
-          const baseName = `${accountId}_${d.id}.jpg`
+          const cacheKey = `${accountId}_${d.id}`
+          const baseName = `${cacheKey}.jpg`
           const avatarFile = path.join(this.avatarsDir, `avatar_${baseName}`)
-          if (!fs.existsSync(avatarFile) || !d.avatarUrl || d.avatarUrl.length < 2000) {
-            await this.getProfilePhoto(accountId, d.id, false).catch(() => {})
+          const recordedPhotoId = this.peerPhotoIds.get(cacheKey)
+          const needsRefresh = Boolean(
+            !fs.existsSync(avatarFile) ||
+            !d.avatarUrl ||
+            d.avatarUrl.length < 2000 ||
+            (d.photoId && recordedPhotoId && recordedPhotoId !== d.photoId) ||
+            (d.photoId && !recordedPhotoId)
+          )
+
+          if (needsRefresh) {
+            await this.getProfilePhoto(accountId, d.id, false, true).catch(() => {})
           }
         } catch (_) {}
       }
