@@ -3481,7 +3481,7 @@ export class AccountManager {
         }
       }
 
-      const items: MessageItem[] = []
+      let items: MessageItem[] = []
       for (const m of rawMessages) {
         if (m._ === 'messageEmpty') continue
         const id = m.id
