@@ -112,6 +112,8 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [contacts, setContacts] = useState<DialogItem[]>([])
+  const [serverPeers, setServerPeers] = useState<DialogItem[]>([])
+  const [isSearchingServer, setIsSearchingServer] = useState(false)
 
   const effectiveAccountId = accountId || dialogs[0]?.accountId
 
@@ -143,10 +145,42 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     }
   }, [isOpen, effectiveAccountId])
 
+  // Live MTProto server search for peers not cached in local dialogs
+  useEffect(() => {
+    const q = search.trim().replace(/^@/, '')
+    if (!q || q.length < 2 || !effectiveAccountId || !window.guidegram?.searchPublicPeers) {
+      setServerPeers([])
+      setIsSearchingServer(false)
+      return
+    }
+
+    let cancelled = false
+    setIsSearchingServer(true)
+    const timer = setTimeout(() => {
+      window.guidegram
+        ?.searchPublicPeers(effectiveAccountId, q)
+        .then((peers: DialogItem[]) => {
+          if (!cancelled && Array.isArray(peers)) {
+            setServerPeers(peers)
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setIsSearchingServer(false)
+        })
+    }, 220)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [search, effectiveAccountId])
+
   useEffect(() => {
     if (isOpen && message) {
       setSelectedChatIds([])
       setSearch('')
+      setServerPeers([])
       setLoading(false)
       setWithoutQuote(true)
       setDropMediaCaptions(false)
@@ -155,7 +189,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     }
   }, [isOpen, message])
 
-  // Combine dialogs with contacts so all reachable peers can be searched & forwarded to
+  // Combine dialogs with contacts & live server results so all reachable peers can be searched & forwarded to
   const allDestinations = useMemo(() => {
     const mergedMap = new Map<string, DialogItem>()
     for (const d of dialogs) {
@@ -166,8 +200,13 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
         mergedMap.set(c.id, c)
       }
     }
+    for (const s of serverPeers) {
+      if (s.id && !mergedMap.has(s.id)) {
+        mergedMap.set(s.id, s)
+      }
+    }
     return Array.from(mergedMap.values())
-  }, [dialogs, contacts])
+  }, [dialogs, contacts, serverPeers])
 
   // Filter according to strict business logic:
   // 1. Saved Messages handled separately
@@ -551,15 +590,20 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-dark-800 border border-white/5 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
               />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-white cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1.5">
+                {isSearchingServer && (
+                  <div className="w-3 h-3 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                )}
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="text-gray-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
