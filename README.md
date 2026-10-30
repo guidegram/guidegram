@@ -7,11 +7,24 @@
 [![GitHub Release](https://img.shields.io/github/v/release/guidegram/guidegram?style=for-the-badge&color=22c55e&logo=github)](https://github.com/guidegram/guidegram/releases/latest)
 [![Windows](https://img.shields.io/badge/Platform-Windows%20x64-0078d4?style=for-the-badge&logo=windows)](https://github.com/guidegram/guidegram/releases/latest)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary%20%2F%20All%20Rights%20Reserved-red.svg?style=for-the-badge)](#-license--intellectual-property)
+[![Telegram Channel](https://img.shields.io/badge/Telegram-Official%20Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/GuideGram_Official)
+[![Telegram Group](https://img.shields.io/badge/Telegram-Discussion%20Group-24A1DE?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/GuidegramGroup)
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Electron](https://img.shields.io/badge/Electron-34.2-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
 
 > A modern, lightning-fast, ultra-portable desktop client for Telegram engineered to eliminate the 3-account restriction, protect identities with isolated proxies and dedicated environment profiles, preserve deleted messages and edit histories, host Telegram Mini Apps, accelerate downloads with multi-worker MTProto, and deliver comprehensive group activity intelligence.
+
+---
+
+## 💬 Community & Official Channels
+
+Stay connected for the latest releases, feature updates, discussion, and direct support:
+
+| Channel / Group | Description | Link |
+| :--- | :--- | :--- |
+| 📢 **Official Channel** | New versions, changelogs, feature polls, and important security announcements | 👉 [**Join @GuideGram_Official**](https://t.me/GuideGram_Official) |
+| 👥 **Discussion Group** | Community discussion, Q&A, troubleshooting, and feature requests | 👉 [**Join @GuidegramGroup**](https://t.me/GuidegramGroup) |
 
 ---
 
@@ -365,6 +378,11 @@ The compiled portable application will be output to the `release/win-unpacked` d
 ---
 
 ## 🤝 Contributing & Community
+
+Join our global Telegram community to discuss features, report issues, get real-time assistance, and stay updated with the latest releases:
+
+- 📢 **Official Telegram Channel**: [@GuideGram_Official](https://t.me/GuideGram_Official) — Releases, changelogs, announcements, and roadmap previews.
+- 💬 **Official Telegram Group**: [@GuidegramGroup](https://t.me/GuidegramGroup) — Direct feedback, community help, and discussions with developers.
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code standards, TypeScript guidelines, and our Pull Request workflow.
 
