@@ -8,9 +8,9 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 32,
+    "totalActivities": 33,
     "githubIssuesCommented": 25,
-    "githubPullRequests": 2,
+    "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
     "hackernewsComments": 1,
@@ -18,6 +18,19 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_pr_ebertti_412",
+      "platform": "github",
+      "type": "pull_request",
+      "account": "DoctorGuidance",
+      "targetRepo": "ebertti/awesome-telegram",
+      "targetIssueNumber": 412,
+      "targetTitle": "Add Guidegram to Tools",
+      "url": "https://github.com/ebertti/awesome-telegram/pull/412",
+      "status": "open",
+      "summary": "Submitted Guidegram to Tools section in curated awesome-telegram repository (6,182+ stars), adhering to CLAUDE.md guidelines, alphabetical sorting, and single-sentence specification.",
+      "timestamp": "2026-10-30T23:22:00Z"
+    },
     {
       "id": "gh_comment_gotd_1853",
       "platform": "github",
