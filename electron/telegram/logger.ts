@@ -15,6 +15,21 @@ export class Logger {
       }
       this.logFile = path.join(this.logDir, 'guidegram.log')
       this.errorFile = path.join(this.logDir, 'error.log')
+
+      // Auto-rotation guard: prevent runaway log files on disk (cap error.log at 2MB, guidegram.log at 5MB)
+      try {
+        if (fs.existsSync(this.errorFile) && fs.statSync(this.errorFile).size > 2 * 1024 * 1024) {
+          const oldErr = `${this.errorFile}.old`
+          try { if (fs.existsSync(oldErr)) fs.unlinkSync(oldErr) } catch {}
+          fs.renameSync(this.errorFile, oldErr)
+        }
+        if (fs.existsSync(this.logFile) && fs.statSync(this.logFile).size > 5 * 1024 * 1024) {
+          const oldLog = `${this.logFile}.old`
+          try { if (fs.existsSync(oldLog)) fs.unlinkSync(oldLog) } catch {}
+          fs.renameSync(this.logFile, oldLog)
+        }
+      } catch (_) {}
+
       this.initialized = true
 
       this.info('=====================================================')

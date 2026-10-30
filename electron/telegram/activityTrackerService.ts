@@ -75,6 +75,7 @@ export class ActivityTrackerService {
     this.getConfig = getConfig || (() => ({} as AppConfig))
     this.ensureDirectory()
     this.initUptimeTracker()
+    this.sanitizeAllDiskFiles().catch(() => {})
   }
 
   private ensureDirectory(): void {
@@ -122,7 +123,7 @@ export class ActivityTrackerService {
         if (curLast) {
           curLast.end = curNow
         }
-        fs.writeFileSync(fp, JSON.stringify(this.appUptimeIntervals, null, 2), 'utf-8')
+        fs.promises.writeFile(fp, JSON.stringify(this.appUptimeIntervals, null, 2), 'utf-8').catch(() => {})
       } catch (err) {
         // Silent fail on write
       }
@@ -151,6 +152,157 @@ export class ActivityTrackerService {
     return path.join(this.activityDir, `snapshots_${accountId}.json`)
   }
 
+  private isOnlineStatus(status: UserOnlineStatusType): boolean {
+    return status === 'online'
+  }
+
+  private isOfflineStatus(status: UserOnlineStatusType): boolean {
+    return (
+      status === 'offline' ||
+      status === 'recently' ||
+      status === 'within_week' ||
+      status === 'within_month' ||
+      status === 'long_time_ago'
+    )
+  }
+
+  public async sanitizeAllDiskFiles(): Promise<void> {
+    const candidateDirs = [this.activityDir, 'D:\\Guidegram\\data\\activity_tracker']
+    const seenDirs = new Set<string>()
+
+    for (const targetDir of candidateDirs) {
+      if (!targetDir || seenDirs.has(targetDir)) continue
+      seenDirs.add(targetDir)
+      try {
+        if (!fs.existsSync(targetDir)) continue
+        const files = await fs.promises.readdir(targetDir)
+
+        // 1. Sanitize status_*.json
+        const statusFiles = files.filter((f) => f.startsWith('status_') && f.endsWith('.json'))
+        for (const sf of statusFiles) {
+          try {
+            const filePath = path.join(targetDir, sf)
+            const raw = await fs.promises.readFile(filePath, 'utf-8')
+            const data: Record<string, UserStatusRecord[]> = JSON.parse(raw)
+            let modified = false
+            const cleaned: Record<string, UserStatusRecord[]> = {}
+
+            for (const [userId, recs] of Object.entries(data)) {
+              if (!Array.isArray(recs) || recs.length === 0) continue
+              const filtered: UserStatusRecord[] = []
+              for (const r of recs) {
+                if (!r || r.status === 'empty') {
+                  modified = true
+                  continue
+                }
+                const last = filtered[filtered.length - 1]
+                if (!last) {
+                  filtered.push(r)
+                  continue
+                }
+                if (this.isOnlineStatus(r.status) && this.isOnlineStatus(last.status)) {
+                  if (r.expires && (!last.expires || r.expires > last.expires)) {
+                    last.expires = r.expires
+                  }
+                  modified = true
+                  continue
+                }
+                if (this.isOfflineStatus(r.status) && this.isOfflineStatus(last.status)) {
+                  if (r.wasOnline && (!last.wasOnline || r.wasOnline > last.wasOnline)) {
+                    last.wasOnline = r.wasOnline
+                  }
+                  modified = true
+                  continue
+                }
+                filtered.push(r)
+              }
+              if (filtered.length > 0) {
+                const bounded = filtered.length > 30 ? filtered.slice(-30) : filtered
+                if (bounded.length !== recs.length) modified = true
+                cleaned[userId] = bounded
+              } else {
+                modified = true
+              }
+            }
+
+            if (modified || Object.keys(cleaned).length !== Object.keys(data).length) {
+              await fs.promises.writeFile(filePath, JSON.stringify(cleaned), 'utf-8')
+              Logger.info(`[ActivityTracker] Sanitized and pruned bloated status file: ${sf}`)
+            }
+          } catch (e) {
+            Logger.warn(`[ActivityTracker] Failed sanitizing ${sf}:`, e)
+          }
+        }
+
+        // 2. Sanitize snapshots_*.json
+        const snapshotFiles = files.filter((f) => f.startsWith('snapshots_') && f.endsWith('.json'))
+        for (const snf of snapshotFiles) {
+          try {
+            const filePath = path.join(targetDir, snf)
+            const raw = await fs.promises.readFile(filePath, 'utf-8')
+            const data: Record<string, UserSnapshot> = JSON.parse(raw)
+            let modified = false
+
+            for (const [userId, s] of Object.entries(data)) {
+              if (s && s.avatarUrl && typeof s.avatarUrl === 'string' && s.avatarUrl.startsWith('data:image')) {
+                s.avatarUrl = undefined
+                modified = true
+              }
+            }
+
+            if (modified) {
+              await fs.promises.writeFile(filePath, JSON.stringify(data), 'utf-8')
+              Logger.info(`[ActivityTracker] Stripped base64 images from snapshot file: ${snf}`)
+            }
+          } catch (e) {
+            Logger.warn(`[ActivityTracker] Failed sanitizing ${snf}:`, e)
+          }
+        }
+
+        // 3. Sanitize changes_*.json
+        const changeFiles = files.filter((f) => f.startsWith('changes_') && f.endsWith('.json'))
+        for (const cf of changeFiles) {
+          try {
+            const filePath = path.join(targetDir, cf)
+            const raw = await fs.promises.readFile(filePath, 'utf-8')
+            let data: ContactChangeEvent[] = JSON.parse(raw)
+            let modified = false
+
+            if (Array.isArray(data)) {
+              const initialLen = data.length
+              for (const c of data) {
+                if (c && c.userAvatarUrl && typeof c.userAvatarUrl === 'string' && c.userAvatarUrl.startsWith('data:image')) {
+                  c.userAvatarUrl = undefined
+                  modified = true
+                }
+                if ((c as any).oldPhotoUrl && typeof (c as any).oldPhotoUrl === 'string' && (c as any).oldPhotoUrl.startsWith('data:image')) {
+                  ;(c as any).oldPhotoUrl = undefined
+                  modified = true
+                }
+                if ((c as any).newPhotoUrl && typeof (c as any).newPhotoUrl === 'string' && (c as any).newPhotoUrl.startsWith('data:image')) {
+                  ;(c as any).newPhotoUrl = undefined
+                  modified = true
+                }
+              }
+              if (data.length > 100) {
+                data = data.slice(0, 100)
+                modified = true
+              }
+              if (modified || data.length !== initialLen) {
+                await fs.promises.writeFile(filePath, JSON.stringify(data), 'utf-8')
+                Logger.info(`[ActivityTracker] Stripped base64 images and pruned changes file: ${cf}`)
+              }
+            }
+          } catch (e) {
+            Logger.warn(`[ActivityTracker] Failed sanitizing ${cf}:`, e)
+          }
+        }
+      } catch (err) {
+        Logger.warn('[ActivityTracker] Error during auto-sanitization of disk files:', err)
+      }
+    }
+  }
+
   // =========================================================================
   // Cache Loaders & Disk Persistence
   // =========================================================================
@@ -175,23 +327,50 @@ export class ActivityTrackerService {
       this.scheduleSaveStatus(accountId)
     }
 
-    // Auto-sanitization: deduplicate consecutive identical statuses and limit to 50
+    // Auto-sanitization: deduplicate transitions and limit to 30 events per user
     let didSanitize = false
+    const cleaned: Record<string, UserStatusRecord[]> = {}
+
     for (const [userId, recs] of Object.entries(data)) {
       if (!Array.isArray(recs) || recs.length === 0) continue
-      const dedup: UserStatusRecord[] = [recs[0]]
-      for (let i = 1; i < recs.length; i++) {
-        if (recs[i].status !== dedup[dedup.length - 1].status) {
-          dedup.push(recs[i])
+      const filtered: UserStatusRecord[] = []
+      for (const r of recs) {
+        if (!r || r.status === 'empty') {
+          didSanitize = true
+          continue
         }
+        const last = filtered[filtered.length - 1]
+        if (!last) {
+          filtered.push(r)
+          continue
+        }
+        if (this.isOnlineStatus(r.status) && this.isOnlineStatus(last.status)) {
+          if (r.expires && (!last.expires || r.expires > last.expires)) {
+            last.expires = r.expires
+          }
+          didSanitize = true
+          continue
+        }
+        if (this.isOfflineStatus(r.status) && this.isOfflineStatus(last.status)) {
+          if (r.wasOnline && (!last.wasOnline || r.wasOnline > last.wasOnline)) {
+            last.wasOnline = r.wasOnline
+          }
+          didSanitize = true
+          continue
+        }
+        filtered.push(r)
       }
-      const bounded = dedup.length > 50 ? dedup.slice(-50) : dedup
-      if (bounded.length !== recs.length) {
-        data[userId] = bounded
+      if (filtered.length > 0) {
+        const bounded = filtered.length > 30 ? filtered.slice(-30) : filtered
+        if (bounded.length !== recs.length) didSanitize = true
+        cleaned[userId] = bounded
+      } else {
         didSanitize = true
       }
     }
+
     if (didSanitize) {
+      data = cleaned
       this.scheduleSaveStatus(accountId)
     }
 
@@ -224,6 +403,18 @@ export class ActivityTrackerService {
         c.userAvatarUrl = undefined
         didSanitizeChanges = true
       }
+      if ((c as any).oldPhotoUrl && typeof (c as any).oldPhotoUrl === 'string' && (c as any).oldPhotoUrl.startsWith('data:image')) {
+        ;(c as any).oldPhotoUrl = undefined
+        didSanitizeChanges = true
+      }
+      if ((c as any).newPhotoUrl && typeof (c as any).newPhotoUrl === 'string' && (c as any).newPhotoUrl.startsWith('data:image')) {
+        ;(c as any).newPhotoUrl = undefined
+        didSanitizeChanges = true
+      }
+    }
+    if (data.length > 100) {
+      data = data.slice(0, 100)
+      didSanitizeChanges = true
     }
 
     if (data.length !== initialLen || didSanitizeChanges) {
@@ -281,7 +472,8 @@ export class ActivityTrackerService {
       } catch (err) {
         Logger.warn(`[ActivityTracker] Failed to save status for ${accountId}:`, err)
       }
-    }, 4000)
+    }, 6000)
+    if (timer.unref) timer.unref()
     this.saveStatusTimers.set(accountId, timer)
   }
 
@@ -297,7 +489,8 @@ export class ActivityTrackerService {
       } catch (err) {
         Logger.warn(`[ActivityTracker] Failed to save changes for ${accountId}:`, err)
       }
-    }, 3000)
+    }, 6000)
+    if (timer.unref) timer.unref()
     this.saveChangesTimers.set(accountId, timer)
   }
 
@@ -313,7 +506,8 @@ export class ActivityTrackerService {
       } catch (err) {
         Logger.warn(`[ActivityTracker] Failed to save snapshots for ${accountId}:`, err)
       }
-    }, 5000)
+    }, 8000)
+    if (timer.unref) timer.unref()
     this.saveSnapshotsTimers.set(accountId, timer)
   }
 
@@ -381,6 +575,7 @@ export class ActivityTrackerService {
     if (cfg.ignoredUserTrackingIds?.includes(userId)) return
 
     const parsed = this.parseUserStatusType(rawStatus)
+    if (parsed.status === 'empty') return // Ignore empty/unspecified status updates
     const now = Math.floor(Date.now() / 1000)
 
     const allStatus = this.loadStatus(accountId)
@@ -389,10 +584,21 @@ export class ActivityTrackerService {
     }
     const history = allStatus[userId]
 
-    // Deduplicate identical last status: only record when status ACTUALLY changes!
+    // Deduplicate transitions: only record when status ACTUALLY changes between online & offline states!
     const lastRec = history[history.length - 1]
-    if (lastRec && lastRec.status === parsed.status) {
-      return
+    if (lastRec) {
+      if (this.isOnlineStatus(parsed.status) && this.isOnlineStatus(lastRec.status)) {
+        if (parsed.expires && (!lastRec.expires || parsed.expires > lastRec.expires)) {
+          lastRec.expires = parsed.expires
+        }
+        return
+      }
+      if (this.isOfflineStatus(parsed.status) && this.isOfflineStatus(lastRec.status)) {
+        if (parsed.wasOnline && (!lastRec.wasOnline || parsed.wasOnline > lastRec.wasOnline)) {
+          lastRec.wasOnline = parsed.wasOnline
+        }
+        return
+      }
     }
 
     const newRecord: UserStatusRecord = {
@@ -403,9 +609,9 @@ export class ActivityTrackerService {
     }
     history.push(newRecord)
 
-    // Keep memory history bounded (max 50 events per user instead of 500)
-    if (history.length > 50) {
-      allStatus[userId] = history.slice(-50)
+    // Keep memory history bounded (max 30 genuine transition events per user)
+    if (history.length > 30) {
+      allStatus[userId] = history.slice(-30)
     }
 
     // Active session handling
@@ -507,7 +713,7 @@ export class ActivityTrackerService {
     userId: string,
     newPhotoUrl: string
   ): void {
-    if (!accountId || !userId || !newPhotoUrl) return
+    if (!accountId || !userId || !newPhotoUrl || newPhotoUrl.startsWith('data:image')) return
     const changes = this.loadChanges(accountId)
     const target = changes.find(
       (c) => c.userId === userId && c.changeType === 'photo_change'

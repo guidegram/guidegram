@@ -1191,22 +1191,30 @@ export class AccountManager {
       this.hydrateNotifySettingsFromCache(savedAcc.id)
     }
 
-    // Start periodic background contact changes auditor (every 15 minutes)
+    // Start periodic background contact changes auditor - staggered round-robin across accounts (one account every 90 seconds)
+    let contactAuditIndex = 0
     this.contactAuditInterval = setInterval(() => {
-      for (const [accId, holder] of this.clients.entries()) {
-        if (holder?.info?.status === 'connected' && !holder?.info?.isBot) {
-          this.syncAndAuditContacts(accId).catch(() => {})
-        }
-      }
-    }, 15 * 60 * 1000)
+      const activeHolders = Array.from(this.clients.entries()).filter(
+        ([_, holder]) => holder?.info?.status === 'connected' && !holder?.info?.isBot
+      )
+      if (activeHolders.length === 0) return
+      const [accId] = activeHolders[contactAuditIndex % activeHolders.length]
+      contactAuditIndex++
+      this.syncAndAuditContacts(accId).catch(() => {})
+    }, 90 * 1000)
+    if (this.contactAuditInterval.unref) {
+      this.contactAuditInterval.unref()
+    }
 
-    // Start periodic self profile sync (every 60 seconds) to ensure dynamic name/photo changes
-    // (e.g. clock bots, external bio/photo updates) are reflected in real-time.
+    // Start periodic self profile sync (every 10 minutes) to ensure dynamic updates without CPU/network churning
     this.profileSyncInterval = setInterval(() => {
       this.syncAllActiveAccountsProfile().catch(() => {})
-    }, 60 * 1000)
+    }, 10 * 60 * 1000)
+    if (this.profileSyncInterval.unref) {
+      this.profileSyncInterval.unref()
+    }
 
-    // Start active-targeted throttled profile audit queue processor (every 30 seconds to prevent event-loop wakeups)
+    // Start active-targeted throttled profile audit queue processor
     this.startAuditQueueProcessor()
   }
 
@@ -2297,31 +2305,52 @@ export class AccountManager {
 
     if (holder.info?.isBot) {
       // Telegram MTProto strictly forbids bots from calling messages.getDialogs (RPC 400 BOT_METHOD_INVALID).
-      // Synthesize dialog list for bots from known local audit records & conversation store.
-      const audit = this.store.loadAccountAudit(accountId)
-      const dialogs: DialogItem[] = []
-      const chatIds = Object.keys(audit || {})
-      const botSelfName = holder.info?.firstName || ''
+      // Synthesize dialog list for bots from persistent dialog cache, stored bot chats, audit logs, and recent messages.
       const cachedDialogs = this.store.loadDialogsCache(accountId) || []
       const cachedMap = new Map<string, DialogItem>()
       for (const cd of cachedDialogs) {
         if (cd.id) cachedMap.set(cd.id, cd)
       }
 
-      for (const chatId of chatIds) {
-        const chatMsgs = audit[chatId] || {}
-        const msgIds = Object.keys(chatMsgs).map(Number).sort((a, b) => b - a)
-        const lastMsg = msgIds.length > 0 ? chatMsgs[msgIds[0]] : undefined
+      const audit = this.store.loadAccountAudit(accountId) || {}
+      const botChatIds = this.store.loadBotChatList(accountId) || []
+      const allChatIds = new Set<string>([
+        ...cachedDialogs.map((d) => d.id),
+        ...botChatIds,
+        ...Object.keys(audit),
+      ])
 
-        let contactName = ''
-        let contactAvatarUrl: string | undefined = undefined
+      const botSelfName = holder.info?.firstName || ''
+      const dialogs: DialogItem[] = []
+
+      for (const chatId of allChatIds) {
+        const cachedItem = cachedMap.get(chatId)
+        const chatMsgs = audit[chatId] || {}
+        const botMsgs = this.store.loadBotMessages(accountId, chatId)
+
+        // Find latest message from botMsgs or audit
+        let latestMsg: MessageItem | undefined = undefined
+        if (botMsgs.length > 0) {
+          latestMsg = botMsgs[botMsgs.length - 1]
+        }
+        const auditMsgIds = Object.keys(chatMsgs).map(Number).sort((a, b) => b - a)
+        if (auditMsgIds.length > 0) {
+          const lastAudit = chatMsgs[auditMsgIds[0]]
+          if (!latestMsg || (lastAudit && lastAudit.date > latestMsg.date)) {
+            latestMsg = lastAudit
+          }
+        }
+
+        let contactName = cachedItem?.title || ''
+        let contactAvatarUrl: string | undefined = cachedItem?.avatarUrl
         let contactUsername: string | undefined = undefined
 
-        // Find incoming user message to extract the true sender's name and photo
-        for (const mid of msgIds) {
-          const m = chatMsgs[mid]
+        // Look for sender name & avatar in incoming messages
+        const allMsgList = [...botMsgs, ...Object.values(chatMsgs)]
+        for (let i = allMsgList.length - 1; i >= 0; i--) {
+          const m = allMsgList[i]
           if (m && !m.isOutgoing) {
-            if (!contactName && m.senderName && m.senderName !== botSelfName) {
+            if ((!contactName || contactName.startsWith('کاربر ') || contactName.startsWith('Group ')) && m.senderName && m.senderName !== botSelfName) {
               contactName = m.senderName
             }
             if (!contactAvatarUrl && m.senderAvatarUrl) {
@@ -2335,25 +2364,14 @@ export class AccountManager {
 
         // If no incoming message found, check if message text contains user metadata like "کاربر: نام (ID) @user"
         if (!contactName) {
-          for (const mid of msgIds) {
-            const m = chatMsgs[mid]
+          for (let i = allMsgList.length - 1; i >= 0; i--) {
+            const m = allMsgList[i]
             if (m?.text) {
               const userMatch = m.text.match(/کاربر:\s*([^\n\r(@]+)/i) || m.text.match(/User:\s*([^\n\r(@]+)/i)
               if (userMatch && userMatch[1]?.trim()) {
                 contactName = userMatch[1].trim()
                 break
               }
-            }
-          }
-        }
-
-        // Check if cached dialogs previously resolved this peer
-        if (!contactName) {
-          const cachedItem = cachedMap.get(chatId)
-          if (cachedItem?.title && !cachedItem.title.startsWith('کاربر ') && !cachedItem.title.startsWith('Group ')) {
-            contactName = cachedItem.title
-            if (!contactAvatarUrl && cachedItem.avatarUrl) {
-              contactAvatarUrl = cachedItem.avatarUrl
             }
           }
         }
@@ -2367,7 +2385,6 @@ export class AccountManager {
           ? `@${contactUsername}`
           : (chatId.startsWith('-') ? `Group ${chatId}` : `کاربر ${chatId}`)
 
-        const cachedItem = cachedMap.get(chatId)
         const isMuted = cachedItem && typeof cachedItem.isMuted === 'boolean' ? cachedItem.isMuted : true
 
         dialogs.push({
@@ -2375,14 +2392,17 @@ export class AccountManager {
           accountId,
           title: contactName || fallbackTitle,
           avatarUrl: contactAvatarUrl,
-          unreadCount: 0,
-          lastMessageText: lastMsg?.text || (lastMsg?.mediaType ? `[${lastMsg.mediaType}]` : ''),
-          lastMessageDate: lastMsg?.date || 0,
+          unreadCount: cachedItem?.unreadCount || 0,
+          lastMessageText: latestMsg?.text || (latestMsg?.mediaType ? `[${latestMsg.mediaType}]` : cachedItem?.lastMessageText || ''),
+          lastMessageDate: latestMsg?.date || cachedItem?.lastMessageDate || 0,
+          lastMessageId: latestMsg?.id || cachedItem?.lastMessageId,
+          lastMessageIsOutgoing: latestMsg?.isOutgoing ?? cachedItem?.lastMessageIsOutgoing ?? false,
+          lastMessageRead: cachedItem?.lastMessageRead ?? true,
           isUser: !chatId.startsWith('-'),
           isGroup: chatId.startsWith('-') && !chatId.startsWith('-100'),
           isChannel: chatId.startsWith('-100'),
           isBot: false,
-          isPinned: false,
+          isPinned: cachedItem?.isPinned || false,
           isMuted,
         })
 
@@ -2919,7 +2939,12 @@ export class AccountManager {
 
       return dialogs
     } catch (err: any) {
-      Logger.error(`[AccountManager] getDialogs error for ${accountId}:`, err)
+      const errMsg = String(err?.message || err)
+      if (errMsg.includes('FLOOD_WAIT')) {
+        Logger.warn(`[AccountManager] getDialogs rate limited for ${accountId}: ${errMsg}`)
+      } else {
+        Logger.error(`[AccountManager] getDialogs error for ${accountId}:`, err)
+      }
       return []
     }
   }
@@ -3034,7 +3059,12 @@ export class AccountManager {
         }
       })
     } catch (err: any) {
-      Logger.error(`[AccountManager] getContacts error for ${accountId}:`, err)
+      const errMsg = String(err?.message || err)
+      if (errMsg.includes('FLOOD_WAIT')) {
+        Logger.warn(`[AccountManager] getContacts rate limited for ${accountId}: ${errMsg}`)
+      } else {
+        Logger.error(`[AccountManager] getContacts error for ${accountId}:`, err)
+      }
       return []
     }
   }
@@ -3134,6 +3164,15 @@ export class AccountManager {
       const cfg = this.store.getConfig()
       if (cfg.profileChangeAuditorEnabled === false) return
 
+      let hasAny = false
+      for (const q of this.auditQueue.values()) {
+        if (q && q.size > 0) {
+          hasAny = true
+          break
+        }
+      }
+      if (!hasAny) return
+
       for (const [accId, holder] of this.clients.entries()) {
         if (holder?.info?.status !== 'connected' || !holder.client || holder?.info?.isBot) continue
 
@@ -3200,7 +3239,7 @@ export class AccountManager {
           this.lastAuditedTime.set(auditKey, now)
         }
       }
-    }, 15000)
+    }, 45000)
 
     if (this.auditQueueInterval.unref) {
       this.auditQueueInterval.unref()
@@ -3250,7 +3289,12 @@ export class AccountManager {
       if (holder.info?.isBot) {
         // Telegram MTProto strictly prohibits bots from invoking messages.getHistory (RPC 400 BOT_METHOD_INVALID).
         // Bots fetch history via messages.getMessages / channels.getMessages using known message IDs or audit store.
+        const localBotMsgs = this.store.loadBotMessages(accountId, chatId) || []
         let topId = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
+        if (localBotMsgs.length > 0) {
+          const maxLocalId = Math.max(...localBotMsgs.map((m) => m.id))
+          if (maxLocalId > topId) topId = maxLocalId
+        }
         const auditMsgs = this.store.getAuditLog(accountId, chatId)
         if (auditMsgs.length > 0) {
           const maxAuditId = Math.max(...auditMsgs.map((m) => m.id))
@@ -3769,13 +3813,28 @@ export class AccountManager {
         })
       }
 
-      if (items.length > 0) {
-        this.store.recordMessages(accountId, chatId, items)
+      if (holder.info?.isBot) {
+        if (items.length > 0) {
+          this.store.recordBotMessages(accountId, chatId, items)
+        }
+        const localBotMsgs = this.store.loadBotMessages(accountId, chatId) || []
+        const mergedMap = new Map<number, MessageItem>()
+        for (const m of localBotMsgs) mergedMap.set(m.id, m)
+        for (const m of items) mergedMap.set(m.id, m)
+        items = Array.from(mergedMap.values()).sort((a, b) => (a.date - b.date) || (a.id - b.id))
+      } else {
+        if (items.length > 0) {
+          this.store.recordMessages(accountId, chatId, items)
+        }
       }
       const keepDeleted = this.store.getConfig().keepDeletedMessagesLocally !== false
       return this.store.mergeAuditLogIntoMessages(accountId, chatId, items, keepDeleted)
     } catch (err: any) {
       Logger.error(`[AccountManager] getMessages error for ${chatId}:`, err)
+      if (holder?.info?.isBot) {
+        const localBotMsgs = this.store.loadBotMessages(accountId, chatId)
+        if (localBotMsgs.length > 0) return localBotMsgs
+      }
       const fallback = this.store.getAuditLog(accountId, chatId)
       if (fallback && fallback.length > 0) {
         return fallback
@@ -4132,8 +4191,9 @@ export class AccountManager {
     if (!holder?.client) return null
     const client = holder.client
 
-    const cacheKey = `${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}`
-    if (this.failedMediaKeys.has(cacheKey)) return null
+    const baseKey = `${accountId}_${chatId}_${messageId}`
+    const cacheKey = `${baseKey}${thumb ? '_thumb' : ''}`
+    if (this.failedMediaKeys.has(cacheKey) || this.failedMediaKeys.has(baseKey)) return null
     if (this.mediaCache.has(cacheKey)) return this.mediaCache.get(cacheKey)!
 
     if (this.inFlightDownloads.has(cacheKey)) {
@@ -4379,18 +4439,28 @@ export class AccountManager {
           return dataUrl
         }
         return null
-      } catch (err) {
+      } catch (err: any) {
         this.activeMediaDownloads.delete(cacheKey)
-        const errMsg = String((err as any)?.message || err)
-        if (errMsg.includes('FILE_REFERENCE_EXPIRED') || errMsg.includes('400')) {
+        const errMsg = String(err?.message || err?.text || err?.errorMessage || err)
+        const isExpiredOrInvalid =
+          errMsg.includes('FILE_REFERENCE_EXPIRED') ||
+          errMsg.includes('FILE_REFERENCE_') ||
+          errMsg.includes('400') ||
+          errMsg.includes('CHANNEL_INVALID') ||
+          errMsg.includes('MEDIA_EMPTY') ||
+          errMsg.includes('BOT_METHOD_INVALID')
+
+        if (isExpiredOrInvalid) {
           this.failedMediaKeys.add(cacheKey)
-          if (this.failedMediaKeys.size > 2000) {
+          this.failedMediaKeys.add(baseKey)
+          this.failedMediaKeys.add(`${baseKey}_thumb`)
+          if (this.failedMediaKeys.size > 3000) {
             const first = this.failedMediaKeys.values().next().value
             if (first) this.failedMediaKeys.delete(first)
           }
-          Logger.warn(`[AccountManager] Media ${cacheKey} reference expired (cached failure, suppressed loop)`)
+          Logger.warn(`[AccountManager] Media ${cacheKey} expired/invalid (${errMsg.slice(0, 80)}): suppressed loop`)
         } else {
-          Logger.error('[AccountManager] downloadMedia error:', err)
+          Logger.warn(`[AccountManager] downloadMedia temporary failure for ${cacheKey}:`, errMsg.slice(0, 80))
         }
         return null
       } finally {
@@ -5156,6 +5226,7 @@ export class AccountManager {
   ): Promise<MessageItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    if (holder.info?.isBot) return [] // Bots are not permitted to execute messages.searchGlobal in MTProto
 
     try {
       // Map filterType to MTProto TL InputMessagesFilter
@@ -5313,8 +5384,13 @@ export class AccountManager {
         })
       }
       return items
-    } catch (err) {
-      Logger.error('[AccountManager] searchGlobal error:', err)
+    } catch (err: any) {
+      const errMsg = String(err?.message || err)
+      if (errMsg.includes('BOT_METHOD_INVALID')) {
+        Logger.warn('[AccountManager] searchGlobal not supported for this account type:', errMsg)
+      } else {
+        Logger.error('[AccountManager] searchGlobal error:', err)
+      }
       return []
     }
   }
@@ -7317,6 +7393,33 @@ export class AccountManager {
     const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
     if (msgId > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msgId)
     this.store.recordMessage(accountId, chatId, item)
+
+    const isBotAccount = Boolean(holder.info?.isBot)
+    if (isBotAccount) {
+      this.store.recordBotMessage(accountId, chatId, item)
+      try {
+        const cached = this.store.loadDialogsCache(accountId) || []
+        const isPeerMatch = (a: string, b: string) => {
+          if (a === b) return true
+          const ca = a.replace(/^-100/, '').replace(/^-/, '')
+          const cb = b.replace(/^-100/, '').replace(/^-/, '')
+          return ca === cb
+        }
+        const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+        if (idx >= 0) {
+          cached[idx] = {
+            ...cached[idx],
+            lastMessageText: text,
+            lastMessageDate: itemDate,
+            lastMessageId: msgId,
+            lastMessageIsOutgoing: true,
+            lastMessageRead: true,
+          }
+          this.store.saveDialogsCache(accountId, cached)
+        }
+      } catch (_) {}
+    }
+
     return item
   }
 
@@ -8028,7 +8131,7 @@ export class AccountManager {
       mediaFileSize = undefined
     }
 
-    return {
+    const item: MessageItem = {
       id: uploaded.id,
       chatId,
       accountId,
@@ -8041,6 +8144,33 @@ export class AccountManager {
       mediaFileSize,
       mediaDuration: options?.duration,
     }
+
+    if (holder.info?.isBot) {
+      this.store.recordBotMessage(accountId, chatId, item)
+      try {
+        const cached = this.store.loadDialogsCache(accountId) || []
+        const isPeerMatch = (a: string, b: string) => {
+          if (a === b) return true
+          const ca = a.replace(/^-100/, '').replace(/^-/, '')
+          const cb = b.replace(/^-100/, '').replace(/^-/, '')
+          return ca === cb
+        }
+        const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+        if (idx >= 0) {
+          cached[idx] = {
+            ...cached[idx],
+            lastMessageText: options?.caption || (options?.isVoice ? '[Voice message]' : '[Photo]'),
+            lastMessageDate: item.date,
+            lastMessageId: uploaded.id,
+            lastMessageIsOutgoing: true,
+            lastMessageRead: true,
+          }
+          this.store.saveDialogsCache(accountId, cached)
+        }
+      } catch (_) {}
+    }
+
+    return item
   }
 
   public async forwardMessages(
@@ -15486,6 +15616,54 @@ export class AccountManager {
           }
         }
         this.store.recordMessage(accountId, chatId, item)
+        if (isBotAccount) {
+          this.store.recordBotMessage(accountId, chatId, item)
+          try {
+            const cached = this.store.loadDialogsCache(accountId) || []
+            const isPeerMatch = (a: string, b: string) => {
+              if (a === b) return true
+              const ca = a.replace(/^-100/, '').replace(/^-/, '')
+              const cb = b.replace(/^-100/, '').replace(/^-/, '')
+              return ca === cb
+            }
+            const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+            const fallbackTitle = chat ? formatEntityName(chat, 'Chat') : (item.senderName || `کاربر ${chatId}`)
+            const cleanAvatar = item.senderAvatarUrl && item.senderAvatarUrl.length > 2000 ? item.senderAvatarUrl : undefined
+            if (idx >= 0) {
+              cached[idx] = {
+                ...cached[idx],
+                title: cached[idx].title && !cached[idx].title.startsWith('کاربر ') ? cached[idx].title : fallbackTitle,
+                avatarUrl: cleanAvatar || cached[idx].avatarUrl,
+                lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
+                lastMessageDate: item.date || Math.floor(Date.now() / 1000),
+                lastMessageId: item.id,
+                lastMessageIsOutgoing: item.isOutgoing,
+                lastMessageRead: item.isOutgoing,
+                unreadCount: (cached[idx].unreadCount || 0) + (item.isOutgoing ? 0 : 1),
+              }
+            } else {
+              cached.unshift({
+                id: chatId,
+                accountId,
+                title: fallbackTitle,
+                avatarUrl: cleanAvatar,
+                unreadCount: item.isOutgoing ? 0 : 1,
+                lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
+                lastMessageDate: item.date || Math.floor(Date.now() / 1000),
+                lastMessageId: item.id,
+                lastMessageIsOutgoing: item.isOutgoing,
+                lastMessageRead: item.isOutgoing,
+                isUser: !chatId.startsWith('-'),
+                isGroup: chatId.startsWith('-') && !chatId.startsWith('-100'),
+                isChannel: chatId.startsWith('-100'),
+                isBot: false,
+                isPinned: false,
+                isMuted: isChatMuted,
+              })
+            }
+            this.store.saveDialogsCache(accountId, cached)
+          } catch (_) {}
+        }
 
         // Ultra-fast auto-download for incoming photos in private chats so they are preserved locally even if deleted
         const isPrivateChat = chat
