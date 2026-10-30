@@ -13359,6 +13359,54 @@ export class AccountManager {
     }
   }
 
+  private mapRawStoryItem(s: any): StoryItemPayload {
+    const media = s?.media
+    const mediaIsPhoto = media?._ === 'messageMediaPhoto' && Boolean(media.photo)
+    const mediaIsVideo =
+      media?._ === 'messageMediaDocument' &&
+      Boolean(media.document) &&
+      ((Array.isArray(media.document.attributes) &&
+        media.document.attributes.some(
+          (a: any) =>
+            a?._ === 'documentAttributeVideo' ||
+            a?._ === 'documentAttributeAnimated'
+        )) ||
+        /^video\//i.test(media.document.mimeType || ''))
+
+    const privacy: StoryItemPayload['privacy'] = s?.closeFriends
+      ? 'close_friends'
+      : s?.contacts
+        ? 'contacts'
+        : s?.selectedContacts
+          ? 'selected_contacts'
+          : s?.public
+            ? 'everyone'
+            : undefined
+
+    const thumb = extractStrippedThumb(media?.photo || media?.document)
+
+    return {
+      id: Number(s?.id),
+      date: Number(s?.date) || 0,
+      expireDate: Number(s?.expireDate) || 0,
+      caption: s?.caption || s?.message || undefined,
+      isVideo: mediaIsVideo,
+      mediaType: mediaIsPhoto ? 'photo' : mediaIsVideo ? 'video' : 'unsupported',
+      hasPhoto: mediaIsPhoto,
+      hasVideo: mediaIsVideo,
+      thumbnailUrl: thumb,
+      isPinned: Boolean(s?.pinned),
+      isPublic: Boolean(s?.public),
+      isOut: Boolean(s?.out),
+      privacy,
+      forbidForwards: Boolean(s?.noforwards),
+      viewsCount: s?.views?.viewsCount,
+      forwardsCount: s?.views?.forwardsCount,
+      reactionsCount: s?.views?.reactionsCount,
+      hasViewers: Boolean(s?.views?.hasViewers),
+    } satisfies StoryItemPayload
+  }
+
   public async getPeerStories(accountId: string, peerId: string): Promise<PeerStoriesPayload | null> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return null
@@ -13370,52 +13418,8 @@ export class AccountManager {
         peer: inputPeer,
       })
 
-      const stories = (res.stories?.stories || [])
-        .filter((s: any) => s?._ === 'storyItem')
-        .map((s: any) => {
-          const media = s.media
-          const mediaIsPhoto = media?._ === 'messageMediaPhoto' && Boolean(media.photo)
-          const mediaIsVideo =
-            media?._ === 'messageMediaDocument' &&
-            Boolean(media.document) &&
-            ((Array.isArray(media.document.attributes) &&
-              media.document.attributes.some(
-                (a: any) =>
-                  a?._ === 'documentAttributeVideo' ||
-                  a?._ === 'documentAttributeAnimated'
-              )) ||
-              /^video\//i.test(media.document.mimeType || ''))
-
-          const privacy: StoryItemPayload['privacy'] = s.closeFriends
-            ? 'close_friends'
-            : s.contacts
-              ? 'contacts'
-              : s.selectedContacts
-                ? 'selected_contacts'
-                : s.public
-                  ? 'everyone'
-                  : undefined
-
-          return {
-            id: s.id,
-            date: s.date,
-            expireDate: s.expireDate,
-            caption: s.caption || undefined,
-            isVideo: mediaIsVideo,
-            mediaType: mediaIsPhoto ? 'photo' : mediaIsVideo ? 'video' : 'unsupported',
-            hasPhoto: mediaIsPhoto,
-            hasVideo: mediaIsVideo,
-            isPinned: Boolean(s.pinned),
-            isPublic: Boolean(s.public),
-            isOut: Boolean(s.out),
-            privacy,
-            forbidForwards: Boolean(s.noforwards),
-            viewsCount: s.views?.viewsCount,
-            forwardsCount: s.views?.forwardsCount,
-            reactionsCount: s.views?.reactionsCount,
-            hasViewers: Boolean(s.views?.hasViewers),
-          } satisfies StoryItemPayload
-        })
+      const rawStories = (res.stories?.stories || []).filter((s: any) => s?._ === 'storyItem')
+      const stories = rawStories.map((s: any) => this.mapRawStoryItem(s))
 
       return {
         peerId,
@@ -13889,7 +13893,13 @@ export class AccountManager {
         offset_id: Number(offsetId) || 0,
         limit: Math.min(Number(limit) || 50, 100),
       } as any)
-      return res || { count: 0, stories: [] }
+      const rawStories = (res?.stories || []).filter((s: any) => s?._ === 'storyItem')
+      const stories = rawStories.map((s: any) => this.mapRawStoryItem(s))
+      return {
+        count: res?.count ?? stories.length,
+        stories,
+        peerId: peerId || accountId,
+      }
     } catch (err: any) {
       Logger.warn(`[AccountManager] getStoriesArchive error:`, err?.message || err)
       return { count: 0, stories: [] }
@@ -13915,7 +13925,13 @@ export class AccountManager {
         offset_id: Number(offsetId) || 0,
         limit: Math.min(Number(limit) || 50, 100),
       } as any)
-      return res || { count: 0, stories: [] }
+      const rawStories = (res?.stories || []).filter((s: any) => s?._ === 'storyItem')
+      const stories = rawStories.map((s: any) => this.mapRawStoryItem(s))
+      return {
+        count: res?.count ?? stories.length,
+        stories,
+        peerId: peerId || accountId,
+      }
     } catch (err: any) {
       Logger.warn(`[AccountManager] getPinnedStories error:`, err?.message || err)
       return { count: 0, stories: [] }

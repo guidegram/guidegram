@@ -1283,6 +1283,7 @@ export interface StoryItemPayload {
   expireDate: number
   caption?: string
   mediaUrl?: string
+  thumbnailUrl?: string
   isVideo?: boolean
   /** Actual media kind as reported by Telegram's storyItem. */
   mediaType?: StoryMediaType

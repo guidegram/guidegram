@@ -22,6 +22,7 @@ import {
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
 import { Avatar } from './Avatar'
+import { useI18n } from '../i18n'
 
 interface StoryViewerModalProps {
   isOpen: boolean
@@ -30,6 +31,8 @@ interface StoryViewerModalProps {
   peerId: string
   peerTitle: string
   ghostMode?: boolean
+  initialTab?: 'active' | 'pinned' | 'archive'
+  initialStoryId?: number
   onDeleted?: () => void
 }
 
@@ -54,8 +57,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   peerId,
   peerTitle,
   ghostMode = false,
+  initialTab = 'active',
+  initialStoryId,
   onDeleted,
 }) => {
+  const { language, isRTL } = useI18n()
+  const isPersian = language === 'fa' || isRTL
   const [peerStories, setPeerStories] = useState<PeerStoriesPayload | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -75,7 +82,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [localGhostMode, setLocalGhostMode] = useState(ghostMode)
   const [activeReaction, setActiveReaction] = useState<string | null>(null)
   const [reactionFeedback, setReactionFeedback] = useState<string | null>(null)
-  const [storyTab, setStoryTab] = useState<'active' | 'pinned' | 'archive'>('active')
+  const [storyTab, setStoryTab] = useState<'active' | 'pinned' | 'archive'>(initialTab || 'active')
+
+  useEffect(() => {
+    if (initialTab) {
+      setStoryTab(initialTab)
+    }
+  }, [initialTab])
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const pausedRef = useRef(false)
@@ -138,7 +151,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
 
     if (!request) {
-      setLoadError('Stories are unavailable.')
+      setLoadError(isPersian ? 'سرویس استوری در دسترس نیست.' : 'Stories are unavailable.')
       setLoading(false)
       return
     }
@@ -149,30 +162,47 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         if (!data) {
           setLoadError(
             storyTab === 'pinned'
-              ? 'No pinned stories found.'
+              ? (isPersian ? 'هیچ پستی در پروفایل کاربر پین نشده است.' : 'No pinned stories found.')
               : storyTab === 'archive'
-                ? 'No archived stories found.'
-                : 'Unable to load stories for this contact.'
+                ? (isPersian ? 'هیچ استوری در آرشیو یافت نشد.' : 'No archived stories found.')
+                : (isPersian ? 'استوری فعالی در ۲۴ ساعت گذشته وجود ندارد.' : 'Unable to load stories for this contact.')
           )
           setLoading(false)
           return
         }
         const rawList = Array.isArray(data) ? data : data.stories || []
         const sortedStories = [...rawList].sort((a, b) => a.date - b.date)
+        if (sortedStories.length === 0) {
+          setLoadError(
+            storyTab === 'pinned'
+              ? (isPersian ? 'هیچ پستی در پروفایل کاربر پین نشده است.' : 'No pinned stories found on profile.')
+              : storyTab === 'archive'
+                ? (isPersian ? 'هیچ استوری در آرشیو یافت نشد.' : 'No archived stories found.')
+                : (isPersian ? 'استوری فعالی در ۲۴ ساعت گذشته وجود ندارد.' : 'No active stories for this contact.')
+          )
+          setLoading(false)
+          return
+        }
         setPeerStories({
           peer: data.peer || { _: 'peerUser', userId: peerId },
           stories: sortedStories,
         } as any)
+        if (initialStoryId) {
+          const targetIdx = sortedStories.findIndex((s) => s.id === initialStoryId)
+          if (targetIdx >= 0) {
+            setCurrentIndex(targetIdx)
+          }
+        }
         setLoading(false)
       })
       .catch(() => {
         if (!active) return
         setLoadError(
           storyTab === 'pinned'
-            ? 'No pinned stories found.'
+            ? (isPersian ? 'هیچ پستی در پروفایل کاربر پین نشده است.' : 'No pinned stories found.')
             : storyTab === 'archive'
-              ? 'No archived stories found.'
-              : 'Unable to load stories for this contact.'
+              ? (isPersian ? 'هیچ استوری در آرشیو یافت نشد.' : 'No archived stories found.')
+              : (isPersian ? 'استوری فعالی در ۲۴ ساعت گذشته وجود ندارد.' : 'Unable to load stories for this contact.')
         )
         setLoading(false)
       })
@@ -515,45 +545,45 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           </div>
 
           {/* Story Mode Selector Pills */}
-          {isOwnStory && (
-            <div className="mt-2.5 flex items-center justify-center">
-              <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md rounded-full p-0.5 border border-white/10 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setStoryTab('active')}
-                  className={`px-3 py-0.5 rounded-full font-semibold transition-all ${
-                    storyTab === 'active'
-                      ? 'bg-primary-500 text-white shadow'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Active
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStoryTab('pinned')}
-                  className={`px-3 py-0.5 rounded-full font-semibold transition-all ${
-                    storyTab === 'pinned'
-                      ? 'bg-primary-500 text-white shadow'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Pinned
-                </button>
+          <div className="mt-2.5 flex items-center justify-center">
+            <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md rounded-full p-0.5 border border-white/10 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setStoryTab('active')}
+                className={`px-3 py-0.5 rounded-full font-semibold transition-all cursor-pointer ${
+                  storyTab === 'active'
+                    ? 'bg-primary-500 text-white shadow'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                {isPersian ? 'استوری‌های ۲۴ساعته' : 'Active'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStoryTab('pinned')}
+                className={`px-3 py-0.5 rounded-full font-semibold transition-all cursor-pointer ${
+                  storyTab === 'pinned'
+                    ? 'bg-primary-500 text-white shadow'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                {isPersian ? 'پست‌های پروفایل (پین)' : 'Profile Posts'}
+              </button>
+              {isOwnStory && (
                 <button
                   type="button"
                   onClick={() => setStoryTab('archive')}
-                  className={`px-3 py-0.5 rounded-full font-semibold transition-all ${
+                  className={`px-3 py-0.5 rounded-full font-semibold transition-all cursor-pointer ${
                     storyTab === 'archive'
                       ? 'bg-primary-500 text-white shadow'
                       : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  Archive
+                  {isPersian ? 'آرشیو' : 'Archive'}
                 </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Story content */}
@@ -561,7 +591,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           {loading && (
             <div className="flex flex-col items-center gap-3 text-white/70">
               <Loader2 className="h-7 w-7 animate-spin text-primary-400" />
-              <span className="text-xs">Loading stories…</span>
+              <span className="text-xs">{isPersian ? 'در حال دریافت استوری‌ها…' : 'Loading stories…'}</span>
             </div>
           )}
 
@@ -569,13 +599,32 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             <div className="flex max-w-xs flex-col items-center gap-3 px-6 text-center">
               <AlertCircle className="h-8 w-8 text-amber-400" />
               <p className="text-sm text-white/80">{loadError}</p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2 mt-1">
+                {storyTab === 'active' ? (
+                  <button
+                    type="button"
+                    onClick={() => setStoryTab('pinned')}
+                    className="rounded-full bg-accent-cyan/20 border border-accent-cyan/40 px-3.5 py-1 text-xs font-semibold text-accent-cyan transition-colors hover:bg-accent-cyan/35 cursor-pointer"
+                  >
+                    {isPersian ? 'مشاهده پست‌های پروفایل' : 'Check Profile Posts'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setStoryTab('active')}
+                    className="rounded-full bg-primary-600/30 border border-primary-500/40 px-3.5 py-1 text-xs font-semibold text-primary-300 transition-colors hover:bg-primary-600/50 cursor-pointer"
+                  >
+                    {isPersian ? 'بررسی استوری‌های فعال' : 'Check Active Stories'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-full bg-white/10 px-3.5 py-1 text-xs font-medium text-white transition-colors hover:bg-white/20 cursor-pointer"
+                >
+                  {isPersian ? 'بستن' : 'Close'}
+                </button>
+              </div>
             </div>
           )}
 
