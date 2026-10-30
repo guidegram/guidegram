@@ -42,6 +42,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
     account: AccountInfo
   } | null>(null)
   const [copiedId, setCopiedId] = useState(false)
+  const [isToolsHubOpen, setIsToolsHubOpen] = useState(false)
   const [hoveredTooltip, setHoveredTooltip] = useState<{
     y: number
     title: string
@@ -68,12 +69,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
       setContextMenu(null)
       setCopiedId(false)
       setHoveredTooltip(null)
+      setIsToolsHubOpen(false)
     }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setContextMenu(null)
         setCopiedId(false)
         setHoveredTooltip(null)
+        setIsToolsHubOpen(false)
       }
     }
     window.addEventListener('click', handleClose)
@@ -264,66 +267,140 @@ export const AccountDock: React.FC<AccountDockProps> = ({
 
       <div className="w-8 h-[1px] bg-white/10 my-1"></div>
 
-      {/* Bottom Actions */}
-      <div className="flex flex-col gap-2 pt-2">
+      {/* Bottom Actions - Space-Saving Ergonomic Hub */}
+      <div className="flex flex-col items-center gap-2 pt-2 pb-1 mt-auto">
+        {/* Advanced Tools Hub Trigger */}
         <button
-          onClick={onOpenMcpHub}
-          onMouseEnter={(e) =>
-            showTooltip(e.currentTarget, {
-              title: 'هاب هوش مصنوعی و پروتکل MCP',
-              subtitle: 'اتصال Claude و ابزارهای تحلیلی',
-            })
-          }
-          onMouseLeave={hideTooltip}
-          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600/20 via-accent-cyan/15 to-purple-600/20 border border-primary-500/40 hover:border-accent-cyan text-accent-cyan hover:text-white flex items-center justify-center transition-all cursor-pointer group shadow-glow"
-        >
-          <Bot className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        </button>
-
-        <button
-          onClick={onOpenProxyModal}
-          onMouseEnter={(e) =>
-            showTooltip(e.currentTarget, {
-              title: 'تنظیمات پروکسی و پینگ',
-              subtitle: 'مدیریت MTProto و SOCKS5',
-            })
-          }
-          onMouseLeave={hideTooltip}
-          className="w-10 h-10 rounded-xl bg-dark-800 text-gray-400 hover:text-white hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer"
-        >
-          <Shield className="w-4 h-4" />
-        </button>
-
-        <button
-          onClick={onOpenAccountExport}
-          onMouseEnter={(e) =>
-            showTooltip(e.currentTarget, {
-              title: 'انتقال اکانت به موبایل (Air-Gap)',
-              subtitle: 'همگام‌سازی امن بدون اینترنت با QR',
-            })
-          }
-          onMouseLeave={hideTooltip}
-          className="w-10 h-10 rounded-xl bg-dark-800 text-cyan-400 hover:text-cyan-300 hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer group"
-        >
-          <Smartphone className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        </button>
-
-        {onOpenTonWallet && (
-          <button
-            onClick={onOpenTonWallet}
-            onMouseEnter={(e) =>
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsToolsHubOpen((prev) => !prev)
+            hideTooltip()
+          }}
+          onMouseEnter={(e) => {
+            if (!isToolsHubOpen) {
               showTooltip(e.currentTarget, {
-                title: 'کیف پول بلاکچین TON',
-                subtitle: 'مدیریت دارایی‌ها و TonConnect 2.0',
+                title: 'هاب ابزارهای پیشرفته گایدگرام',
+                subtitle: 'هوش مصنوعی، پروکسی، ولت و انتقال امن',
+                badge: 'Hub',
               })
             }
-            onMouseLeave={hideTooltip}
-            className="w-10 h-10 rounded-xl bg-dark-800 text-[#00c2ff] hover:text-white hover:bg-[#0098ea]/30 flex items-center justify-center transition-colors cursor-pointer group"
+          }}
+          onMouseLeave={hideTooltip}
+          aria-label="Advanced Tools Hub"
+          className={`group relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 cursor-pointer ${
+            isToolsHubOpen
+              ? 'bg-gradient-to-tr from-cyan-500/25 via-primary-500/20 to-purple-600/30 border border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.45)] scale-105'
+              : 'bg-dark-800/90 hover:bg-dark-750 border border-white/10 hover:border-cyan-400/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.25)]'
+          }`}
+        >
+          {/* Animated Quantum / Cyber Kinetic SVG Icon */}
+          <svg
+            viewBox="0 0 28 28"
+            className="w-5 h-5 transition-transform duration-500 transform group-hover:scale-110"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <Wallet className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          </button>
-        )}
+            <defs>
+              <linearGradient id="toolsHubGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#00F2FE" />
+                <stop offset="50%" stopColor="#38BDF8" />
+                <stop offset="100%" stopColor="#818CF8" />
+              </linearGradient>
+              <linearGradient id="toolsHubGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#C084FC" />
+                <stop offset="50%" stopColor="#A855F7" />
+                <stop offset="100%" stopColor="#06B6D4" />
+              </linearGradient>
+              <filter id="toolsHubGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
 
+            {/* Ambient slow rotating constellation ring */}
+            <g className="hub-orbit-anim origin-center">
+              {/* Dashed orbit track */}
+              <circle
+                cx="14"
+                cy="14"
+                r="9.5"
+                stroke="url(#toolsHubGrad1)"
+                strokeWidth="1.2"
+                strokeDasharray="3.5 2.5"
+                className="opacity-50 group-hover:opacity-95 transition-opacity duration-300"
+              />
+
+              {/* 4 Kinetic satellite nodes */}
+              <circle
+                cx="14"
+                cy="4.5"
+                r="1.75"
+                fill="#00F2FE"
+                className="transition-transform duration-300 group-hover:scale-125"
+                filter="url(#toolsHubGlow)"
+              />
+              <circle
+                cx="23.5"
+                cy="14"
+                r="1.75"
+                fill="#818CF8"
+                className="transition-transform duration-300 group-hover:scale-125"
+                filter="url(#toolsHubGlow)"
+              />
+              <circle
+                cx="14"
+                cy="23.5"
+                r="1.75"
+                fill="#C084FC"
+                className="transition-transform duration-300 group-hover:scale-125"
+                filter="url(#toolsHubGlow)"
+              />
+              <circle
+                cx="4.5"
+                cy="14"
+                r="1.75"
+                fill="#38BDF8"
+                className="transition-transform duration-300 group-hover:scale-125"
+                filter="url(#toolsHubGlow)"
+              />
+            </g>
+
+            {/* Counter-rotating morphing diamond in center */}
+            <g className="transition-transform duration-700 ease-out origin-center group-hover:-rotate-45">
+              <rect
+                x="9.5"
+                y="9.5"
+                width="9"
+                height="9"
+                rx="2"
+                transform="rotate(45 14 14)"
+                stroke="url(#toolsHubGrad2)"
+                strokeWidth="1.4"
+                className="opacity-75 group-hover:opacity-100 transition-all duration-300 fill-cyan-500/10 group-hover:fill-purple-500/30"
+              />
+            </g>
+
+            {/* Center glowing quantum core */}
+            <circle
+              cx="14"
+              cy="14"
+              r="2.2"
+              fill="url(#toolsHubGrad1)"
+              className="hub-glow-anim transition-transform duration-300 group-hover:scale-135 origin-center"
+              filter="url(#toolsHubGlow)"
+            />
+            <circle
+              cx="14"
+              cy="14"
+              r="1"
+              fill="#FFFFFF"
+              className="transition-transform duration-200 group-hover:scale-125 origin-center"
+            />
+          </svg>
+        </button>
+
+        {/* Quick Settings Button */}
         <button
           onClick={onOpenSettings}
           onMouseEnter={(e) =>
@@ -333,11 +410,167 @@ export const AccountDock: React.FC<AccountDockProps> = ({
             })
           }
           onMouseLeave={hideTooltip}
-          className="w-10 h-10 rounded-xl bg-dark-800 text-gray-400 hover:text-white hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer"
+          className="w-10 h-10 rounded-xl bg-dark-800 text-gray-400 hover:text-white hover:bg-dark-750 flex items-center justify-center transition-colors cursor-pointer group"
+          aria-label="Settings"
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
         </button>
       </div>
+
+      {/* Tools Hub Flyout Menu */}
+      {isToolsHubOpen && (
+        <div
+          style={{ left: '80px', bottom: '16px' }}
+          className="fixed z-[999] min-w-[275px] max-w-[315px] bg-dark-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-150 flex flex-col gap-1 select-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-3 py-2 border-b border-white/10 mb-1 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              <span className="text-xs font-bold text-gray-100">ابزارهای پیشرفته گایدگرام</span>
+            </div>
+            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary-500/20 text-cyan-300 border border-primary-500/30">
+              HUB
+            </span>
+          </div>
+
+          {/* Item 1: MCP AI Hub */}
+          <button
+            type="button"
+            onClick={() => {
+              onOpenMcpHub?.()
+              setIsToolsHubOpen(false)
+            }}
+            className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/10 transition-colors text-right group cursor-pointer border border-transparent hover:border-cyan-500/30"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-purple-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+              <Bot className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-200 group-hover:text-cyan-300 transition-colors">
+                  هاب هوش مصنوعی و MCP
+                </span>
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300">
+                  AI
+                </span>
+              </div>
+              <div className="text-[10px] text-gray-400 truncate">
+                دستیار هوشمند و پروتکل ابزارها
+              </div>
+            </div>
+          </button>
+
+          {/* Item 2: Proxy */}
+          <button
+            type="button"
+            onClick={() => {
+              onOpenProxyModal()
+              setIsToolsHubOpen(false)
+            }}
+            className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/10 transition-colors text-right group cursor-pointer border border-transparent hover:border-emerald-500/30"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">
+                  تنظیمات پروکسی و پینگ
+                </span>
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                  MTProto
+                </span>
+              </div>
+              <div className="text-[10px] text-gray-400 truncate">
+                مدیریت پروکسی، پینگ و اتصال
+              </div>
+            </div>
+          </button>
+
+          {/* Item 3: TON Wallet */}
+          {onOpenTonWallet && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenTonWallet()
+                setIsToolsHubOpen(false)
+              }}
+              className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/10 transition-colors text-right group cursor-pointer border border-transparent hover:border-[#00c2ff]/30"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[#0098ea]/15 border border-[#00c2ff]/30 flex items-center justify-center text-[#00c2ff] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-200 group-hover:text-[#00c2ff] transition-colors">
+                    کیف پول بلاکچین TON
+                  </span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#0098ea]/20 text-[#00c2ff]">
+                    Web3
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-400 truncate">
+                  مدیریت دارایی‌ها، گیفت‌ها و TonConnect
+                </div>
+              </div>
+            </button>
+          )}
+
+          {/* Item 4: Air-Gap Mobile Export */}
+          {onOpenAccountExport && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenAccountExport()
+                setIsToolsHubOpen(false)
+              }}
+              className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/10 transition-colors text-right group cursor-pointer border border-transparent hover:border-cyan-500/30"
+            >
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-200 group-hover:text-cyan-300 transition-colors">
+                    انتقال اکانت به موبایل
+                  </span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300">
+                    Air-Gap
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-400 truncate">
+                  همگام‌سازی امن بدون اینترنت با QR
+                </div>
+              </div>
+            </button>
+          )}
+
+          {/* Divider & Settings inside Hub */}
+          <div className="border-t border-white/5 my-0.5" />
+          <button
+            type="button"
+            onClick={() => {
+              onOpenSettings()
+              setIsToolsHubOpen(false)
+            }}
+            className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/10 transition-colors text-right group cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-white group-hover:rotate-45 transition-all shrink-0">
+              <Settings className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">
+                تنظیمات گایدگرام
+              </span>
+              <div className="text-[10px] text-gray-500 truncate">
+                شخصی‌سازی، تم، امنیت و حریم خصوصی
+              </div>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Floating In-DOM Tooltip (Zero Native Win32 Z-Order Glitches) */}
       {hoveredTooltip && !contextMenu && (

@@ -2172,6 +2172,39 @@ textarea:focus-visible {
   animation: starGiftCounterOrbit 16s linear infinite;
 }
 
+@keyframes hubOrbitSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hubPulseGlow {
+  0%, 100% {
+    opacity: 0.75;
+    filter: drop-shadow(0 0 3px rgba(6, 182, 212, 0.5));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 9px rgba(168, 85, 247, 0.85));
+  }
+}
+
+.hub-orbit-anim {
+  animation: hubOrbitSlow 18s linear infinite;
+  transform-origin: center;
+}
+
+.group:hover .hub-orbit-anim {
+  animation-duration: 3.5s;
+}
+
+.hub-glow-anim {
+  animation: hubPulseGlow 3s ease-in-out infinite;
+}
+
 
 
 
