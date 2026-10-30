@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 27,
-    "githubIssuesCommented": 20,
+    "totalActivities": 28,
+    "githubIssuesCommented": 21,
     "githubPullRequests": 2,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_gotd_1800",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "gotd/td",
+      "targetIssueNumber": 1800,
+      "targetTitle": "updates.Manager: steady-state cost (per-channel idle getChannelDifference + goroutine-per-channel) scales with channel count — ideas welcome",
+      "targetUser": "vzd3v",
+      "url": "https://github.com/gotd/td/issues/1800#issuecomment-6535429488",
+      "issueUrl": "https://github.com/gotd/td/issues/1800",
+      "status": "live_public",
+      "summary": "Detailed why Telegram drops passive broadcast pushes, and provided an O(1) Hierarchical Timing Wheel scheduler, Three-Tier Dormancy model, and Guidegram's on-demand difference hydration.",
+      "timestamp": "2026-10-30T23:09:31Z"
+    },
     {
       "id": "gh_comment_tdesktop_29485",
       "platform": "github",
