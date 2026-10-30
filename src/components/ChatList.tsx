@@ -1006,6 +1006,7 @@ export const ChatList = React.memo<ChatListProps>(({
                     onSelect={handleSelectDialog}
                     story={storyPeerMap.get(dialog.id)}
                     onOpenStory={handleOpenStory}
+                    onContextMenu={handleItemContextMenu}
                   />
                 ))}
               </div>
@@ -1387,15 +1388,16 @@ interface DialogListItemProps {
   isSelected: boolean
   showChatId: boolean
   formatTime: (timestamp?: number) => string
-  formatNumber: (n: number) => string
+  formatNumber: (n: number | string) => string
   t: (key: string, params?: any) => string
   onSelect: (id: string) => void
   story?: ActiveStoryPeer
   onOpenStory: (peerId: string, title: string) => void
+  onContextMenu?: (e: React.MouseEvent, dialog: DialogItem) => void
 }
 
 export const DialogListItem = React.memo<DialogListItemProps>(
-  ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory }) => {
+  ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory, onContextMenu }) => {
     return (
       <motion.div
         role="option"
@@ -1403,6 +1405,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
         aria-selected={isSelected}
         aria-label={`${dialog.title}${dialog.unreadCount ? `, ${dialog.unreadCount} unread` : ''}`}
         onClick={() => onSelect(dialog.id)}
+        onContextMenu={(e) => onContextMenu?.(e, dialog)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -1612,6 +1615,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
       prev.dialog.customEmojiStatusId === next.dialog.customEmojiStatusId &&
       prev.dialog.isPremium === next.dialog.isPremium &&
       prev.onOpenStory === next.onOpenStory &&
+      prev.onContextMenu === next.onContextMenu &&
       prev.story?.peerId === next.story?.peerId &&
       prev.story?.maxStoryId === next.story?.maxStoryId &&
       prev.story?.storyCount === next.story?.storyCount &&

@@ -3478,81 +3478,10 @@ export class AccountManager {
           }
         }
 
-        let replyMarkup: MessageItem['replyMarkup'] = undefined
         const rawMarkup = m.replyMarkup || (m as any).reply_markup
-        if (rawMarkup?._ === 'replyKeyboardHide') {
-          replyMarkup = { rows: [], _: 'replyKeyboardHide' }
-        } else if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
-          const rows: InlineButton[][] = []
-          for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
-            const row = rawMarkup.rows[rIdx]
-            const btnRow: InlineButton[] = []
-            if (row?.buttons && Array.isArray(row.buttons)) {
-              for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
-                const b = row.buttons[cIdx]
-                let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
-                const rawStyle = b.style || (b as any).theme || (b as any).color
-                if (rawStyle) {
-                  const sName = typeof rawStyle === 'string' ? rawStyle : (rawStyle._ || rawStyle.type || '')
-                  if (/success|green/i.test(sName)) btnStyle = 'success'
-                  else if (/danger|red/i.test(sName)) btnStyle = 'danger'
-                  else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
-                }
-                const iconCustomEmojiId = b.iconCustomEmojiId
-                  ? String(b.iconCustomEmojiId)
-                  : ((b as any).icon_custom_emoji_id ? String((b as any).icon_custom_emoji_id) : undefined)
-
-                if (b._ === 'keyboardButtonRequestPhone') {
-                  btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonRequestGeoLocation') {
-                  btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonRequestPoll') {
-                  btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonUrl') {
-                  btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonCallback') {
-                  const b64 = Buffer.from(b.data).toString('base64')
-                  this.botButtonCache.set(`${chatId}_${id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
-                  btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonSwitchInline') {
-                  btnRow.push({
-                    text: b.text,
-                    type: 'switch_inline',
-                    switchInlineQuery: b.query ?? '',
-                    switchInlineQueryCurrentChat: Boolean(b.samePeer),
-                    _: 'keyboardButtonSwitchInline',
-                    style: btnStyle,
-                    iconCustomEmojiId,
-                  })
-                } else if (b._ === 'keyboardButtonBuy') {
-                  btnRow.push({
-                    text: b.text,
-                    type: 'buy',
-                    _: 'keyboardButtonBuy',
-                    style: btnStyle || 'success',
-                    iconCustomEmojiId,
-                  })
-                } else if (b.text) {
-                  btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
-                }
-              }
-            }
-            if (btnRow.length > 0) rows.push(btnRow)
-          }
-          if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
-            replyMarkup = {
-              rows,
-              _: rawMarkup._,
-              resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
-              singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
-              selective: Boolean(rawMarkup.selective),
-              persistent: Boolean(rawMarkup.persistent),
-              placeholder: rawMarkup.placeholder,
-            }
-          }
-        }
+        const replyMarkup = parseMtprotoReplyMarkup(rawMarkup, chatId, id, (key, data) => {
+          this.botButtonCache.set(key, data)
+        })
 
         let replyTo: ReplyInfo | undefined = undefined
         if (m.replyTo?.replyToMsgId) {
@@ -4749,22 +4678,32 @@ export class AccountManager {
         } catch (_) {}
 
         try {
-          // Direct download using document object in mtcute
-          await holder.client.downloadToFile(filePath, doc as any)
-        } catch (downloadErr) {
-          // Fallback to thumbnail if direct full document fails
-          if (doc.thumbs && doc.thumbs.length > 0) {
-            const thumb = doc.thumbs[doc.thumbs.length - 1]
-            if (thumb && (thumb as any).type) {
-              const thumbLoc: tl.TypeInputFileLocation = {
-                _: 'inputDocumentFileLocation',
-                id: doc.id,
-                accessHash: doc.accessHash,
-                fileReference: doc.fileReference || Buffer.alloc(0),
-                thumbSize: (thumb as any).type,
-              }
-              if (holder?.client) {
-                await holder.client.downloadToFile(filePath, thumbLoc as any).catch(() => {})
+          const docLoc: tl.TypeInputFileLocation = {
+            _: 'inputDocumentFileLocation',
+            id: doc.id,
+            accessHash: doc.accessHash,
+            fileReference: doc.fileReference || Buffer.alloc(0),
+            thumbSize: '',
+          }
+          await holder.client.downloadToFile(filePath, docLoc as any, { dcId: (doc as any).dcId })
+        } catch (_) {
+          try {
+            await holder.client.downloadToFile(filePath, doc as any)
+          } catch (downloadErr) {
+            // Fallback to thumbnail if direct full document fails
+            if (doc.thumbs && doc.thumbs.length > 0) {
+              const thumb = doc.thumbs[doc.thumbs.length - 1]
+              if (thumb && (thumb as any).type) {
+                const thumbLoc: tl.TypeInputFileLocation = {
+                  _: 'inputDocumentFileLocation',
+                  id: doc.id,
+                  accessHash: doc.accessHash,
+                  fileReference: doc.fileReference || Buffer.alloc(0),
+                  thumbSize: (thumb as any).type,
+                }
+                if (holder?.client) {
+                  await holder.client.downloadToFile(filePath, thumbLoc as any, { dcId: (doc as any).dcId }).catch(() => {})
+                }
               }
             }
           }
@@ -15261,81 +15200,10 @@ export class AccountManager {
 
         const entities = parseMtprotoEntities(msg.raw?.entities)
 
-        let replyMarkup: MessageItem['replyMarkup'] = undefined
         const rawMarkup = msg.raw?.replyMarkup || msg.raw?.reply_markup
-        if (rawMarkup?._ === 'replyKeyboardHide') {
-          replyMarkup = { rows: [], _: 'replyKeyboardHide' }
-        } else if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
-          const rows: InlineButton[][] = []
-          for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
-            const row = rawMarkup.rows[rIdx]
-            const btnRow: InlineButton[] = []
-            if (row?.buttons && Array.isArray(row.buttons)) {
-              for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
-                const b = row.buttons[cIdx]
-                let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
-                const rawStyle = b.style || (b as any).theme || (b as any).color
-                if (rawStyle) {
-                  const sName = typeof rawStyle === 'string' ? rawStyle : (rawStyle._ || rawStyle.type || '')
-                  if (/success|green/i.test(sName)) btnStyle = 'success'
-                  else if (/danger|red/i.test(sName)) btnStyle = 'danger'
-                  else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
-                }
-                const iconCustomEmojiId = b.iconCustomEmojiId
-                  ? String(b.iconCustomEmojiId)
-                  : ((b as any).icon_custom_emoji_id ? String((b as any).icon_custom_emoji_id) : undefined)
-
-                if (b._ === 'keyboardButtonRequestPhone') {
-                  btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonRequestGeoLocation') {
-                  btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonRequestPoll') {
-                  btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonUrl') {
-                  btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonCallback') {
-                  const b64 = Buffer.from(b.data).toString('base64')
-                  this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
-                  btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                  btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
-                } else if (b._ === 'keyboardButtonSwitchInline') {
-                  btnRow.push({
-                    text: b.text,
-                    type: 'switch_inline',
-                    switchInlineQuery: b.query ?? '',
-                    switchInlineQueryCurrentChat: Boolean(b.samePeer),
-                    _: 'keyboardButtonSwitchInline',
-                    style: btnStyle,
-                    iconCustomEmojiId,
-                  })
-                } else if (b._ === 'keyboardButtonBuy') {
-                  btnRow.push({
-                    text: b.text,
-                    type: 'buy',
-                    _: 'keyboardButtonBuy',
-                    style: btnStyle || 'success',
-                    iconCustomEmojiId,
-                  })
-                } else if (b.text) {
-                  btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
-                }
-              }
-            }
-            if (btnRow.length > 0) rows.push(btnRow)
-          }
-          if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
-            replyMarkup = {
-              rows,
-              _: rawMarkup._,
-              resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
-              singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
-              selective: Boolean(rawMarkup.selective),
-              persistent: Boolean(rawMarkup.persistent),
-              placeholder: rawMarkup.placeholder,
-            }
-          }
-        }
+        const replyMarkup = parseMtprotoReplyMarkup(rawMarkup, chatId, msg.id, (key, data) => {
+          this.botButtonCache.set(key, data)
+        })
 
         let replyTo: ReplyInfo | undefined = undefined
         if (msg.raw?.replyTo?.replyToMsgId) {
@@ -15504,6 +15372,20 @@ export class AccountManager {
           : Math.floor(Date.now() / 1000)
         const entities = parseMtprotoEntities(msg.raw?.entities)
 
+        const rawMarkup = msg.raw?.replyMarkup || msg.raw?.reply_markup
+        const replyMarkup = parseMtprotoReplyMarkup(rawMarkup, chatId, msg.id, (key, data) => {
+          this.botButtonCache.set(key, data)
+        })
+
+        const richMsgPayload = extractRichMessagePayload(msg.raw || msg)
+        let richMessage = richMsgPayload
+        if (!richMessage && msg.text) {
+          const parsedTable = parseMarkdownTable(msg.text)
+          if (parsedTable) {
+            richMessage = { blocks: [parsedTable], rtl: true }
+          }
+        }
+
         const updated = this.store.recordMessageEdit(
           accountId,
           chatId,
@@ -15515,7 +15397,8 @@ export class AccountManager {
           formatEntityName(msg.sender, '')
         )
 
-        const item: MessageItem = updated || {
+        const item: MessageItem = {
+          ...(updated || {}),
           id: msg.id,
           chatId,
           accountId,
@@ -15524,6 +15407,8 @@ export class AccountManager {
           editDate,
           isOutgoing: msg.isOutgoing,
           entities,
+          replyMarkup,
+          richMessage,
         }
         this.onEventCallback?.('telegram:message-edited', { accountId, chatId, message: item })
       } catch (e) {
