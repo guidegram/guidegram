@@ -24,6 +24,7 @@ data/
 .env.*.local
 *.jks
 *.keystore
+!android/app/guidegram-release.jks
 
 # IDE & OS
 .idea/
