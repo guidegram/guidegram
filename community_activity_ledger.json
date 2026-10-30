@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 15,
-    "githubIssuesCommented": 9,
+    "totalActivities": 18,
+    "githubIssuesCommented": 12,
     "githubPullRequests": 1,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,51 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_teloxide_1414",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "teloxide/teloxide",
+      "targetIssueNumber": 1414,
+      "targetTitle": "ParseMode::MarkdownV2 doesn't work correctly",
+      "targetUser": "aplafoe",
+      "url": "https://github.com/teloxide/teloxide/issues/1414#issuecomment-6534689372",
+      "issueUrl": "https://github.com/teloxide/teloxide/issues/1414",
+      "status": "live_public",
+      "summary": "Explained Telegram's 18 reserved MarkdownV2 characters including decimal dot in float metrics, and shared Guidegram's clean programmatic MessageEntity decoupling pattern.",
+      "timestamp": "2026-10-30T22:18:35Z"
+    },
+    {
+      "id": "gh_comment_aiogram_1802",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "aiogram/aiogram",
+      "targetIssueNumber": 1802,
+      "targetTitle": "message.delete() stops bot from sending message",
+      "targetUser": "triple-raze",
+      "url": "https://github.com/aiogram/aiogram/issues/1802#issuecomment-6534676937",
+      "issueUrl": "https://github.com/aiogram/aiogram/issues/1802",
+      "status": "live_public",
+      "summary": "Diagnosed unhandled TelegramBadRequest on message deletion in supergroups interrupting coroutine execution, and shared Guidegram's non-fatal exception suppressor and local audit vault decoupling.",
+      "timestamp": "2026-10-30T22:17:45Z"
+    },
+    {
+      "id": "gh_comment_telegrambots_1508",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "rubenlagus/TelegramBots",
+      "targetIssueNumber": 1508,
+      "targetTitle": "Not receive updates. Look like live lock issue",
+      "targetUser": "peterarsentev",
+      "url": "https://github.com/rubenlagus/TelegramBots/issues/1508#issuecomment-6534666371",
+      "issueUrl": "https://github.com/rubenlagus/TelegramBots/issues/1508",
+      "status": "live_public",
+      "summary": "Diagnosed silent half-open TCP socket hangs in cloud container NAT firewalls during 50s long-polling and presented Guidegram's strict socket read timeouts and watchdog heartbeat architecture.",
+      "timestamp": "2026-10-30T22:17:05Z"
+    },
     {
       "id": "gh_comment_tdesktop_30494",
       "platform": "github",
