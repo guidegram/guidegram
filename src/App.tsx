@@ -654,7 +654,27 @@ export const App: React.FC = () => {
             }).catch(() => {})
           }
           const msgDate = message?.date ? (message.date < 1e11 ? message.date * 1000 : message.date) : Date.now()
-          const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
+          const mediaFileName = (message as any)?.mediaFileName || (message as any)?.fileName || ''
+          let fallbackText = ''
+          if (message?.mediaType === 'document') {
+            fallbackText = mediaFileName ? `📄 ${mediaFileName}` : '📄 [File]'
+          } else if (message?.mediaType === 'audio') {
+            fallbackText = (message as any)?.mediaTitle ? `🎵 ${(message as any).mediaTitle}` : (mediaFileName ? `🎵 ${mediaFileName}` : '[Audio]')
+          } else if (message?.mediaType === 'photo') {
+            fallbackText = '[Photo]'
+          } else if (message?.mediaType === 'video') {
+            fallbackText = '[Video]'
+          } else if (message?.mediaType === 'voice') {
+            fallbackText = '[Voice message]'
+          } else if (message?.mediaType === 'round_video') {
+            fallbackText = '[Video message]'
+          } else if (message?.mediaType) {
+            fallbackText = `[${message.mediaType}]`
+          }
+
+          const msgText = message?.text
+            ? (message.mediaType === 'document' ? `📄 ${message.text}` : message.text)
+            : fallbackText
           const isOutgoing = Boolean(message?.isOutgoing)
           const currentAcc = accounts.find((a) => a.id === accountId)
           const isSavedChatId =
@@ -671,21 +691,32 @@ export const App: React.FC = () => {
               chatInfo?.title?.toLowerCase() === 'saved messages' ||
               chatInfo?.title === 'پیام‌های ذخیره‌شده'
 
+            const cachedDialog = (dialogsByAccountRef.current[accountId] || []).find(
+              (d) => d.id === chatId || isPeerMatch(d.id, chatId)
+            )
+            const wasContact = Boolean(cachedDialog?.isContact)
+            const isContactCalculated = Boolean(
+              chatInfo?.isContact ||
+              (payload as any)?.message?.sender?.isContact ||
+              wasContact
+            )
+
             const newDialog: DialogItem = {
               id: chatId,
               accountId,
-              title: isSaved ? 'Saved Messages' : (chatInfo?.title || message?.senderName || 'Chat'),
+              title: isSaved ? 'Saved Messages' : (chatInfo?.title || message?.senderName || cachedDialog?.title || 'Chat'),
               unreadCount: isSaved ? 0 : (chatId !== activeChatId && !message?.isOutgoing ? 1 : 0),
               unreadMentionsCount: 0,
               isMuted: isChatMuted,
-              isUser: chatInfo?.isUser ?? true,
-              isGroup: chatInfo?.isGroup ?? false,
-              isChannel: chatInfo?.isChannel ?? false,
-              isBroadcast: chatInfo?.isBroadcast ?? false,
-              isBot: chatInfo?.isBot ?? false,
-              isContact: chatInfo?.isContact ?? Boolean((payload as any)?.message?.sender?.isContact),
-              isPinned: false,
+              isUser: chatInfo?.isUser ?? cachedDialog?.isUser ?? true,
+              isGroup: chatInfo?.isGroup ?? cachedDialog?.isGroup ?? false,
+              isChannel: chatInfo?.isChannel ?? cachedDialog?.isChannel ?? false,
+              isBroadcast: chatInfo?.isBroadcast ?? cachedDialog?.isBroadcast ?? false,
+              isBot: chatInfo?.isBot ?? cachedDialog?.isBot ?? false,
+              isContact: isContactCalculated,
+              isPinned: cachedDialog?.isPinned || false,
               isSavedMessages: isSaved,
+              avatarUrl: chatInfo?.avatarUrl || cachedDialog?.avatarUrl || (payload as any)?.message?.senderAvatarUrl,
               lastMessageText: msgText,
               lastMessageDate: msgDate,
               lastMessageId: message?.id,
@@ -715,6 +746,8 @@ export const App: React.FC = () => {
                 return {
                   ...d,
                   isSavedMessages: d.isSavedMessages || isSaved,
+                  isContact: Boolean(d.isContact || (payload as any)?.chatInfo?.isContact || (payload as any)?.message?.sender?.isContact),
+                  avatarUrl: d.avatarUrl || (payload as any)?.chatInfo?.avatarUrl || (payload as any)?.message?.senderAvatarUrl,
                   unreadCount: isSaved
                     ? 0
                     : shouldIncrement
@@ -1523,7 +1556,7 @@ export const App: React.FC = () => {
   const loadMessages = async (accountId: string, chatId: string) => {
     if (!window.guidegram?.getMessages) return
     try {
-      const dialog = (dialogsByAccount[accountId] || []).find((d) => d.id === chatId)
+      const dialog = (dialogsByAccountRef.current[accountId] || []).find((d) => d.id === chatId || isPeerMatch(d.id, chatId))
       const unreadCount = dialog?.unreadCount || 0
       const fetchLimit = Math.min(100, Math.max(60, unreadCount + 20))
       const msgs = await window.guidegram.getMessages(accountId, chatId, fetchLimit)
@@ -1531,11 +1564,17 @@ export const App: React.FC = () => {
         ? [...msgs].sort((a, b) => (a.date - b.date) || (a.id - b.id))
         : []
       setMessagesByChat((prev) => {
-        const next: Record<string, MessageItem[]> = { ...prev, [chatId]: sortedMsgs }
+        const existing = prev[chatId] || []
+        const mergedMap = new Map<number, MessageItem>()
+        for (const m of existing) mergedMap.set(m.id, m)
+        for (const m of sortedMsgs) mergedMap.set(m.id, m)
+        const merged = Array.from(mergedMap.values()).sort((a, b) => (a.date - b.date) || (a.id - b.id))
+
+        const next: Record<string, MessageItem[]> = { ...prev, [chatId]: merged }
         const keys = Object.keys(next)
-        // Keep at most 3 recently opened chats in memory (active + 2 previous for snappy back-navigation)
-        if (keys.length > 3) {
-          const toEvict = keys.filter((k) => k !== chatId).slice(0, keys.length - 3)
+        // Memory guard: keep up to 30 recent chats in memory without wiping active history
+        if (keys.length > 30) {
+          const toEvict = keys.filter((k) => k !== chatId).slice(0, keys.length - 30)
           for (const k of toEvict) {
             delete next[k]
           }
@@ -1551,6 +1590,7 @@ export const App: React.FC = () => {
       console.error('Failed to load messages:', err)
     }
   }
+
 
   const handleMergeHistoricalMessages = (newMsgs: MessageItem[]) => {
     if (!activeChatId || !newMsgs || newMsgs.length === 0) return
@@ -1788,12 +1828,24 @@ export const App: React.FC = () => {
         }
       })
 
-      const mediaLabel = options?.caption || (options?.isVoice ? '[Voice message]' : '[Photo]')
+      const fileName = (options as any)?.fileName || (filePath ? filePath.split(/[\/\\]/).pop() : '')
+      const isVoice = Boolean(options?.isVoice)
+      const isDoc = sent.mediaType === 'document' || (!isVoice && sent.mediaType !== 'photo' && sent.mediaType !== 'video')
+      const mediaLabel = options?.caption
+        ? (isDoc ? `📄 ${options.caption}` : options.caption)
+        : (isDoc && fileName ? `📄 ${fileName}` : (isVoice ? '[Voice message]' : (sent.mediaType === 'photo' ? '[Photo]' : (sent.mediaType === 'video' ? '[Video]' : (fileName ? `📄 ${fileName}` : '📄 [File]')))))
+
+      const validMediaType: DialogItem['lastMessageMediaType'] =
+        sent.mediaType === 'photo' || sent.mediaType === 'video' || sent.mediaType === 'document' ||
+        sent.mediaType === 'voice' || sent.mediaType === 'sticker' || sent.mediaType === 'audio'
+          ? sent.mediaType
+          : (isVoice ? 'voice' : (isDoc ? 'document' : 'photo'))
+
       setDialogsByAccount((prev) => {
         const list = prev[activeAccountId] || []
         return {
           ...prev,
-          [activeAccountId]: list.map((d) =>
+          [activeAccountId]: list.map((d: DialogItem): DialogItem =>
             d.id === activeChatId
               ? {
                   ...d,
@@ -1802,7 +1854,7 @@ export const App: React.FC = () => {
                   lastMessageId: sent.id,
                   lastMessageIsOutgoing: true,
                   lastMessageRead: false,
-                  lastMessageMediaType: options?.isVoice ? 'voice' : 'photo',
+                  lastMessageMediaType: validMediaType,
                   unreadCount: 0,
                 }
               : d

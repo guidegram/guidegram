@@ -1645,7 +1645,9 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                         )}
 
                         <span className="truncate font-persian" dir="auto">
-                          {dialog.lastMessageText || '...'}
+                          {dialog.lastMessageText === '[File]' && dialog.lastMessageMediaType === 'document'
+                            ? '📄 File'
+                            : (dialog.lastMessageText || '...')}
                         </span>
                       </>
                     )}

@@ -1399,6 +1399,11 @@ export class AccountManager {
           Logger.warn(`[AccountManager] updates.catchUp error for ${updatedInfo.id}:`, catchErr)
         }
 
+        // Proactively populate contactPeerIds cache on launch so contact filtering is instant
+        if (!isBot) {
+          this.getContacts(updatedInfo.id).catch(() => {})
+        }
+
         const currentAccounts = this.store.getConfig().accounts.map((a) => (a.id === updatedInfo.id ? updatedInfo : a))
         this.store.updateConfig({ accounts: currentAccounts })
 
@@ -15252,6 +15257,28 @@ export class AccountManager {
       try {
         const chat = msg.chat as any
         const chatId = chat?.id?.toString() || ''
+        if (chatId) {
+          const rawChatHash = chat?.accessHash || chat?.raw?.accessHash || (msg.raw as any)?.peer?.accessHash
+          if (rawChatHash) {
+            this.setPeerAccessHash(accountId, chatId, rawChatHash)
+            const cleanId = chatId.replace(/^-100/, '').replace(/^-/, '')
+            this.setPeerAccessHash(accountId, cleanId, rawChatHash)
+          }
+        }
+        if (msg.sender?.id) {
+          const senderIdStr = String(msg.sender.id)
+          const senderHash = msg.sender.accessHash || (msg.sender as any).raw?.accessHash
+          if (senderHash) {
+            this.setPeerAccessHash(accountId, senderIdStr, senderHash)
+          }
+          if (msg.sender.isContact || (msg.sender as any).contact) {
+            this.addContactPeer(accountId, senderIdStr)
+            if (chatId) this.addContactPeer(accountId, chatId)
+          }
+        }
+        if (chat?.isContact || chat?.contact || (chat as any)?.raw?.contact) {
+          this.addContactPeer(accountId, chatId)
+        }
         if (chat?.photo?.small) {
           this.peerPhotos.set(`${accountId}_${chatId}`, chat.photo.small)
         }
@@ -15495,7 +15522,15 @@ export class AccountManager {
                 isChannel: chat.chatType === 'channel',
                 isBroadcast: chat.chatType === 'channel',
                 isBot: chat.chatType === 'bot',
-                isContact: Boolean(chat.isContact || chat.contact || (chat as any).raw?.contact || msg.sender?.isContact || this.isContactPeer(accountId, chatId)),
+                isContact: Boolean(
+                  chat.isContact ||
+                  chat.contact ||
+                  (chat as any).raw?.contact ||
+                  msg.sender?.isContact ||
+                  (msg.sender as any)?.contact ||
+                  this.isContactPeer(accountId, chatId) ||
+                  (senderIdStr && this.isContactPeer(accountId, senderIdStr))
+                ),
                 isMuted: isChatMuted,
               }
             : undefined,
@@ -15930,30 +15965,85 @@ export class AccountManager {
             }
           } else if (uId && uId !== accountId) {
             // Invalidate cached avatar for this user
-            this.avatarCache.delete(`${accountId}_${uId}`)
-            this.avatarCache.delete(`${accountId}_${uId}_big`)
+            const cacheKey = `${accountId}_${uId}`
+            this.avatarCache.delete(cacheKey)
+            this.avatarCache.delete(`${cacheKey}_big`)
 
-            if (update.photo?.small) this.peerPhotos.set(`${accountId}_${uId}`, update.photo.small)
-            if (update.photo?.big) this.peerBigPhotos.set(`${accountId}_${uId}`, update.photo.big)
+            const cleanUId = uId.replace(/^-100/, '').replace(/^-/, '')
+            const diskFiles = [
+              path.join(this.avatarsDir, `avatar_${accountId}_${uId}.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_${uId}_big.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_-100${cleanUId}.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_-100${cleanUId}_big.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_${cleanUId}.jpg`),
+              path.join(this.avatarsDir, `avatar_${accountId}_${cleanUId}_big.jpg`),
+            ]
+            for (const f of diskFiles) {
+              try { if (fs.existsSync(f)) fs.unlinkSync(f) } catch (_) {}
+            }
 
-            this.activityTrackerService.inspectUserSnapshot(accountId, {
-              id: uId,
-              photo: update.photo,
-            })
+            const isPhotoEmpty = !update.photo || update.photo._ === 'userProfilePhotoEmpty'
+            if (isPhotoEmpty) {
+              this.peerPhotoIds.delete(cacheKey)
+              this.savePhotoIdsDebounced()
+              this.onEventCallback?.('telegram:user-avatar-updated', {
+                accountId,
+                userId: uId,
+                avatarUrl: '',
+              })
+            } else {
+              const currentPhotoId = update.photo.photoId ? update.photo.photoId.toString() : (update.photo.id ? update.photo.id.toString() : '')
+              if (currentPhotoId) {
+                this.peerPhotoIds.set(cacheKey, currentPhotoId)
+                this.savePhotoIdsDebounced()
+              }
 
-            // Immediately trigger asynchronous high-resolution photo download
-            this.getProfilePhoto(accountId, uId, true, true)
-              .then((hdAvatarUrl) => {
-                if (hdAvatarUrl) {
-                  this.activityTrackerService.updateLatestPhotoChangeUrl(accountId, uId, hdAvatarUrl)
+              if (update.photo?.small) this.peerPhotos.set(cacheKey, update.photo.small)
+              if (update.photo?.big) this.peerBigPhotos.set(cacheKey, update.photo.big)
+
+              // Fast preview placeholder from stripped thumbnail if available
+              if (update.photo.strippedThumb) {
+                const fastThumb = strippedThumbToDataUrl(update.photo.strippedThumb)
+                if (fastThumb) {
                   this.onEventCallback?.('telegram:user-avatar-updated', {
                     accountId,
                     userId: uId,
-                    avatarUrl: hdAvatarUrl,
+                    avatarUrl: fastThumb,
                   })
                 }
+              }
+
+              this.activityTrackerService.inspectUserSnapshot(accountId, {
+                id: uId,
+                photo: update.photo,
               })
-              .catch(() => {})
+
+              // Immediately download both regular (for dialogs/chat list) and HD avatar
+              this.getProfilePhoto(accountId, uId, false, true)
+                .then((normAvatarUrl) => {
+                  if (normAvatarUrl) {
+                    this.onEventCallback?.('telegram:user-avatar-updated', {
+                      accountId,
+                      userId: uId,
+                      avatarUrl: normAvatarUrl,
+                    })
+                  }
+                })
+                .catch(() => {})
+
+              this.getProfilePhoto(accountId, uId, true, true)
+                .then((hdAvatarUrl) => {
+                  if (hdAvatarUrl) {
+                    this.activityTrackerService.updateLatestPhotoChangeUrl(accountId, uId, hdAvatarUrl)
+                    this.onEventCallback?.('telegram:user-avatar-updated', {
+                      accountId,
+                      userId: uId,
+                      avatarUrl: hdAvatarUrl,
+                    })
+                  }
+                })
+                .catch(() => {})
+            }
           }
         } else if (update._ === 'updateUser') {
           const u = update.user
