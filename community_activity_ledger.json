@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 36,
-    "githubIssuesCommented": 28,
+    "totalActivities": 37,
+    "githubIssuesCommented": 29,
     "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_telegrambots_1401",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "rubenlagus/TelegramBots",
+      "targetIssueNumber": 1401,
+      "targetTitle": "TelegramApiErrorResponseException: null while GetUpdates Request",
+      "targetUser": "bratinghosh",
+      "url": "https://github.com/rubenlagus/TelegramBots/issues/1401#issuecomment-6535921041",
+      "issueUrl": "https://github.com/rubenlagus/TelegramBots/issues/1401",
+      "status": "live_public",
+      "summary": "Diagnosed stale OkHttpClient TCP keep-alive sockets and JVM DNS caching causing TelegramApiErrorResponseException: null after idle days, providing connection pool eviction and null description guard patterns.",
+      "timestamp": "2026-10-30T23:46:00Z"
+    },
     {
       "id": "gh_comment_tdesktop_29655",
       "platform": "github",
