@@ -1097,6 +1097,22 @@ export class AccountManager {
   private peerPhotos = new Map<string, any>()
   private peerBigPhotos = new Map<string, any>()
   private peerPhotoIds = new Map<string, string>()
+  private photoIdsMetaPath: string = ''
+  private savePhotoIdsTimer?: NodeJS.Timeout
+
+  private savePhotoIdsDebounced(): void {
+    if (this.savePhotoIdsTimer) clearTimeout(this.savePhotoIdsTimer)
+    this.savePhotoIdsTimer = setTimeout(() => {
+      try {
+        if (!this.photoIdsMetaPath) return
+        const obj: Record<string, string> = {}
+        for (const [k, v] of this.peerPhotoIds.entries()) {
+          obj[k] = v
+        }
+        fs.writeFileSync(this.photoIdsMetaPath, JSON.stringify(obj, null, 2), 'utf-8')
+      } catch (_) {}
+    }, 1000)
+  }
   private pendingPhotoDownloads = new Map<string, Promise<string | null>>()
   private peerAccessHashes = new Map<string, Long>()
   private rawMessagesCache = new Map<string, any>()
@@ -1143,6 +1159,19 @@ export class AccountManager {
     } catch (e) {
       Logger.warn('[AccountManager] Cache directories creation warning:', e)
     }
+
+    this.photoIdsMetaPath = path.join(this.avatarsDir, 'avatars_meta.json')
+    try {
+      if (fs.existsSync(this.photoIdsMetaPath)) {
+        const raw = fs.readFileSync(this.photoIdsMetaPath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (parsed && typeof parsed === 'object') {
+          for (const [k, v] of Object.entries(parsed)) {
+            if (typeof v === 'string') this.peerPhotoIds.set(k, v)
+          }
+        }
+      }
+    } catch (_) {}
 
     try {
       const savedHashes = this.store.loadPeerHashes()
@@ -2461,60 +2490,95 @@ export class AccountManager {
           this.peerBigPhotos.set(`${accountId}_${peerId}`, peer.photo.big)
         }
 
+        // Resolve MTProto photo identifiers
+        const currentPhotoId = (
+          peer.photo?.photoId?.toString?.() ||
+          (peer.photo as any)?.photoId?.toString?.() ||
+          (peer.photo as any)?.photo_id?.toString?.() ||
+          peer.photo?.id?.toString?.() ||
+          (peer.photo?.raw as any)?.photoId?.toString?.() ||
+          (peer.photo?.raw as any)?.photo_id?.toString?.() ||
+          (peer.raw?.photo as any)?.photoId?.toString?.() ||
+          (peer.raw?.photo as any)?.photo_id?.toString?.() ||
+          ''
+        )
+        const hasPhoto = Boolean(peer.photo && peer.photo._ !== 'userProfilePhotoEmpty' && peer.photo._ !== 'chatPhotoEmpty')
+
         let avatarUrl: string | undefined = undefined
         const avatarCacheKey = `${accountId}_${peerId}`
-        // 1. Prioritize full high-res avatar from in-memory cache
-        if (this.avatarCache.has(avatarCacheKey)) {
-          avatarUrl = this.avatarCache.get(avatarCacheKey)
-        } else {
-          // 2. Check disk for existing crystal-clear HD avatar
-          const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
-          const diskCandidates = [
-            path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`),
-            path.join(this.avatarsDir, `avatar_${accountId}_-100${cleanId}.jpg`),
-            path.join(this.avatarsDir, `avatar_${accountId}_${cleanId}.jpg`),
-          ]
-          for (const cand of diskCandidates) {
-            if (fs.existsSync(cand)) {
-              try {
-                const stat = fs.statSync(cand)
-                if (stat.size > 500) {
-                  const fileData = fs.readFileSync(cand)
-                  avatarUrl = `data:image/jpeg;base64,${fileData.toString('base64')}`
-                  this.avatarCache.set(avatarCacheKey, avatarUrl)
-                  break
-                }
-              } catch (_) {}
-            }
-          }
-        }
-        // 3. Fallback to progressive preview thumbnail if HD photo is not on disk yet
-        if (!avatarUrl) {
-          if (peer.photo?.thumb) {
-            try {
-              avatarUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
-            } catch (_) {}
-          } else if (peer.photo?.raw?.strippedThumb) {
-            const thumb = strippedThumbToDataUrl(peer.photo.raw.strippedThumb)
-            if (thumb) {
-              avatarUrl = thumb
-            }
-          }
-        }
+        const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+        const diskCandidates = [
+          path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`),
+          path.join(this.avatarsDir, `avatar_${accountId}_-100${cleanId}.jpg`),
+          path.join(this.avatarsDir, `avatar_${accountId}_${cleanId}.jpg`),
+        ]
 
-        // Photo staleness / change detection from Telegram MTProto
-        const rawPhoto = (peer.photo?.raw as any) || (peer.raw?.photo as any)
-        const currentPhotoId = rawPhoto?.photoId ? rawPhoto.photoId.toString() : ''
-        if (currentPhotoId) {
-          const prevPhotoId = this.peerPhotoIds.get(`${accountId}_${peerId}`)
+        if (!hasPhoto) {
+          // User has completely deleted/removed profile photo! Invalidate disk and cache
+          this.avatarCache.delete(avatarCacheKey)
+          this.avatarCache.delete(`${avatarCacheKey}_big`)
+          for (const cand of diskCandidates) {
+            try { if (fs.existsSync(cand)) fs.unlinkSync(cand) } catch (_) {}
+          }
+          if (this.peerPhotoIds.has(avatarCacheKey)) {
+            this.peerPhotoIds.delete(avatarCacheKey)
+            this.savePhotoIdsDebounced()
+          }
+        } else if (currentPhotoId) {
+          const prevPhotoId = this.peerPhotoIds.get(avatarCacheKey)
+          const diskExists = diskCandidates.some((c) => fs.existsSync(c))
+
           if (prevPhotoId && prevPhotoId !== currentPhotoId) {
+            // Photo staleness: Photo ID changed in Telegram! Purge old cached photos
             this.avatarCache.delete(avatarCacheKey)
             this.avatarCache.delete(`${avatarCacheKey}_big`)
-            const diskFile = path.join(this.avatarsDir, `avatar_${accountId}_${peerId}.jpg`)
-            try { if (fs.existsSync(diskFile)) fs.unlinkSync(diskFile) } catch (_) {}
+            for (const cand of diskCandidates) {
+              try { if (fs.existsSync(cand)) fs.unlinkSync(cand) } catch (_) {}
+            }
+            this.getProfilePhoto(accountId, peerId, false, true).catch(() => {})
+            this.getProfilePhoto(accountId, peerId, true, true).catch(() => {})
+          } else if (!prevPhotoId && diskExists) {
+            // Legacy file without recorded photoId metadata: fetch fresh HD photo in background
             this.getProfilePhoto(accountId, peerId, false, true).catch(() => {})
           }
-          this.peerPhotoIds.set(`${accountId}_${peerId}`, currentPhotoId)
+          this.peerPhotoIds.set(avatarCacheKey, currentPhotoId)
+          this.savePhotoIdsDebounced()
+        }
+
+        if (hasPhoto) {
+          // 1. Prioritize full high-res avatar from in-memory cache
+          if (this.avatarCache.has(avatarCacheKey)) {
+            avatarUrl = this.avatarCache.get(avatarCacheKey)
+          } else {
+            // 2. Check disk for existing crystal-clear HD avatar
+            for (const cand of diskCandidates) {
+              if (fs.existsSync(cand)) {
+                try {
+                  const stat = fs.statSync(cand)
+                  if (stat.size > 500) {
+                    const fileData = fs.readFileSync(cand)
+                    avatarUrl = `data:image/jpeg;base64,${fileData.toString('base64')}`
+                    this.avatarCache.set(avatarCacheKey, avatarUrl)
+                    break
+                  }
+                } catch (_) {}
+              }
+            }
+          }
+          // 3. Progressive preview fallback from MTProto thumb if HD photo not on disk yet
+          if (!avatarUrl) {
+            if (peer.photo?.thumb) {
+              try {
+                avatarUrl = `data:image/jpeg;base64,${Buffer.from(peer.photo.thumb).toString('base64')}`
+              } catch (_) {}
+            } else if (peer.photo?.raw?.strippedThumb) {
+              const thumb = strippedThumbToDataUrl(peer.photo.raw.strippedThumb)
+              if (thumb) avatarUrl = thumb
+            } else if ((peer.photo as any)?.strippedThumb) {
+              const thumb = strippedThumbToDataUrl((peer.photo as any).strippedThumb)
+              if (thumb) avatarUrl = thumb
+            }
+          }
         }
 
         const isUser = peer._ === 'user' || typeof peer.firstName === 'string'
@@ -2597,9 +2661,12 @@ export class AccountManager {
               const doc = rawMedia.document
               if (doc && doc._ === 'document') {
                 lastMessageThumb = extractStrippedThumb(doc)
+                let docFileName = ''
                 if (doc.attributes) {
                   for (const attr of doc.attributes) {
-                    if (attr._ === 'documentAttributeSticker') {
+                    if (attr._ === 'documentAttributeFilename') {
+                      docFileName = attr.fileName || ''
+                    } else if (attr._ === 'documentAttributeSticker') {
                       lastMessageMediaType = 'sticker'
                       const docIdStr = doc.id?.toString ? doc.id.toString() : String(doc.id || '')
                       const accessHashStr = doc.accessHash?.toString ? doc.accessHash.toString() : String(doc.accessHash || '')
@@ -2631,13 +2698,18 @@ export class AccountManager {
                     }
                   }
                 }
-                if (!lastMessageMediaType) lastMessageMediaType = 'document'
+                if (!lastMessageMediaType) {
+                  lastMessageMediaType = 'document'
+                  if (docFileName && !lastMessageText) {
+                    lastMessageText = `📄 ${docFileName}`
+                  }
+                }
               }
             }
           }
 
           if (d.lastMessage.text) {
-            lastMessageText = d.lastMessage.text
+            lastMessageText = lastMessageMediaType === 'document' ? `📄 ${d.lastMessage.text}` : d.lastMessage.text
           } else if (!lastMessageText && lastMessageMediaType) {
             if (lastMessageMediaType === 'audio') lastMessageText = '[Audio]'
             else if (lastMessageMediaType === 'photo') lastMessageText = '[Photo]'
@@ -2645,7 +2717,7 @@ export class AccountManager {
             else if (lastMessageMediaType === 'video') lastMessageText = '[Video]'
             else if (lastMessageMediaType === 'voice') lastMessageText = '[Voice message]'
             else if (lastMessageMediaType === 'round_video') lastMessageText = '[Video message]'
-            else if (lastMessageMediaType === 'document') lastMessageText = '[File]'
+            else if (lastMessageMediaType === 'document') lastMessageText = '📄 [File]'
           } else if (!lastMessageText) {
             const rawLast = (d.lastMessage as any).raw || d.lastMessage
             const act = (rawLast as any).action || (d.lastMessage as any).action

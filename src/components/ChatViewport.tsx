@@ -8890,14 +8890,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 {/* Media Picker Drawer Toggle Button (Emojis, Stickers & Animated Packs) */}
                 <button
                   type="button"
+                  disabled={!canSendStickers}
                   aria-label="Emojis, Stickers & Animated Packs"
-                  onClick={() => setIsStickerDrawerOpen((prev) => !prev)}
-                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer ${
-                    isStickerDrawerOpen
-                      ? 'text-accent-violet bg-dark-750'
-                      : 'text-gray-400 hover:text-accent-violet hover:bg-dark-800'
+                  onClick={() => canSendStickers && setIsStickerDrawerOpen((prev) => !prev)}
+                  className={`p-2.5 rounded-xl transition-colors shrink-0 touch-hit-slop min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    !canSendStickers
+                      ? 'opacity-30 cursor-not-allowed text-gray-600'
+                      : isStickerDrawerOpen
+                      ? 'text-accent-violet bg-dark-750 cursor-pointer'
+                      : 'text-gray-400 hover:text-accent-violet hover:bg-dark-800 cursor-pointer'
                   }`}
-                  title="Emojis, Stickers & Animated Packs"
+                  title={!canSendStickers ? 'Sending stickers/emojis is restricted in this group' : 'Emojis, Stickers & Animated Packs'}
                 >
                   <Smile className="w-4 h-4" />
                 </button>

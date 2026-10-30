@@ -150,6 +150,7 @@ export interface DialogItem {
   }
   avatarInitials?: string
   avatarUrl?: string
+  photoId?: string
   username?: string
   folderId?: number
   customEmojiStatusId?: string
