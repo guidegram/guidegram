@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 20,
-    "githubIssuesCommented": 14,
+    "totalActivities": 23,
+    "githubIssuesCommented": 17,
     "githubPullRequests": 1,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,51 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdlib_3351",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "tdlib/td",
+      "targetIssueNumber": 3351,
+      "targetTitle": "Web - the TDLib stops working after the initial sign-in (Repro included)",
+      "targetUser": "kubk",
+      "url": "https://github.com/tdlib/td/issues/3351#issuecomment-6535189192",
+      "issueUrl": "https://github.com/tdlib/td/issues/3351",
+      "status": "live_public",
+      "summary": "Diagnosed fatal WASM assertion Check 'running_get_difference_' failed during page reloads in Emscripten/IDBFS, and provided Guidegram's atomic PTS checkpointing and Web Locks API mutex architecture.",
+      "timestamp": "2026-10-30T22:52:19Z"
+    },
+    {
+      "id": "gh_comment_tdesktop_29703",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 29703,
+      "targetTitle": "Use proxy for calls",
+      "targetUser": "kirsan31",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/29703#issuecomment-6535169264",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/29703",
+      "status": "live_public",
+      "summary": "Dissected signaling vs. tgcalls WebRTC media transport plane, explained why MTProto proxies cannot tunnel RTP, and detailed SOCKS5 TCP WebRTC PortAllocator bridging and Guidegram's zero-leak media proxy.",
+      "timestamp": "2026-10-30T22:50:51Z"
+    },
+    {
+      "id": "gh_comment_hydrogram_62",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "hydrogram/hydrogram",
+      "targetIssueNumber": 62,
+      "targetTitle": "Most likely the client time has to be synchronized",
+      "targetUser": "matheuszbb",
+      "url": "https://github.com/hydrogram/hydrogram/issues/62#issuecomment-6535153083",
+      "issueUrl": "https://github.com/hydrogram/hydrogram/issues/62",
+      "status": "live_public",
+      "summary": "Diagnosed MTProto 64-bit msg_id epoch calculation drift in WSL2/Docker, and detailed Guidegram's autonomous zero-NTP in-band time_offset calibration via bad_msg_notification handling.",
+      "timestamp": "2026-10-30T22:49:44Z"
+    },
     {
       "id": "gh_comment_go_tg_bot_api_774",
       "platform": "github",
