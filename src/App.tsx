@@ -157,6 +157,22 @@ export const App: React.FC = () => {
     }
   }, [isSettingsOpen])
 
+  // Freeze heavy animation loops and CSS painters when app is hidden / minimized in background
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        document.documentElement.classList.add('app-hidden')
+      } else {
+        document.documentElement.classList.remove('app-hidden')
+      }
+    }
+    handleVisibility()
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [])
+
   const handleManualLockApp = async () => {
     try {
       if (window.guidegram?.passcode?.lock) {

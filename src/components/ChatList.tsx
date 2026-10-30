@@ -512,7 +512,10 @@ export const ChatList = React.memo<ChatListProps>(({
     return list.sort((a, b) => scoreDialog(b) - scoreDialog(a))
   }, [filteredDialogs, serverMyPeers, searchScope, normQuery])
 
-  const storyPeerMap = new Map(activeStoryPeers.map((peer) => [peer.peerId, peer]))
+  const storyPeerMap = React.useMemo(
+    () => new Map(activeStoryPeers.map((peer) => [peer.peerId, peer])),
+    [activeStoryPeers]
+  )
 
   // Counts for PV filter toggle
   const userDialogs = React.useMemo(() => {
@@ -606,7 +609,7 @@ export const ChatList = React.memo<ChatListProps>(({
   }, [searchQuery, searchFilter, searchScope, searchDateFilter, customDate, account?.id])
 
   // Format time (e.g. 14:20 or Yesterday)
-  const formatTime = (timestamp?: number) => {
+  const formatTime = useCallback((timestamp?: number) => {
     if (!timestamp) return ''
     const ms = timestamp < 1e11 ? timestamp * 1000 : timestamp
     const date = new Date(ms)
@@ -615,7 +618,7 @@ export const ChatList = React.memo<ChatListProps>(({
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
     }
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
-  }
+  }, [])
 
   // Highlight search snippet in global results with flexible Persian normalization
   const highlightSnippet = (text: string, q: string) => {
@@ -1107,7 +1110,7 @@ export const ChatList = React.memo<ChatListProps>(({
                     {formatNumber(chatsAndContacts.length)}
                   </span>
                 </div>
-                {chatsAndContacts.map((dialog) => (
+                {chatsAndContacts.slice(0, 40).map((dialog) => (
                   <DialogListItem
                     key={dialog.id}
                     dialog={dialog}
@@ -1137,7 +1140,7 @@ export const ChatList = React.memo<ChatListProps>(({
                     {formatNumber(globalPeers.length)}
                   </span>
                 </div>
-                {globalPeers.map((peer) => (
+                {globalPeers.slice(0, 30).map((peer) => (
                   <div
                     key={`peer-${peer.id}`}
                     onClick={() => {

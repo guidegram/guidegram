@@ -432,6 +432,15 @@ html.light ::-webkit-scrollbar-thumb:hover {
 
 .message-bubble-contain {
   contain: layout style;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 44px;
+}
+
+/* Suspend all animations & transitions when app is hidden or minimized */
+.app-hidden *,
+.app-hidden *::before,
+.app-hidden *::after {
+  animation-play-state: paused !important;
 }
 
 /* Telegram Desktop fluid drawer and modal transitions */
