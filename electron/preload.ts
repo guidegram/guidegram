@@ -828,6 +828,16 @@ const guidegramAPI = {
     rawDoc?: any
   ): Promise<{ format: 'lottie' | 'video' | 'image'; data?: any; url?: string } | null> =>
     ipcRenderer.invoke('telegram:get-star-gift-media', { accountId, documentId, rawDoc }),
+  getStarGiftCollectionTraits: (
+    accountId: string,
+    slug?: string,
+    title?: string
+  ): Promise<{
+    models: Array<{ name: string; rarityPercent: number; isSelected?: boolean; documentId?: string; iconEmoji?: string }>;
+    backdrops: Array<{ name: string; rarityPercent: number; centerColor: string; edgeColor: string; isSelected?: boolean }>;
+    symbols: Array<{ name: string; rarityPercent: number; isSelected?: boolean; iconEmoji?: string }>;
+  }> =>
+    ipcRenderer.invoke('telegram:get-star-gift-collection-traits', { accountId, slug, title }),
   convertStarGift: (
     accountId: string,
     stargiftMsgId: number

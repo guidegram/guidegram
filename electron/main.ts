@@ -2958,6 +2958,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-star-gift-collection-traits', async (_event, { accountId, slug, title }) => {
+    try {
+      return await accountManager.getStarGiftCollectionTraits(accountId, slug, title)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getStarGiftCollectionTraits error:`, err)
+      return { models: [], backdrops: [], symbols: [] }
+    }
+  })
+
   ipcMain.handle('telegram:convert-star-gift', async (_event, { accountId, stargiftMsgId }) => {
     try {
       return await accountManager.convertStarGift(accountId, stargiftMsgId)

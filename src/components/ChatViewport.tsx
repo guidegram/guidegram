@@ -889,6 +889,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const [isBotMenuConfigModalOpen, setIsBotMenuConfigModalOpen] = useState(false)
   const [isPaidMediaComposerModalOpen, setIsPaidMediaComposerModalOpen] = useState(false)
   const [isStarGiftsModalOpen, setIsStarGiftsModalOpen] = useState(false)
+  const [selectedStarGift, setSelectedStarGift] = useState<StarGiftItem | null>(null)
   const [peerStarGifts, setPeerStarGifts] = useState<StarGiftItem[]>([])
 
   useEffect(() => {
@@ -9624,6 +9625,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                               })
                             )
                       }
+                      onSelectGift={(gift) => {
+                        setSelectedStarGift(gift)
+                        setIsStarGiftsModalOpen(true)
+                      }}
                       onOpenModal={() => setIsStarGiftsModalOpen(true)}
                     >
                       <Avatar
@@ -11914,7 +11919,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           accountId={chat.accountId}
           peerId={chat.id}
           userName={chatDetails?.title || chat.title}
-          onClose={() => setIsStarGiftsModalOpen(false)}
+          initialSelectedGift={selectedStarGift}
+          onClose={() => {
+            setIsStarGiftsModalOpen(false)
+            setSelectedStarGift(null)
+          }}
         />
       )}
 

@@ -92,6 +92,7 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
   }, [showQrModal, account])
 
   const [isStarGiftsModalOpen, setIsStarGiftsModalOpen] = useState(false)
+  const [selectedStarGift, setSelectedStarGift] = useState<StarGiftItem | null>(null)
   const [myStarGifts, setMyStarGifts] = useState<StarGiftItem[]>([])
 
   useEffect(() => {
@@ -198,6 +199,10 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
               <LiquidGiftOrbit
                 accountId={account.id}
                 starGifts={myStarGifts}
+                onSelectGift={(gift) => {
+                  setSelectedStarGift(gift)
+                  setIsStarGiftsModalOpen(true)
+                }}
                 onOpenModal={() => setIsStarGiftsModalOpen(true)}
               >
                 <div
@@ -522,9 +527,13 @@ export const MyProfileDrawer: React.FC<MyProfileDrawerProps> = ({
       {isStarGiftsModalOpen && account && (
         <StarGiftsModal
           isOpen={isStarGiftsModalOpen}
-          onClose={() => setIsStarGiftsModalOpen(false)}
+          onClose={() => {
+            setIsStarGiftsModalOpen(false)
+            setSelectedStarGift(null)
+          }}
           accountId={account.id}
           userName={fullName}
+          initialSelectedGift={selectedStarGift}
         />
       )}
     </div>

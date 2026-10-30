@@ -1189,6 +1189,7 @@ export interface StarGiftItem {
   isSoldOut?: boolean
   availabilityRemains?: number
   availabilityTotal?: number
+  availabilityIssued?: number
   canExportAt?: number
   transferStars?: number
   documentId?: string
@@ -1198,11 +1199,46 @@ export interface StarGiftItem {
   isUnique?: boolean
   slug?: string
   num?: number
+  ownerId?: string
+  ownerName?: string
+  ownerAddress?: string
+  valueUsd?: number
+  valueGram?: number
+  resellPriceStars?: number
+  resellPriceTon?: number
+  collectionModelsCount?: number
+  totalRarityPercent?: number
+  model?: {
+    name: string
+    rarityPermille?: number
+    rarityPercent?: number
+    rarityType?: string
+    documentId?: string
+    rawDocument?: any
+    mediaUrl?: string
+    lottieData?: any
+    mediaFormat?: 'lottie' | 'video' | 'image'
+  }
+  symbol?: {
+    name: string
+    rarityPermille?: number
+    rarityPercent?: number
+    rarityType?: string
+    documentId?: string
+    rawDocument?: any
+    mediaUrl?: string
+    lottieData?: any
+    mediaFormat?: 'lottie' | 'video' | 'image'
+  }
   backdrop?: {
+    name?: string
     centerColor?: string
     edgeColor?: string
     patternColor?: string
     textColor?: string
+    rarityPermille?: number
+    rarityPercent?: number
+    rarityType?: string
   }
   lottieData?: any
   mediaUrl?: string

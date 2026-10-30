@@ -6,10 +6,11 @@ import { StarGiftItem } from '../types/telegram'
 interface StarGiftVisualProps {
   gift: StarGiftItem
   accountId: string
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   className?: string
   showBackdrop?: boolean
   interactive?: boolean
+  hideBadge?: boolean
   onClick?: () => void
 }
 
@@ -19,14 +20,16 @@ const sizeClasses = {
   md: 'w-14 h-14 text-base',
   lg: 'w-20 h-20 text-xl',
   xl: 'w-28 h-28 text-2xl',
+  '2xl': 'w-48 h-48 text-4xl',
 }
 
 const mediaSizeClasses = {
   xs: 'w-5 h-5',
-  sm: 'w-7 h-7',
-  md: 'w-10 h-10',
+  sm: 'w-8 h-8',
+  md: 'w-11 h-11',
   lg: 'w-16 h-16',
-  xl: 'w-22 h-22',
+  xl: 'w-24 h-24',
+  '2xl': 'w-40 h-40',
 }
 
 // Global in-memory cache to prevent re-fetching across re-renders
@@ -39,6 +42,7 @@ export const StarGiftVisual: React.FC<StarGiftVisualProps> = ({
   className = '',
   showBackdrop = true,
   interactive = false,
+  hideBadge = false,
   onClick,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -188,8 +192,8 @@ export const StarGiftVisual: React.FC<StarGiftVisualProps> = ({
         </div>
       )}
 
-      {/* Collectible Unique Badge (#123) if available */}
-      {gift.num !== undefined && size !== 'xs' && (
+      {/* Collectible Unique Badge (#123) if available and not hidden */}
+      {!hideBadge && gift.num !== undefined && size !== 'xs' && (
         <div className="absolute bottom-0.5 right-0.5 px-1 rounded bg-black/65 backdrop-blur-xs text-[8px] font-mono font-bold text-amber-300 border border-amber-400/30 leading-tight select-none">
           #{gift.num}
         </div>
