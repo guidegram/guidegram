@@ -1177,14 +1177,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   useEffect(() => {
     refreshScheduledMessages()
-    const syncTimer = setInterval(refreshScheduledMessages, 30000)
+    const syncTimer = setInterval(() => {
+      if (!document.hidden) {
+        refreshScheduledMessages()
+      }
+    }, 30000)
     return () => clearInterval(syncTimer)
   }, [refreshScheduledMessages])
 
-  // Live 1-second countdown ticker active only when scheduled messages exist
+  // Live 1-second countdown ticker active only when scheduled messages exist and window is visible
   useEffect(() => {
     if (chatScheduledMessages.length === 0) return
-    const ticker = setInterval(() => setScheduledTickerNow(Date.now()), 1000)
+    const ticker = setInterval(() => {
+      if (!document.hidden) {
+        setScheduledTickerNow(Date.now())
+      }
+    }, 1000)
     return () => clearInterval(ticker)
   }, [chatScheduledMessages.length])
 
