@@ -159,7 +159,7 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className={`absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-xs select-none ${className}`}
+      className={`absolute bottom-full start-0 right-0 mb-2 max-h-64 overflow-y-auto bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-0.5 z-[70] animate-in fade-in zoom-in-95 duration-100 text-xs select-none ${className}`}
     >
       {/* Header info */}
       <div className="px-3 py-1.5 border-b border-white/5 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -272,7 +272,7 @@ const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     <div
       ref={modalRef}
       onClick={(e) => e.stopPropagation()}
-      className="absolute bottom-full left-0 mb-2 w-80 max-h-96 overflow-hidden bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-xs"
+      className="absolute bottom-full start-0 mb-2 w-80 max-h-96 overflow-hidden bg-dark-850/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col z-[70] animate-in fade-in zoom-in-95 duration-150 select-none text-xs"
     >
       {/* Header */}
       <div className="p-3 border-b border-white/5 flex items-center justify-between">
@@ -386,9 +386,10 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
 }) => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isLaunchingApp, setIsLaunchingApp] = useState(false)
+  const [lazyCommands, setLazyCommands] = useState<BotCommandItem[]>([])
 
-  // Resolve bot commands
-  const resolvedCommands = useMemo<BotCommandItem[]>(() => {
+  // Resolve bot commands from props or chatDetails
+  const propCommands = useMemo<BotCommandItem[]>(() => {
     if (explicitCommands && explicitCommands.length > 0) {
       return explicitCommands
     }
@@ -397,6 +398,22 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
     }
     return []
   }, [explicitCommands, chatDetails?.botInfo?.commands])
+
+  const resolvedCommands = useMemo<BotCommandItem[]>(() => {
+    if (propCommands.length > 0) return propCommands
+    return lazyCommands
+  }, [propCommands, lazyCommands])
+
+  // Lazy-fetch commands if bot commands are missing
+  useEffect(() => {
+    if (propCommands.length === 0 && (chat.isBot || chatDetails?.isBot) && (window as any).guidegram?.getBotInfo) {
+      (window as any).guidegram.getBotInfo(chat.accountId, chat.id).then((info: any) => {
+        if (info?.commands && info.commands.length > 0) {
+          setLazyCommands(info.commands)
+        }
+      }).catch((e: any) => console.debug('Bot commands fetch:', e))
+    }
+  }, [chat.accountId, chat.id, chat.isBot, chatDetails?.isBot, propCommands.length])
 
   // Resolve bot menu button configuration
   const resolvedMenuButton = useMemo(() => {
@@ -430,12 +447,12 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
         mode: 'commands' as const,
         label: (btn as any).text || 'Menu',
         url: undefined,
-        show: hasCommands,
+        show: true,
       }
     }
 
-    // Default button: fallback to command palette if commands exist
-    if (hasCommands) {
+    // Default button: fallback to command palette if commands exist or if chat is a bot
+    if (hasCommands || chat.isBot || chatDetails?.isBot) {
       return {
         mode: 'commands' as const,
         label: (btn as any)?.text || 'Menu',
@@ -451,7 +468,7 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
       url: undefined,
       show: false,
     }
-  }, [resolvedMenuButton, resolvedCommands])
+  }, [resolvedMenuButton, resolvedCommands, chat.isBot, chatDetails?.isBot])
 
   // Handle Web App launch via window.guidegram or onLaunchMiniApp
   const handleLaunchWebApp = useCallback(

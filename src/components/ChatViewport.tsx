@@ -7666,6 +7666,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
                   {/* Bot Inline Keyboard Buttons - Rendered SEPARATELY below message bubble */}
                     {msg.replyMarkup &&
+                      msg.replyMarkup._ !== 'replyKeyboardMarkup' &&
                       msg.replyMarkup.rows &&
                       msg.replyMarkup.rows.length > 0 && (
                         <div className="mt-1.5 w-full space-y-1.5">
@@ -7675,6 +7676,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                 const btnIsRtl = isRTL(btn.text)
                                 const btnId = `${msg.id}_${rIdx}_${bIdx}`
                                 const isCalling = callingBotBtnId === btnId
+
+                                const styleClass =
+                                  btn.style === 'primary'
+                                    ? 'bg-[#298acf] hover:bg-[#3498db] active:bg-[#2075b0] text-white border-[#298acf]/50 shadow-sm'
+                                    : btn.style === 'success'
+                                    ? 'bg-[#4fae4e] hover:bg-[#58bd57] active:bg-[#439c42] text-white border-[#4fae4e]/50 shadow-sm'
+                                    : btn.style === 'danger'
+                                    ? 'bg-[#d8504e] hover:bg-[#e45a58] active:bg-[#c24442] text-white border-[#d8504e]/50 shadow-sm'
+                                    : 'bg-dark-800/90 hover:bg-dark-750 active:scale-98 text-gray-100 hover:text-white border-white/10 shadow-sm backdrop-blur-sm'
 
                                 return (
                                   <button
@@ -7760,11 +7770,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         ? `Open ${btn.url}`
                                         : undefined
                                     }
-                                    className="flex-1 min-w-[80px] px-3 py-2 rounded-xl bg-dark-800/90 hover:bg-dark-750 active:scale-98 text-gray-100 hover:text-white text-xs font-medium transition-all border border-white/10 shadow-sm flex items-center justify-center gap-1.5 cursor-pointer backdrop-blur-sm"
+                                    className={`flex-1 min-w-[80px] px-3 py-2 rounded-xl text-xs font-medium transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${styleClass}`}
                                   >
                                     {isCalling ? (
                                       <div className="w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin shrink-0" />
                                     ) : null}
+                                    {btn.iconCustomEmojiId && (
+                                      <CustomEmojiView
+                                        accountId={msg.accountId || chat?.accountId || ''}
+                                        documentId={btn.iconCustomEmojiId}
+                                        className="w-4 h-4 inline-block align-middle shrink-0"
+                                      />
+                                    )}
                                     <span className="truncate">{btn.text}</span>
                                     {btn.url && (
                                       <ExternalLink className="w-3 h-3 text-gray-300 shrink-0" />
@@ -8643,7 +8660,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             </button>
           </div>
         ) : (
-          <div className="p-3 relative">
+          <div className="p-3 relative z-30">
 
             {isRecordingVoice ? (
               <div className="flex items-center gap-3 w-full bg-dark-800/95 border border-red-500/30 rounded-2xl px-4 py-2 shadow-lg animate-in fade-in slide-in-from-bottom-1 duration-150">
@@ -8708,7 +8725,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     chat={chat}
                     chatDetails={chatDetails}
                     menuButton={botMenuButtonState || (chatDetails?.botInfo?.menuButton as any)}
-                    commands={chatDetails?.botInfo?.commands}
+                    commands={botInfoState?.commands?.length ? botInfoState.commands : chatDetails?.botInfo?.commands}
                     inputText={inputText}
                     cursorPosition={textareaRef.current?.selectionEnd ?? undefined}
                     onSendCommand={(cmd: string) => onSendMessage(cmd)}
@@ -9380,6 +9397,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             {/* Telegram Persistent Custom Reply Keyboard Panel (Layer 180+) */}
             {activeReplyMarkup && (
               <ReplyKeyboardPanel
+                accountId={chat?.accountId}
                 replyMarkup={activeReplyMarkup as any}
                 isOpen={isReplyKeyboardOpen}
                 botName={chatDetails?.title || chat.title}
