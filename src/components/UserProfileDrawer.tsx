@@ -19,12 +19,17 @@ import {
   Loader2,
   Users,
   Activity,
+  Pin,
+  Clock,
+  Play,
+  Layers,
 } from 'lucide-react'
-import type { ChatDetails } from '../types/telegram'
+import type { ChatDetails, StoryItemPayload } from '../types/telegram'
 import { Avatar } from './Avatar'
 import { UserActivityRadar } from './UserActivityRadar'
 import { UserMutualGroupsActivity } from './UserMutualGroupsActivity'
 import { CustomEmojiView } from './ChatViewport'
+import { StoryViewerModal } from './StoryViewerModal'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL } from '../utils/textUtils'
 import { useI18n } from '../i18n'
@@ -61,6 +66,66 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [isBlocking, setIsBlocking] = useState(false)
   const [profileTab, setProfileTab] = useState<'activity_radar' | 'mutual_groups'>('mutual_groups')
+
+  // Story & Pinned Profile Posts State
+  const [pinnedStories, setPinnedStories] = useState<StoryItemPayload[]>([])
+  const [activeStories, setActiveStories] = useState<StoryItemPayload[]>([])
+  const [isLoadingStories, setIsLoadingStories] = useState(false)
+  const [selectedStoryViewer, setSelectedStoryViewer] = useState<{
+    isOpen: boolean
+    tab: 'active' | 'pinned'
+    initialStoryId?: number
+  } | null>(null)
+
+  // Fetch Pinned Profile Stories (Posts) and Active Stories for this user
+  useEffect(() => {
+    if (!isOpen || !peerId || !accountId) {
+      setPinnedStories([])
+      setActiveStories([])
+      setIsLoadingStories(false)
+      return
+    }
+
+    let active = true
+    setIsLoadingStories(true)
+
+    const pPinned = window.guidegram?.getPinnedStories
+      ? window.guidegram.getPinnedStories(accountId, peerId)
+      : Promise.resolve({ count: 0, stories: [] })
+
+    const pActive = window.guidegram?.getPeerStories
+      ? window.guidegram.getPeerStories(accountId, peerId)
+      : Promise.resolve(null)
+
+    Promise.allSettled([pPinned, pActive])
+      .then(([pinnedRes, activeRes]) => {
+        if (!active) return
+        if (pinnedRes.status === 'fulfilled' && pinnedRes.value) {
+          const list = Array.isArray(pinnedRes.value)
+            ? pinnedRes.value
+            : pinnedRes.value.stories || []
+          setPinnedStories(list)
+        } else {
+          setPinnedStories([])
+        }
+
+        if (activeRes.status === 'fulfilled' && activeRes.value) {
+          const list = Array.isArray(activeRes.value)
+            ? activeRes.value
+            : activeRes.value.stories || []
+          setActiveStories(list)
+        } else {
+          setActiveStories([])
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoadingStories(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [isOpen, accountId, peerId])
 
   useEffect(() => {
     if (initialDetails?.isContact || details?.isContact) {
@@ -220,6 +285,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
   const displayTitle = details?.title || initialDetails?.title || 'User'
   const displayUsername = details?.username || initialDetails?.username
   const displayAvatar = details?.avatarUrl || initialDetails?.avatarUrl
+  const hasStories = pinnedStories.length > 0 || activeStories.length > 0
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -264,15 +330,51 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
           {/* Hero Avatar & Identity Card */}
           <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-dark-850/70 border border-white/5 shadow-xs">
-            <Avatar
-              accountId={accountId}
-              peerId={peerId}
-              title={displayTitle}
-              avatarUrl={displayAvatar}
-              size="xl"
-              className="mb-3 cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-white/10 hover:ring-accent-cyan/50"
-              onClick={handleOpenPhoto}
-            />
+            <div className="relative mb-3 flex items-center justify-center">
+              <div
+                className={`rounded-full p-1 transition-all ${
+                  hasStories
+                    ? 'bg-gradient-to-tr from-accent-cyan via-primary-500 to-accent-rose shadow-lg shadow-primary-500/25 ring-2 ring-white/20'
+                    : ''
+                }`}
+              >
+                <Avatar
+                  accountId={accountId}
+                  peerId={peerId}
+                  title={displayTitle}
+                  avatarUrl={displayAvatar}
+                  size="xl"
+                  className="cursor-pointer hover:opacity-90 transition-opacity ring-2 ring-white/10 hover:ring-accent-cyan/50"
+                  onClick={() => {
+                    if (hasStories) {
+                      setSelectedStoryViewer({
+                        isOpen: true,
+                        tab: pinnedStories.length > 0 ? 'pinned' : 'active',
+                        initialStoryId: pinnedStories[0]?.id || activeStories[0]?.id,
+                      })
+                    } else {
+                      handleOpenPhoto()
+                    }
+                  }}
+                />
+              </div>
+              {hasStories && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedStoryViewer({
+                      isOpen: true,
+                      tab: pinnedStories.length > 0 ? 'pinned' : 'active',
+                      initialStoryId: pinnedStories[0]?.id || activeStories[0]?.id,
+                    })
+                  }
+                  title={isPersian ? 'مشاهده استوری‌ها و پست‌های پروفایل' : 'View Profile Posts & Stories'}
+                  className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-gradient-to-tr from-accent-cyan to-primary-600 text-white shadow-md hover:scale-110 transition-transform cursor-pointer border border-white/30"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
             <div className="flex items-center justify-center gap-1.5 mb-1 px-2 max-w-full">
               <h3
@@ -349,6 +451,131 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               <span className="text-[11px]">{isPersian ? 'منشن' : 'Mention'}</span>
             </button>
           </div>
+
+          {/* Profile Stories & Pinned Posts Section */}
+          {(hasStories || isLoadingStories) && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-b from-dark-850/95 to-dark-850/70 border border-white/10 shadow-md space-y-3">
+              {/* Section Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-tr from-accent-cyan/20 to-primary-500/20 text-accent-cyan border border-accent-cyan/30">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
+                      <span>{isPersian ? 'پست‌ها و استوری‌های پروفایل' : 'Profile Posts & Stories'}</span>
+                    </h4>
+                    <span className="text-[10px] text-gray-400">
+                      {pinnedStories.length > 0 && `${pinnedStories.length} ${isPersian ? 'پست پین‌شده' : 'pinned'}`}
+                      {pinnedStories.length > 0 && activeStories.length > 0 && ' · '}
+                      {activeStories.length > 0 && `${activeStories.length} ${isPersian ? 'استوری فعال' : 'active'}`}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedStoryViewer({
+                      isOpen: true,
+                      tab: pinnedStories.length > 0 ? 'pinned' : 'active',
+                      initialStoryId: pinnedStories[0]?.id || activeStories[0]?.id,
+                    })
+                  }
+                  className="px-2.5 py-1 rounded-xl bg-primary-600/25 hover:bg-primary-600/40 border border-primary-500/30 text-primary-300 hover:text-white text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                >
+                  <span>{isPersian ? 'نمایش کامل' : 'View All'}</span>
+                  <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                </button>
+              </div>
+
+              {/* Stories Thumbnails Carousel */}
+              {isLoadingStories ? (
+                <div className="flex items-center justify-center py-6 text-gray-400 gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent-cyan" />
+                  <span className="text-xs">{isPersian ? 'در حال دریافت پست‌های پروفایل...' : 'Loading profile posts...'}</span>
+                </div>
+              ) : (
+                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10 snap-x">
+                  {[...pinnedStories, ...activeStories].map((story, idx) => {
+                    const isPinned = pinnedStories.some((p) => p.id === story.id)
+                    return (
+                      <div
+                        key={`profile-story-${story.id}-${idx}`}
+                        onClick={() =>
+                          setSelectedStoryViewer({
+                            isOpen: true,
+                            tab: isPinned ? 'pinned' : 'active',
+                            initialStoryId: story.id,
+                          })
+                        }
+                        className="group relative w-22 h-32 shrink-0 rounded-xl overflow-hidden bg-dark-900 border border-white/10 hover:border-accent-cyan/50 hover:shadow-lg hover:shadow-accent-cyan/15 transition-all cursor-pointer snap-start flex flex-col justify-between p-2 select-none"
+                      >
+                        {/* Media Thumbnail or Gradient Background */}
+                        {story.thumbnailUrl ? (
+                          <img
+                            src={story.thumbnailUrl}
+                            alt={story.caption || 'Story preview'}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-b from-dark-800 via-dark-850 to-dark-950 group-hover:scale-105 transition-transform duration-300" />
+                        )}
+
+                        {/* Dark Overlay for Readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/40 group-hover:via-black/10 transition-colors" />
+
+                        {/* Top Badges: Pinned Pin or Video Indicator */}
+                        <div className="relative z-10 flex items-center justify-between w-full">
+                          {isPinned ? (
+                            <span
+                              className="p-1 rounded-md bg-accent-cyan/80 text-dark-950 backdrop-blur-xs font-bold text-[9px] flex items-center gap-0.5 shadow-xs"
+                              title={isPersian ? 'پست پین‌شده در پروفایل' : 'Pinned to profile'}
+                            >
+                              <Pin className="w-2.5 h-2.5 fill-current" />
+                            </span>
+                          ) : (
+                            <span
+                              className="p-1 rounded-md bg-accent-violet/80 text-white backdrop-blur-xs font-bold text-[9px] flex items-center gap-0.5 shadow-xs"
+                              title={isPersian ? 'استوری فعال ۲۴ساعته' : 'Active 24h story'}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                            </span>
+                          )}
+
+                          {story.isVideo && (
+                            <span className="p-1 rounded-md bg-black/50 text-white backdrop-blur-xs text-[9px]">
+                              <Play className="w-2.5 h-2.5 fill-white" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Hover Center Play Button */}
+                        <div className="relative z-10 my-auto self-center opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:scale-110 duration-200">
+                          <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center text-white shadow-lg">
+                            <Play className="w-4 h-4 fill-white ml-0.5" />
+                          </div>
+                        </div>
+
+                        {/* Bottom Caption or Date */}
+                        <div className="relative z-10 min-w-0">
+                          {story.caption ? (
+                            <p className="text-[10px] text-white/90 truncate font-medium">
+                              {story.caption}
+                            </p>
+                          ) : (
+                            <span className="text-[9px] text-gray-300 font-mono">
+                              {story.date ? new Date(story.date * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Block / Unblock User Action */}
           {peerId !== currentChatId && !details?.isBot && (
@@ -615,6 +842,19 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Story & Profile Posts Viewer Modal */}
+      {selectedStoryViewer?.isOpen && (
+        <StoryViewerModal
+          isOpen={selectedStoryViewer.isOpen}
+          onClose={() => setSelectedStoryViewer(null)}
+          accountId={accountId}
+          peerId={peerId}
+          peerTitle={displayTitle}
+          initialTab={selectedStoryViewer.tab}
+          initialStoryId={selectedStoryViewer.initialStoryId}
+        />
+      )}
     </div>
   )
 }
