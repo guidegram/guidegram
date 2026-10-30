@@ -1,4 +1,26 @@
 apply plugin: 'com.android.application'
+import groovy.json.JsonSlurper
+
+def getPackageVersion() {
+    def packageJsonFile = file('../../package.json')
+    if (packageJsonFile.exists()) {
+        def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
+        return packageJson.version ?: "2.5.4"
+    }
+    return "2.5.4"
+}
+
+def getPackageVersionCode() {
+    try {
+        def ver = getPackageVersion().tokenize('.')
+        def major = ver[0].toInteger()
+        def minor = ver[1].toInteger()
+        def patch = ver[2].toInteger()
+        return major * 10000 + minor * 100 + patch
+    } catch (Exception e) {
+        return 20504
+    }
+}
 
 android {
     namespace = "io.github.guidegram.app"
@@ -7,8 +29,8 @@ android {
         applicationId "io.github.guidegram.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 242
-        versionName "2.4.2"
+        versionCode getPackageVersionCode()
+        versionName getPackageVersion()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +38,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            storeFile file('guidegram-release.jks')
+            storePassword 'guidegram2026'
+            keyAlias 'guidegram'
+            keyPassword 'guidegram2026'
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.release
         }
     }
 }

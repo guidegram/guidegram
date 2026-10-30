@@ -200,12 +200,12 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Prepare Android APK Output
         run: |
           mkdir -p release
-          cp android/app/build/outputs/apk/debug/app-debug.apk release/Guidegram-Android.apk || find android/app/build/outputs/apk -type f -name "*.apk" -exec cp {} release/Guidegram-Android.apk \;
+          cp android/app/build/outputs/apk/release/app-release.apk release/Guidegram-Android.apk || find android/app/build/outputs/apk -type f -name "*.apk" -exec cp {} release/Guidegram-Android.apk \;
 
       - name: Attach Android APK to Release
         uses: softprops/action-gh-release@v2
