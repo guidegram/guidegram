@@ -1102,16 +1102,19 @@ export class AccountManager {
 
   private savePhotoIdsDebounced(): void {
     if (this.savePhotoIdsTimer) clearTimeout(this.savePhotoIdsTimer)
-    this.savePhotoIdsTimer = setTimeout(() => {
+    this.savePhotoIdsTimer = setTimeout(async () => {
       try {
         if (!this.photoIdsMetaPath) return
         const obj: Record<string, string> = {}
         for (const [k, v] of this.peerPhotoIds.entries()) {
           obj[k] = v
         }
-        fs.writeFileSync(this.photoIdsMetaPath, JSON.stringify(obj, null, 2), 'utf-8')
+        await fs.promises.writeFile(this.photoIdsMetaPath, JSON.stringify(obj, null, 2), 'utf-8')
       } catch (_) {}
     }, 1000)
+    if (this.savePhotoIdsTimer.unref) {
+      this.savePhotoIdsTimer.unref()
+    }
   }
   private pendingPhotoDownloads = new Map<string, Promise<string | null>>()
   private peerAccessHashes = new Map<string, Long>()
@@ -3267,8 +3270,9 @@ export class AccountManager {
       const keys = Array.from(this.mediaCache.keys()).slice(0, this.mediaCache.size - 50)
       for (const k of keys) this.mediaCache.delete(k)
     }
-    if (this.failedMediaKeys.size > 500) {
-      this.failedMediaKeys.clear()
+    if (this.failedMediaKeys.size > 3000) {
+      const keys = Array.from(this.failedMediaKeys).slice(0, this.failedMediaKeys.size - 1500)
+      for (const k of keys) this.failedMediaKeys.delete(k)
     }
   }
 
@@ -4207,20 +4211,21 @@ export class AccountManager {
           `media_${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}`,
           `${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}`,
         ]
-        try {
-          const files = fs.readdirSync(this.mediaDir)
-          for (const prefix of candidatePrefixes) {
-            const found = files.find((f) => f.startsWith(prefix))
-            if (found) {
-              const fullPath = path.join(this.mediaDir, found)
-              if (fs.existsSync(fullPath) && fs.statSync(fullPath).size > 0) {
-                const dataUrl = `guidegram-media://${fullPath.replace(/\\/g, '/')}`
-                this.mediaCache.set(cacheKey, dataUrl)
-                return dataUrl
-              }
+        const candidateExts = ['.jpg', '.png', '.webp', '.mp4', '.mp3', '.ogg', '.pdf', '.webm', '.gif', '']
+        for (const prefix of candidatePrefixes) {
+          for (const ext of candidateExts) {
+            const candidatePath = path.join(this.mediaDir, `${prefix}${ext}`)
+            if (fs.existsSync(candidatePath)) {
+              try {
+                if (fs.statSync(candidatePath).size > 0) {
+                  const dataUrl = `guidegram-media://${candidatePath.replace(/\\/g, '/')}`
+                  this.mediaCache.set(cacheKey, dataUrl)
+                  return dataUrl
+                }
+              } catch (_) {}
             }
           }
-        } catch {}
+        }
 
         const cleanChatId = String(chatId).trim()
         const bareId = cleanChatId.replace(/^-100/, '').replace(/^-/, '')

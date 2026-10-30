@@ -22,6 +22,10 @@ export class SessionStore {
   private pendingSaveAudit: Map<string, boolean> = new Map()
   private messageChatIndex: Map<string, Map<number, string>> = new Map()
   private recentMessagesCache: Map<string, Map<string, MessageItem>> = new Map()
+  private botMessagesCache: Map<string, MessageItem[]> = new Map()
+  private botChatsCache: Map<string, string[]> = new Map()
+  private saveBotMessagesTimers: Map<string, NodeJS.Timeout> = new Map()
+  private saveBotChatsTimers: Map<string, NodeJS.Timeout> = new Map()
 
   constructor(baseDataDir: string) {
     this.dataDir = baseDataDir
@@ -712,6 +716,30 @@ export class SessionStore {
       this.flushSaveAccountAuditSync(accountId)
     }
     this.saveAuditTimers.clear()
+
+    for (const [key, timer] of this.saveBotMessagesTimers.entries()) {
+      clearTimeout(timer)
+      const list = this.botMessagesCache.get(key)
+      if (list) {
+        const [accId, ...rest] = key.split('_')
+        const chId = rest.join('_')
+        try {
+          fs.writeFileSync(this.getBotMessagesFilePath(accId, chId), JSON.stringify(list), 'utf-8')
+        } catch (_) {}
+      }
+    }
+    this.saveBotMessagesTimers.clear()
+
+    for (const [accountId, timer] of this.saveBotChatsTimers.entries()) {
+      clearTimeout(timer)
+      const chats = this.botChatsCache.get(accountId)
+      if (chats) {
+        try {
+          fs.writeFileSync(this.getBotChatsFilePath(accountId), JSON.stringify(chats), 'utf-8')
+        } catch (_) {}
+      }
+    }
+    this.saveBotChatsTimers.clear()
   }
 
   public indexMessageChat(accountId: string, chatId: string, messageId: number): void {
