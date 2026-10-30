@@ -885,13 +885,21 @@ export class SessionStore {
     this.saveAccountAudit(accountId, audit)
   }
 
+  private getBotMessagesFilePath(accountId: string, chatId: string): string {
+    return path.join(this.botMessagesDir, `bot_${accountId}_${chatId}.json`)
+  }
+
+  private getBotChatsFilePath(accountId: string): string {
+    return path.join(this.botMessagesDir, `chats_${accountId}.json`)
+  }
+
   public recordBotMessage(accountId: string, chatId: string, msg: MessageItem): void {
     if (!accountId || !chatId || !msg?.id) return
     try {
       if (!fs.existsSync(this.botMessagesDir)) {
         fs.mkdirSync(this.botMessagesDir, { recursive: true })
       }
-      const filePath = path.join(this.botMessagesDir, `bot_${accountId}_${chatId}.json`)
+      const filePath = this.getBotMessagesFilePath(accountId, chatId)
       let list: MessageItem[] = []
       if (fs.existsSync(filePath)) {
         try {
@@ -926,7 +934,7 @@ export class SessionStore {
       if (!fs.existsSync(this.botMessagesDir)) {
         fs.mkdirSync(this.botMessagesDir, { recursive: true })
       }
-      const filePath = path.join(this.botMessagesDir, `bot_${accountId}_${chatId}.json`)
+      const filePath = this.getBotMessagesFilePath(accountId, chatId)
       let list: MessageItem[] = []
       if (fs.existsSync(filePath)) {
         try {
@@ -964,7 +972,7 @@ export class SessionStore {
   public loadBotMessages(accountId: string, chatId: string): MessageItem[] {
     if (!accountId || !chatId) return []
     try {
-      const filePath = path.join(this.botMessagesDir, `bot_${accountId}_${chatId}.json`)
+      const filePath = this.getBotMessagesFilePath(accountId, chatId)
       if (fs.existsSync(filePath)) {
         const raw = fs.readFileSync(filePath, 'utf-8')
         const parsed = JSON.parse(raw)
@@ -980,7 +988,7 @@ export class SessionStore {
 
   private indexBotChat(accountId: string, chatId: string): void {
     try {
-      const listPath = path.join(this.botMessagesDir, `chats_${accountId}.json`)
+      const listPath = this.getBotChatsFilePath(accountId)
       let chats: string[] = []
       if (fs.existsSync(listPath)) {
         try {
@@ -998,7 +1006,7 @@ export class SessionStore {
 
   public loadBotChatList(accountId: string): string[] {
     try {
-      const listPath = path.join(this.botMessagesDir, `chats_${accountId}.json`)
+      const listPath = this.getBotChatsFilePath(accountId)
       if (fs.existsSync(listPath)) {
         const raw = fs.readFileSync(listPath, 'utf-8')
         const parsed = JSON.parse(raw)
