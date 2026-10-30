@@ -300,6 +300,18 @@ export class SessionStore {
     return this.config
   }
 
+  public getSessionsDir(): string {
+    return this.sessionsDir
+  }
+
+  public getCacheDir(): string {
+    return this.cacheDir
+  }
+
+  public getDataDir(): string {
+    return this.dataDir
+  }
+
   public saveSessionString(accountId: string, sessionString: string): void {
     const safeId = SecureStorage.sanitizeAccountId(accountId)
     const encrypted = SecureStorage.encrypt(sessionString)

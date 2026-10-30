@@ -8,6 +8,7 @@ interface GroupedMediaAlbumProps {
   downloadedMedia: Record<string, string>
   onOpenViewer: (msg: MessageItem, url?: string) => void
   onRequestDownload: (msg: MessageItem) => void
+  onContextMenu?: (e: React.MouseEvent, msg: MessageItem) => void
 }
 
 export const GroupedMediaAlbum: React.FC<GroupedMediaAlbumProps> = ({
@@ -16,6 +17,7 @@ export const GroupedMediaAlbum: React.FC<GroupedMediaAlbumProps> = ({
   downloadedMedia,
   onOpenViewer,
   onRequestDownload,
+  onContextMenu,
 }) => {
   if (messages.length === 0) return null
 
@@ -51,6 +53,13 @@ export const GroupedMediaAlbum: React.FC<GroupedMediaAlbumProps> = ({
           <div
             key={msg.id}
             onClick={() => onOpenViewer(msg, mediaUrl)}
+            onContextMenu={(e) => {
+              if (onContextMenu) {
+                e.preventDefault()
+                e.stopPropagation()
+                onContextMenu(e, msg)
+              }
+            }}
             className="absolute cursor-pointer overflow-hidden group bg-dark-800 transition-transform duration-150 hover:brightness-105 active:scale-[0.99]"
             style={{
               left: `${layout.x}px`,

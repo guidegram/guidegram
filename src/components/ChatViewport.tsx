@@ -787,10 +787,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 }) => {
   const [inputText, setInputText] = useState('')
   const [copiedChatId, setCopiedChatId] = useState(false)
-  const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null)
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(new Set())
   const isSelectionMode = selectedMessageIds.size > 0
   const hoveredMessageRef = useRef<MessageItem | null>(null)
+  // Telegram Desktop Mouse Drag Multi-Select State & Refs
+  const isDragSelectingRef = useRef(false)
+  const dragStartYRef = useRef<number | null>(null)
+  const dragStartSelectionRef = useRef<Set<number>>(new Set())
+  const hasMovedPastThresholdRef = useRef(false)
   const { t, formatNumber: formatLocalizedNumber } = useI18n()
   const [toast, setToast] = useState<string | null>(null)
   const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
@@ -3067,7 +3071,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   const clearSelection = useCallback(() => {
     setSelectedMessageIds(new Set())
-    setSelectedMessage(null)
   }, [])
 
   const selectAllMessages = useCallback(() => {
@@ -3076,9 +3079,97 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }, [filteredMessages])
 
   const isMessageSelected = useCallback(
-    (msgId: number) => selectedMessageIds.has(msgId) || selectedMessage?.id === msgId,
-    [selectedMessageIds, selectedMessage]
+    (msgId: number) => selectedMessageIds.has(msgId),
+    [selectedMessageIds]
   )
+
+  // Telegram Desktop Drag to Select Messages Handler
+  const handleMessagesMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      // Only trigger on primary left click
+      if (e.button !== 0) return
+
+      const target = e.target as HTMLElement
+      // Ignore clicks on buttons, links, interactive widgets, avatars, or reaction popups
+      if (
+        target.closest('button') ||
+        target.closest('a') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('[role="button"]') ||
+        target.closest('.reaction-picker-spring') ||
+        target.closest('.avatar-element')
+      ) {
+        return
+      }
+
+      // Allow native text highlighting if clicking inside bubble text
+      const isBubbleText = Boolean(
+        target.closest('.message-bubble-text') ||
+        target.closest('pre') ||
+        target.closest('code')
+      )
+      if (isBubbleText) return
+
+      isDragSelectingRef.current = true
+      dragStartYRef.current = e.clientY
+      hasMovedPastThresholdRef.current = false
+      dragStartSelectionRef.current = new Set(selectedMessageIds)
+    },
+    [selectedMessageIds]
+  )
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isDragSelectingRef.current || dragStartYRef.current === null) return
+
+      const deltaY = Math.abs(e.clientY - dragStartYRef.current)
+      if (!hasMovedPastThresholdRef.current && deltaY > 8) {
+        hasMovedPastThresholdRef.current = true
+        // Prevent accidental text selection while dragging messages
+        window.getSelection()?.removeAllRanges()
+      }
+
+      if (hasMovedPastThresholdRef.current) {
+        const topY = Math.min(dragStartYRef.current, e.clientY)
+        const bottomY = Math.max(dragStartYRef.current, e.clientY)
+
+        const container = messagesContainerRef.current
+        if (!container) return
+
+        const messageEls = container.querySelectorAll<HTMLElement>('.message-bubble-container')
+        const newlySelected = new Set(dragStartSelectionRef.current)
+
+        messageEls.forEach((el) => {
+          const rect = el.getBoundingClientRect()
+          const msgIdStr = el.dataset.messageId || el.id?.replace(/^msg-/, '')
+          const msgId = Number(msgIdStr)
+          if (!msgId || isNaN(msgId)) return
+
+          // Message intersects the drag vertical range
+          if (rect.bottom >= topY && rect.top <= bottomY) {
+            newlySelected.add(msgId)
+          }
+        })
+
+        setSelectedMessageIds(newlySelected)
+      }
+    }
+
+    const handleGlobalMouseUp = () => {
+      if (!isDragSelectingRef.current) return
+      isDragSelectingRef.current = false
+      dragStartYRef.current = null
+      hasMovedPastThresholdRef.current = false
+    }
+
+    window.addEventListener('mousemove', handleGlobalMouseMove)
+    window.addEventListener('mouseup', handleGlobalMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove)
+      window.removeEventListener('mouseup', handleGlobalMouseUp)
+    }
+  }, [messagesContainerRef])
 
   const getSelectedMessages = useCallback(() => {
     return messages.filter((m) => selectedMessageIds.has(m.id))
@@ -3465,8 +3556,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       }
 
       if (e.altKey && (e.key === 'f' || e.key === 'F')) {
+        const firstSelected = selectedMessageIds.size > 0 ? messages.find((m) => selectedMessageIds.has(m.id)) : null
         const target =
-          selectedMessage ||
+          firstSelected ||
           hoveredMessageRef.current ||
           (messages.length > 0 ? messages[messages.length - 1] : null)
         if (!target) return
@@ -3475,8 +3567,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       } else if (e.altKey && (e.key === 'c' || e.key === 'C')) {
         if (isInputFocused && window.getSelection()?.toString()) return
 
+        const firstSelected = selectedMessageIds.size > 0 ? messages.find((m) => selectedMessageIds.has(m.id)) : null
         const target =
-          selectedMessage ||
+          firstSelected ||
           hoveredMessageRef.current ||
           (messages.length > 0 ? messages[messages.length - 1] : null)
         if (!target) return
@@ -3500,7 +3593,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedMessage, messages, onOpenDirectForward, lightboxUrl, isInfoOpen, replyMessage, isAttachMenuOpen, isSelectionMode, clearSelection, selectAllMessages, filteredMessages])
+  }, [selectedMessageIds, messages, onOpenDirectForward, lightboxUrl, isInfoOpen, replyMessage, isAttachMenuOpen, isSelectionMode, clearSelection, selectAllMessages, filteredMessages])
 
   // Attachment picking handlers (Feature 17)
   const handlePickAttachment = async (category: 'media' | 'document' | 'audio') => {
@@ -4807,6 +4900,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               downloadedMedia={downloadedMedia}
               onOpenViewer={(m, url) => handleOpenMediaViewer(m, url)}
               onRequestDownload={(m) => requestMediaDownload(m, false, true)}
+              onContextMenu={(e, itemMsg) => {
+                setContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  message: itemMsg,
+                })
+              }}
             />
           )
         } else {
@@ -6378,10 +6478,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           aria-label="Messages stream"
           aria-live="polite"
           onScroll={handleScroll}
-          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 relative z-10 overscroll-contain"
+          onMouseDown={handleMessagesMouseDown}
+          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 relative z-10 overscroll-contain select-none"
           style={{ willChange: 'scroll-position' }}
           onClick={(e) => {
-            if (e.target === e.currentTarget) clearSelection()
+            if (hasMovedPastThresholdRef.current) return
+            if (e.target === e.currentTarget && isSelectionMode) {
+              clearSelection()
+            }
           }}
         >
         {isLoadingOlder && (
@@ -6466,7 +6570,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               return null
             }
 
-            const isSelected = selectedMessageIds.has(msg.id) || selectedMessage?.id === msg.id
+            const isSelected = selectedMessageIds.has(msg.id)
             const isFirstUnread = msg.id === firstUnreadMessageId
             const prevMsg = index > 0 ? filteredMessages[index - 1] : null
             const isNewDay = !prevMsg || !isSameDay(msg.date, prevMsg.date)
@@ -6513,6 +6617,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 )}
                 <div
                   id={`msg-${msg.id}`}
+                  data-message-id={msg.id}
                   onMouseEnter={() => {
                     hoveredMessageRef.current = msg
                   }}
@@ -6616,6 +6721,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   })
                 }}
                 onClick={async (e) => {
+                  if (hasMovedPastThresholdRef.current) return
                   if (isSelectionMode) {
                     e.preventDefault()
                     e.stopPropagation()
@@ -6636,7 +6742,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     }
                     return
                   }
-                  setSelectedMessage(isSelected ? null : msg)
+                  // Plain click on message container does not trigger selection (Telegram Desktop parity)
                 }}
                 onDoubleClick={(e) => {
                   if (isSelectionMode) return
