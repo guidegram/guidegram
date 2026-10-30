@@ -811,6 +811,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const res = await window.guidegram.getPrivacySettings(targetAccountId)
       if (res) {
         setPrivacyData(res)
+        if (typeof res.localPasscode === 'boolean') {
+          setLocalPasscodeEnabled(res.localPasscode)
+        }
       }
     } catch (err) {
       console.warn('[SettingsModal] Failed to load privacy settings:', err)
@@ -2142,7 +2145,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Local passcode</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {localPasscodeEnabled ? 'On' : 'Off'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (privacyData?.localPasscode ?? localPasscodeEnabled) ? (
+                        'On'
+                      ) : (
+                        'Off'
+                      )}
                     </span>
                   </div>
 
@@ -4597,13 +4606,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (localPasscodeEnabled && localPasscodeVal) {
                     localStorage.setItem('guidegram_local_passcode', localPasscodeVal)
                     localStorage.setItem('guidegram_passcode_timeout', passcodeTimeout)
+                    if (window.guidegram?.passcode?.setPasscode) {
+                      await window.guidegram.passcode.setPasscode(localPasscodeVal)
+                    }
+                    setPrivacyData((prev) => (prev ? { ...prev, localPasscode: true } : null))
                     showToast('Passcode lock activated')
                   } else {
+                    const oldPass = localStorage.getItem('guidegram_local_passcode') || ''
                     localStorage.removeItem('guidegram_local_passcode')
+                    if (window.guidegram?.passcode?.removePasscode) {
+                      await window.guidegram.passcode.removePasscode(oldPass)
+                    }
+                    setPrivacyData((prev) => (prev ? { ...prev, localPasscode: false } : null))
                     showToast('Passcode lock disabled')
                   }
                   setActiveSubModal(null)
