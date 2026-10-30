@@ -424,14 +424,14 @@ export const App: React.FC = () => {
         const isChannel = Boolean(targetDialog?.isChannel || (payload as any)?.chatInfo?.isChannel)
         const isGroup = Boolean(targetDialog?.isGroup || (payload as any)?.chatInfo?.isGroup)
 
-        // MTProto Chat Mute Status
-        const isChatMuted = typeof (payload as any)?.chatInfo?.isMuted === 'boolean'
-          ? Boolean((payload as any).chatInfo.isMuted)
-          : targetDialog
-          ? Boolean(targetDialog.isMuted)
-          : isChannel
-          ? true
-          : false
+        // MTProto Chat Mute Status:
+        // Ironclad mute guard: If targetDialog is muted in local state OR payload marks it muted,
+        // it is strictly muted. Never allow a false from backend to unmute a muted dialog.
+        const isChatMuted = Boolean(
+          targetDialog?.isMuted ||
+          (typeof (payload as any)?.chatInfo?.isMuted === 'boolean' && (payload as any).chatInfo.isMuted) ||
+          (!targetDialog && isChannel)
+        )
 
         const currentCfg = configRef.current
         const notifsAllowed = currentCfg?.notificationsEnabled !== false
@@ -489,7 +489,7 @@ export const App: React.FC = () => {
 
         if (shouldNotify) {
           if (currentCfg?.soundEnabled !== false) {
-            playNotificationSound(currentCfg?.notificationTone || 'classic')
+            playNotificationSound(currentCfg?.notificationTone || 'classic') // playNotificationSound()
           }
           if (currentCfg?.notificationFlashTaskbar !== false && !document.hasFocus()) {
             window.guidegram?.flashWindow?.(true)
@@ -759,6 +759,19 @@ export const App: React.FC = () => {
             })
           }
         }
+      })
+
+      // Real-time Dialog Mute Synchronization (Official Telegram Desktop parity)
+      unsubscribeMute = window.guidegram.on('telegram:dialog-mute-updated', (payload: any) => {
+        const { accountId, chatId, isMuted } = payload || {}
+        if (!accountId || !chatId) return
+        setDialogsByAccount((prev) => {
+          const list = prev[accountId] || []
+          return {
+            ...prev,
+            [accountId]: list.map((d) => (d.id === chatId || isPeerMatch(d.id, chatId) ? { ...d, isMuted: Boolean(isMuted) } : d)),
+          }
+        })
       })
 
       // Hourly Auto-Update listener
@@ -2790,6 +2803,7 @@ export const App: React.FC = () => {
           <SettingsModal
             isOpen={isSettingsOpen}
             accounts={accounts}
+            activeAccountId={activeAccountId || accounts[0]?.id || ''}
             initialTab={settingsInitialTab}
             onClose={() => setIsSettingsOpen(false)}
             onLogoutAccount={handleLogoutAccount}

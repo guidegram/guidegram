@@ -108,6 +108,7 @@ import { ActiveSessionsModal } from './ActiveSessionsModal'
 interface SettingsModalProps {
   isOpen: boolean
   accounts: AccountInfo[]
+  activeAccountId?: string
   initialTab?: SettingsTab
   onClose: () => void
   onLogoutAccount: (accountId: string) => Promise<void>
@@ -207,6 +208,7 @@ type SettingsTab = 'profile' | 'features' | 'business' | 'general' | 'notificati
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   accounts,
+  activeAccountId,
   initialTab,
   onClose,
   onLogoutAccount,
@@ -443,14 +445,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTimeout(() => setFeedbackToast(null), 2500)
   }
 
-  const activeAccountId = accounts[0]?.id || ''
+  const targetAccountId = activeAccountId || accounts[0]?.id || ''
 
   const handleResetTwoFactor = async () => {
-    if (!activeAccountId) return
+    if (!targetAccountId) return
     setIsResettingTwoFactor(true)
     try {
       if ((window.guidegram as any).accountResetPassword) {
-        const res = await (window.guidegram as any).accountResetPassword(activeAccountId)
+        const res = await (window.guidegram as any).accountResetPassword(targetAccountId)
         if (res.status === 'ok') {
           showToast('2FA Cloud Password has been reset.')
           setTwoFactorResetStatus(null)
@@ -475,10 +477,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }
 
   const handleDeclineResetTwoFactor = async () => {
-    if (!activeAccountId) return
+    if (!targetAccountId) return
     try {
       if ((window.guidegram as any).accountDeclinePasswordReset) {
-        const ok = await (window.guidegram as any).accountDeclinePasswordReset(activeAccountId)
+        const ok = await (window.guidegram as any).accountDeclinePasswordReset(targetAccountId)
         if (ok) {
           setTwoFactorResetStatus(null)
           showToast('Pending password reset cancelled.')
@@ -796,17 +798,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       })
       loadCacheStats()
       loadLogs()
-      if (accounts.length > 0 && window.guidegram?.getPrivacySettings) {
-        setIsLoadingPrivacy(true)
-        window.guidegram.getPrivacySettings(accounts[0].id)
-          .then((res) => {
-            if (res) setPrivacyData(res)
-          })
-          .catch(() => {})
-          .finally(() => setIsLoadingPrivacy(false))
+      if (accounts.length > 0) {
+        loadPrivacySettings()
       }
     }
-  }, [isOpen, accounts])
+  }, [isOpen, accounts, targetAccountId])
+
+  const loadPrivacySettings = async () => {
+    if (!targetAccountId || !window.guidegram?.getPrivacySettings) return
+    setIsLoadingPrivacy(true)
+    try {
+      const res = await window.guidegram.getPrivacySettings(targetAccountId)
+      if (res) {
+        setPrivacyData(res)
+      }
+    } catch (err) {
+      console.warn('[SettingsModal] Failed to load privacy settings:', err)
+    } finally {
+      setIsLoadingPrivacy(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'privacy') {
+      loadPrivacySettings()
+    }
+  }, [isOpen, activeTab, targetAccountId])
 
   const loadCacheStats = async () => {
     try {
@@ -2065,12 +2082,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <ShieldCheck className="w-4 h-4 text-accent-cyan" />
                     <span>Privacy and Security</span>
                   </div>
-                  {isLoadingPrivacy && (
-                    <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
-                      <RefreshCw className="w-3 h-3 animate-spin text-primary-400" />
-                      <span>Syncing...</span>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => loadPrivacySettings()}
+                    disabled={isLoadingPrivacy}
+                    className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isLoadingPrivacy ? 'animate-spin text-primary-400' : 'text-gray-400'}`} />
+                    <span>{isLoadingPrivacy ? 'Syncing...' : 'Sync'}</span>
+                  </button>
                 </div>
 
                 {/* Section: Security */}
@@ -2086,7 +2106,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Two-Step Verification</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.twoStepVerification ? 'On' : 'Off'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : privacyData?.twoStepVerification ? (
+                        'On'
+                      ) : (
+                        'Off'
+                      )}
                     </span>
                   </div>
 
@@ -2099,7 +2125,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Auto-Delete Messages</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] capitalize">
-                      {privacyData?.autoDeleteMessages || 'Off'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.autoDeleteMessages || 'Off'
+                      )}
                     </span>
                   </div>
 
@@ -2125,7 +2155,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Passkeys</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.passkeys ? 'On' : 'Off'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : privacyData?.passkeys ? (
+                        'On'
+                      ) : (
+                        'Off'
+                      )}
                     </span>
                   </div>
 
@@ -2138,7 +2174,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Blocked users</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] font-mono">
-                      {privacyData?.blockedUsersCount ?? 0}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.blockedUsersCount ?? 0
+                      )}
                     </span>
                   </div>
 
@@ -2151,7 +2191,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Connected websites</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] font-mono">
-                      {privacyData?.connectedWebsitesCount ?? 0}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.connectedWebsitesCount ?? 0
+                      )}
                     </span>
                   </div>
 
@@ -2164,7 +2208,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-xs text-gray-200">Active sessions</span>
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9] font-mono">
-                      {privacyData?.activeSessionsCount ?? 1}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-8 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.activeSessionsCount ?? 1
+                      )}
                     </span>
                   </div>
 
@@ -2183,14 +2231,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         'phoneNumberPrivacy',
                         'Phone number',
                         'Who can see my phone number?',
-                        privacyData?.phoneNumberPrivacy || 'Nobody (+45)'
+                        privacyData?.phoneNumberPrivacy || 'Nobody'
                       )
                     }
                     className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
                   >
                     <span className="text-xs text-gray-200">Phone number</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.phoneNumberPrivacy || 'Nobody (+45)'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-16 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.phoneNumberPrivacy || 'Nobody'
+                      )}
                     </span>
                   </div>
 
@@ -2207,7 +2259,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Last seen & online</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.lastSeenPrivacy || 'Nobody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.lastSeenPrivacy || 'Nobody'
+                      )}
                     </span>
                   </div>
 
@@ -2224,7 +2280,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Profile photos</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.profilePhotosPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.profilePhotosPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2241,7 +2301,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Forwarded messages</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.forwardedMessagesPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.forwardedMessagesPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2258,7 +2322,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Calls</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.callsPrivacy || 'My contacts'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.callsPrivacy || 'My contacts'
+                      )}
                     </span>
                   </div>
 
@@ -2278,7 +2346,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <Sparkles className="w-3 h-3 text-purple-400" />
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.voiceMessagesPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.voiceMessagesPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2298,7 +2370,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <Sparkles className="w-3 h-3 text-purple-400" />
                     </div>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.messagesPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.messagesPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2315,7 +2391,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Birthday</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.birthdayPrivacy || 'My contacts'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.birthdayPrivacy || 'My contacts'
+                      )}
                     </span>
                   </div>
 
@@ -2332,7 +2412,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Gifts</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.giftsPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.giftsPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2349,7 +2433,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Bio</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.bioPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.bioPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2366,7 +2454,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <span className="text-xs text-gray-200">Saved Music</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.savedMusicPrivacy || 'Everybody'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.savedMusicPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
 
@@ -2376,14 +2468,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         'invitesPrivacy',
                         'Invites',
                         'Who can add you to groups and channels?',
-                        privacyData?.invitesPrivacy || 'Nobody (+1)'
+                        privacyData?.invitesPrivacy || 'Everybody'
                       )
                     }
                     className="p-2.5 px-3 rounded-xl hover:bg-white/5 flex items-center justify-between cursor-pointer transition-colors"
                   >
                     <span className="text-xs text-gray-200">Invites</span>
                     <span className="text-xs font-medium text-[#50a2e9]">
-                      {privacyData?.invitesPrivacy || 'Nobody (+1)'}
+                      {isLoadingPrivacy && !privacyData ? (
+                        <span className="inline-block w-14 h-3.5 rounded bg-white/10 animate-pulse" />
+                      ) : (
+                        privacyData?.invitesPrivacy || 'Everybody'
+                      )}
                     </span>
                   </div>
                 </div>
@@ -4222,7 +4318,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <ActiveSessionsModal
           isOpen={true}
           onClose={() => setActiveSubModal(null)}
-          accountId={accounts[0]?.id || ''}
+          accountId={targetAccountId}
         />
       )}
 

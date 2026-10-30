@@ -14019,50 +14019,156 @@ export class AccountManager {
   }
 
   public async getPrivacySettings(accountId: string): Promise<PrivacySecuritySettings> {
-    const holder = this.clients.get(accountId)
+    let holder = accountId ? this.clients.get(String(accountId)) : undefined
+    if (!holder && accountId) {
+      for (const [id, h] of this.clients.entries()) {
+        if (id === String(accountId) || h.info.phone === accountId || h.info.id === accountId) {
+          holder = h
+          break
+        }
+      }
+    }
+    if (!holder && this.clients.size > 0) {
+      holder = Array.from(this.clients.values()).find((h) => h.client && h.info.status === 'connected') || this.clients.values().next().value
+    }
+
     const localPasscode = passcodeGuard.isPasscodeSet()
     let blockedUsersCount = 0
     let activeSessionsCount = 1
+    let connectedWebsitesCount = 0
     let twoStepVerification = false
+    let autoDeleteMessages: 'off' | '1d' | '1w' | '1m' = 'off'
 
-    let lastSeenPrivacy: 'everybody' | 'contacts' | 'nobody' = 'everybody'
-    let phoneNumberPrivacy: 'everybody' | 'contacts' | 'nobody' = 'contacts'
+    let phoneNumberPrivacy = 'Nobody'
+    let lastSeenPrivacy = 'Everybody'
+    let profilePhotosPrivacy = 'Everybody'
+    let forwardedMessagesPrivacy = 'Everybody'
+    let callsPrivacy = 'My contacts'
+    let voiceMessagesPrivacy = 'Everybody'
+    let messagesPrivacy = 'Everybody'
+    let birthdayPrivacy = 'My contacts'
+    let giftsPrivacy = 'Everybody'
+    let bioPrivacy = 'Everybody'
+    let savedMusicPrivacy = 'Everybody'
+    let invitesPrivacy = 'Everybody'
 
-    const mapRuleToPrivacy = (rulesRes: any, fallback: 'everybody' | 'contacts' | 'nobody'): 'everybody' | 'contacts' | 'nobody' => {
+    const parsePrivacyRule = (rulesRes: any, fallback: string = 'Everybody'): string => {
       if (!rulesRes?.rules || !Array.isArray(rulesRes.rules)) return fallback
+      let base: 'Everybody' | 'My contacts' | 'Nobody' = 'Everybody'
+      let allowedCount = 0
+      let disallowedCount = 0
+
       for (const r of rulesRes.rules) {
-        if (r._ === 'privacyValueDisallowAll') return 'nobody'
-        if (r._ === 'privacyValueAllowContacts') return 'contacts'
-        if (r._ === 'privacyValueAllowAll') return 'everybody'
+        if (r._ === 'privacyValueDisallowAll') {
+          base = 'Nobody'
+        } else if (r._ === 'privacyValueAllowContacts') {
+          base = 'My contacts'
+        } else if (r._ === 'privacyValueAllowAll') {
+          base = 'Everybody'
+        } else if (r._ === 'privacyValueAllowUsers') {
+          allowedCount += Array.isArray(r.users) ? r.users.length : 0
+        } else if (r._ === 'privacyValueDisallowUsers') {
+          disallowedCount += Array.isArray(r.users) ? r.users.length : 0
+        } else if (r._ === 'privacyValueAllowChatParticipants') {
+          allowedCount += Array.isArray(r.chats) ? r.chats.length : 0
+        } else if (r._ === 'privacyValueDisallowChatParticipants') {
+          disallowedCount += Array.isArray(r.chats) ? r.chats.length : 0
+        }
+      }
+
+      if (base === 'Nobody') {
+        return allowedCount > 0 ? `Nobody (+${allowedCount})` : 'Nobody'
+      }
+      if (base === 'Everybody') {
+        return disallowedCount > 0 ? `Everybody (-${disallowedCount})` : 'Everybody'
+      }
+      if (base === 'My contacts') {
+        if (allowedCount > 0 && disallowedCount > 0) return `My contacts (+${allowedCount}, -${disallowedCount})`
+        if (allowedCount > 0) return `My contacts (+${allowedCount})`
+        if (disallowedCount > 0) return `My contacts (-${disallowedCount})`
+        return 'My contacts'
       }
       return fallback
     }
 
     if (holder?.client) {
-      try {
-        const [blockedRes, sessionsRes, pwdRes, lastSeenRes, phoneRes] = await Promise.allSettled([
-          holder.client.call({ _: 'contacts.getBlocked', offset: 0, limit: 1 }),
-          holder.client.call({ _: 'account.getAuthorizations' }),
-          holder.client.call({ _: 'account.getPassword' }),
-          holder.client.call({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyStatusTimestamp' } }),
-          holder.client.call({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyPhoneNumber' } }),
+      const client = holder.client
+      const callWithTimeout = (query: any, timeoutMs = 6000) => {
+        return Promise.race([
+          client.call(query),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout calling ${query._} after ${timeoutMs}ms`)), timeoutMs)
+          ),
         ])
+      }
+
+      try {
+        const [
+          blockedRes,
+          sessionsRes,
+          webSessionsRes,
+          pwdRes,
+          ttlRes,
+          phoneRes,
+          lastSeenRes,
+          photosRes,
+          forwardsRes,
+          callsRes,
+          voiceRes,
+          invitesRes,
+          bioRes,
+          birthdayRes,
+          giftsRes,
+        ] = await Promise.allSettled([
+          callWithTimeout({ _: 'contacts.getBlocked', offset: 0, limit: 1 }),
+          callWithTimeout({ _: 'account.getAuthorizations' }),
+          callWithTimeout({ _: 'account.getWebAuthorizations' }),
+          callWithTimeout({ _: 'account.getPassword' }),
+          callWithTimeout({ _: 'messages.getDefaultHistoryTTL' }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyPhoneNumber' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyStatusTimestamp' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyProfilePhoto' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyForwards' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyPhoneCall' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyVoiceMessages' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyChatInvite' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyAbout' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyBirthday' } }),
+          callWithTimeout({ _: 'account.getPrivacy', key: { _: 'inputPrivacyKeyStarGifts' } }),
+        ])
+
         if (blockedRes.status === 'fulfilled' && blockedRes.value) {
           const bVal: any = blockedRes.value
-          blockedUsersCount = Number(bVal.count || (Array.isArray(bVal.blocked) ? bVal.blocked.length : 0))
+          blockedUsersCount = Number(bVal.count ?? (Array.isArray(bVal.blocked) ? bVal.blocked.length : 0))
         }
-        if (sessionsRes.status === 'fulfilled' && sessionsRes.value?.authorizations) {
-          activeSessionsCount = sessionsRes.value.authorizations.length
+        if (sessionsRes.status === 'fulfilled' && (sessionsRes.value as any)?.authorizations) {
+          activeSessionsCount = (sessionsRes.value as any).authorizations.length
+        }
+        if (webSessionsRes.status === 'fulfilled' && (webSessionsRes.value as any)?.authorizations) {
+          connectedWebsitesCount = (webSessionsRes.value as any).authorizations.length
         }
         if (pwdRes.status === 'fulfilled' && pwdRes.value) {
-          twoStepVerification = Boolean(pwdRes.value.hasPassword)
+          const pVal: any = pwdRes.value
+          twoStepVerification = Boolean(pVal.hasPassword ?? pVal.has_password ?? pVal.currentAlgo)
         }
-        if (lastSeenRes.status === 'fulfilled') {
-          lastSeenPrivacy = mapRuleToPrivacy(lastSeenRes.value, 'everybody')
+        if (ttlRes.status === 'fulfilled' && ttlRes.value) {
+          const period = Number((ttlRes.value as any).period || 0)
+          if (period >= 2592000) autoDeleteMessages = '1m'
+          else if (period >= 604800) autoDeleteMessages = '1w'
+          else if (period >= 86400) autoDeleteMessages = '1d'
+          else autoDeleteMessages = 'off'
         }
-        if (phoneRes.status === 'fulfilled') {
-          phoneNumberPrivacy = mapRuleToPrivacy(phoneRes.value, 'contacts')
-        }
+
+        if (phoneRes.status === 'fulfilled') phoneNumberPrivacy = parsePrivacyRule(phoneRes.value, 'Nobody')
+        if (lastSeenRes.status === 'fulfilled') lastSeenPrivacy = parsePrivacyRule(lastSeenRes.value, 'Everybody')
+        if (photosRes.status === 'fulfilled') profilePhotosPrivacy = parsePrivacyRule(photosRes.value, 'Everybody')
+        if (forwardsRes.status === 'fulfilled') forwardedMessagesPrivacy = parsePrivacyRule(forwardsRes.value, 'Everybody')
+        if (callsRes.status === 'fulfilled') callsPrivacy = parsePrivacyRule(callsRes.value, 'My contacts')
+        if (voiceRes.status === 'fulfilled') voiceMessagesPrivacy = parsePrivacyRule(voiceRes.value, 'Everybody')
+        if (invitesRes.status === 'fulfilled') invitesPrivacy = parsePrivacyRule(invitesRes.value, 'Everybody')
+        if (bioRes.status === 'fulfilled') bioPrivacy = parsePrivacyRule(bioRes.value, 'Everybody')
+        if (birthdayRes.status === 'fulfilled') birthdayPrivacy = parsePrivacyRule(birthdayRes.value, 'My contacts')
+        if (giftsRes.status === 'fulfilled') giftsPrivacy = parsePrivacyRule(giftsRes.value, 'Everybody')
       } catch (err: any) {
         Logger.warn('[AccountManager] getPrivacySettings fetch error:', err?.message || err)
       }
@@ -14070,24 +14176,24 @@ export class AccountManager {
 
     return {
       twoStepVerification,
-      autoDeleteMessages: 'off',
+      autoDeleteMessages,
       localPasscode,
       passkeys: false,
       blockedUsersCount,
-      connectedWebsitesCount: 0,
+      connectedWebsitesCount,
       activeSessionsCount,
       phoneNumberPrivacy,
       lastSeenPrivacy,
-      profilePhotosPrivacy: 'everybody',
-      forwardedMessagesPrivacy: 'everybody',
-      callsPrivacy: 'everybody',
-      voiceMessagesPrivacy: 'everybody',
-      messagesPrivacy: 'everybody',
-      birthdayPrivacy: 'everybody',
-      giftsPrivacy: 'everybody',
-      bioPrivacy: 'everybody',
-      savedMusicPrivacy: 'everybody',
-      invitesPrivacy: 'everybody',
+      profilePhotosPrivacy,
+      forwardedMessagesPrivacy,
+      callsPrivacy,
+      voiceMessagesPrivacy,
+      messagesPrivacy,
+      birthdayPrivacy,
+      giftsPrivacy,
+      bioPrivacy,
+      savedMusicPrivacy,
+      invitesPrivacy,
     }
   }
 
