@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
@@ -12,8 +12,12 @@ import {
   RotateCcw,
   Edit3,
   Scissors,
+  Search,
+  Megaphone,
+  Users,
+  Bot,
 } from 'lucide-react'
-import { DialogItem, MessageItem } from '../types/telegram'
+import { DialogItem, MessageItem, ContactItem } from '../types/telegram'
 
 export interface DirectForwardPayload {
   toChatIds: string[]
@@ -28,6 +32,7 @@ export interface DirectForwardModalProps {
   message: MessageItem | null
   messages?: MessageItem[]
   dialogs: DialogItem[]
+  accountId?: string
   onClose: () => void
   onForward: (
     payloadOrTargetChatIds: DirectForwardPayload | string[],
@@ -37,11 +42,65 @@ export interface DirectForwardModalProps {
   ) => Promise<void> | void
 }
 
+/**
+ * Normalizes Persian and Arabic text for consistent, high-recall search matching.
+ * Handles Yeh/Kaf variants, Alef diacritics/hamza, Tatweel, and ZWNJ.
+ */
+export const normalizeSearchText = (text?: string): string => {
+  if (!text) return ''
+  return text
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '') // Arabic diacritics / tanween
+    .replace(/[يى]/g, 'ی') // Arabic Yeh to Persian Ye
+    .replace(/[ك]/g, 'ک') // Arabic Kaf to Persian Ke
+    .replace(/[آأإ]/g, 'ا') // Alef variations to plain Alef
+    .replace(/[ؤ]/g, 'و') // Waw with hamza
+    .replace(/[ئ]/g, 'ی') // Yeh with hamza
+    .replace(/[\u200c\u200b\u00ad]/g, '') // Zero-width non-joiner & soft hyphens
+    .replace(/[ـ]/g, '') // Tatweel
+    .trim()
+}
+
+/**
+ * Builds a flexible regex that matches Persian/Arabic character variations
+ * and optional half-spaces (ZWNJ) between characters.
+ */
+export const buildFlexibleSearchRegex = (q: string): RegExp | null => {
+  const trimmed = q.trim()
+  if (!trimmed) return null
+
+  let pattern = ''
+  for (let i = 0; i < trimmed.length; i++) {
+    const char = trimmed[i]
+    if (char === 'ی' || char === 'ي' || char === 'ى' || char === 'ئ') {
+      pattern += '[یيىئ]'
+    } else if (char === 'ک' || char === 'ك') {
+      pattern += '[کك]'
+    } else if (char === 'ا' || char === 'آ' || char === 'أ' || char === 'إ') {
+      pattern += '[اآأإ]'
+    } else if (char === 'ه' || char === 'ة') {
+      pattern += '[هة]'
+    } else if (char === 'و' || char === 'ؤ') {
+      pattern += '[وؤ]'
+    } else if (/[\s\u200c\u200b\u00ad]/.test(char)) {
+      pattern += '[\\s\\u200c\\u200b\\u00ad]*'
+    } else {
+      pattern += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    }
+  }
+  try {
+    return new RegExp(pattern, 'i')
+  } catch {
+    return null
+  }
+}
+
 export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   isOpen,
   message,
   messages,
   dialogs,
+  accountId,
   onClose,
   onForward,
 }) => {
@@ -52,6 +111,37 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   const [silent, setSilent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const [contacts, setContacts] = useState<DialogItem[]>([])
+
+  const effectiveAccountId = accountId || dialogs[0]?.accountId
+
+  // Load account contacts to enrich the forward list if they are not in recent dialogs
+  useEffect(() => {
+    if (isOpen && effectiveAccountId && window.guidegram?.getContacts) {
+      window.guidegram
+        .getContacts(effectiveAccountId)
+        .then((cts: ContactItem[]) => {
+          if (Array.isArray(cts)) {
+            const mappedContacts: DialogItem[] = cts.map((c) => ({
+              id: c.id,
+              accountId: effectiveAccountId,
+              title: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.username || c.phone || 'Contact',
+              unreadCount: 0,
+              isUser: true,
+              isGroup: false,
+              isChannel: false,
+              isBot: false,
+              isPinned: false,
+              username: c.username,
+              avatarUrl: c.avatarUrl,
+              isContact: true,
+            }))
+            setContacts(mappedContacts)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [isOpen, effectiveAccountId])
 
   useEffect(() => {
     if (isOpen && message) {
@@ -64,6 +154,114 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
       setNewCaption(message.text || '')
     }
   }, [isOpen, message])
+
+  // Combine dialogs with contacts so all reachable peers can be searched & forwarded to
+  const allDestinations = useMemo(() => {
+    const mergedMap = new Map<string, DialogItem>()
+    for (const d of dialogs) {
+      if (d.id) mergedMap.set(d.id, d)
+    }
+    for (const c of contacts) {
+      if (c.id && !mergedMap.has(c.id)) {
+        mergedMap.set(c.id, c)
+      }
+    }
+    return Array.from(mergedMap.values())
+  }, [dialogs, contacts])
+
+  // Filter according to strict business logic:
+  // 1. Saved Messages handled separately
+  // 2. Channels: ONLY channels where user is admin, owner (creator) or has send permissions
+  // 3. Groups: included
+  // 4. PVs: included
+  // 5. Bots: included (sorted to the bottom)
+  const validDestinations = useMemo(() => {
+    return allDestinations.filter((d) => {
+      if (d.isSponsored || d.isSponsorChannel) return false
+      if (d.id === 'me' || d.isSavedMessages) return false
+
+      const isBroadcast = Boolean(d.isBroadcast ?? (d.isChannel && !d.isGroup))
+      if (isBroadcast) {
+        const isChannelAdminOrOwner = Boolean(d.isCreator || d.isAdmin || d.canSendMessages)
+        if (!isChannelAdminOrOwner) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [allDestinations])
+
+  // Sort: non-bots first (PVs, Groups, Admin Channels), then Bots at the very bottom
+  const sortedDestinations = useMemo(() => {
+    const nonBots: DialogItem[] = []
+    const bots: DialogItem[] = []
+
+    for (const d of validDestinations) {
+      if (d.isBot) {
+        bots.push(d)
+      } else {
+        nonBots.push(d)
+      }
+    }
+
+    return [...nonBots, ...bots]
+  }, [validDestinations])
+
+  // High-recall Persian / Arabic / English matching
+  const matchesSearch = (d: DialogItem, query: string): boolean => {
+    const clean = query.trim().toLowerCase().replace(/^@/, '')
+    if (!clean) return true
+    const norm = normalizeSearchText(clean)
+
+    const normTitle = normalizeSearchText(d.title || '')
+    const normUser = normalizeSearchText((d.username || '').replace(/^@/, ''))
+    const rawTitle = (d.title || '').toLowerCase()
+    const rawUser = (d.username || '').toLowerCase().replace(/^@/, '')
+
+    if (norm && (normTitle.includes(norm) || normUser.includes(norm))) return true
+    if (rawTitle.includes(clean) || rawUser.includes(clean)) return true
+    if (d.id && d.id.includes(clean)) return true
+
+    const regex = buildFlexibleSearchRegex(clean)
+    if (regex && (regex.test(d.title || '') || regex.test(d.username || ''))) {
+      return true
+    }
+
+    return false
+  }
+
+  const isSavedMessagesMatch = (query: string): boolean => {
+    const clean = query.trim().toLowerCase()
+    if (!clean) return true
+    const norm = normalizeSearchText(clean)
+    const terms = [
+      'saved',
+      'save',
+      'saved messages',
+      'messages',
+      'me',
+      'ذخیره',
+      'ذخیره شده',
+      'پیام های ذخیره',
+      'پیام های ذخیره شده',
+      'پیامهای ذخیره شده',
+      'پیامهای ذخیره‌شده',
+      'پیام ذخیره',
+      'سیو',
+      'سیود',
+    ]
+    return terms.some((t) => {
+      const normT = normalizeSearchText(t)
+      return normT.includes(norm) || norm.includes(normT) || t.includes(clean)
+    })
+  }
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return sortedDestinations
+    return sortedDestinations.filter((d) => matchesSearch(d, search))
+  }, [sortedDestinations, search])
+
+  const showSavedMessages = isSavedMessagesMatch(search)
 
   if (!isOpen || !message) return null
 
@@ -124,13 +322,9 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
 
   const getChatTitle = (chatId: string): string => {
     if (chatId === 'me') return 'Saved Messages'
-    const found = dialogs.find((d) => d.id === chatId)
+    const found = allDestinations.find((d) => d.id === chatId)
     return found?.title || `Chat ${chatId}`
   }
-
-  const filtered = dialogs.filter((d) =>
-    d.title.toLowerCase().includes(search.toLowerCase())
-  )
 
   const isCaptionModified = newCaption !== (message.text || '')
 
@@ -346,18 +540,30 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
 
           {/* Destination Chat Search & List */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search className="w-3.5 h-3.5" />
+              </div>
               <input
                 type="text"
-                placeholder="Search destination chats..."
+                placeholder="جستجو در گفتگوها، مخاطبین و ربات‌ها..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 bg-dark-800 border border-white/5 rounded-xl px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                className="w-full bg-dark-800 border border-white/5 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
-            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-              {(!search || 'saved messages'.includes(search.toLowerCase())) && (
+            <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
+              {showSavedMessages && (
                 <div
                   onClick={() => handleToggleChat('me')}
                   className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs border ${
@@ -367,10 +573,13 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0">
-                      <Bookmark className="w-3.5 h-3.5" />
+                    <div className="w-8 h-8 rounded-xl bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0 border border-accent-cyan/20">
+                      <Bookmark className="w-4 h-4" />
                     </div>
-                    <span className="truncate font-medium">Saved Messages</span>
+                    <div>
+                      <div className="truncate font-semibold text-gray-100">Saved Messages</div>
+                      <div className="text-[10px] text-gray-400">پیام‌های ذخیره‌شده</div>
+                    </div>
                   </div>
                   <div
                     className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors ${
@@ -391,6 +600,11 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
               {filtered.map((d) => {
                 const isSelected = selectedChatIds.includes(d.id)
                 const orderIndex = selectedChatIds.indexOf(d.id)
+                const isBroadcast = Boolean(d.isBroadcast ?? (d.isChannel && !d.isGroup))
+                const isGroup = Boolean(d.isGroup || (d.isChannel && !isBroadcast))
+                const isBot = Boolean(d.isBot)
+                const isOwner = Boolean(d.isCreator)
+
                 return (
                   <div
                     key={d.id}
@@ -402,18 +616,42 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded-lg bg-dark-800 text-gray-400 flex items-center justify-center font-bold text-[11px] shrink-0 border border-white/5">
-                        {d.avatarInitials || d.title.charAt(0).toUpperCase()}
+                      <div className="w-8 h-8 rounded-xl bg-dark-800 text-gray-300 flex items-center justify-center font-bold text-xs shrink-0 border border-white/5 overflow-hidden">
+                        {d.avatarUrl ? (
+                          <img src={d.avatarUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{d.avatarInitials || d.title.charAt(0).toUpperCase()}</span>
+                        )}
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate font-medium">{d.title}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-medium">{d.title}</span>
+                          {isBroadcast && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30 flex items-center gap-0.5 shrink-0">
+                              <Megaphone className="w-2.5 h-2.5" />
+                              <span>{isOwner ? 'مالک' : 'ادمین'}</span>
+                            </span>
+                          )}
+                          {isGroup && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-primary-500/15 text-primary-300 border border-primary-500/30 flex items-center gap-0.5 shrink-0">
+                              <Users className="w-2.5 h-2.5" />
+                              <span>گروه</span>
+                            </span>
+                          )}
+                          {isBot && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent-amber/15 text-accent-amber border border-accent-amber/30 flex items-center gap-0.5 shrink-0">
+                              <Bot className="w-2.5 h-2.5" />
+                              <span>ربات</span>
+                            </span>
+                          )}
+                        </div>
                         {d.username && (
                           <div className="text-[10px] text-gray-500 truncate">@{d.username}</div>
                         )}
                       </div>
                     </div>
                     <div
-                      className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors ${
+                      className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors shrink-0 ml-2 ${
                         isSelected
                           ? 'bg-primary-600 border-primary-500 text-white'
                           : 'border-white/20 bg-dark-900/60'
@@ -426,6 +664,12 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
                   </div>
                 )
               })}
+
+              {filtered.length === 0 && !showSavedMessages && (
+                <div className="py-8 text-center text-xs text-gray-500">
+                  گفتگویی مطابق با جستجو پیدا نشد
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -475,3 +719,4 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     </div>
   )
 }
+

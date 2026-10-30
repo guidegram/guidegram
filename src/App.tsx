@@ -3045,6 +3045,7 @@ export const App: React.FC = () => {
             message={forwardMessage || (forwardMessagesList ? forwardMessagesList[0] : null)}
             messages={forwardMessagesList || (forwardMessage ? [forwardMessage] : undefined)}
             dialogs={currentDialogs}
+            accountId={activeAccountId || undefined}
             onClose={() => {
               setForwardMessage(null)
               setForwardMessagesList(null)
