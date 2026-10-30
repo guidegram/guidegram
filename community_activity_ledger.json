@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 35,
-    "githubIssuesCommented": 27,
+    "totalActivities": 36,
+    "githubIssuesCommented": 28,
     "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_29655",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 29655,
+      "targetTitle": "Focus switches from global search field to the chat message field after pressing Backspace on an empty field",
+      "targetUser": "dvkolesnikov",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/29655#issuecomment-6535755541",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/29655",
+      "status": "live_public",
+      "summary": "Endorsed and implemented John Preston's proposal to guard Backspace unfocus in global search when an active chat is open, preventing privacy leaks and accidental message dispatch from muscle memory.",
+      "timestamp": "2026-10-30T23:33:00Z"
+    },
     {
       "id": "gh_comment_gotd_1852",
       "platform": "github",
