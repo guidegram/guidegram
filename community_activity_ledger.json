@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 29,
-    "githubIssuesCommented": 22,
+    "totalActivities": 30,
+    "githubIssuesCommented": 23,
     "githubPullRequests": 2,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_gotd_1842",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "gotd/td",
+      "targetIssueNumber": 1842,
+      "targetTitle": "telegram: ExportAuth deadlock if floodwait.Waiter middleware is installed on the underlying client",
+      "targetUser": "aleksandr-m",
+      "url": "https://github.com/gotd/td/issues/1842#issuecomment-6535501140",
+      "issueUrl": "https://github.com/gotd/td/issues/1842",
+      "status": "live_public",
+      "summary": "Diagnosed re-entrancy deadlock during DC migration auth export wrapped in floodwait.Waiter, detailed why recursive exportAuthorization acquires nested locks, and provided transport control plane decoupling pattern from Guidegram.",
+      "timestamp": "2026-10-30T23:14:40Z"
+    },
     {
       "id": "gh_comment_gotd_1856",
       "platform": "github",
