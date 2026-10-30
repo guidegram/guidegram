@@ -424,13 +424,20 @@ export const App: React.FC = () => {
         const isChannel = Boolean(targetDialog?.isChannel || (payload as any)?.chatInfo?.isChannel)
         const isGroup = Boolean(targetDialog?.isGroup || (payload as any)?.chatInfo?.isGroup)
 
+        const currentAcc = accounts.find((a) => a.id === accountId)
+        const isBotAccount = Boolean(currentAcc?.isBot)
+
         // MTProto Chat Mute Status:
-        // Ironclad mute guard: If targetDialog is muted in local state OR payload marks it muted,
-        // it is strictly muted. Never allow a false from backend to unmute a muted dialog.
+        // Ironclad mute guard:
+        // 1. If targetDialog is muted in local state OR payload marks it muted, it is strictly muted.
+        // 2. Channels are muted by default (!targetDialog && isChannel).
+        // 3. Bot accounts (logged in via bot token) are strictly DEFAULT MUTED for all incoming chats/messages
+        //    unless explicitly unmuted by the user (targetDialog?.isMuted === false).
         const isChatMuted = Boolean(
           targetDialog?.isMuted ||
           (typeof (payload as any)?.chatInfo?.isMuted === 'boolean' && (payload as any).chatInfo.isMuted) ||
-          (!targetDialog && isChannel)
+          (!targetDialog && isChannel) ||
+          (isBotAccount && targetDialog?.isMuted !== false)
         )
 
         const currentCfg = configRef.current
@@ -460,7 +467,6 @@ export const App: React.FC = () => {
 
         // Authentic Telegram mention: MTProto server-calculated isMention flag,
         // or entity mention matching current account username/id
-        const currentAcc = accounts.find((a) => a.id === accountId)
         const myUsername = currentAcc?.username?.toLowerCase().replace(/^@/, '')
         const myId = currentAcc?.id
         const rawText = message?.text || ''
@@ -480,7 +486,8 @@ export const App: React.FC = () => {
         if (!isOutgoing && !isService && !isSilent && !isUserLookingAtChat && notifsAllowed) {
           if (isChatMuted) {
             // Muted chats in Telegram ONLY notify on direct mentions/replies
-            shouldNotify = isMention
+            // For bot accounts, incoming bot traffic never notifies unless explicitly unmuted
+            shouldNotify = isBotAccount ? false : isMention
           } else {
             // Unmuted chats notify if the category is allowed, or if mentioned
             shouldNotify = typeAllowed || isMention

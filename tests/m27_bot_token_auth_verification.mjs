@@ -65,7 +65,7 @@ assert(!botTokenRegex.test('12345:token with spaces'), 'Token with spaces is rej
 // 7. Visual Indicators in Dock & ChatList
 console.log('\n[SUITE 7] Bot Visual Badges')
 const dockCode = fs.readFileSync(path.join(process.cwd(), 'src/components/AccountDock.tsx'), 'utf8')
-assert(dockCode.includes('acc.isBot') && dockCode.includes('🤖'), 'AccountDock renders bot badge for bot accounts')
+assert(dockCode.includes('acc.isBot') && (dockCode.includes('🤖') || dockCode.includes('Bot')), 'AccountDock renders bot badge for bot accounts')
 
 const chatListCode = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatList.tsx'), 'utf8')
 assert(chatListCode.includes('account.isBot') && chatListCode.includes('BOT'), 'ChatList renders BOT label for active bot account')

@@ -3,6 +3,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { app, BrowserWindow, dialog } from 'electron'
 import { TelegramClient, MemoryStorage } from '@mtcute/node'
+import { PersistentKvStorage } from './persistentKvStorage'
 import { tl, Long, InputMedia, User } from '@mtcute/core'
 import {
   getChatMembers as mtcuteGetChatMembers,
@@ -1002,6 +1003,7 @@ export class AccountManager {
   private auditQueueInterval?: NodeJS.Timeout
   private auditQueueFloodWaitUntil = new Map<string, number>()
   private manualDirectAccounts = new Set<string>()
+  private contactPeerIds = new Map<string, Set<string>>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
@@ -1070,6 +1072,26 @@ export class AccountManager {
 
     // Start active-targeted throttled profile audit queue processor (every 30 seconds to prevent event-loop wakeups)
     this.startAuditQueueProcessor()
+  }
+
+  public isContactPeer(accountId: string, peerId: string): boolean {
+    if (!accountId || !peerId) return false
+    const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+    const set = this.contactPeerIds.get(accountId)
+    if (!set) return false
+    return set.has(peerId) || set.has(cleanId)
+  }
+
+  public addContactPeer(accountId: string, peerId: string): void {
+    if (!accountId || !peerId) return
+    const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+    let set = this.contactPeerIds.get(accountId)
+    if (!set) {
+      set = new Set<string>()
+      this.contactPeerIds.set(accountId, set)
+    }
+    set.add(peerId)
+    set.add(cleanId)
   }
 
   public hydrateNotifySettingsFromCache(accountId: string): void {
@@ -1143,10 +1165,16 @@ export class AccountManager {
     const antiFingerprinting = config.antiFingerprinting !== false
     const profile = savedAcc.deviceProfile || DeviceProfileManager.getProfileForAccount(savedAcc.id, antiFingerprinting)
 
+    const storagePath = path.join(this.store.getSessionsDir(), `updates_state_${savedAcc.id}.json`)
+    const storage = new PersistentKvStorage(storagePath)
+
     const clientOptions: any = {
       apiId: config.apiId,
       apiHash: config.apiHash,
-      storage: new MemoryStorage(),
+      storage,
+      updates: {
+        catchUp: true,
+      },
       // MM-003: Connection Pooling - prevent socket exhaustion by capping pooled TCP sockets per account
       connectionCount: (kind: any) => (kind === 'download' ? 4 : (kind === 'upload' ? 4 : 2)),
       initConnectionOptions: {
@@ -1224,6 +1252,15 @@ export class AccountManager {
           client.startUpdatesLoop()
         } catch (updErr) {
           Logger.warn(`[AccountManager] startUpdatesLoop warning for ${updatedInfo.id}:`, updErr)
+        }
+
+        // Proactively ensure offline updates catch-up is executed
+        try {
+          if (typeof (client as any).updates?.catchUp === 'function') {
+            (client as any).updates.catchUp()
+          }
+        } catch (catchErr) {
+          Logger.warn(`[AccountManager] updates.catchUp error for ${updatedInfo.id}:`, catchErr)
         }
 
         const currentAccounts = this.store.getConfig().accounts.map((a) => (a.id === updatedInfo.id ? updatedInfo : a))
@@ -2260,6 +2297,9 @@ export class AccountManager {
           ? `@${contactUsername}`
           : (chatId.startsWith('-') ? `Group ${chatId}` : `کاربر ${chatId}`)
 
+        const cachedItem = cachedMap.get(chatId)
+        const isMuted = cachedItem && typeof cachedItem.isMuted === 'boolean' ? cachedItem.isMuted : true
+
         dialogs.push({
           id: chatId,
           accountId,
@@ -2273,7 +2313,12 @@ export class AccountManager {
           isChannel: chatId.startsWith('-100'),
           isBot: false,
           isPinned: false,
+          isMuted,
         })
+
+        const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
+        this.peerNotifySettings.set(`${accountId}_${chatId}`, { isMuted })
+        this.peerNotifySettings.set(`${accountId}_${cleanChatId}`, { isMuted })
       }
 
       // Asynchronously resolve missing user profile names and avatars for bot dialogs via MTProto
@@ -2780,6 +2825,7 @@ export class AccountManager {
       const contacts = await holder.client.getContacts()
       return contacts.map((c: any) => {
         const id = c.id.toString()
+        this.addContactPeer(accountId, id)
         if (c.accessHash) {
           this.peerAccessHashes.set(`${accountId}_${id}`, c.accessHash)
         }
@@ -2841,6 +2887,26 @@ export class AccountManager {
 
       const beforeCount = this.activityTrackerService.getContactChanges(accountId).length
       const contacts = await this.getContacts(accountId)
+      for (const c of contacts) {
+        this.addContactPeer(accountId, c.id)
+      }
+
+      // Re-hydrate isContact flag on existing cached dialogs
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        let cacheUpdated = false
+        for (const d of cached) {
+          if (this.isContactPeer(accountId, d.id) && !d.isContact) {
+            d.isContact = true
+            cacheUpdated = true
+          }
+        }
+        if (cacheUpdated) {
+          this.store.saveDialogsCache(accountId, cached)
+          this.onEventCallback?.('telegram:dialogs-updated', { accountId, dialogs: cached })
+        }
+      } catch (_) {}
+
       const afterCount = this.activityTrackerService.getContactChanges(accountId).length
       const newEventsCount = Math.max(0, afterCount - beforeCount)
 
@@ -12171,10 +12237,147 @@ export class AccountManager {
         title: s.title,
         shortName: s.shortName,
         count: s.count,
+        isEmoji: Boolean(s.emojis),
+        thumbnailUrl: extractStrippedThumb(s),
         stickers: [],
       }))
     } catch (_) {
       return []
+    }
+  }
+
+  public async getInstalledEmojiSets(accountId: string): Promise<StickerSetItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getEmojiStickers',
+        hash: Long.ZERO,
+      })
+
+      return (res.sets || []).map((s: any) => ({
+        id: s.id?.toString(),
+        accessHash: s.accessHash?.toString(),
+        title: s.title,
+        shortName: s.shortName,
+        count: s.count,
+        isEmoji: true,
+        thumbnailUrl: extractStrippedThumb(s),
+        stickers: [],
+      }))
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getInstalledEmojiSets error:`, err?.message || err)
+      return []
+    }
+  }
+
+  public async getRecentStickers(accountId: string): Promise<StickerItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getRecentStickers',
+        hash: Long.ZERO,
+      })
+
+      const docs = res.stickers || []
+      return docs.map((d: any) => {
+        let emoticon = ''
+        if (d.attributes) {
+          for (const attr of d.attributes) {
+            if (attr._ === 'documentAttributeSticker' || attr._ === 'documentAttributeCustomEmoji') {
+              emoticon = attr.alt || ''
+            }
+          }
+        }
+        return {
+          id: d.id?.toString(),
+          accessHash: d.accessHash?.toString(),
+          fileReferenceHex: Buffer.from(d.fileReference || []).toString('hex'),
+          mimeType: d.mimeType,
+          emoticon,
+          isAnimated: d.mimeType === 'application/x-tgsticker',
+          isVideo: d.mimeType === 'video/webm' || d.mimeType === 'video/mp4',
+          thumbnailUrl: extractStrippedThumb(d),
+        }
+      })
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getRecentStickers error:`, err?.message || err)
+      return []
+    }
+  }
+
+  public async getSavedGifs(accountId: string): Promise<StickerItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'messages.getSavedGifs',
+        hash: Long.ZERO,
+      })
+
+      const docs = res.gifs || []
+      return docs.map((d: any) => {
+        return {
+          id: d.id?.toString(),
+          accessHash: d.accessHash?.toString(),
+          fileReferenceHex: Buffer.from(d.fileReference || []).toString('hex'),
+          mimeType: d.mimeType || 'video/mp4',
+          emoticon: 'GIF',
+          isAnimated: false,
+          isVideo: true,
+          thumbnailUrl: extractStrippedThumb(d),
+        }
+      })
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] getSavedGifs error:`, err?.message || err)
+      return []
+    }
+  }
+
+  public async sendSavedGif(
+    accountId: string,
+    chatId: string,
+    gifId: string,
+    accessHash: string,
+    fileReferenceHex: string,
+    replyToMsgId?: number
+  ): Promise<MessageItem> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const inputPeer = await this.resolveInputPeer(accountId, chatId)
+    const randomId = toLong(Math.floor(Math.random() * 10000000000))
+
+    const res: any = await holder.client.call({
+      _: 'messages.sendMedia',
+      peer: inputPeer,
+      replyTo: replyToMsgId ? { _: 'inputReplyToMessage', replyToMsgId } : undefined,
+      media: {
+        _: 'inputMediaDocument',
+        id: {
+          _: 'inputDocument',
+          id: toLong(gifId),
+          accessHash: toLong(accessHash),
+          fileReference: Buffer.from(fileReferenceHex, 'hex'),
+        },
+      },
+      message: '',
+      randomId,
+    })
+
+    const msgId = res.id || res.updates?.[0]?.id || Math.floor(Date.now() / 1000)
+    return {
+      id: msgId,
+      chatId,
+      accountId,
+      text: '',
+      date: Math.floor(Date.now() / 1000),
+      isOutgoing: true,
+      mediaType: 'video',
     }
   }
 
@@ -12204,7 +12407,9 @@ export class AccountManager {
         let emoticon = ''
         if (d.attributes) {
           for (const attr of d.attributes) {
-            if (attr._ === 'documentAttributeSticker') emoticon = attr.alt || ''
+            if (attr._ === 'documentAttributeSticker' || attr._ === 'documentAttributeCustomEmoji') {
+              emoticon = attr.alt || ''
+            }
           }
         }
         return {
@@ -12214,7 +12419,8 @@ export class AccountManager {
           mimeType: d.mimeType,
           emoticon,
           isAnimated: d.mimeType === 'application/x-tgsticker',
-          isVideo: d.mimeType === 'video/webm',
+          isVideo: d.mimeType === 'video/webm' || d.mimeType === 'video/mp4',
+          thumbnailUrl: extractStrippedThumb(d),
         }
       })
 
@@ -12224,6 +12430,8 @@ export class AccountManager {
         title: set.title,
         shortName: set.shortName,
         count: set.count,
+        isEmoji: Boolean(set.emojis),
+        thumbnailUrl: extractStrippedThumb(set) || stickers[0]?.thumbnailUrl,
         stickers,
       }
     } catch (_) {
@@ -12532,6 +12740,24 @@ export class AccountManager {
           fs.copyFileSync(rawFile, webmCache)
         }
         return { format: 'video', url: `guidegram-media://${webmCache.replace(/\\/g, '/')}` }
+      }
+
+      // Check if MP4 video (Telegram saved GIFs): magic bytes 'ftyp' at offset 4
+      if (buffer.length > 8 && buffer.subarray(4, 8).toString('ascii') === 'ftyp') {
+        const mp4Cache = path.join(this.mediaDir, `sticker_${stickerId}.mp4`)
+        if (!fs.existsSync(mp4Cache)) {
+          fs.copyFileSync(rawFile, mp4Cache)
+        }
+        return { format: 'video', url: `guidegram-media://${mp4Cache.replace(/\\/g, '/')}` }
+      }
+
+      // Check if GIF image: magic bytes 'GIF'
+      if (buffer.length > 3 && buffer.subarray(0, 3).toString('ascii') === 'GIF') {
+        const gifCache = path.join(this.mediaDir, `sticker_${stickerId}.gif`)
+        if (!fs.existsSync(gifCache)) {
+          fs.copyFileSync(rawFile, gifCache)
+        }
+        return { format: 'image', url: `guidegram-media://${gifCache.replace(/\\/g, '/')}` }
       }
 
       // Default to WebP image
@@ -14900,7 +15126,8 @@ export class AccountManager {
           } catch (_) {}
         }
 
-        let isChatMuted = cachedNotify ? cachedNotify.isMuted : chat?.chatType === 'channel'
+        const isBotAccount = Boolean(this.clients.get(accountId)?.info?.isBot)
+        let isChatMuted = cachedNotify ? cachedNotify.isMuted : (chat?.chatType === 'channel' || isBotAccount)
 
         if (!cachedNotify && (msg.raw as any)?.notifySettings) {
           const rawNotify = (msg.raw as any).notifySettings

@@ -4387,6 +4387,42 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-installed-emojis', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getInstalledEmojiSets(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getInstalledEmojiSets error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-recent-stickers', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getRecentStickers(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getRecentStickers error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-saved-gifs', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getSavedGifs(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSavedGifs error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:send-saved-gif', async (_event, { accountId, chatId, documentId, accessHash, fileRef, replyToMsgId }) => {
+    try {
+      return await accountManager.sendSavedGif(accountId, chatId, documentId, accessHash, fileRef, replyToMsgId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendSavedGif error:`, err)
+      throw err
+    }
+  })
+
   // Stories IPC
   ipcMain.handle('telegram:get-all-stories', async (_event, { accountId }) => {
     try {

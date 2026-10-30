@@ -214,23 +214,31 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
       {/* Bottom Tabs for Installed Packs */}
       {sets.length > 0 && (
         <div className="p-2 border-t border-white/5 bg-dark-950 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          {sets.map((set, idx) => {
+          {sets.map((set) => {
             const isSelected = set.id === activeSetId
-            const shortLabel = set.title ? set.title.trim().replace(/^@/, '').slice(0, 3).toUpperCase() : `#${idx + 1}`
+            const thumbUrl = set.thumbnailUrl || cachedSetDetails[set.id]?.thumbnailUrl || cachedSetDetails[set.id]?.stickers?.[0]?.thumbnailUrl
             return (
               <button
                 key={set.id}
                 type="button"
                 onClick={() => setActiveSetId(set.id)}
-                className={`h-9 min-w-[36px] px-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 ${
+                className={`h-9 w-9 rounded-xl transition-all flex items-center justify-center cursor-pointer shrink-0 overflow-hidden relative border ${
                   isSelected
-                    ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40 shadow-sm shadow-accent-cyan/10'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent'
+                    ? 'bg-accent-cyan/20 border-accent-cyan/60 shadow-sm shadow-accent-cyan/20 scale-105'
+                    : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10'
                 }`}
                 title={set.title}
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-mono tracking-tight">{shortLabel}</span>
+                {thumbUrl ? (
+                  <img
+                    src={thumbUrl}
+                    alt={set.title}
+                    className="w-7 h-7 object-contain rounded"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Layers className="w-4 h-4 text-gray-400" />
+                )}
               </button>
             )
           })}

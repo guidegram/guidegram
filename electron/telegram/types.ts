@@ -1258,6 +1258,7 @@ export interface StickerItem {
   isVideo: boolean
   width?: number
   height?: number
+  thumbnailUrl?: string
 }
 
 export interface StickerSetItem {
@@ -1267,6 +1268,8 @@ export interface StickerSetItem {
   shortName: string
   count: number
   stickers: StickerItem[]
+  isEmoji?: boolean
+  thumbnailUrl?: string
 }
 
 export type StoryMediaType = 'photo' | 'video' | 'unsupported'

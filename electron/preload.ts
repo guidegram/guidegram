@@ -1537,6 +1537,21 @@ const guidegramAPI = {
     fileRef?: string
   ): Promise<{ format: 'lottie' | 'image' | 'video'; url?: string; data?: Record<string, unknown> | ArrayBuffer | string } | null> =>
     ipcRenderer.invoke('telegram:get-sticker-data', { accountId, documentId, accessHash, fileRef }),
+  getInstalledEmojiSets: (accountId: string): Promise<StickerSetItem[]> =>
+    ipcRenderer.invoke('telegram:get-installed-emojis', { accountId }),
+  getRecentStickers: (accountId: string): Promise<StickerItem[]> =>
+    ipcRenderer.invoke('telegram:get-recent-stickers', { accountId }),
+  getSavedGifs: (accountId: string): Promise<StickerItem[]> =>
+    ipcRenderer.invoke('telegram:get-saved-gifs', { accountId }),
+  sendSavedGif: (
+    accountId: string,
+    chatId: string,
+    documentId: string,
+    accessHash: string,
+    fileRef?: string,
+    replyToMsgId?: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:send-saved-gif', { accountId, chatId, documentId, accessHash, fileRef, replyToMsgId }),
   getAllStories: (accountId: string): Promise<ActiveStoriesResult> =>
     ipcRenderer.invoke('telegram:get-all-stories', { accountId }),
   getPeerStories: (accountId: string, peerId: string): Promise<PeerStoriesPayload | null> =>

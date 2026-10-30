@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Smile, Layers, Film, Search, X, Sparkles, Clock, RefreshCw, Star, Flame, Check } from 'lucide-react'
+import { Smile, Layers, Film, Search, X, Clock, RefreshCw, Star, Flame, Sparkles } from 'lucide-react'
 import { StickerSetItem, StickerItem } from '../types/telegram'
 import lottie from 'lottie-web'
 
@@ -11,7 +11,7 @@ interface MediaPickerDrawerProps {
   chatId: string
   onSelectEmoji: (emoji: string) => void
   onSelectSticker: (sticker: StickerItem) => void
-  onSelectGif?: (gifUrl: string) => void
+  onSelectGif?: (gif: StickerItem) => void
 }
 
 type TabType = 'emoji' | 'stickers' | 'gifs'
@@ -180,49 +180,17 @@ const EMOJI_CATEGORIES: { id: string; name: string; icon: string; emojis: string
   },
 ]
 
-// Curated Telegram Premium Custom Emoji Effects
-const TELEGRAM_PREMIUM_EMOJIS = [
-  { emoji: '⚡️', name: 'Supercharged', glow: 'from-amber-400 to-yellow-500' },
-  { emoji: '👑', name: 'Telegram VIP', glow: 'from-yellow-400 to-amber-600' },
-  { emoji: '💎', name: 'Precious Gem', glow: 'from-cyan-400 to-blue-500' },
-  { emoji: '🔥', name: 'Inferno', glow: 'from-orange-500 to-red-600' },
-  { emoji: '⭐️', name: 'Telegram Star', glow: 'from-amber-300 to-yellow-400' },
-  { emoji: '🚀', name: 'Cosmic Boost', glow: 'from-indigo-500 to-purple-600' },
-  { emoji: '✨', name: 'Sparkles', glow: 'from-pink-400 to-violet-500' },
-  { emoji: '💫', name: 'Dizzy Star', glow: 'from-teal-400 to-cyan-500' },
-  { emoji: '🛡️', name: 'Verified Shield', glow: 'from-blue-500 to-indigo-600' },
-  { emoji: '🏆', name: 'Champion Cup', glow: 'from-yellow-500 to-amber-700' },
-  { emoji: '🍾', name: 'Celebration', glow: 'from-emerald-400 to-teal-500' },
-  { emoji: '🎉', name: 'Party Popper', glow: 'from-pink-500 to-rose-600' },
-  { emoji: '💜', name: 'Telegram Heart', glow: 'from-purple-500 to-pink-500' },
-  { emoji: '🍀', name: 'Lucky Clover', glow: 'from-emerald-500 to-green-600' },
-  { emoji: '🎯', name: 'Bullseye', glow: 'from-red-500 to-rose-700' },
-  { emoji: '🔮', name: 'Crystal Ball', glow: 'from-violet-500 to-indigo-700' },
-]
-
-// Popular reaction GIFs categories for Telegram
-const GIF_CATEGORIES = [
-  { tag: 'trending', label: '🔥 Trending' },
-  { tag: 'happy', label: '😊 Happy' },
-  { tag: 'love', label: '❤️ Love' },
-  { tag: 'clap', label: '👏 Clap' },
-  { tag: 'dance', label: '💃 Dance' },
-  { tag: 'party', label: '🎉 Party' },
-  { tag: 'lol', label: '😂 LOL' },
-  { tag: 'yes', label: '👍 Yes' },
-  { tag: 'no', label: '🙅 No' },
-  { tag: 'fire', label: '🔥 Fire' },
-]
-
-const StickerThumbnail: React.FC<{
+// Thumbnail renderer for animated Lottie, WebM/MP4 video, or WebP images
+const MediaItemThumbnail: React.FC<{
   accountId: string
-  sticker: StickerItem
+  item: StickerItem
   onClick: () => void
-}> = ({ accountId, sticker, onClick }) => {
+  sizeClass?: string
+}> = ({ accountId, item, onClick, sizeClass = 'w-16 h-16 sm:w-18 sm:h-18 p-1.5' }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const [dataUrl, setDataUrl] = useState<string | null>(null)
+  const [dataUrl, setDataUrl] = useState<string | null>(item.thumbnailUrl || null)
   const [format, setFormat] = useState<'lottie' | 'video' | 'image' | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!item.thumbnailUrl)
 
   useEffect(() => {
     let active = true
@@ -230,7 +198,7 @@ const StickerThumbnail: React.FC<{
     if (!window.guidegram?.getStickerData) return
 
     window.guidegram
-      .getStickerData(accountId, sticker.id, sticker.accessHash, sticker.fileReferenceHex)
+      .getStickerData(accountId, item.id, item.accessHash, item.fileReferenceHex)
       .then((res: any) => {
         if (!active || !res) return
         if (typeof res === 'string') {
@@ -263,20 +231,18 @@ const StickerThumbnail: React.FC<{
 
     return () => {
       active = false
-      if (animItem) {
-        animItem.destroy()
-      }
+      if (animItem) animItem.destroy()
     }
-  }, [accountId, sticker.id, sticker.accessHash])
+  }, [accountId, item.id, item.accessHash])
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-16 h-16 sm:w-18 sm:h-18 p-1.5 rounded-xl hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center cursor-pointer group relative shrink-0"
-      title={sticker.emoticon ? `${sticker.emoticon} (Click to send)` : 'Click to send'}
+      className={`${sizeClass} rounded-xl hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center cursor-pointer group relative shrink-0`}
+      title={item.emoticon ? `${item.emoticon}` : 'Click to send'}
     >
-      {format === 'lottie' || sticker.isAnimated ? (
+      {format === 'lottie' || item.isAnimated ? (
         <div ref={containerRef} className="w-full h-full object-contain pointer-events-none" />
       ) : format === 'video' && dataUrl ? (
         <video
@@ -285,90 +251,169 @@ const StickerThumbnail: React.FC<{
           loop
           muted
           playsInline
-          className="w-full h-full object-contain pointer-events-none"
+          className="w-full h-full object-contain pointer-events-none rounded-lg"
         />
       ) : dataUrl ? (
         <img
           src={dataUrl}
-          alt={sticker.emoticon || 'sticker'}
+          alt={item.emoticon || 'sticker'}
           className="w-full h-full object-contain pointer-events-none group-hover:scale-105 transition-transform"
           loading="lazy"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-xl select-none">
+        <div className="w-full h-full flex items-center justify-center text-lg select-none">
           {loading ? (
-            <div className="w-4 h-4 rounded-full border-2 border-primary-400 border-t-transparent animate-spin" />
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-primary-400 border-t-transparent animate-spin" />
           ) : (
-            sticker.emoticon || '⭐'
+            item.emoticon || '⭐'
           )}
         </div>
       )}
-      {sticker.emoticon && (
-        <span className="absolute bottom-1 right-1 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-1 rounded">
-          {sticker.emoticon}
+      {item.emoticon && item.emoticon !== 'GIF' && (
+        <span className="absolute bottom-0.5 right-0.5 text-[9px] opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 px-1 rounded pointer-events-none">
+          {item.emoticon}
         </span>
       )}
     </button>
   )
 }
 
-// Emoji Keyword Search Index
-const EMOJI_KEYWORDS: Record<string, string[]> = {
-  '😀': ['smile', 'happy', 'face', 'grin'],
-  '😃': ['smile', 'happy', 'face', 'big'],
-  '😄': ['smile', 'happy', 'laugh'],
-  '😁': ['grin', 'teeth', 'smile', 'happy'],
-  '😆': ['laugh', 'lol', 'haha', 'xd'],
-  '😅': ['sweat', 'relief', 'smile'],
-  '😂': ['joy', 'tears', 'laugh', 'lol', 'haha', 'crying'],
-  '🤣': ['rofl', 'laughing', 'floor', 'lol'],
-  '🥲': ['smiling', 'tear', 'sad', 'happy'],
-  '🥹': ['pleading', 'tears', 'cute', 'eyes'],
-  '😊': ['blush', 'smile', 'warm', 'happy'],
-  '😇': ['angel', 'halo', 'innocent', 'good'],
-  '😍': ['love', 'heart', 'eyes', 'crush'],
-  '🥰': ['love', 'hearts', 'adorable', 'blush'],
-  '😘': ['kiss', 'blow', 'love', 'heart'],
-  '😋': ['yum', 'delicious', 'tongue', 'food'],
-  '😛': ['tongue', 'playful', 'joke'],
-  '😜': ['wink', 'tongue', 'joke', 'crazy'],
-  '🤪': ['zany', 'crazy', 'wild', 'goofy'],
-  '😎': ['cool', 'sunglasses', 'boss'],
-  '🥳': ['party', 'celebrate', 'birthday', 'hat'],
-  '😭': ['cry', 'tears', 'sobbing', 'sad'],
-  '🥺': ['plead', 'puppy', 'eyes', 'beg'],
-  '😡': ['angry', 'mad', 'rage', 'red'],
-  '🤬': ['cursing', 'swear', 'mad', 'angry'],
-  '🤯': ['mindblown', 'explode', 'shocked'],
-  '😱': ['scream', 'fear', 'shocked', 'scared'],
-  '🤔': ['think', 'ponder', 'wonder'],
-  '😴': ['sleep', 'tired', 'zzz'],
-  '💀': ['skull', 'dead', 'deadass', 'skeleton'],
-  '💩': ['poop', 'crap', 'shit'],
-  '🔥': ['fire', 'lit', 'flame', 'hot'],
-  '❤️': ['heart', 'love', 'red'],
-  '💖': ['sparkle', 'heart', 'pink', 'love'],
-  '💔': ['broken', 'heart', 'heartbreak'],
-  '👍': ['thumbsup', 'like', 'approve', 'yes', 'ok'],
-  '👎': ['thumbsdown', 'dislike', 'no'],
-  '👏': ['clap', 'applause', 'bravo'],
-  '🙌': ['hooray', 'praise', 'celebrate'],
-  '🙏': ['pray', 'thanks', 'please', 'grateful'],
-  '🎉': ['tada', 'party', 'celebrate', 'congrats'],
-  '✨': ['sparkles', 'magic', 'shine', 'clean'],
-  '⭐': ['star', 'favorite', 'rating'],
-  '🌟': ['star', 'glow', 'shine'],
-  '💯': ['hundred', '100', 'perfect'],
-  '🐱': ['cat', 'kitten', 'pet'],
-  '🐶': ['dog', 'puppy', 'pet'],
-  '🍕': ['pizza', 'food', 'cheese'],
-  '🍔': ['burger', 'food', 'fastfood'],
-  '🍺': ['beer', 'drink', 'alcohol', 'cheers'],
-  '☕': ['coffee', 'tea', 'cafe', 'morning'],
-  '🚗': ['car', 'auto', 'drive'],
-  '🚀': ['rocket', 'space', 'launch', 'moon'],
-  '💡': ['lightbulb', 'idea', 'lamp'],
-  '💵': ['money', 'cash', 'dollar'],
+// Compact Pack Cover Icon for the bottom dock bar
+const PackCoverIcon: React.FC<{
+  accountId: string
+  set: StickerSetItem
+  isSelected: boolean
+  onClick: () => void
+}> = ({ accountId, set, isSelected, onClick }) => {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(set.thumbnailUrl || null)
+
+  useEffect(() => {
+    let active = true
+    if (thumbUrl || !window.guidegram?.getStickerSet) return
+
+    window.guidegram
+      .getStickerSet(accountId, set.id, set.accessHash)
+      .then((detailed) => {
+        if (!active || !detailed) return
+        if (detailed.thumbnailUrl) {
+          setThumbUrl(detailed.thumbnailUrl)
+        } else if (detailed.stickers?.[0]) {
+          const first = detailed.stickers[0]
+          if (first.thumbnailUrl) {
+            setThumbUrl(first.thumbnailUrl)
+          } else if (window.guidegram?.getStickerData) {
+            window.guidegram
+              .getStickerData(accountId, first.id, first.accessHash, first.fileReferenceHex)
+              .then((res: any) => {
+                if (active && res?.url) setThumbUrl(res.url)
+              })
+              .catch(() => {})
+          }
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      active = false
+    }
+  }, [accountId, set.id, set.accessHash, thumbUrl])
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-9 w-9 rounded-xl transition-all flex items-center justify-center cursor-pointer shrink-0 overflow-hidden relative border ${
+        isSelected
+          ? 'bg-accent-cyan/20 border-accent-cyan/60 shadow-sm shadow-accent-cyan/20 scale-105'
+          : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10'
+      }`}
+      title={set.title}
+    >
+      {thumbUrl ? (
+        <img
+          src={thumbUrl}
+          alt={set.title}
+          className="w-7 h-7 object-contain rounded"
+          loading="lazy"
+        />
+      ) : (
+        <span className="text-[10px] font-bold text-gray-300 uppercase">
+          {set.title ? set.title.trim().replace(/^@/, '').slice(0, 2) : '🗂️'}
+        </span>
+      )}
+    </button>
+  )
+}
+
+// GIF Thumbnail Card with responsive playback
+const GifItemCard: React.FC<{
+  accountId: string
+  item: StickerItem
+  onClick: () => void
+}> = ({ accountId, item, onClick }) => {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    if (!window.guidegram?.getStickerData) return
+
+    window.guidegram
+      .getStickerData(accountId, item.id, item.accessHash, item.fileReferenceHex)
+      .then((res: any) => {
+        if (!active || !res) return
+        if (typeof res === 'string') {
+          setVideoUrl(res)
+        } else if (res.url) {
+          setVideoUrl(res.url)
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [accountId, item.id, item.accessHash])
+
+  return (
+    <div
+      onClick={onClick}
+      className="group relative aspect-video bg-dark-800 rounded-xl overflow-hidden cursor-pointer border border-white/5 hover:border-primary-500/50 hover:shadow-lg transition-all"
+    >
+      {videoUrl ? (
+        <video
+          src={videoUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+        />
+      ) : item.thumbnailUrl ? (
+        <img
+          src={item.thumbnailUrl}
+          alt="GIF thumbnail"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+          {loading ? (
+            <div className="w-4 h-4 rounded-full border-2 border-primary-400 border-t-transparent animate-spin" />
+          ) : (
+            'GIF'
+          )}
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5">
+        <span className="text-[10px] font-semibold text-white bg-primary-600/80 px-1.5 py-0.5 rounded">
+          Send GIF
+        </span>
+      </div>
+    </div>
+  )
 }
 
 export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
@@ -381,32 +426,36 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('emoji')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Emojis state
   const [recentEmojis, setRecentEmojis] = useState<string[]>([])
-  const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('all')
+  const [customEmojiSets, setCustomEmojiSets] = useState<StickerSetItem[]>([])
+  const [cachedEmojiSetDetails, setCachedEmojiSetDetails] = useState<Record<string, StickerSetItem>>({})
+  const [activeEmojiSetId, setActiveEmojiSetId] = useState<string | null>(null)
+  const [loadingEmojiSets, setLoadingEmojiSets] = useState(false)
 
   // Sticker state
-  const [sets, setSets] = useState<StickerSetItem[]>([])
-  const [activeSetId, setActiveSetId] = useState<string | null>(null)
-  const [cachedSetDetails, setCachedSetDetails] = useState<Record<string, StickerSetItem>>({})
-  const [loadingSets, setLoadingSets] = useState(false)
-  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [stickerSets, setStickerSets] = useState<StickerSetItem[]>([])
+  const [activeStickerSetId, setActiveStickerSetId] = useState<string | null>('recent')
+  const [cachedStickerSetDetails, setCachedStickerSetDetails] = useState<Record<string, StickerSetItem>>({})
+  const [recentStickers, setRecentStickers] = useState<StickerItem[]>([])
+  const [loadingStickerSets, setLoadingStickerSets] = useState(false)
+  const [loadingStickerDetails, setLoadingStickerDetails] = useState(false)
 
   // GIF state
-  const [selectedGifTag, setSelectedGifTag] = useState('trending')
+  const [savedGifs, setSavedGifs] = useState<StickerItem[]>([])
+  const [loadingGifs, setLoadingGifs] = useState(false)
 
   // Load recent emojis from storage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('guidegram_recent_emojis')
-      if (saved) {
-        setRecentEmojis(JSON.parse(saved))
-      }
+      if (saved) setRecentEmojis(JSON.parse(saved))
     } catch (_) {}
   }, [])
 
   const handlePickEmoji = (emoji: string) => {
     onSelectEmoji(emoji)
-    // Update recents
     setRecentEmojis((prev) => {
       const next = [emoji, ...prev.filter((e) => e !== emoji)].slice(0, 32)
       try {
@@ -416,70 +465,132 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
     })
   }
 
-  // Load installed sticker packs
+  // 1. Fetch Installed Custom Emoji Packs for the Telegram Account
   useEffect(() => {
-    if (!isOpen || !accountId || activeTab !== 'stickers') return
-    if (sets.length > 0) return
-    setLoadingSets(true)
-    if (window.guidegram?.getInstalledStickerSets) {
+    if (!isOpen || !accountId || activeTab !== 'emoji') return
+    if (customEmojiSets.length > 0) return
+
+    setLoadingEmojiSets(true)
+    if (window.guidegram?.getInstalledEmojiSets) {
       window.guidegram
-        .getInstalledStickerSets(accountId)
-        .then((list) => {
-          setSets(list || [])
-          if (list && list.length > 0 && !activeSetId) {
-            setActiveSetId(list[0].id)
+        .getInstalledEmojiSets(accountId)
+        .then((sets) => {
+          setCustomEmojiSets(sets || [])
+          if (sets && sets.length > 0 && !activeEmojiSetId) {
+            setActiveEmojiSetId(sets[0].id)
           }
         })
         .catch(() => {})
-        .finally(() => setLoadingSets(false))
+        .finally(() => setLoadingEmojiSets(false))
     }
-  }, [isOpen, accountId, activeTab, sets.length])
+  }, [isOpen, accountId, activeTab, customEmojiSets.length])
 
-  // Load active pack stickers
+  // Load details for top custom emoji packs
   useEffect(() => {
-    if (!isOpen || !accountId || !activeSetId || activeTab !== 'stickers') return
-    if (cachedSetDetails[activeSetId]) return
+    if (!isOpen || !accountId || customEmojiSets.length === 0) return
+    const targetSets = customEmojiSets.slice(0, 6)
+    targetSets.forEach((set) => {
+      if (cachedEmojiSetDetails[set.id]) return
+      if (window.guidegram?.getStickerSet) {
+        window.guidegram.getStickerSet(accountId, set.id, set.accessHash).then((res) => {
+          if (res) {
+            setCachedEmojiSetDetails((prev) => ({ ...prev, [set.id]: res }))
+          }
+        }).catch(() => {})
+      }
+    })
+  }, [isOpen, accountId, customEmojiSets, cachedEmojiSetDetails])
 
-    const targetSet = sets.find((s) => s.id === activeSetId)
+  // Load active custom emoji pack details if not loaded
+  useEffect(() => {
+    if (!isOpen || !accountId || !activeEmojiSetId || activeEmojiSetId === 'standard') return
+    if (cachedEmojiSetDetails[activeEmojiSetId]) return
+
+    const target = customEmojiSets.find((s) => s.id === activeEmojiSetId)
+    if (!target) return
+
+    if (window.guidegram?.getStickerSet) {
+      window.guidegram.getStickerSet(accountId, target.id, target.accessHash).then((res) => {
+        if (res) {
+          setCachedEmojiSetDetails((prev) => ({ ...prev, [activeEmojiSetId]: res }))
+        }
+      }).catch(() => {})
+    }
+  }, [isOpen, accountId, activeEmojiSetId, customEmojiSets, cachedEmojiSetDetails])
+
+  // 2. Fetch Installed Sticker Packs & Recent Stickers
+  useEffect(() => {
+    if (!isOpen || !accountId || activeTab !== 'stickers') return
+
+    // Load recent stickers
+    if (recentStickers.length === 0 && window.guidegram?.getRecentStickers) {
+      window.guidegram.getRecentStickers(accountId).then((list) => {
+        if (list) setRecentStickers(list)
+      }).catch(() => {})
+    }
+
+    // Load installed sticker packs
+    if (stickerSets.length === 0 && window.guidegram?.getInstalledStickerSets) {
+      setLoadingStickerSets(true)
+      window.guidegram
+        .getInstalledStickerSets(accountId)
+        .then((list) => {
+          setStickerSets(list || [])
+          if (list && list.length > 0 && !activeStickerSetId) {
+            setActiveStickerSetId('recent')
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoadingStickerSets(false))
+    }
+  }, [isOpen, accountId, activeTab, stickerSets.length, recentStickers.length])
+
+  // Load active sticker pack details
+  useEffect(() => {
+    if (!isOpen || !accountId || !activeStickerSetId || activeStickerSetId === 'recent') return
+    if (cachedStickerSetDetails[activeStickerSetId]) return
+
+    const targetSet = stickerSets.find((s) => s.id === activeStickerSetId)
     if (!targetSet) return
 
-    setLoadingDetails(true)
+    setLoadingStickerDetails(true)
     if (window.guidegram?.getStickerSet) {
       window.guidegram
         .getStickerSet(accountId, targetSet.id, targetSet.accessHash)
         .then((detailed) => {
           if (detailed) {
-            setCachedSetDetails((prev) => ({ ...prev, [activeSetId]: detailed }))
+            setCachedStickerSetDetails((prev) => ({ ...prev, [activeStickerSetId]: detailed }))
           }
         })
         .catch(() => {})
-        .finally(() => setLoadingDetails(false))
+        .finally(() => setLoadingStickerDetails(false))
     }
-  }, [isOpen, accountId, activeSetId, sets, activeTab, cachedSetDetails])
+  }, [isOpen, accountId, activeStickerSetId, stickerSets, cachedStickerSetDetails])
 
-  // Filter emojis based on search and category
-  const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) {
-      if (!selectedEmojiCategory || selectedEmojiCategory === 'all') return EMOJI_CATEGORIES
-      if (selectedEmojiCategory === 'recents' || selectedEmojiCategory === 'premium') return []
-      return EMOJI_CATEGORIES.filter((c) => c.id === selectedEmojiCategory)
+  // 3. Fetch Saved GIFs
+  useEffect(() => {
+    if (!isOpen || !accountId || activeTab !== 'gifs') return
+    if (savedGifs.length > 0) return
+
+    setLoadingGifs(true)
+    if (window.guidegram?.getSavedGifs) {
+      window.guidegram
+        .getSavedGifs(accountId)
+        .then((gifs) => {
+          setSavedGifs(gifs || [])
+        })
+        .catch(() => {})
+        .finally(() => setLoadingGifs(false))
     }
-    const q = searchQuery.toLowerCase().trim()
-    return EMOJI_CATEGORIES.map((cat) => {
-      const matched = cat.emojis.filter((e) => {
-        if (e.includes(q)) return true
-        const keywords = EMOJI_KEYWORDS[e] || []
-        return keywords.some((k) => k.includes(q))
-      })
-      return { ...cat, emojis: matched }
-    }).filter((cat) => cat.emojis.length > 0)
-  }, [searchQuery, selectedEmojiCategory])
+  }, [isOpen, accountId, activeTab, savedGifs.length])
 
   if (!isOpen) return null
 
-  const activeSet = sets.find((s) => s.id === activeSetId)
-  const activeDetails = activeSetId ? cachedSetDetails[activeSetId] : null
-  const currentStickers = activeDetails?.stickers || []
+  // Active sticker set details
+  const activeStickerSet = stickerSets.find((s) => s.id === activeStickerSetId)
+  const currentStickers = activeStickerSetId && activeStickerSetId !== 'recent'
+    ? cachedStickerSetDetails[activeStickerSetId]?.stickers || []
+    : []
 
   return (
     <motion.div
@@ -487,10 +598,10 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.94, y: 16 }}
       transition={{ type: 'spring', damping: 25, stiffness: 380 }}
-      className="absolute bottom-16 left-4 z-40 w-80 sm:w-[410px] h-[440px] rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden select-none"
+      className="absolute bottom-16 left-4 z-40 w-80 sm:w-[420px] h-[480px] rounded-2xl bg-dark-900/95 border border-white/10 shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden select-none"
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Top Header with Telegram-style Navigation Tabs */}
+      {/* Top Header with Telegram-style Navigation Tabs (Emoji | Stickers | GIFs) */}
       <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between bg-dark-850/90">
         <div className="flex items-center gap-1 bg-dark-800 p-0.5 rounded-xl border border-white/5">
           <button
@@ -542,7 +653,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
       </div>
 
       {/* =========================================================
-          TAB 1: EMOJI (Standard Unicode + Telegram Premium Custom)
+          TAB 1: EMOJI (Real Telegram Premium Custom Emojis + Standard)
           ========================================================= */}
       {activeTab === 'emoji' && (
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -569,66 +680,58 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
             </div>
           </div>
 
-          {/* Emoji Category Navigator Pills */}
-          {!searchQuery && (
-            <div className="px-3 py-1 flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-white/5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedEmojiCategory('all')}
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${
-                  selectedEmojiCategory === 'all'
-                    ? 'bg-primary-600/30 text-primary-300 border border-primary-500/40'
-                    : 'text-gray-400 hover:text-gray-200'
-                }`}
-                title="All Categories"
-              >
-                All
-              </button>
-              {recentEmojis.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedEmojiCategory('recents')}
-                  className={`p-1.5 rounded-lg text-sm transition-all cursor-pointer shrink-0 ${
-                    selectedEmojiCategory === 'recents' ? 'bg-white/15 text-white scale-105' : 'opacity-60 hover:opacity-100'
-                  }`}
-                  title="Recent"
-                >
-                  <Clock className="w-3.5 h-3.5 text-primary-400" />
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedEmojiCategory('premium')}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
-                  selectedEmojiCategory === 'premium'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                    : 'text-amber-400/80 hover:text-amber-300'
-                }`}
-                title="Telegram Premium Custom Emojis"
-              >
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                <span>Premium</span>
-              </button>
-              {EMOJI_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedEmojiCategory(cat.id)}
-                  className={`p-1.5 rounded-lg text-sm transition-all cursor-pointer shrink-0 ${
-                    selectedEmojiCategory === cat.id ? 'bg-white/15 text-white scale-110' : 'opacity-60 hover:opacity-100'
-                  }`}
-                  title={cat.name}
-                >
-                  {cat.icon}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Emoji Palette Scrollable List */}
+          {/* Emoji Content Area */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
-            {/* Recent Emojis Section */}
-            {!searchQuery && (selectedEmojiCategory === 'recents' || selectedEmojiCategory === 'all') && recentEmojis.length > 0 && (
+            {/* 1. Installed Custom Emoji Packs */}
+            {customEmojiSets.length > 0 && !searchQuery && (
+              <div className="space-y-4">
+                {customEmojiSets.map((pack) => {
+                  const details = cachedEmojiSetDetails[pack.id]
+                  const emojis = details?.stickers || []
+                  if (activeEmojiSetId && activeEmojiSetId !== 'standard' && activeEmojiSetId !== pack.id) {
+                    return null
+                  }
+                  return (
+                    <div key={pack.id} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-bold text-amber-300/90 px-1">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                          <span className="truncate">{pack.title}</span>
+                          <span className="text-[10px] text-gray-400 font-normal">({pack.count})</span>
+                        </div>
+                        <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">
+                          PREMIUM
+                        </span>
+                      </div>
+
+                      {emojis.length > 0 ? (
+                        <div className="grid grid-cols-8 gap-1">
+                          {emojis.map((stk) => (
+                            <MediaItemThumbnail
+                              key={stk.id}
+                              accountId={accountId}
+                              item={stk}
+                              sizeClass="w-9 h-9 sm:w-10 sm:h-10 p-1"
+                              onClick={() => {
+                                handlePickEmoji(stk.emoticon || '⭐')
+                              }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-4 text-center text-[11px] text-gray-500 flex items-center justify-center gap-2">
+                          <RefreshCw className="w-3 h-3 animate-spin text-amber-400" />
+                          <span>Loading custom emojis...</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* 2. Recently Used Unicode Emojis */}
+            {recentEmojis.length > 0 && !searchQuery && (
               <div>
                 <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-primary-400" />
@@ -649,79 +752,96 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
               </div>
             )}
 
-            {/* Telegram Premium Custom Emojis Section */}
-            {!searchQuery && (selectedEmojiCategory === 'premium' || selectedEmojiCategory === 'all') && (
-              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-purple-500/5 to-transparent border border-amber-500/20">
-                <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span>Telegram Premium Custom Emojis</span>
-                  </div>
-                  <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-semibold">
-                    VIP
-                  </span>
-                </div>
-                <div className="grid grid-cols-8 gap-1.5">
-                  {TELEGRAM_PREMIUM_EMOJIS.map((p, idx) => (
-                    <button
-                      key={`prem-${idx}`}
-                      type="button"
-                      onClick={() => handlePickEmoji(p.emoji)}
-                      className="group relative w-9 h-9 flex items-center justify-center text-2xl rounded-xl hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
-                      title={`${p.name} (Telegram Premium)`}
-                    >
-                      <span className="group-hover:scale-125 transition-transform drop-shadow-[0_2px_8px_rgba(245,158,11,0.5)]">
-                        {p.emoji}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+            {/* 3. Categorized Standard Unicode Emojis */}
+            {(activeEmojiSetId === 'standard' || !activeEmojiSetId || customEmojiSets.length === 0 || searchQuery) && (
+              <div className="space-y-4">
+                {EMOJI_CATEGORIES.map((cat) => {
+                  const filtered = searchQuery
+                    ? cat.emojis.filter((e) => e.includes(searchQuery))
+                    : cat.emojis
+                  if (filtered.length === 0) return null
+                  return (
+                    <div key={cat.id}>
+                      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <span>{cat.icon}</span>
+                        <span>{cat.name}</span>
+                        <span className="text-[10px] text-gray-500 font-normal">({filtered.length})</span>
+                      </div>
+                      <div className="grid grid-cols-8 gap-1">
+                        {filtered.map((emoji, idx) => (
+                          <button
+                            key={`${cat.id}-${idx}`}
+                            type="button"
+                            onClick={() => handlePickEmoji(emoji)}
+                            className="w-9 h-9 flex items-center justify-center text-xl rounded-xl hover:bg-white/10 active:scale-90 transition-transform cursor-pointer"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
-
-            {/* Categorized Unicode Emojis */}
-            {filteredCategories.map((cat) => (
-              <div key={cat.id}>
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <span>{cat.icon}</span>
-                  <span>{cat.name}</span>
-                  <span className="text-[10px] text-gray-500 font-normal">({cat.emojis.length})</span>
-                </div>
-                <div className="grid grid-cols-8 gap-1">
-                  {cat.emojis.map((emoji, idx) => (
-                    <button
-                      key={`${cat.id}-${idx}`}
-                      type="button"
-                      onClick={() => handlePickEmoji(emoji)}
-                      className="w-9 h-9 flex items-center justify-center text-xl rounded-xl hover:bg-white/10 active:scale-90 transition-transform cursor-pointer"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
           </div>
+
+          {/* Bottom Dock for Custom Emoji Packs (Matching Telegram Desktop) */}
+          {customEmojiSets.length > 0 && (
+            <div className="p-2 border-t border-white/5 bg-dark-950 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setActiveEmojiSetId('standard')}
+                className={`h-9 w-9 rounded-xl transition-all flex items-center justify-center text-base cursor-pointer shrink-0 border ${
+                  activeEmojiSetId === 'standard'
+                    ? 'bg-primary-600/30 border-primary-500/50 scale-105'
+                    : 'bg-white/5 border-transparent hover:bg-white/10'
+                }`}
+                title="Standard Emojis"
+              >
+                😀
+              </button>
+
+              {customEmojiSets.map((pack) => (
+                <PackCoverIcon
+                  key={pack.id}
+                  accountId={accountId}
+                  set={pack}
+                  isSelected={activeEmojiSetId === pack.id}
+                  onClick={() => setActiveEmojiSetId(pack.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* =========================================================
-          TAB 2: STICKERS (MTProto Installed Sticker Packs + Lottie)
+          TAB 2: STICKERS (Recently Used + Real Installed Packs Dock)
           ========================================================= */}
       {activeTab === 'stickers' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Active Pack Title & Info */}
           <div className="px-3.5 py-2 border-b border-white/5 flex items-center justify-between text-xs bg-dark-850/40">
             <div className="flex items-center gap-2">
-              <Layers className="w-3.5 h-3.5 text-accent-cyan" />
-              <span className="font-semibold text-white truncate max-w-[200px]">
-                {activeSet?.title || 'Sticker Packs'}
-              </span>
-              {activeSet && (
-                <span className="text-[10px] text-gray-400">({activeSet.count})</span>
+              {activeStickerSetId === 'recent' ? (
+                <>
+                  <Clock className="w-3.5 h-3.5 text-accent-cyan" />
+                  <span className="font-semibold text-white">Recently Used Stickers</span>
+                </>
+              ) : (
+                <>
+                  <Layers className="w-3.5 h-3.5 text-accent-cyan" />
+                  <span className="font-semibold text-white truncate max-w-[200px]">
+                    {activeStickerSet?.title || 'Sticker Packs'}
+                  </span>
+                  {activeStickerSet && (
+                    <span className="text-[10px] text-gray-400">({activeStickerSet.count})</span>
+                  )}
+                </>
               )}
             </div>
-            {loadingSets && (
+            {loadingStickerSets && (
               <div className="flex items-center gap-1 text-[11px] text-gray-400">
                 <RefreshCw className="w-3 h-3 animate-spin text-accent-cyan" />
                 <span>Syncing...</span>
@@ -730,99 +850,148 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
           </div>
 
           {/* Stickers Grid */}
-          <div className="flex-1 overflow-y-auto p-3 grid grid-cols-4 sm:grid-cols-5 gap-1.5 justify-items-center scrollbar-thin">
-            {loadingDetails ? (
-              <div className="col-span-full py-16 flex flex-col items-center justify-center gap-2 text-gray-400">
+          <div className="flex-1 overflow-y-auto p-3 scrollbar-thin">
+            {/* When Recently Used is selected */}
+            {activeStickerSetId === 'recent' ? (
+              <div className="space-y-4">
+                {recentStickers.length > 0 ? (
+                  <div>
+                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-accent-cyan" />
+                      <span>Recent Stickers ({recentStickers.length})</span>
+                    </div>
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 justify-items-center">
+                      {recentStickers.map((stk) => (
+                        <MediaItemThumbnail
+                          key={stk.id}
+                          accountId={accountId}
+                          item={stk}
+                          onClick={() => {
+                            onSelectSticker(stk)
+                            onClose()
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-16 text-center text-xs text-gray-500">
+                    No recent stickers yet. Pick a sticker pack from below!
+                  </div>
+                )}
+              </div>
+            ) : loadingStickerDetails ? (
+              <div className="py-16 flex flex-col items-center justify-center gap-2 text-gray-400">
                 <RefreshCw className="w-6 h-6 animate-spin text-accent-cyan" />
-                <span className="text-xs">Loading animated stickers...</span>
+                <span className="text-xs">Loading pack stickers...</span>
               </div>
             ) : currentStickers.length > 0 ? (
-              currentStickers.map((stk) => (
-                <StickerThumbnail
-                  key={stk.id}
-                  accountId={accountId}
-                  sticker={stk}
-                  onClick={() => {
-                    onSelectSticker(stk)
-                    onClose()
-                  }}
-                />
-              ))
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 justify-items-center">
+                {currentStickers.map((stk) => (
+                  <MediaItemThumbnail
+                    key={stk.id}
+                    accountId={accountId}
+                    item={stk}
+                    onClick={() => {
+                      onSelectSticker(stk)
+                      onClose()
+                    }}
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="col-span-full py-16 text-center text-xs text-gray-500">
-                {loadingSets ? 'Fetching installed sticker sets from Telegram...' : 'No stickers in this pack.'}
+              <div className="py-16 text-center text-xs text-gray-500">
+                {loadingStickerSets ? 'Fetching sticker sets...' : 'No stickers in this pack.'}
               </div>
             )}
           </div>
 
-          {/* Bottom Tabs for Installed Packs */}
-          {sets.length > 0 && (
-            <div className="p-2 border-t border-white/5 bg-dark-950 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-              {sets.map((set, idx) => {
-                const isSelected = set.id === activeSetId
-                const shortLabel = set.title ? set.title.trim().replace(/^@/, '').slice(0, 3).toUpperCase() : `#${idx + 1}`
-                return (
-                  <button
-                    key={set.id}
-                    type="button"
-                    onClick={() => setActiveSetId(set.id)}
-                    className={`h-9 min-w-[36px] px-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 ${
-                      isSelected
-                        ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/40 shadow-sm shadow-accent-cyan/10'
-                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent'
-                    }`}
-                    title={set.title}
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    <span className="text-[11px] font-mono tracking-tight">{shortLabel}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {/* Bottom Dock with Real Pack Covers (Matching Telegram Desktop) */}
+          <div className="p-2 border-t border-white/5 bg-dark-950 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            {/* Clock button for Recently Used */}
+            <button
+              type="button"
+              onClick={() => setActiveStickerSetId('recent')}
+              className={`h-9 w-9 rounded-xl transition-all flex items-center justify-center cursor-pointer shrink-0 border ${
+                activeStickerSetId === 'recent'
+                  ? 'bg-accent-cyan/20 border-accent-cyan/60 text-accent-cyan shadow-sm shadow-accent-cyan/20 scale-105'
+                  : 'bg-white/5 border-transparent text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+              title="Recently Used"
+            >
+              <Clock className="w-4 h-4" />
+            </button>
+
+            {/* Pack Covers */}
+            {stickerSets.map((set) => (
+              <PackCoverIcon
+                key={set.id}
+                accountId={accountId}
+                set={set}
+                isSelected={activeStickerSetId === set.id}
+                onClick={() => setActiveStickerSetId(set.id)}
+              />
+            ))}
+          </div>
         </div>
       )}
 
       {/* =========================================================
-          TAB 3: GIFS (Telegram Trending Reactions & Search)
+          TAB 3: GIFS (Telegram MTProto Saved GIFs)
           ========================================================= */}
       {activeTab === 'gifs' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Reaction category tags */}
-          <div className="p-2 border-b border-white/5 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0 bg-dark-850/40">
-            {GIF_CATEGORIES.map((cat) => (
-              <button
-                key={cat.tag}
-                type="button"
-                onClick={() => setSelectedGifTag(cat.tag)}
-                className={`px-2.5 py-1 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                  selectedGifTag === cat.tag
-                    ? 'bg-primary-600 text-white shadow-sm'
-                    : 'bg-dark-800 text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+          {/* GIFs Header */}
+          <div className="px-3.5 py-2 border-b border-white/5 flex items-center justify-between text-xs bg-dark-850/40">
+            <div className="flex items-center gap-2">
+              <Film className="w-3.5 h-3.5 text-primary-400" />
+              <span className="font-semibold text-white">Saved GIFs</span>
+              {savedGifs.length > 0 && (
+                <span className="text-[10px] text-gray-400">({savedGifs.length})</span>
+              )}
+            </div>
+            {loadingGifs && (
+              <div className="flex items-center gap-1 text-[11px] text-gray-400">
+                <RefreshCw className="w-3 h-3 animate-spin text-primary-400" />
+                <span>Loading saved GIFs...</span>
+              </div>
+            )}
           </div>
 
-          {/* GIF Collection */}
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col items-center justify-center gap-3 text-gray-400 text-xs text-center">
-            <Flame className="w-8 h-8 text-primary-400 animate-pulse" />
-            <div>
-              <p className="font-semibold text-gray-200">Tenor GIF Integration</p>
-              <p className="text-[11px] text-gray-500 mt-0.5">Type @gif in the chat box to search animated GIFs live</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onSelectEmoji('🔥')
-                onClose()
-              }}
-              className="px-3 py-1.5 rounded-xl bg-primary-600/30 hover:bg-primary-600/50 text-primary-300 border border-primary-500/30 font-medium text-xs transition-colors cursor-pointer"
-            >
-              Insert Reaction 🔥
-            </button>
+          {/* Saved GIFs Grid */}
+          <div className="flex-1 overflow-y-auto p-3 scrollbar-thin">
+            {loadingGifs && savedGifs.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-2 text-gray-400">
+                <RefreshCw className="w-6 h-6 animate-spin text-primary-400" />
+                <span className="text-xs">Fetching your saved GIFs from Telegram...</span>
+              </div>
+            ) : savedGifs.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {savedGifs.map((gif) => (
+                  <GifItemCard
+                    key={gif.id}
+                    accountId={accountId}
+                    item={gif}
+                    onClick={() => {
+                      if (onSelectGif) {
+                        onSelectGif(gif)
+                      }
+                      onClose()
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="py-20 flex flex-col items-center justify-center gap-3 text-gray-400 text-xs text-center px-4">
+                <Flame className="w-8 h-8 text-primary-400/50" />
+                <div>
+                  <p className="font-semibold text-gray-300">No Saved GIFs Found</p>
+                  <p className="text-[11px] text-gray-500 mt-1 max-w-[240px]">
+                    Right-click any animated GIF in Telegram and select "Save to GIFs" to see it here.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

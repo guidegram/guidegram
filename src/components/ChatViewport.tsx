@@ -3969,6 +3969,38 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
 
+  const handleSendGif = async (gif: StickerItem) => {
+    if (!chat?.accountId || !chat?.id) return
+    if (!canSendMedia) {
+      showToast('Sending media is not allowed in this group.')
+      return
+    }
+    if (slowModeSecondsLeft > 0) {
+      showToast(`Slow mode is active. Please wait ${slowModeSecondsLeft}s before sending.`)
+      return
+    }
+    try {
+      const targetReplyId = replyMessage?.id ?? (activeTopicId !== null ? activeTopicId : undefined)
+      await window.guidegram?.sendSavedGif?.(
+        chat.accountId,
+        chat.id,
+        gif.id,
+        gif.accessHash,
+        gif.fileReferenceHex,
+        targetReplyId
+      )
+      if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
+        setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
+      }
+      setIsStickerDrawerOpen(false)
+      setReplyMessage(null)
+      showToast('GIF sent!')
+    } catch (err: any) {
+      console.error('Failed to send GIF:', err)
+      showToast(`Failed to send GIF: ${err.message || err}`)
+    }
+  }
+
   const handleInsertEmoji = (emoji: string) => {
     const el = textareaRef.current
     if (!el) {
@@ -11098,6 +11130,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chatId={chat.id}
           onSelectEmoji={handleInsertEmoji}
           onSelectSticker={handleSendSticker}
+          onSelectGif={handleSendGif}
         />
       )}
       {false && <StickerPickerDrawer isOpen={false} onClose={() => {}} accountId="" chatId="" onSelectSticker={() => {}} />}

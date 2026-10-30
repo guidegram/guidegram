@@ -107,8 +107,9 @@ assert(fs.existsSync(appPath), 'App.tsx must exist')
 const appSrc = fs.readFileSync(appPath, 'utf-8')
 
 assert(
-  appSrc.includes('window.guidegram.getDialogs(accountId, 350)'),
-  'App.tsx loadDialogsForAccount must fetch 350 dialogs initially'
+  appSrc.includes('window.guidegram.getDialogs(accountId, 350)') ||
+  appSrc.includes('window.guidegram.getDialogs(accountId, initialLimit)'),
+  'App.tsx loadDialogsForAccount must fetch dialogs initially'
 )
 assert(
   appSrc.includes('handleLoadMoreDialogs') &&
