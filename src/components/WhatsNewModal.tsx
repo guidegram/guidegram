@@ -37,32 +37,32 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
-    // v2.5.4: Telegram Bot Parity, Custom Button Colors & Emojis, Passcode Security & Smart Context Menus
+    // v2.5.4: Supercharged Performance & Zero-I/O Surgery, Official Bot Parity & Master Passcode
     if (gte(cleanVer, '2.5.4')) {
       return [
         {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: isRTL ? 'جراحی بزرگ مصرف رم، دیسک و پردازنده' : 'Supercharged Performance & Zero-I/O Surgery',
+          desc: isRTL
+            ? 'کاهش ۹۰٪ نوشتن روی دیسک، کش غیرهمگام سشن و پیام ربات‌ها، جستجوی مستقیم مدیا بدون اسکن هزاران فایل و مهار حلقه‌های خطای فایل.'
+            : '90%+ reduction in disk writes, async bot & session persistence, direct O(1) media lookups without directory scanning, and loop suppression.',
+        },
+        {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'تطابق کامل رابط ربات‌ها با تلگرام رسمی' : 'Official Telegram Bot & UI Parity',
+          title: isRTL ? 'تطابق کامل رابط ربات‌ها با تلگرام رسمی' : 'Official Telegram Bot UI Parity & Colors',
           desc: isRTL
-            ? 'پشتیبانی از رنگ دکمه‌های شیشه‌ای و چسبیده (سبز، قرمز، آبی)، آیکون ایموجی‌های پرمیوم در دکمه‌ها و متن، و منوی دستورات در لایه رویی با ساپورت RTL.'
-            : 'Full support for Layer 180+ bot button colors (success, danger, primary), custom emoji icons in buttons, and accessible top-layer bot command menu drawer.',
+            ? 'پشتیبانی کامل از رنگ دکمه‌های شیشه‌ای و چسبیده تلگرام (سبز، قرمز، آبی)، آیکون ایموجی‌های پرمیوم و منوی دستورات در لایه رویی.'
+            : 'Full support for Layer 180+ bot button colors (success, danger, primary), custom emoji icons in buttons, and accessible bot command menu.',
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'قفل اختصاصی برنامه و رمز عبور اصلی' : 'Master Passcode & Instant Lock Screen',
+          title: isRTL ? 'قفل پس‌کد و رندرینگ پنجره‌ای سبک چت‌ها' : 'Master Passcode & Windowed Chat List',
           desc: isRTL
-            ? 'امنیت کامل گفتگوها با قفل پس‌کد، فعال‌سازی سریع از طریق آیکون قفل در نوار عنوان، و قفل خودکار در صورت عدم فعالیت.'
-            : 'Complete session protection with master passcode, titlebar padlock quick-lock trigger, and auto-lock screen safeguards.',
-        },
-        {
-          icon: Zap,
-          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'تایپ زنده ربات‌ها، درگ سلکت و منوی هوشمند چت' : 'Reactive Bot Streaming, Drag-to-Select & Smart Actions',
-          desc: isRTL
-            ? 'رندر بلادرنگ تایپ استریمینگ ربات‌ها، انتخاب متن به سبک تلگرام دسکتاپ، و گزینه‌های نمایش در پوشه، باز کردن فایل و کپی نام فایل.'
-            : 'Live reactive rendering for streaming bot edits, official tDesktop drag-to-select, and smart context menu actions.',
+            ? 'امنیت کامل گفتگوها با قفل پس‌کد، قفل خودکار و دستی، به همراه رندرینگ پنجره‌ای لیست گفتگوها و ترنزیشن‌های فوق‌سبک بومی.'
+            : 'Master passcode app lock screen with auto-lock timers, combined with windowed dialog list rendering and lightweight transitions.',
         },
       ]
     }

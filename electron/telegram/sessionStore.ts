@@ -893,26 +893,60 @@ export class SessionStore {
     return path.join(this.botMessagesDir, `chats_${accountId}.json`)
   }
 
+  private scheduleSaveBotMessages(accountId: string, chatId: string): void {
+    const key = `${accountId}_${chatId}`
+    if (this.saveBotMessagesTimers.has(key)) return
+    const timer = setTimeout(async () => {
+      this.saveBotMessagesTimers.delete(key)
+      try {
+        const list = this.botMessagesCache.get(key)
+        if (list) {
+          if (!fs.existsSync(this.botMessagesDir)) {
+            await fs.promises.mkdir(this.botMessagesDir, { recursive: true })
+          }
+          await fs.promises.writeFile(this.getBotMessagesFilePath(accountId, chatId), JSON.stringify(list), 'utf-8')
+        }
+      } catch (e) {
+        console.error(`[SessionStore] Failed to save bot messages for ${key}:`, e)
+      }
+    }, 2500)
+    if (timer.unref) timer.unref()
+    this.saveBotMessagesTimers.set(key, timer)
+  }
+
+  private scheduleSaveBotChats(accountId: string): void {
+    if (this.saveBotChatsTimers.has(accountId)) return
+    const timer = setTimeout(async () => {
+      this.saveBotChatsTimers.delete(accountId)
+      try {
+        const chats = this.botChatsCache.get(accountId)
+        if (chats) {
+          if (!fs.existsSync(this.botMessagesDir)) {
+            await fs.promises.mkdir(this.botMessagesDir, { recursive: true })
+          }
+          await fs.promises.writeFile(this.getBotChatsFilePath(accountId), JSON.stringify(chats), 'utf-8')
+        }
+      } catch (e) {
+        console.error(`[SessionStore] Failed to save bot chats for ${accountId}:`, e)
+      }
+    }, 3000)
+    if (timer.unref) timer.unref()
+    this.saveBotChatsTimers.set(accountId, timer)
+  }
+
   public recordBotMessage(accountId: string, chatId: string, msg: MessageItem): void {
     if (!accountId || !chatId || !msg?.id) return
     try {
-      if (!fs.existsSync(this.botMessagesDir)) {
-        fs.mkdirSync(this.botMessagesDir, { recursive: true })
+      const key = `${accountId}_${chatId}`
+      let list = this.botMessagesCache.get(key)
+      if (!list) {
+        list = this.loadBotMessages(accountId, chatId)
       }
-      const filePath = this.getBotMessagesFilePath(accountId, chatId)
-      let list: MessageItem[] = []
-      if (fs.existsSync(filePath)) {
-        try {
-          const raw = fs.readFileSync(filePath, 'utf-8')
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) list = parsed
-        } catch (_) {}
-      }
-      const existingIdx = list.findIndex((m) => m.id === msg.id)
       const cleanMsg = { ...msg }
       if (cleanMsg.senderAvatarUrl && cleanMsg.senderAvatarUrl.startsWith('data:')) {
         delete cleanMsg.senderAvatarUrl
       }
+      const existingIdx = list.findIndex((m) => m.id === msg.id)
       if (existingIdx >= 0) {
         list[existingIdx] = { ...list[existingIdx], ...cleanMsg }
       } else {
@@ -921,7 +955,8 @@ export class SessionStore {
       if (list.length > 2000) {
         list = list.slice(list.length - 2000)
       }
-      fs.writeFileSync(filePath, JSON.stringify(list), 'utf-8')
+      this.botMessagesCache.set(key, list)
+      this.scheduleSaveBotMessages(accountId, chatId)
       this.indexBotChat(accountId, chatId)
     } catch (e) {
       console.error('[SessionStore] recordBotMessage error:', e)
@@ -931,17 +966,10 @@ export class SessionStore {
   public recordBotMessages(accountId: string, chatId: string, msgs: MessageItem[]): void {
     if (!accountId || !chatId || !Array.isArray(msgs) || msgs.length === 0) return
     try {
-      if (!fs.existsSync(this.botMessagesDir)) {
-        fs.mkdirSync(this.botMessagesDir, { recursive: true })
-      }
-      const filePath = this.getBotMessagesFilePath(accountId, chatId)
-      let list: MessageItem[] = []
-      if (fs.existsSync(filePath)) {
-        try {
-          const raw = fs.readFileSync(filePath, 'utf-8')
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) list = parsed
-        } catch (_) {}
+      const key = `${accountId}_${chatId}`
+      let list = this.botMessagesCache.get(key)
+      if (!list) {
+        list = this.loadBotMessages(accountId, chatId)
       }
       const map = new Map<number, MessageItem>()
       for (const m of list) map.set(m.id, m)
@@ -962,7 +990,8 @@ export class SessionStore {
       if (merged.length > 2000) {
         merged = merged.slice(merged.length - 2000)
       }
-      fs.writeFileSync(filePath, JSON.stringify(merged), 'utf-8')
+      this.botMessagesCache.set(key, merged)
+      this.scheduleSaveBotMessages(accountId, chatId)
       this.indexBotChat(accountId, chatId)
     } catch (e) {
       console.error('[SessionStore] recordBotMessages error:', e)
@@ -971,49 +1000,61 @@ export class SessionStore {
 
   public loadBotMessages(accountId: string, chatId: string): MessageItem[] {
     if (!accountId || !chatId) return []
+    const key = `${accountId}_${chatId}`
+    if (this.botMessagesCache.has(key)) {
+      return this.botMessagesCache.get(key)!
+    }
     try {
       const filePath = this.getBotMessagesFilePath(accountId, chatId)
       if (fs.existsSync(filePath)) {
         const raw = fs.readFileSync(filePath, 'utf-8')
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
-          return parsed.sort((a, b) => (a.date - b.date) || (a.id - b.id))
+          const sorted = parsed.sort((a, b) => (a.date - b.date) || (a.id - b.id))
+          this.botMessagesCache.set(key, sorted)
+          return sorted
         }
       }
     } catch (e) {
       console.error('[SessionStore] loadBotMessages error:', e)
     }
-    return []
+    const emptyList: MessageItem[] = []
+    this.botMessagesCache.set(key, emptyList)
+    return emptyList
   }
 
   private indexBotChat(accountId: string, chatId: string): void {
     try {
-      const listPath = this.getBotChatsFilePath(accountId)
-      let chats: string[] = []
-      if (fs.existsSync(listPath)) {
-        try {
-          const raw = fs.readFileSync(listPath, 'utf-8')
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) chats = parsed
-        } catch (_) {}
+      let chats = this.botChatsCache.get(accountId)
+      if (!chats) {
+        chats = this.loadBotChatList(accountId)
       }
       if (!chats.includes(chatId)) {
         chats.push(chatId)
-        fs.writeFileSync(listPath, JSON.stringify(chats), 'utf-8')
+        this.botChatsCache.set(accountId, chats)
+        this.scheduleSaveBotChats(accountId)
       }
     } catch (_) {}
   }
 
   public loadBotChatList(accountId: string): string[] {
+    if (this.botChatsCache.has(accountId)) {
+      return this.botChatsCache.get(accountId)!
+    }
     try {
       const listPath = this.getBotChatsFilePath(accountId)
       if (fs.existsSync(listPath)) {
         const raw = fs.readFileSync(listPath, 'utf-8')
         const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) return parsed
+        if (Array.isArray(parsed)) {
+          this.botChatsCache.set(accountId, parsed)
+          return parsed
+        }
       }
     } catch (_) {}
-    return []
+    const emptyChats: string[] = []
+    this.botChatsCache.set(accountId, emptyChats)
+    return emptyChats
   }
 
   public shouldAuditChat(accountId: string, chatId: string, isEdit: boolean): boolean {

@@ -30,19 +30,29 @@ assert.ok(accMgrCode.includes('profileSyncInterval'), 'Must have profileSyncInte
 assert.ok(accMgrCode.includes('10 * 60 * 1000'), 'profileSyncInterval must be increased to 10 minutes (10 * 60 * 1000 ms)')
 assert.ok(accMgrCode.includes('startAuditQueueProcessor'), 'Must have startAuditQueueProcessor')
 assert.ok(accMgrCode.includes('45000'), 'Audit queue processor must have increased interval')
-console.log('  [PASS] AccountManager intervals staggered and media retry loop eliminated')
+assert.ok(!accMgrCode.includes('fs.readdirSync(this.mediaDir)'), 'Must eliminate synchronous readdir of mediaDir')
+assert.ok(accMgrCode.includes('candidateExts'), 'Must use candidateExts direct probing')
+assert.ok(!accMgrCode.includes('this.failedMediaKeys.clear()'), 'Must not wipe failedMediaKeys completely')
 
-// 4. Verify Logger auto-rotation
+// 4. Verify SessionStore bot message in-memory caching and async write
+const sessionStoreCode = fs.readFileSync(path.resolve('electron/telegram/sessionStore.ts'), 'utf-8')
+assert.ok(sessionStoreCode.includes('botMessagesCache'), 'SessionStore must maintain botMessagesCache in memory')
+assert.ok(sessionStoreCode.includes('scheduleSaveBotMessages'), 'SessionStore must debounce bot message writes')
+assert.ok(sessionStoreCode.includes('scheduleSaveBotChats'), 'SessionStore must debounce bot chat index writes')
+console.log('  [PASS] SessionStore bot message in-memory caching and debounced async persistence verified')
+
+// 5. Verify Logger auto-rotation
 const loggerCode = fs.readFileSync(path.resolve('electron/telegram/logger.ts'), 'utf-8')
 assert.ok(loggerCode.includes('Auto-rotation guard'), 'Logger must include auto-rotation')
 assert.ok(loggerCode.includes('2 * 1024 * 1024'), 'Error log must rotate at 2MB')
 assert.ok(loggerCode.includes('5 * 1024 * 1024'), 'Main log must rotate at 5MB')
 console.log('  [PASS] Logger auto-rotation implemented')
 
-// 5. Verify UI Virtualization & Idle Pauses
+// 6. Verify UI Virtualization & Idle Pauses
 const chatListCode = fs.readFileSync(path.resolve('src/components/ChatList.tsx'), 'utf-8')
 assert.ok(chatListCode.includes('chatsAndContacts.slice(0, 40)'), 'ChatList must slice dialogs search')
 assert.ok(chatListCode.includes('globalPeers.slice(0, 30)'), 'ChatList must slice global peers search')
+assert.ok(chatListCode.includes('globalMessages.slice(0, 40)'), 'ChatList must slice global messages search')
 
 const viewportCode = fs.readFileSync(path.resolve('src/components/ChatViewport.tsx'), 'utf-8')
 assert.ok(viewportCode.includes('!document.hidden'), 'ChatViewport must check document.hidden before polling')
@@ -55,7 +65,7 @@ assert.ok(cssCode.includes('.app-hidden *'), 'CSS must pause animations when app
 assert.ok(cssCode.includes('content-visibility: auto'), 'CSS must include content-visibility: auto')
 console.log('  [PASS] UI virtualization, CSS pause, and document.hidden guards verified')
 
-// 6. Verify Deployed Artifacts Integrity
+// 7. Verify Deployed Artifacts Integrity
 const deployedAsar = 'D:\\Guidegram\\resources\\app.asar'
 assert.ok(fs.existsSync(deployedAsar), 'Deployed app.asar must exist in D:\\Guidegram\\resources')
 const deployedStat = fs.statSync(deployedAsar)

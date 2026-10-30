@@ -167,7 +167,11 @@ export class ActivityTrackerService {
   }
 
   public async sanitizeAllDiskFiles(): Promise<void> {
-    const candidateDirs = [this.activityDir, 'D:\\Guidegram\\data\\activity_tracker']
+    const candidateDirs = [
+      this.activityDir,
+      path.join(this.baseDir, 'activity_tracker'),
+      'D:\\Guidegram\\data\\activity_tracker'
+    ]
     const seenDirs = new Set<string>()
 
     for (const targetDir of candidateDirs) {
@@ -590,12 +594,14 @@ export class ActivityTrackerService {
       if (this.isOnlineStatus(parsed.status) && this.isOnlineStatus(lastRec.status)) {
         if (parsed.expires && (!lastRec.expires || parsed.expires > lastRec.expires)) {
           lastRec.expires = parsed.expires
+          this.scheduleSaveStatus(accountId)
         }
         return
       }
       if (this.isOfflineStatus(parsed.status) && this.isOfflineStatus(lastRec.status)) {
         if (parsed.wasOnline && (!lastRec.wasOnline || parsed.wasOnline > lastRec.wasOnline)) {
           lastRec.wasOnline = parsed.wasOnline
+          this.scheduleSaveStatus(accountId)
         }
         return
       }

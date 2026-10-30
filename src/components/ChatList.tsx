@@ -446,7 +446,7 @@ export const ChatList = React.memo<ChatListProps>(({
   const [displayLimit, setDisplayLimit] = useState(40)
   useEffect(() => {
     setDisplayLimit(40)
-  }, [activeTab, searchQuery, pvFilter, dialogs.length])
+  }, [activeTab, searchQuery, pvFilter, dialogs.length, account?.id])
 
   const visibleDialogs = React.useMemo(() => {
     return filteredDialogs.slice(0, displayLimit)
@@ -1187,7 +1187,7 @@ export const ChatList = React.memo<ChatListProps>(({
                     {t('search.messages_found', { count: formatNumber(globalMessages.length) })}
                   </span>
                 </div>
-                {globalMessages.map((msg) => {
+                {globalMessages.slice(0, 40).map((msg) => {
                   const hasMedia = Boolean(msg.mediaType)
                   return (
                     <div

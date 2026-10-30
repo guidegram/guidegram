@@ -4546,13 +4546,16 @@ export class AccountManager {
 
     try {
       if (fs.existsSync(this.mediaDir)) {
-        const files = fs.readdirSync(this.mediaDir)
+        const candidateExts = ['.jpg', '.png', '.webp', '.mp4', '.mp3', '.ogg', '.pdf', '.webm', '.gif', '']
         for (const p of prefixes) {
-          const match = files.find((f) => f.startsWith(p) && !f.includes('_thumb'))
-          if (match) {
-            const full = path.join(this.mediaDir, match)
-            if (fs.existsSync(full) && fs.statSync(full).size > 0) {
-              return full
+          for (const ext of candidateExts) {
+            const full = path.join(this.mediaDir, `${p}${ext}`)
+            if (fs.existsSync(full)) {
+              try {
+                if (fs.statSync(full).size > 0) {
+                  return full
+                }
+              } catch (_) {}
             }
           }
         }
@@ -13535,19 +13538,16 @@ export class AccountManager {
       let cachedFile: string | null = null
 
       try {
-        const existing = fs
-          .readdirSync(this.mediaDir)
-          .find((f) => f.startsWith(`${cachePrefix}.`))
-        if (existing) {
-          const existingPath = path.join(this.mediaDir, existing)
-          if (fs.statSync(existingPath).size > 0) {
-            cachedFile = existingPath
-          } else {
-            try {
-              fs.unlinkSync(existingPath)
-            } catch (_) {}
-
-            // Proceed to a fresh download instead of reusing an empty cache entry.
+        const candidateExts = ['.mp4', '.jpg', '.webp', '.png', '.bin']
+        for (const ext of candidateExts) {
+          const existingPath = path.join(this.mediaDir, `${cachePrefix}${ext}`)
+          if (fs.existsSync(existingPath)) {
+            if (fs.statSync(existingPath).size > 0) {
+              cachedFile = existingPath
+              break
+            } else {
+              try { fs.unlinkSync(existingPath) } catch (_) {}
+            }
           }
         }
       } catch (_) {
@@ -13739,12 +13739,15 @@ export class AccountManager {
 
       // Remove cached copies so a deleted story cannot reappear from disk.
       try {
-        const suffix = `_${Number(storyId)}.`
-        for (const file of fs.readdirSync(this.mediaDir)) {
-          if (file.startsWith(`story_${accountId}_`) && file.includes(suffix)) {
-            try {
-              fs.unlinkSync(path.join(this.mediaDir, file))
-            } catch (_) {}
+        if (fs.existsSync(this.mediaDir)) {
+          const files = await fs.promises.readdir(this.mediaDir)
+          const suffix = `_${Number(storyId)}.`
+          for (const file of files) {
+            if (file.startsWith(`story_${accountId}_`) && file.includes(suffix)) {
+              try {
+                await fs.promises.unlink(path.join(this.mediaDir, file))
+              } catch (_) {}
+            }
           }
         }
       } catch (_) {
