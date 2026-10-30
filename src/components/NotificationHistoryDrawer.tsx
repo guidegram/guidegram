@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Bell,
@@ -11,6 +11,10 @@ import {
   Clock,
   Check,
   Search,
+  Image as ImageIcon,
+  Maximize2,
+  ShieldCheck,
+  ExternalLink,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -24,10 +28,13 @@ export interface NotificationHistoryItem {
   avatarUrl?: string
   text?: string
   mediaType?: string
+  thumbUrl?: string
+  photoUrl?: string
   date: number
   isRead: boolean
   isGroup?: boolean
   isChannel?: boolean
+  isDeletedLocally?: boolean
 }
 
 interface NotificationHistoryDrawerProps {
@@ -43,6 +50,88 @@ interface NotificationHistoryDrawerProps {
 
 type FilterTab = 'all' | 'unread' | 'private' | 'groups_channels'
 
+// Compact interactive thumbnail for photos in notifications
+const NotificationMediaThumbnail: React.FC<{
+  item: NotificationHistoryItem
+  onOpenPreview: (item: NotificationHistoryItem, url: string) => void
+}> = ({ item, onOpenPreview }) => {
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(item.photoUrl || item.thumbUrl)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (item.photoUrl) {
+      setPhotoUrl(item.photoUrl)
+      return
+    }
+    if (item.mediaType === 'photo' && item.messageId && window.guidegram?.downloadMedia) {
+      let cancelled = false
+      setIsLoading(true)
+      window.guidegram
+        .downloadMedia(item.accountId, item.chatId, item.messageId, false)
+        .then((url) => {
+          if (!cancelled && url) {
+            setPhotoUrl(url)
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setIsLoading(false)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+  }, [item.accountId, item.chatId, item.messageId, item.photoUrl, item.mediaType])
+
+  const effectiveUrl = photoUrl || item.thumbUrl
+
+  if (!effectiveUrl && item.mediaType !== 'photo') return null
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation()
+        if (effectiveUrl) {
+          onOpenPreview(item, effectiveUrl)
+        }
+      }}
+      className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/15 bg-black/40 group/photo cursor-pointer shadow-sm hover:border-primary-500/50 transition-all hover:scale-105"
+      title="مشاهده تصویر بزرگ (ذخیره‌شده در لوکال)"
+    >
+      {effectiveUrl ? (
+        <img
+          src={effectiveUrl}
+          alt=""
+          className="w-full h-full object-cover rounded-xl transition-transform duration-200 group-hover/photo:scale-110"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-white/5">
+          <ImageIcon className="w-4 h-4 text-gray-500" />
+        </div>
+      )}
+
+      {/* Hover zoom overlay */}
+      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
+        <Maximize2 className="w-4 h-4 text-white drop-shadow" />
+      </div>
+
+      {isLoading && !photoUrl && (
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+          <div className="w-3.5 h-3.5 border-2 border-accent-cyan border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Anti-delete local shield badge */}
+      <div
+        className="absolute bottom-0 right-0 p-0.5 rounded-tl bg-black/75 text-emerald-400"
+        title="ذخیره‌شده در حافظه لوکال"
+      >
+        <ShieldCheck className="w-2.5 h-2.5" />
+      </div>
+    </div>
+  )
+}
+
 export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps> = ({
   isOpen,
   onClose,
@@ -56,6 +145,10 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
   const { isRTL } = useI18n()
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [previewPhotoItem, setPreviewPhotoItem] = useState<{
+    item: NotificationHistoryItem
+    url: string
+  } | null>(null)
 
   const filteredHistory = useMemo(() => {
     let list = history
@@ -253,100 +346,208 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                 </p>
               </div>
             ) : (
-              filteredHistory.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  onClick={() => {
-                    onSelectNotification(item)
-                    onClose()
-                  }}
-                  className={`group relative flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer border ${
-                    item.isRead
-                      ? 'bg-transparent hover:bg-white/[0.04] border-transparent'
-                      : 'bg-primary-950/20 hover:bg-primary-900/30 border-primary-500/20 shadow-sm'
-                  }`}
-                >
-                  {/* Avatar */}
-                  <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-600/30 to-accent-cyan/20 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
-                    {item.avatarUrl ? (
-                      <img src={item.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm font-bold text-primary-300 uppercase">
-                        {item.senderName ? item.senderName.charAt(0) : 'G'}
-                      </span>
-                    )}
-                    <div className="absolute -bottom-0.5 -right-0.5 p-0.5 rounded-full bg-dark-900 border border-white/10">
-                      {item.isChannel ? (
-                        <Megaphone className="w-2.5 h-2.5 text-accent-cyan" />
-                      ) : item.isGroup ? (
-                        <Users className="w-2.5 h-2.5 text-primary-400" />
+              filteredHistory.map((item) => {
+                const hasPhoto = item.mediaType === 'photo' || item.thumbUrl || item.photoUrl
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    onClick={() => {
+                      onSelectNotification(item)
+                      onClose()
+                    }}
+                    className={`group relative flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer border ${
+                      item.isRead
+                        ? 'bg-transparent hover:bg-white/[0.04] border-transparent'
+                        : 'bg-primary-950/20 hover:bg-primary-900/30 border-primary-500/20 shadow-sm'
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-600/30 to-accent-cyan/20 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                      {item.avatarUrl ? (
+                        <img src={item.avatarUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <MessageSquare className="w-2.5 h-2.5 text-emerald-400" />
+                        <span className="text-sm font-bold text-primary-300 uppercase">
+                          {item.senderName ? item.senderName.charAt(0) : 'G'}
+                        </span>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-xs font-bold text-gray-100 truncate flex items-center gap-1.5">
-                        <span>{item.senderName}</span>
-                        {item.chatTitle && item.isGroup && (
-                          <span className="text-[11px] font-normal text-gray-400 truncate">
-                            ({item.chatTitle})
-                          </span>
+                      <div className="absolute -bottom-0.5 -right-0.5 p-0.5 rounded-full bg-dark-900 border border-white/10">
+                        {item.isChannel ? (
+                          <Megaphone className="w-2.5 h-2.5 text-accent-cyan" />
+                        ) : item.isGroup ? (
+                          <Users className="w-2.5 h-2.5 text-primary-400" />
+                        ) : (
+                          <MessageSquare className="w-2.5 h-2.5 text-emerald-400" />
                         )}
-                      </h4>
-                      <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
-                        <Clock className="w-2.5 h-2.5 text-gray-500" />
-                        <span>{formatRelativeTime(item.date)}</span>
-                      </span>
+                      </div>
                     </div>
 
-                    <p className="text-xs text-gray-300/90 line-clamp-2 mt-1 leading-relaxed break-words font-sans">
-                      {item.text || (item.mediaType ? `[${item.mediaType}]` : (isRTL ? 'پیام جدید' : 'New message'))}
-                    </p>
-                  </div>
+                    {/* Body */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold text-gray-100 truncate flex items-center gap-1.5">
+                          <span>{item.senderName}</span>
+                          {item.chatTitle && item.isGroup && (
+                            <span className="text-[11px] font-normal text-gray-400 truncate">
+                              ({item.chatTitle})
+                            </span>
+                          )}
+                          {item.isDeletedLocally && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-accent-rose/20 text-accent-rose font-medium border border-accent-rose/30">
+                              {isRTL ? 'حذف‌شده' : 'Deleted'}
+                            </span>
+                          )}
+                        </h4>
+                        <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
+                          <Clock className="w-2.5 h-2.5 text-gray-500" />
+                          <span>{formatRelativeTime(item.date)}</span>
+                        </span>
+                      </div>
 
-                  {/* Hover / Status actions */}
-                  <div className="flex items-center gap-1 shrink-0 self-center">
-                    {!item.isRead ? (
+                      <div className="text-xs text-gray-300/90 line-clamp-2 mt-1 leading-relaxed break-words font-sans">
+                        {item.mediaType === 'photo' ? (
+                          <span className="inline-flex items-center gap-1 text-accent-cyan font-medium">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span>{item.text || (isRTL ? 'تصویر' : 'Photo')}</span>
+                          </span>
+                        ) : (
+                          item.text || (item.mediaType ? `[${item.mediaType}]` : (isRTL ? 'پیام جدید' : 'New message'))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Photo Thumbnail if available */}
+                    {hasPhoto && (
+                      <NotificationMediaThumbnail
+                        item={item}
+                        onOpenPreview={(it, url) => {
+                          setPreviewPhotoItem({ item: it, url })
+                        }}
+                      />
+                    )}
+
+                    {/* Hover / Status actions */}
+                    <div className="flex items-center gap-1 shrink-0 self-center">
+                      {!item.isRead ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onMarkItemAsRead(item.id)
+                          }}
+                          title={isRTL ? 'علامت به عنوان خوانده‌شده' : 'Mark as read'}
+                          className="p-1 rounded-lg text-primary-400 hover:text-primary-300 hover:bg-primary-500/15 transition-colors cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-transparent" />
+                      )}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          onMarkItemAsRead(item.id)
+                          onDeleteItem(item.id)
                         }}
-                        title={isRTL ? 'علامت به عنوان خوانده‌شده' : 'Mark as read'}
-                        className="p-1 rounded-lg text-primary-400 hover:text-primary-300 hover:bg-primary-500/15 transition-colors cursor-pointer"
+                        title={isRTL ? 'حذف از تاریخچه' : 'Delete'}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/5 transition-all cursor-pointer"
                       >
-                        <Check className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    ) : (
-                      <span className="w-2 h-2 rounded-full bg-transparent" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteItem(item.id)
-                      }}
-                      title={isRTL ? 'حذف از تاریخچه' : 'Delete'}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/5 transition-all cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </motion.div>
-              ))
+                    </div>
+                  </motion.div>
+                )
+              })
             )}
           </div>
         </motion.aside>
+
+        {/* Full Photo Lightbox Modal */}
+        <AnimatePresence>
+          {previewPhotoItem && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+              onClick={() => setPreviewPhotoItem(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative max-w-2xl w-full bg-dark-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                dir={isRTL ? 'rtl' : 'ltr'}
+              >
+                {/* Modal Header */}
+                <div className="p-3 border-b border-white/10 flex items-center justify-between gap-3 bg-dark-950/60">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-100">
+                        {previewPhotoItem.item.senderName}
+                      </h4>
+                      <p className="text-[10px] text-gray-400">
+                        {isRTL
+                          ? 'تصویر در حافظه لوکال دانلود و محافظت شده است (ضد حذف)'
+                          : 'Photo downloaded and preserved in local cache (Anti-Delete)'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const it = previewPhotoItem.item
+                        setPreviewPhotoItem(null)
+                        onSelectNotification(it)
+                        onClose()
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>{isRTL ? 'مشاهده در چت' : 'Open in chat'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewPhotoItem(null)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Photo Area */}
+                <div className="relative p-2 bg-black/60 flex items-center justify-center min-h-[300px] max-h-[70vh]">
+                  <img
+                    src={previewPhotoItem.url}
+                    alt=""
+                    className="max-h-[65vh] w-auto max-w-full object-contain rounded-xl select-none"
+                  />
+                </div>
+
+                {/* Modal Caption if any */}
+                {previewPhotoItem.item.text && (
+                  <div className="p-3 bg-dark-950/60 border-t border-white/5 text-xs text-gray-300 leading-relaxed font-sans">
+                    {previewPhotoItem.item.text}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AnimatePresence>
   )
 }
+

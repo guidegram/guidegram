@@ -1410,7 +1410,7 @@ interface DialogListItemProps {
 export const DialogListItem = React.memo<DialogListItemProps>(
   ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory, onContextMenu }) => {
     return (
-      <motion.div
+      <div
         role="option"
         tabIndex={0}
         aria-selected={isSelected}
@@ -1423,20 +1423,13 @@ export const DialogListItem = React.memo<DialogListItemProps>(
             onSelect(dialog.id)
           }
         }}
-        whileHover={{ scale: 1.006, x: 2 }}
-        whileTap={{ scale: 0.982 }}
-        transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.8 }}
-        className={`chat-virtual-item px-3 py-2.5 transition-colors cursor-pointer border-b border-white/5 relative group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/50 ${
-          isSelected ? 'bg-primary-600/20' : 'hover:bg-dark-800/60'
+        className={`chat-virtual-item px-3 py-2.5 transition-all duration-150 ease-out cursor-pointer border-b border-white/5 relative group hover:bg-dark-800/60 active:scale-[0.988] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cyan/50 ${
+          isSelected ? 'bg-primary-600/20' : ''
         }`}
       >
         {/* Active Selection Accent Bar */}
         {isSelected && (
-          <motion.div
-            layoutId="activeChatBar"
-            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary-400 shadow-glow"
-            transition={{ type: 'spring', stiffness: 450, damping: 32, mass: 0.7 }}
-          />
+          <div className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary-400 shadow-glow" />
         )}
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
@@ -1601,7 +1594,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     )
   },
   (prev, next) => {

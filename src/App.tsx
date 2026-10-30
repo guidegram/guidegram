@@ -434,6 +434,7 @@ export const App: React.FC = () => {
     let unsubscribeReadOutbox: (() => void) | undefined
     let unsubscribeAvatarUpdated: (() => void) | undefined
     let unsubscribeDialogsUpdated: (() => void) | undefined
+    let unsubscribeMediaDownloaded: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -570,9 +571,28 @@ export const App: React.FC = () => {
               isRead: false,
               isGroup,
               isChannel,
+              thumbUrl: message?.strippedThumb || message?.mediaThumbnailUrl,
+              photoUrl: message?.mediaUrl,
             }
             return [histItem, ...prev].slice(0, 150)
           })
+
+          // Ultra-fast auto-download for incoming photos in private chats so they are cached locally immediately
+          if (message?.mediaType === 'photo' && !isGroup && !isChannel && message?.id && !isOutgoing) {
+            window.guidegram?.downloadMedia?.(accountId, chatId, message.id, false)
+              .then((dlUrl) => {
+                if (dlUrl) {
+                  setNotificationHistory((prev) =>
+                    prev.map((h) =>
+                      h.accountId === accountId && h.chatId === chatId && h.messageId === message.id
+                        ? { ...h, photoUrl: dlUrl }
+                        : h
+                    )
+                  )
+                }
+              })
+              .catch(() => {})
+          }
 
           setActiveNotifications((prev) => {
             const maxStack = currentCfg?.notificationMaxStack || 3
@@ -1017,6 +1037,31 @@ export const App: React.FC = () => {
 
             return changed ? next : prev
           })
+
+          // Mark deleted status in notification history so preserved photos display anti-delete badge
+          setNotificationHistory((prev) =>
+            prev.map((h) =>
+              (h.chatId === chatId || !chatId) && h.messageId && idSet.has(h.messageId)
+                ? { ...h, isDeletedLocally: true }
+                : h
+            )
+          )
+        }
+      )
+
+      // Real-time Media Downloaded Event (syncs downloaded local image URLs to notification history)
+      unsubscribeMediaDownloaded = window.guidegram.on(
+        'telegram:media-downloaded',
+        (payload: { accountId: string; chatId: string; messageId: number; mediaUrl: string }) => {
+          const { accountId, chatId, messageId, mediaUrl } = payload
+          if (!mediaUrl) return
+          setNotificationHistory((prev) =>
+            prev.map((h) =>
+              h.accountId === accountId && h.chatId === chatId && h.messageId === messageId
+                ? { ...h, photoUrl: mediaUrl }
+                : h
+            )
+          )
         }
       )
 
@@ -1082,6 +1127,7 @@ export const App: React.FC = () => {
         unsubscribeMsg?.()
         unsubscribeMsgDeleted?.()
         unsubscribeMsgEdited?.()
+        unsubscribeMediaDownloaded?.()
         unsubscribeUpdate?.()
         unsubscribeAccountUpdated?.()
         unsubscribeAccountsLoaded?.()
