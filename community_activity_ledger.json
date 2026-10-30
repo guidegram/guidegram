@@ -8,9 +8,9 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 25,
+    "totalActivities": 26,
     "githubIssuesCommented": 19,
-    "githubPullRequests": 1,
+    "githubPullRequests": 2,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
     "hackernewsComments": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_pr_awesome_alternative_front_ends_41",
+      "platform": "github",
+      "type": "pull_request",
+      "account": "DoctorGuidance",
+      "targetRepo": "skynet2982/awesome-alternative-front-ends",
+      "targetIssueNumber": 41,
+      "targetTitle": "feat(telegram): add Guidegram under Computer App",
+      "targetUser": "skynet2982",
+      "url": "https://github.com/skynet2982/awesome-alternative-front-ends/pull/41",
+      "issueUrl": "https://github.com/skynet2982/awesome-alternative-front-ends/pull/41",
+      "status": "live_public",
+      "summary": "Submitted official pull request to curated list of Open Source alternative frontends, adding Guidegram under Telegram > Computer App with platform tags and source links.",
+      "timestamp": "2026-10-30T23:04:46Z"
+    },
     {
       "id": "gh_comment_unigram_3212",
       "platform": "github",
