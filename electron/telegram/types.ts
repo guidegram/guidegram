@@ -133,6 +133,8 @@ export interface DialogItem {
   isSavedMessages?: boolean
   pinnedMessage?: PinnedMessageItem
   canSendMessages?: boolean
+  isCreator?: boolean
+  isAdmin?: boolean
   lastMessageText?: string
   lastMessageDate?: number
   lastMessageId?: number

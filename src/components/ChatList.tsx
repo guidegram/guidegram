@@ -44,6 +44,63 @@ type SearchFilterCategory =
 
 type SearchScopeCategory = 'all' | 'private' | 'groups' | 'channels' | 'bots'
 
+/**
+ * Normalizes Persian and Arabic text for consistent, high-recall search matching.
+ * Handles Yeh/Kaf variants, Alef diacritics/hamza, Tatweel, and ZWNJ.
+ */
+export const normalizeSearchText = (text?: string): string => {
+  if (!text) return ''
+  return text
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '') // Arabic diacritics / tanween
+    .replace(/[يى]/g, 'ی') // Arabic Yeh to Persian Ye
+    .replace(/[ك]/g, 'ک') // Arabic Kaf to Persian Ke
+    .replace(/[آأإ]/g, 'ا') // Alef variations to plain Alef
+    .replace(/[ؤ]/g, 'و') // Waw with hamza
+    .replace(/[ئ]/g, 'ی') // Yeh with hamza
+    .replace(/[\u200c\u200b\u00ad]/g, '') // Zero-width non-joiner & soft hyphens
+    .replace(/[ـ]/g, '') // Tatweel
+    .trim()
+}
+
+/**
+ * Builds a flexible regex that matches Persian/Arabic character variations
+ * and optional half-spaces (ZWNJ) between characters.
+ */
+export const buildFlexibleSearchRegex = (q: string): RegExp | null => {
+  const trimmed = q.trim()
+  if (!trimmed) return null
+
+  let pattern = ''
+  for (let i = 0; i < trimmed.length; i++) {
+    const char = trimmed[i]
+    if (char === 'ی' || char === 'ي' || char === 'ى' || char === 'ئ') {
+      pattern += '[یيىئ]'
+    } else if (char === 'ک' || char === 'ك') {
+      pattern += '[کك]'
+    } else if (char === 'ا' || char === 'آ' || char === 'أ' || char === 'إ') {
+      pattern += '[اآأإ]'
+    } else if (char === 'ه' || char === 'ة') {
+      pattern += '[هة]'
+    } else if (char === 'و' || char === 'ؤ') {
+      pattern += '[وؤ]'
+    } else if (/[.*+?^${}()|[\]\\]/.test(char)) {
+      pattern += '\\' + char
+    } else {
+      pattern += char
+    }
+    if (i < trimmed.length - 1) {
+      pattern += '[\\u200c\\u200b]?'
+    }
+  }
+
+  try {
+    return new RegExp(`(${pattern})`, 'gi')
+  } catch {
+    return null
+  }
+}
+
 export const ChatList = React.memo<ChatListProps>(({
   account,
   dialogs,
@@ -272,20 +329,22 @@ export const ChatList = React.memo<ChatListProps>(({
     }
   }, [account?.id, account?.status, storyRefreshKey])
 
-  // Filter local dialogs based on active tab & search query
+  // Filter local dialogs based on active tab & search query (Title/Username only, no message body pollution)
   const cleanQuery = searchQuery.trim().toLowerCase().replace(/^@/, '')
+  const normQuery = normalizeSearchText(cleanQuery)
   const filteredDialogs = dialogs.filter((dialog) => {
     // Suppress proxy sponsor channels & promoted dialogs to keep chat list ad-free
     if (dialog.isSponsored || dialog.isSponsorChannel) {
       return false
     }
 
-    if (cleanQuery) {
-      const matchTitle = dialog.title.toLowerCase().includes(cleanQuery)
-      const matchMsg = dialog.lastMessageText?.toLowerCase().includes(cleanQuery)
+    if (normQuery) {
+      const normTitle = normalizeSearchText(dialog.title)
+      const normUser = normalizeSearchText(dialog.username || '')
+      const matchTitle = normTitle.includes(normQuery)
+      const matchUser = normUser.includes(normQuery)
       const matchId = dialog.id.includes(cleanQuery)
-      const matchUser = dialog.username?.toLowerCase().includes(cleanQuery)
-      if (!matchTitle && !matchMsg && !matchId && !matchUser) {
+      if (!matchTitle && !matchUser && !matchId) {
         return false
       }
     }
@@ -393,7 +452,7 @@ export const ChatList = React.memo<ChatListProps>(({
     return filteredDialogs.slice(0, displayLimit)
   }, [filteredDialogs, displayLimit])
 
-  // Seamlessly merge local matching dialogs with server myPeers (full Telegram parity)
+  // Seamlessly merge local matching dialogs with server myPeers with Smart Relevance Ranking
   const chatsAndContacts = React.useMemo(() => {
     const map = new Map<string, DialogItem>()
     for (const d of filteredDialogs) {
@@ -408,8 +467,50 @@ export const ChatList = React.memo<ChatListProps>(({
         map.set(p.id, p)
       }
     }
-    return Array.from(map.values())
-  }, [filteredDialogs, serverMyPeers, searchScope])
+    const list = Array.from(map.values())
+    if (!normQuery) return list
+
+    // Smart Relevance Scoring (Exact Match > Word Boundary > Substring + Activity bonuses)
+    const scoreDialog = (d: DialogItem): number => {
+      const normTitle = normalizeSearchText(d.title)
+      const normUser = normalizeSearchText(d.username || '')
+      let score = 0
+
+      // Exact title match gets highest priority
+      if (normTitle === normQuery) {
+        score += 1000
+      } else if (normTitle.startsWith(normQuery)) {
+        score += 600
+      } else {
+        const words = normTitle.split(/\s+/)
+        if (words.some((w) => w.startsWith(normQuery))) {
+          score += 450
+        } else if (normTitle.includes(normQuery)) {
+          score += 250
+        }
+      }
+
+      // Username match
+      if (normUser === normQuery) {
+        score += 350
+      } else if (normUser.startsWith(normQuery)) {
+        score += 200
+      } else if (normUser.includes(normQuery)) {
+        score += 100
+      }
+
+      // Small bonuses
+      if (d.isPinned) score += 20
+      if (d.unreadCount > 0) score += 10
+      // Date tie-breaker
+      const ts = d.lastMessageDate || 0
+      score += Math.min(ts / 1e11, 50)
+
+      return score
+    }
+
+    return list.sort((a, b) => scoreDialog(b) - scoreDialog(a))
+  }, [filteredDialogs, serverMyPeers, searchScope, normQuery])
 
   const storyPeerMap = new Map(activeStoryPeers.map((peer) => [peer.peerId, peer]))
 
@@ -497,7 +598,7 @@ export const ChatList = React.memo<ChatListProps>(({
       } finally {
         setIsSearchingGlobal(false)
       }
-    }, 350)
+    }, 250)
 
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
@@ -516,15 +617,16 @@ export const ChatList = React.memo<ChatListProps>(({
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
   }
 
-  // Highlight search snippet in global results
+  // Highlight search snippet in global results with flexible Persian normalization
   const highlightSnippet = (text: string, q: string) => {
     if (!q.trim() || !text) return text
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(`(${escaped})`, 'gi')
+    const regex = buildFlexibleSearchRegex(q)
+    if (!regex) return text
     const parts = text.split(regex)
     if (parts.length <= 1) return text
+    const testRegex = new RegExp(regex.source, 'i')
     return parts.map((part, i) =>
-      part.toLowerCase() === q.toLowerCase() ? (
+      testRegex.test(part) ? (
         <mark key={i} className="bg-primary-500/30 text-accent-cyan rounded px-0.5 font-bold">
           {part}
         </mark>
@@ -994,12 +1096,12 @@ export const ChatList = React.memo<ChatListProps>(({
         {searchQuery.trim().length > 0 ? (
           <div className="space-y-3 p-1.5">
             {/* 1. Matching Chats & Contacts (Local + Server MyPeers) */}
-            {chatsAndContacts.length > 0 && (
+            {searchFilter === 'all' && chatsAndContacts.length > 0 && (
               <div>
                 <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Users className="w-3 h-3 text-primary-400" />
-                    <span>{t('search.all_chats')}</span>
+                    <span>{t('search.my_chats') || t('search.all_chats')}</span>
                   </span>
                   <span className="text-[10px] font-normal text-gray-400 font-mono">
                     {formatNumber(chatsAndContacts.length)}
@@ -1024,7 +1126,7 @@ export const ChatList = React.memo<ChatListProps>(({
             )}
 
             {/* 2. Global Public Channels & Users (Contacts.Search) */}
-            {globalPeers.length > 0 && (
+            {searchFilter === 'all' && globalPeers.length > 0 && (
               <div>
                 <div className="px-3 py-1 text-[11px] font-bold text-accent-cyan uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
@@ -1076,7 +1178,7 @@ export const ChatList = React.memo<ChatListProps>(({
                 <div className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <MessageSquare className="w-3 h-3 text-primary-400" />
-                    <span>{t('search.global_results')}</span>
+                    <span>{t('search.messages_found_title') || t('search.global_results')}</span>
                   </span>
                   <span className="text-[10px] font-normal text-gray-400 font-mono">
                     {t('search.messages_found', { count: formatNumber(globalMessages.length) })}

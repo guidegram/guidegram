@@ -136,6 +136,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     'chat.file_open_error': 'Failed to open file',
     'chat.edit_message': 'Edit Message',
     'chat.add_caption': 'Add Caption',
+    'chat.save_changes': 'Save changes',
     'chat.image_copied': 'Image copied to clipboard',
     'chat.go_to_message': 'Go to Message',
     'chat.rotate_image': 'Rotate 90°',
@@ -173,6 +174,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     'tab.marking': 'Marking...',
 
     // Global Search Tabs
+    'search.my_chats': 'Chats and contacts',
+    'search.messages_found_title': 'Messages found',
     'search.all_chats': 'All chats',
     'search.archive': 'From archive',
     'search.private_chats': 'Private chats',
@@ -1081,6 +1084,7 @@ export const translations: Record<Language, TranslationDictionary> = {
     'chat.file_open_error': 'خطا در باز کردن فایل',
     'chat.edit_message': 'ویرایش پیام',
     'chat.add_caption': 'افزودن توضیحات (کپشن)',
+    'chat.save_changes': 'ذخیره تغییرات',
     'chat.image_copied': 'تصویر در کلیپ‌بورد کپی شد',
     'chat.go_to_message': 'نمایش در گفتگو',
     'chat.rotate_image': 'چرخش ۹۰ درجه',
@@ -1118,6 +1122,8 @@ export const translations: Record<Language, TranslationDictionary> = {
     'tab.marking': 'در حال علامت‌گذاری...',
 
     // Global Search Tabs
+    'search.my_chats': 'گفتگوها و کانال‌های من',
+    'search.messages_found_title': 'پیام‌های یافت‌شده',
     'search.all_chats': 'همه چت‌ها',
     'search.archive': 'از آرشیو',
     'search.private_chats': 'چت‌های خصوصی',

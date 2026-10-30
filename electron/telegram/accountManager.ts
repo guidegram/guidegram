@@ -2518,10 +2518,25 @@ export class AccountManager {
         }
 
         const isUser = peer._ === 'user' || typeof peer.firstName === 'string'
+        const isSelf = Boolean(
+          (peer as any).self ||
+          (peer as any).isSelf ||
+          peerId === accountId ||
+          (holder.info?.id && peerId === holder.info.id.toString())
+        )
         const isBot = Boolean(peer.isBot)
         const isGroup = peer.chatType === 'group' || peer.chatType === 'supergroup' || Boolean(peer.isGroup)
         const isChannel = peer.chatType === 'channel' || (Boolean(peer.isChannel) && !peer.isGroup)
         const isBroadcast = isChannel && !isGroup
+
+        const isCreator = Boolean((peer as any).creator || (peer as any).isCreator)
+        const peerAdminRights = (peer as any).adminRights || (peer as any).admin_rights
+        const isAdmin = isCreator || Boolean(peerAdminRights)
+        const canSendMessages = isUser || isSelf
+          ? true
+          : isBroadcast
+            ? (isCreator || Boolean(peerAdminRights?.postMessages || (peerAdminRights as any)?.post_messages))
+            : (isCreator || Boolean(peerAdminRights) || !(peer as any).defaultBannedRights?.sendMessages)
 
         const title = formatEntityName(peer, 'Unknown Chat')
         const readInboxMaxId = (d as any).lastReadIngoing ?? (d as any).readInboxMaxId ?? (d.raw as any)?.readInboxMaxId ?? (d.raw as any)?.read_inbox_max_id ?? 0
@@ -2654,13 +2669,6 @@ export class AccountManager {
           }
         }
 
-        const isSelf = Boolean(
-          (peer as any).isSelf ||
-          (peer as any).self ||
-          (holder.info?.id && peerId === holder.info.id.toString()) ||
-          peerId === accountId
-        )
-
         // In Telegram, unread badge is strictly for incoming messages the current user hasn't read.
         // Saved Messages (self cloud storage) NEVER has an unread count.
         const isManuallyUnread = Boolean((d.raw as any)?.unreadMark)
@@ -2724,6 +2732,9 @@ export class AccountManager {
           isBot,
           isPinned,
           isSavedMessages: isSelf,
+          canSendMessages,
+          isCreator,
+          isAdmin,
           lastMessageText,
           lastMessageDate,
           lastMessageId,
@@ -6143,7 +6154,11 @@ export class AccountManager {
           _: 'channels.getFullChannel',
           channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
         })
-        const c = res.chats?.[0]
+        const targetChannelId = inputPeer.channelId?.toString()
+        const c = (res.chats || []).find((x: any) => {
+          const xId = x.id?.toString()
+          return xId === targetChannelId || (xId && targetChannelId && (xId.endsWith(targetChannelId) || targetChannelId.endsWith(xId)))
+        }) || res.chats?.[0]
         let availableReactions: string[] | undefined = undefined
         let canReactWithStars = true
         const chatReactions = res.fullChat?.availableReactions
@@ -6209,23 +6224,26 @@ export class AccountManager {
           }
         }
 
-        const isCreator = Boolean(c?.creator)
-        const adminRights = c?.adminRights
+        const isCreator = Boolean(c?.creator || (c as any)?.isCreator)
+        const adminRights = c?.adminRights || (c as any)?.admin_rights
         const isAdmin = isCreator || Boolean(adminRights)
         const isSupergroup = !c?.broadcast
-        const canManageCalls = isCreator || Boolean(adminRights?.manageCall)
-        const canManageTopics = isCreator || Boolean(adminRights?.manageTopics)
-        const canViewAdminLog = isCreator || Boolean(res.fullChat?.canViewAdminLog || adminRights)
-        const canChangeInfo = isCreator || Boolean(adminRights?.changeInfo)
-        const canBanMembers = isCreator || Boolean(adminRights?.banUsers)
-        const canAddMembers = isCreator || Boolean(adminRights?.inviteUsers)
-        const canPromoteMembers = isCreator || Boolean(adminRights?.addAdmins)
+        const canManageCalls = isCreator || Boolean(adminRights?.manageCall || (adminRights as any)?.manage_call)
+        const canManageTopics = isCreator || Boolean(adminRights?.manageTopics || (adminRights as any)?.manage_topics)
+        const canViewAdminLog = isCreator || Boolean(res.fullChat?.canViewAdminLog || (res.fullChat as any)?.can_view_admin_log || adminRights)
+        const canChangeInfo = isCreator || Boolean(adminRights?.changeInfo || (adminRights as any)?.change_info)
+        const canBanMembers = isCreator || Boolean(adminRights?.banUsers || (adminRights as any)?.ban_users)
+        const canAddMembers = isCreator || Boolean(adminRights?.inviteUsers || (adminRights as any)?.invite_users)
+        const canPromoteMembers = isCreator || Boolean(adminRights?.addAdmins || (adminRights as any)?.add_admins)
         const canManageMembers = isCreator || Boolean(
-          adminRights?.banUsers || adminRights?.inviteUsers || adminRights?.addAdmins || adminRights?.other
+          adminRights?.banUsers || (adminRights as any)?.ban_users ||
+          adminRights?.inviteUsers || (adminRights as any)?.invite_users ||
+          adminRights?.addAdmins || (adminRights as any)?.add_admins ||
+          adminRights?.other
         )
         const canPostMessages = c?.broadcast
-          ? (isCreator || Boolean(adminRights?.postMessages))
-          : !c?.defaultBannedRights?.sendMessages
+          ? (isCreator || Boolean(adminRights?.postMessages || (adminRights as any)?.post_messages))
+          : (isCreator || Boolean(adminRights) || !c?.defaultBannedRights?.sendMessages)
 
         const rawLinkedId = res.fullChat?.linkedChatId
         const linkedChatId = rawLinkedId && rawLinkedId !== 0 ? `-100${rawLinkedId}` : undefined
@@ -6355,16 +6373,16 @@ export class AccountManager {
           }
         }
 
-        const isCreator = Boolean(c?.creator)
-        const adminRights = c?.adminRights
+        const isCreator = Boolean(c?.creator || (c as any)?.isCreator)
+        const adminRights = c?.adminRights || (c as any)?.admin_rights
         const isAdmin = isCreator || Boolean(adminRights)
-        const canManageCalls = isCreator || Boolean(adminRights?.manageCall)
+        const canManageCalls = isCreator || Boolean(adminRights?.manageCall || (adminRights as any)?.manage_call)
         const canManageTopics = false
         const canViewAdminLog = isCreator || Boolean(adminRights)
-        const canChangeInfo = isCreator || Boolean(adminRights?.changeInfo)
-        const canBanMembers = isCreator || Boolean(adminRights?.banUsers)
-        const canAddMembers = isCreator || Boolean(adminRights?.inviteUsers)
-        const canSendMessages = !c?.defaultBannedRights?.sendMessages
+        const canChangeInfo = isCreator || Boolean(adminRights?.changeInfo || (adminRights as any)?.change_info)
+        const canBanMembers = isCreator || Boolean(adminRights?.banUsers || (adminRights as any)?.ban_users)
+        const canAddMembers = isCreator || Boolean(adminRights?.inviteUsers || (adminRights as any)?.invite_users)
+        const canSendMessages = isCreator || Boolean(adminRights) || !c?.defaultBannedRights?.sendMessages
 
         details = {
           id: chatId,

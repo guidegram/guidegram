@@ -1093,8 +1093,18 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }, [slowModeSecondsLeft])
 
   // Granular Chat Permissions helpers
-  const isUserAdminOrCreator = Boolean(chatDetails?.isAdmin || chatDetails?.isCreator)
-  const canSendMessages = chatDetails?.permissionsMatrix?.sendMessages !== false && (chat?.isChannel ? chatDetails?.canSendMessages !== false : true)
+  const isUserAdminOrCreator = Boolean(
+    chatDetails?.isAdmin ||
+    chatDetails?.isCreator ||
+    chat?.isCreator ||
+    chat?.isAdmin
+  )
+  const canSendMessages = Boolean(
+    chat?.isSavedMessages ||
+    isUserAdminOrCreator ||
+    (chatDetails?.permissionsMatrix?.sendMessages !== false &&
+      (chat?.isChannel ? (chatDetails?.canSendMessages ?? chat?.canSendMessages ?? false) : true))
+  )
   const canSendMedia = isUserAdminOrCreator || chatDetails?.permissionsMatrix?.sendMedia !== false
   const canSendStickers = isUserAdminOrCreator || chatDetails?.permissionsMatrix?.sendStickers !== false
 
@@ -1361,7 +1371,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   useEffect(() => {
     if (!chat) return
     // Skip saving cloud drafts in broadcast channels or read-only chats where posting is forbidden
-    if (chat.isChannel && chatDetails?.canSendMessages === false) return
+    if (chat.isChannel && !canSendMessages) return
     if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
 
     draftDebounceRef.current = setTimeout(() => {
@@ -3971,7 +3981,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     // Editing an existing message takes precedence over sending
     if (editingMessage) {
       const newText = inputText.trim()
-      if (!newText) return
+      if (!newText && !editingMessage.mediaType && !editingMessage.mediaUrl) return
       try {
         await onEditMessage?.(editingMessage, newText)
         setEditingMessage(null)
@@ -3980,7 +3990,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         if (chat && window.guidegram?.saveDraft) {
           window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
         }
-        showToast('Message edited')
+        showToast(editingMessage.mediaType || editingMessage.mediaUrl ? 'Caption updated' : 'Message edited')
       } catch (err: any) {
         console.error('Failed to edit message:', err)
         showToast(`Failed to edit message: ${err?.message || err}`)
@@ -8363,12 +8373,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <div className="w-1 self-stretch bg-accent-cyan rounded-full shrink-0" />
               <Pencil className="w-4 h-4 text-accent-cyan shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-semibold text-accent-cyan">Editing message</div>
+                <div className="text-[11px] font-semibold text-accent-cyan">
+                  {!editingMessage.text?.trim() && (editingMessage.mediaType || editingMessage.mediaUrl)
+                    ? (t('chat.add_caption') || 'Add caption')
+                    : (t('chat.edit_message') || 'Editing message')}
+                </div>
                 <div
                   dir={isRTL(editingMessage.text) ? 'rtl' : 'ltr'}
                   className="text-xs text-gray-300 truncate font-normal leading-normal"
                 >
-                  {editingMessage.text || 'Media message'}
+                  {editingMessage.text || (editingMessage.mediaType === 'video' ? 'Video' : editingMessage.mediaType === 'photo' ? 'Photo' : 'Media message')}
                 </div>
               </div>
             </div>
@@ -8635,7 +8649,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               </div>
             </div>
           </div>
-        ) : chatDetails?.canSendMessages === false || (isChannel && !chatDetails?.canSendMessages) ? (
+        ) : !editingMessage && (chat.isChannel || chatDetails?.isChannel) && !canSendMessages ? (
           <div className="p-3 flex items-center justify-center">
             <button
               type="button"
@@ -8712,7 +8726,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   )}
                 </button>
               </div>
-            ) : !canSendMessages ? (
+            ) : (!canSendMessages && !editingMessage) ? (
               <div className="flex items-center justify-center py-3.5 px-4 bg-dark-850/80 border border-white/5 rounded-2xl text-xs text-gray-400 gap-2">
                 <Lock className="w-4 h-4 text-gray-500" />
                 <span>{chat.isChannel ? 'Posting in this channel is restricted' : 'Sending messages is not allowed in this group'}</span>
@@ -9112,7 +9126,13 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     ref={textareaRef}
                     aria-label="Write a message"
                     dir={isRTL(inputText) ? 'rtl' : 'ltr'}
-                    placeholder={editingMessage ? 'Edit message...' : 'Write a message... (Enter to send, Shift+Enter for newline, Alt+F to forward)'}
+                    placeholder={
+                      editingMessage
+                        ? (editingMessage.mediaType || editingMessage.mediaUrl
+                            ? (t('chat.add_caption') || 'Add a caption...')
+                            : (t('chat.edit_message') || 'Edit message...'))
+                        : (t('chat.write_message') || 'Write a message... (Enter to send, Shift+Enter for newline, Alt+F to forward)')
+                    }
                     value={inputText}
                     rows={1}
                     style={{ maxHeight: '160px' }}
@@ -9247,11 +9267,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 )}
 
                 {/* Send or Voice Record Trigger */}
-                {/* Send or Voice Record Trigger */}
-                {inputText.trim() || stagedAttachments.length > 0 ? (
+                {editingMessage || inputText.trim() || stagedAttachments.length > 0 ? (
                   <div className="relative flex items-center shrink-0">
                     {/* Send Options Popover (Send Without Sound, Schedule Message) */}
-                    {isSendMenuOpen && (
+                    {!editingMessage && isSendMenuOpen && (
                       <div
                         onClick={(e) => e.stopPropagation()}
                         className="absolute bottom-full end-0 mb-2 w-56 bg-dark-800/95 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md p-1.5 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100 z-50 text-xs select-none"
@@ -9312,25 +9331,37 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <button
                       type="submit"
                       disabled={slowModeSecondsLeft > 0}
-                      aria-label={slowModeSecondsLeft > 0 ? `Slow mode active: wait ${slowModeSecondsLeft}s` : 'Send message'}
+                      aria-label={
+                        editingMessage
+                          ? 'Save edited message'
+                          : slowModeSecondsLeft > 0
+                            ? `Slow mode active: wait ${slowModeSecondsLeft}s`
+                            : 'Send message'
+                      }
                       onContextMenu={(e) => {
                         e.preventDefault()
-                        if (slowModeSecondsLeft <= 0) {
+                        if (!editingMessage && slowModeSecondsLeft <= 0) {
                           setIsSendMenuOpen((prev) => !prev)
                         }
                       }}
-                      className={`p-2.5 text-white rounded-s-2xl transition-all shadow-glow flex items-center justify-center touch-hit-slop min-w-[40px] min-h-[40px] ${
+                      className={`p-2.5 text-white ${editingMessage ? 'rounded-2xl' : 'rounded-s-2xl'} transition-all shadow-glow flex items-center justify-center touch-hit-slop min-w-[40px] min-h-[40px] ${
                         slowModeSecondsLeft > 0
                           ? 'bg-dark-700 text-gray-400 cursor-not-allowed opacity-80 gap-1.5 px-3'
-                          : 'bg-primary-600 hover:bg-primary-500 cursor-pointer'
+                          : editingMessage
+                            ? 'bg-accent-cyan hover:bg-accent-cyan/90 cursor-pointer shadow-cyan-500/20'
+                            : 'bg-primary-600 hover:bg-primary-500 cursor-pointer'
                       }`}
                       title={
-                        slowModeSecondsLeft > 0
-                          ? `Slow mode active: wait ${slowModeSecondsLeft}s`
-                          : 'Send message (Enter) • Right click for Send Without Sound / Schedule'
+                        editingMessage
+                          ? (t('chat.save_changes') || 'Save changes (Enter)')
+                          : slowModeSecondsLeft > 0
+                            ? `Slow mode active: wait ${slowModeSecondsLeft}s`
+                            : 'Send message (Enter) • Right click for Send Without Sound / Schedule'
                       }
                     >
-                      {slowModeSecondsLeft > 0 ? (
+                      {editingMessage ? (
+                        <Check className="w-4 h-4 text-white" />
+                      ) : slowModeSecondsLeft > 0 ? (
                         <>
                           <Clock className="w-3.5 h-3.5 animate-pulse text-amber-400" />
                           <span className="text-xs font-mono font-bold text-amber-300">{slowModeSecondsLeft}s</span>
@@ -9339,25 +9370,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         <Send className="w-4 h-4" />
                       )}
                     </button>
-                    <button
-                      type="button"
-                      disabled={slowModeSecondsLeft > 0}
-                      aria-label="More send options (Silent or Schedule)"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (slowModeSecondsLeft <= 0) {
-                          setIsSendMenuOpen((prev) => !prev)
-                        }
-                      }}
-                      className={`p-2.5 text-primary-200 hover:text-white rounded-e-2xl border-s border-white/10 transition-colors flex items-center justify-center touch-hit-slop min-w-[32px] min-h-[40px] ${
-                        slowModeSecondsLeft > 0
-                          ? 'bg-dark-750 cursor-not-allowed opacity-50'
-                          : 'bg-primary-700 hover:bg-primary-600 cursor-pointer'
-                      }`}
-                      title="More send options (Silent / Schedule)"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
+                    {!editingMessage && (
+                      <button
+                        type="button"
+                        disabled={slowModeSecondsLeft > 0}
+                        aria-label="More send options (Silent or Schedule)"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (slowModeSecondsLeft <= 0) {
+                            setIsSendMenuOpen((prev) => !prev)
+                          }
+                        }}
+                        className={`p-2.5 text-primary-200 hover:text-white rounded-e-2xl border-s border-white/10 transition-colors flex items-center justify-center touch-hit-slop min-w-[32px] min-h-[40px] ${
+                          slowModeSecondsLeft > 0
+                            ? 'bg-dark-750 cursor-not-allowed opacity-50'
+                            : 'bg-primary-700 hover:bg-primary-600 cursor-pointer'
+                        }`}
+                        title="More send options (Silent / Schedule)"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <button
