@@ -1964,7 +1964,7 @@ export const App: React.FC = () => {
       const list = prev[accountId] || []
       return {
         ...prev,
-        [accountId]: list.map((d) => (d.id === chatId ? { ...d, isMuted: true } : d)),
+        [accountId]: list.map((d) => (d.id === chatId || isPeerMatch(d.id, chatId) ? { ...d, isMuted: true } : d)),
       }
     })
     setActiveNotifications((prev) => prev.filter((n) => !(n.chatId === chatId && n.accountId === accountId)))

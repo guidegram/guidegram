@@ -1050,6 +1050,7 @@ export class AccountManager {
           status: 'connecting',
         },
       })
+      this.hydrateNotifySettingsFromCache(savedAcc.id)
     }
 
     // Start periodic background contact changes auditor (every 15 minutes)
@@ -1069,6 +1070,21 @@ export class AccountManager {
 
     // Start active-targeted throttled profile audit queue processor (every 30 seconds to prevent event-loop wakeups)
     this.startAuditQueueProcessor()
+  }
+
+  public hydrateNotifySettingsFromCache(accountId: string): void {
+    try {
+      const cached = this.store.loadDialogsCache(accountId)
+      if (Array.isArray(cached)) {
+        for (const d of cached) {
+          if (d.id && typeof d.isMuted === 'boolean') {
+            const cleanId = d.id.replace(/^-100/, '').replace(/^-/, '')
+            this.peerNotifySettings.set(`${accountId}_${d.id}`, { isMuted: d.isMuted })
+            this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted: d.isMuted })
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   public setPeerAccessHash(accountId: string, key: string, hash: Long | string): void {
@@ -2435,22 +2451,17 @@ export class AccountManager {
         const unreadMentionsCount = d.unreadMentionsCount || 0
         const isPinned = Boolean(d.isPinned)
 
-        // Accurate isMuted calculation:
-        // 1. Explicit boolean value from mtcute
-        // 2. Peer notify settings check (muteUntil in future or silent)
-        // 3. Fallback: broadcast channels in Telegram are muted by default
+        // Accurate isMuted calculation (Official MTProto & mtcute spec):
+        const rawNotify = (d.raw as any)?.notifySettings
+        const muteUntil = rawNotify?.muteUntil ?? (rawNotify as any)?.mute_until
+        const silent = Boolean(rawNotify?.silent)
         let isMuted = false
-        if (typeof d.isMuted === 'boolean') {
-          isMuted = d.isMuted
-        } else {
-          const rawNotify = (d.raw as any)?.notifySettings
-          const muteUntil = rawNotify?.muteUntil
-          const silent = rawNotify?.silent
-          if (silent || (muteUntil && muteUntil > Date.now() / 1000)) {
-            isMuted = true
-          } else if (isBroadcast) {
-            isMuted = true // Broadcast channels in Telegram are muted by default unless explicitly unmuted
-          }
+        if (d.isMuted === true || silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000)) {
+          isMuted = true
+        } else if (d.isMuted === false || (typeof muteUntil === 'number' && muteUntil === 0)) {
+          isMuted = false
+        } else if (isBroadcast) {
+          isMuted = true // Broadcast channels in Telegram are muted by default unless explicitly unmuted
         }
 
         const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
@@ -6817,6 +6828,23 @@ export class AccountManager {
       const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
       this.peerNotifySettings.set(`${accountId}_${chatId}`, { isMuted: mute })
       this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted: mute })
+
+      // Persist to disk dialog cache
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        if (cached && cached.length > 0) {
+          const next = cached.map((d) => (d.id === chatId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanPeerId) ? { ...d, isMuted: mute } : d)
+          this.store.saveDialogsCache(accountId, next)
+        }
+      } catch (_) {}
+
+      // Emit event so all UI components update in real time
+      this.onEventCallback?.('telegram:dialog-mute-updated', {
+        accountId,
+        chatId,
+        isMuted: mute,
+      })
+
       return true
     } catch (err) {
       Logger.error('[AccountManager] toggleChatNotifications error:', err)
@@ -14855,15 +14883,30 @@ export class AccountManager {
         const isOutgoing = Boolean(msg.isOutgoing || (msg.raw as any)?.out || msg.sender?.isSelf)
 
         const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
-        const cachedNotify =
+        let cachedNotify =
           this.peerNotifySettings.get(`${accountId}_${chatId}`) ||
           this.peerNotifySettings.get(`${accountId}_${cleanChatId}`)
+
+        // If not in RAM map, search persistent dialogs cache
+        if (!cachedNotify) {
+          try {
+            const cachedDialogs = this.store.loadDialogsCache(accountId)
+            const match = cachedDialogs?.find((d) => d.id === chatId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanChatId)
+            if (match && typeof match.isMuted === 'boolean') {
+              cachedNotify = { isMuted: match.isMuted }
+              this.peerNotifySettings.set(`${accountId}_${chatId}`, cachedNotify)
+              this.peerNotifySettings.set(`${accountId}_${cleanChatId}`, cachedNotify)
+            }
+          } catch (_) {}
+        }
+
         let isChatMuted = cachedNotify ? cachedNotify.isMuted : chat?.chatType === 'channel'
 
         if (!cachedNotify && (msg.raw as any)?.notifySettings) {
-          const muteUntil = (msg.raw as any).notifySettings.muteUntil
-          const silent = (msg.raw as any).notifySettings.silent
-          if (silent || (muteUntil && muteUntil > Date.now() / 1000)) {
+          const rawNotify = (msg.raw as any).notifySettings
+          const muteUntil = rawNotify.muteUntil ?? rawNotify.mute_until
+          const silent = Boolean(rawNotify.silent)
+          if (silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000)) {
             isChatMuted = true
           }
         }
@@ -15110,6 +15153,46 @@ export class AccountManager {
               accountId,
               userId,
               userStatus,
+            })
+          }
+        }
+
+        if (update._ === 'updateNotifySettings') {
+          const peer = update.peer?.peer || update.peer
+          let peerId = ''
+          if (peer) {
+            if (peer.userId !== undefined || peer.user_id !== undefined) {
+              peerId = (peer.userId ?? peer.user_id).toString()
+            } else if (peer.chatId !== undefined || peer.chat_id !== undefined) {
+              peerId = `-${peer.chatId ?? peer.chat_id}`
+            } else if (peer.channelId !== undefined || peer.channel_id !== undefined) {
+              const chStr = (peer.channelId ?? peer.channel_id).toString()
+              peerId = chStr.startsWith('-100') ? chStr : (chStr.startsWith('-') ? `-100${chStr.slice(1)}` : `-100${chStr}`)
+            } else if (peer.id !== undefined) {
+              peerId = peer.id.toString()
+            }
+          }
+          const rawNotify = update.notifySettings || update.notify_settings
+          if (peerId && rawNotify) {
+            const muteUntil = rawNotify.muteUntil ?? rawNotify.mute_until
+            const silent = Boolean(rawNotify.silent)
+            const isMuted = silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000)
+            const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+            this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
+            this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted })
+
+            try {
+              const cached = this.store.loadDialogsCache(accountId)
+              if (cached && cached.length > 0) {
+                const next = cached.map((d) => isMatch(d.id, peerId) ? { ...d, isMuted } : d)
+                this.store.saveDialogsCache(accountId, next)
+              }
+            } catch (_) {}
+
+            this.onEventCallback?.('telegram:dialog-mute-updated', {
+              accountId,
+              chatId: peerId,
+              isMuted,
             })
           }
         }
