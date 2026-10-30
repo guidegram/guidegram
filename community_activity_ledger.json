@@ -1,0 +1,114 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-10-30T21:05:00Z",
+  "project": {
+    "name": "Guidegram",
+    "repository": "https://github.com/guidegram/guidegram",
+    "officialChannel": "https://t.me/GuideGram_Official",
+    "officialGroup": "https://t.me/GuidegramGroup"
+  },
+  "summary": {
+    "totalActivities": 7,
+    "githubIssuesCommented": 2,
+    "githubPullRequests": 1,
+    "hackernewsPosts": 1,
+    "hackernewsComments": 1,
+    "redditPosts": 1,
+    "redditAppeals": 1
+  },
+  "activities": [
+    {
+      "id": "gh_comment_kotatogram_69",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "kotatogram/kotatogram-desktop",
+      "targetIssueNumber": 69,
+      "targetTitle": "[Feature Request] Display on the titlebar the account name instead of the unread count",
+      "targetUser": "CarlosEkisde",
+      "url": "https://github.com/kotatogram/kotatogram-desktop/issues/69#issuecomment-6533363535",
+      "issueUrl": "https://github.com/kotatogram/kotatogram-desktop/issues/69",
+      "status": "live_public",
+      "summary": "Introduced Guidegram's vertical dock, instant Ctrl+1..9 hotkey switching, and isolated proxies to solve multi-account clutter.",
+      "timestamp": "2026-10-30T21:00:53Z"
+    },
+    {
+      "id": "gh_comment_ayugram_370",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "AyuGram/AyuGramDesktop",
+      "targetIssueNumber": 370,
+      "targetTitle": "Suggestions",
+      "targetUser": "Pedram987",
+      "url": "https://github.com/AyuGram/AyuGramDesktop/issues/370#issuecomment-6532852159",
+      "issueUrl": "https://github.com/AyuGram/AyuGramDesktop/issues/370",
+      "status": "live_public",
+      "summary": "Introduced Guidegram as a solution for unlimited multi-account dock, direct forward without author quote (Alt+F), and local category folder templates.",
+      "timestamp": "2026-10-30T20:31:05Z"
+    },
+    {
+      "id": "gh_pr_awesome_telegram_147",
+      "platform": "github",
+      "type": "pull_request",
+      "account": "DoctorGuidance",
+      "targetRepo": "kalanakt/awesome-telegram",
+      "prNumber": 147,
+      "title": "Add Guidegram to Unofficial Clients",
+      "url": "https://github.com/kalanakt/awesome-telegram/pull/147",
+      "branch": "add-guidegram-client",
+      "status": "open_awaiting_merge",
+      "summary": "Official PR to list Guidegram under Unofficial Desktop Clients in the curated awesome-telegram registry.",
+      "timestamp": "2026-10-30T20:36:49Z"
+    },
+    {
+      "id": "hn_comment_50309375",
+      "platform": "hackernews",
+      "type": "comment",
+      "account": "ershadzolfi",
+      "targetThreadId": 50263837,
+      "targetThreadTitle": "Breaking the open web won't stop the bad bots",
+      "url": "https://news.ycombinator.com/item?id=50309375",
+      "parentUrl": "https://news.ycombinator.com/item?id=50263837",
+      "status": "flagged_by_heuristics",
+      "summary": "Seasoned technical breakdown on wire protocol boundaries, JA3/JA4 TLS fingerprinting spoofing, residential proxies, and token-bucket edge rate limiting.",
+      "timestamp": "2026-10-30T20:00:24Z"
+    },
+    {
+      "id": "hn_post_50307042",
+      "platform": "hackernews",
+      "type": "post",
+      "account": "ershadzolfi",
+      "itemId": 50307042,
+      "title": "Guidegram – Portable Telegram desktop client with unlimited multi-account",
+      "url": "https://news.ycombinator.com/item?id=50307042",
+      "status": "flagged_by_heuristics",
+      "actionTaken": "Drafted formal unflag appeal to dang at hn@ycombinator.com",
+      "summary": "Initial introduction of Guidegram architecture, multi-account dock, per-account proxy isolation, and portable data directory.",
+      "timestamp": "2026-10-30T17:17:19Z"
+    },
+    {
+      "id": "reddit_appeal_drguidance",
+      "platform": "reddit",
+      "type": "appeal",
+      "account": "u/DrGuidance",
+      "url": "https://www.reddit.com/appeal",
+      "status": "submitted_in_review",
+      "httpStatus": 200,
+      "summary": "Submitted official appeal for automated spam filter shadow-ban. Server returned ONE_APPEAL_PER_DAY confirming receipt.",
+      "timestamp": "2026-10-30T19:54:06Z"
+    },
+    {
+      "id": "reddit_post_sideproject",
+      "platform": "reddit",
+      "type": "post",
+      "account": "u/DrGuidance",
+      "subreddit": "r/SideProject",
+      "title": "Guidegram: Portable desktop Telegram client with unlimited accounts & isolated proxies",
+      "url": "https://www.reddit.com/r/SideProject/comments/1ioqwhd/guidegram_portable_desktop_telegram_client_with/",
+      "status": "filtered_by_automod",
+      "summary": "Original launch post caught by automated link filter due to fresh account creation on VPN subnet.",
+      "timestamp": "2026-10-30T17:10:00Z"
+    }
+  ]
+}
