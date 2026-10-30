@@ -13,6 +13,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { isRTL } from '../../utils/textUtils'
+import { CustomEmojiView } from '../ChatViewport'
 
 export interface KeyboardButtonItem {
   text: string
@@ -114,6 +115,7 @@ export const ReplyKeyboardToggleButton: React.FC<ReplyKeyboardToggleButtonProps>
 export interface ReplyKeyboardPanelProps {
   replyMarkup?: ReplyKeyboardMarkupData | null
   isOpen: boolean
+  accountId?: string
   botName?: string
   botUsername?: string
   onToggleOpen?: (open: boolean) => void
@@ -140,6 +142,7 @@ export interface ReplyKeyboardPanelProps {
 export const ReplyKeyboardPanel: React.FC<ReplyKeyboardPanelProps> = ({
   replyMarkup,
   isOpen,
+  accountId,
   botName = 'Bot',
   botUsername,
   onToggleOpen,
@@ -336,11 +339,11 @@ export const ReplyKeyboardPanel: React.FC<ReplyKeyboardPanelProps> = ({
 
               const styleClass =
                 btn.style === 'primary'
-                  ? 'bg-sky-700/80 hover:bg-sky-600 active:bg-sky-800 text-white border-sky-400/40 shadow-sm'
+                  ? 'bg-[#298acf] hover:bg-[#3498db] active:bg-[#2075b0] text-white border-[#298acf]/50 shadow-sm'
                   : btn.style === 'success'
-                  ? 'bg-emerald-700/80 hover:bg-emerald-600 active:bg-emerald-800 text-white border-emerald-400/40 shadow-sm'
+                  ? 'bg-[#4fae4e] hover:bg-[#58bd57] active:bg-[#439c42] text-white border-[#4fae4e]/50 shadow-sm'
                   : btn.style === 'danger'
-                  ? 'bg-rose-800/80 hover:bg-rose-700 active:bg-rose-900 text-white border-rose-400/40 shadow-sm'
+                  ? 'bg-[#d8504e] hover:bg-[#e45a58] active:bg-[#c24442] text-white border-[#d8504e]/50 shadow-sm'
                   : 'bg-dark-800 hover:bg-dark-750 active:bg-dark-850 text-gray-100 hover:text-white border-white/10 shadow-sm'
 
               const heightClass = isResize
@@ -356,6 +359,13 @@ export const ReplyKeyboardPanel: React.FC<ReplyKeyboardPanelProps> = ({
                   className={`flex-1 min-w-0 rounded-xl font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer border ${heightClass} ${styleClass}`}
                   title={btn.text}
                 >
+                  {btn.iconCustomEmojiId && accountId && (
+                    <CustomEmojiView
+                      accountId={accountId}
+                      documentId={btn.iconCustomEmojiId}
+                      className="w-4 h-4 inline-block align-middle shrink-0"
+                    />
+                  )}
                   {isPhone && (
                     <Phone className="w-3.5 h-3.5 text-primary-400 shrink-0" />
                   )}
