@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 18,
-    "githubIssuesCommented": 12,
+    "totalActivities": 20,
+    "githubIssuesCommented": 14,
     "githubPullRequests": 1,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,36 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_go_tg_bot_api_774",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "go-telegram-bot-api/telegram-bot-api",
+      "targetIssueNumber": 774,
+      "targetTitle": "How to send message to exact topic in supergroup?",
+      "targetUser": "yashkashustrij",
+      "url": "https://github.com/go-telegram-bot-api/telegram-bot-api/issues/774#issuecomment-6534890474",
+      "issueUrl": "https://github.com/go-telegram-bot-api/telegram-bot-api/issues/774",
+      "status": "live_public",
+      "summary": "Explained Telegram forum topic creation root ID mechanics in Bot API and MTProto (InputReplyToMessage top_msg_id), and shared Guidegram's forum topic thread routing architecture.",
+      "timestamp": "2026-10-30T22:32:06Z"
+    },
+    {
+      "id": "gh_comment_tdesktop_30042",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 30042,
+      "targetTitle": "High CPU usage when VPN is disconnected and killswitch is on (on Linux)",
+      "targetUser": "waltmck",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/30042#issuecomment-6534883915",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/30042",
+      "status": "live_public",
+      "summary": "Explained tight spinlock loop in QNetworkAccessManager on instantaneous kernel connection rejection (WFP/iptables killswitch) and presented Guidegram's exponential backoff with jitter.",
+      "timestamp": "2026-10-30T22:31:39Z"
+    },
     {
       "id": "gh_comment_teloxide_1414",
       "platform": "github",
