@@ -26,12 +26,24 @@ export interface StorageRootsConfig {
 export class StorageGuardrails {
   private static mockRoots: StorageRootsConfig | null = null
   private static appInstance: any = null
+  private static extraAllowedRoots: Set<string> = new Set()
 
   /**
    * Explicitly set the active Electron app instance (for ESM or runtime injection)
    */
   public static setApp(app: any): void {
     this.appInstance = app
+  }
+
+  /**
+   * Dynamically registers an authorized root directory (e.g. portable storage or custom media directory)
+   */
+  public static addAllowedRoot(rootPath: string): void {
+    if (rootPath && typeof rootPath === 'string') {
+      try {
+        this.extraAllowedRoots.add(path.resolve(rootPath))
+      } catch {}
+    }
   }
 
   /**
@@ -85,6 +97,10 @@ export class StorageGuardrails {
       // Standalone Node / CLI fallback
       roots.push(path.resolve(process.cwd()))
       roots.push(path.resolve(osTempDir()))
+    }
+
+    for (const extra of this.extraAllowedRoots) {
+      roots.push(extra)
     }
 
     return Array.from(new Set(roots))

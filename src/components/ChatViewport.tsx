@@ -82,6 +82,7 @@ import {
   Ban,
   UserCheck,
   Settings,
+  Folder,
   FolderDown,
   Palette,
   Briefcase,
@@ -5595,22 +5596,64 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       return (
         <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-850/80 p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5" />
+            <div
+              className={`flex items-center gap-3 flex-1 min-w-0 ${isDownloaded ? 'cursor-pointer group/doc' : ''}`}
+              onClick={async () => {
+                if (isDownloaded) {
+                  const targetAccountId = msg.accountId || chat?.accountId
+                  const targetChatId = msg.chatId || chat?.id
+                  if (targetAccountId && targetChatId) {
+                    const res = await window.guidegram?.openMediaFile?.(targetAccountId, targetChatId, msg.id)
+                    if (!res?.success) {
+                      showToast(res?.error || t('chat.file_open_error') || 'Failed to open file')
+                    }
+                  }
+                }
+              }}
+              title={isDownloaded ? (t('chat.open_file') || 'Click to open file') : undefined}
+            >
+              <div className="w-10 h-10 rounded-xl bg-accent-cyan/20 text-accent-cyan flex items-center justify-center shrink-0 group-hover/doc:bg-accent-cyan/30 transition-colors">
+                <FileText className="w-5 h-5" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-gray-200 truncate group-hover/doc:text-accent-cyan transition-colors" title={msg.mediaFileName}>
+                  {msg.mediaFileName || 'Attached File'}
+                </div>
+                <div className="text-[10px] text-gray-400">
+                  {formatFileSize(msg.mediaFileSize)}
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-gray-200 truncate">
-                {msg.mediaFileName || 'Attached File'}
-              </div>
-              <div className="text-[10px] text-gray-400">
-                {formatFileSize(msg.mediaFileSize)}
-              </div>
-            </div>
+            {isDownloaded && (
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  const targetAccountId = msg.accountId || chat?.accountId
+                  const targetChatId = msg.chatId || chat?.id
+                  if (targetAccountId && targetChatId) {
+                    showToast(t('chat.locating_file') || 'Locating file...')
+                    const res = await window.guidegram?.showMediaInFolder?.(targetAccountId, targetChatId, msg.id)
+                    if (res?.success) {
+                      showToast(t('chat.opened_in_folder') || 'Opened folder in File Explorer')
+                    } else {
+                      showToast(res?.error || t('chat.file_not_found') || 'File not found on disk')
+                    }
+                  }
+                }}
+                title={t('chat.show_in_folder') || 'Show in Folder'}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-accent-cyan hover:text-white transition-colors cursor-pointer"
+              >
+                <Folder className="w-4 h-4" />
+              </button>
+            )}
 
             <button
               type="button"
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation()
                 if (isDownloaded) {
                   if (window.guidegram?.saveMediaToFile) {
                     await window.guidegram.saveMediaToFile(msg.accountId, msg.chatId, msg.id, msg.mediaFileName)
@@ -5619,7 +5662,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   await requestMediaDownload(msg, false, true)
                 }
               }}
-              title={isDownloaded ? 'Save File to Computer' : 'Download File'}
+              title={isDownloaded ? (t('chat.save_file_as') || 'Save File As...') : 'Download File'}
               className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
             >
               {isLoading ? (
@@ -10558,18 +10601,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           {/* Telegram Desktop Media & Photo Context Actions */}
           {(() => {
             const msg = contextMenu.message
-            const isPhotoMsg = Boolean(
+            const isDocument = msg.mediaType === 'document'
+            const isAudioOrVoice = msg.mediaType === 'audio' || msg.mediaType === 'voice'
+            const isVideo = msg.mediaType === 'video' || (msg.mediaType as string) === 'round'
+            const isPhotoMsg = !isDocument && !isAudioOrVoice && !isVideo && Boolean(
               msg.mediaType === 'photo' ||
               (msg.mediaType as string) === 'image' ||
               (msg.mediaUrl &&
-                !msg.mediaType?.includes('audio') &&
-                !msg.mediaType?.includes('video') &&
-                !msg.mediaType?.includes('voice') &&
                 !msg.isSticker &&
                 msg.mediaType !== 'sticker')
             )
             const photoUrl = downloadedMedia[msg.id] || msg.mediaUrl
-            const hasAnyMedia = Boolean(msg.mediaType && (msg.mediaType as string) !== 'text' && !msg.isService)
+            const hasAnyMedia = Boolean(
+              (msg.mediaType && (msg.mediaType as string) !== 'text' && !msg.isService) ||
+              msg.mediaFileName ||
+              msg.mediaUrl
+            )
 
             if (isPhotoMsg) {
               return (
@@ -10612,6 +10659,32 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <span>{t('chat.copy_image') || 'Copy Image'}</span>
                   </button>
 
+                  {/* Show in Folder (Telegram Desktop Parity) */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setContextMenu(null)
+                      try {
+                        const targetAccountId = msg.accountId || chat?.accountId
+                        const targetChatId = msg.chatId || chat?.id
+                        if (!targetAccountId || !targetChatId) return
+                        showToast(t('chat.locating_file') || 'Locating file...')
+                        const res = await window.guidegram?.showMediaInFolder?.(targetAccountId, targetChatId, msg.id)
+                        if (res?.success) {
+                          showToast(t('chat.opened_in_folder') || 'Opened folder in File Explorer')
+                        } else {
+                          showToast(res?.error || t('chat.file_not_found') || 'File not found on disk')
+                        }
+                      } catch (err: any) {
+                        showToast(err?.message || 'Failed to reveal in folder')
+                      }
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Folder className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.show_in_folder') || 'Show in Folder'}</span>
+                  </button>
+
                   {/* Save Image As Native Dialog */}
                   <button
                     type="button"
@@ -10630,9 +10703,58 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               )
             }
 
-            if (!isPhotoMsg && hasAnyMedia && (msg.mediaFileName || msg.mediaUrl)) {
+            if (!isPhotoMsg && hasAnyMedia) {
               return (
                 <>
+                  {/* Open File / Document */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setContextMenu(null)
+                      try {
+                        const targetAccountId = msg.accountId || chat?.accountId
+                        const targetChatId = msg.chatId || chat?.id
+                        if (!targetAccountId || !targetChatId) return
+                        const res = await window.guidegram?.openMediaFile?.(targetAccountId, targetChatId, msg.id)
+                        if (!res?.success) {
+                          showToast(res?.error || t('chat.file_open_error') || 'Failed to open file')
+                        }
+                      } catch (err: any) {
+                        showToast(err?.message || 'Failed to open file')
+                      }
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <FileText className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.open_file') || 'Open File'}</span>
+                  </button>
+
+                  {/* Show in Folder (Telegram Desktop Parity) */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setContextMenu(null)
+                      try {
+                        const targetAccountId = msg.accountId || chat?.accountId
+                        const targetChatId = msg.chatId || chat?.id
+                        if (!targetAccountId || !targetChatId) return
+                        showToast(t('chat.locating_file') || 'Locating file...')
+                        const res = await window.guidegram?.showMediaInFolder?.(targetAccountId, targetChatId, msg.id)
+                        if (res?.success) {
+                          showToast(t('chat.opened_in_folder') || 'Opened folder in File Explorer')
+                        } else {
+                          showToast(res?.error || t('chat.file_not_found') || 'File not found on disk')
+                        }
+                      } catch (err: any) {
+                        showToast(err?.message || 'Failed to reveal in folder')
+                      }
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Folder className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                    <span>{t('chat.show_in_folder') || 'Show in Folder'}</span>
+                  </button>
+
                   {/* Save Media File As... */}
                   <button
                     type="button"
@@ -10645,6 +10767,22 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <Download className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
                     <span>{t('chat.save_file_as') || 'Save File As...'}</span>
                   </button>
+
+                  {/* Copy Filename (Telegram Desktop Parity) */}
+                  {msg.mediaFileName && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await copyTextToClipboard(msg.mediaFileName!)
+                        setContextMenu(null)
+                        showToast(t('chat.filename_copied') || `Copied: ${msg.mediaFileName}`)
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-gray-100 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer font-medium"
+                    >
+                      <Copy className="w-3.5 h-3.5 shrink-0 text-accent-cyan" />
+                      <span>{t('chat.copy_filename') || 'Copy Filename'}</span>
+                    </button>
+                  )}
 
                   <div className="h-px bg-white/10 my-1 -mx-1" />
                 </>
@@ -10993,8 +11131,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <span>Forward (Alt+F)</span>
           </button>
 
-          {/* Quick Forward to Saved Messages */}
-          {quickForwardToSaved && onQuickForwardToSaved && (
+          {/* Quick Forward to Saved Messages (hidden when inside Saved Messages) */}
+          {quickForwardToSaved && onQuickForwardToSaved && !chat?.isSavedMessages && chat?.id !== 'saved_messages' && (
             <button
               type="button"
               onClick={async () => {

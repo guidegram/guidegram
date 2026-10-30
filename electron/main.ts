@@ -831,6 +831,8 @@ app.whenReady().then(async () => {
   })
 
   sessionStore = new SessionStore(portableDataDir)
+  StorageGuardrails.addAllowedRoot(sessionStore.getDataDirectory())
+  StorageGuardrails.addAllowedRoot(path.join(sessionStore.getDataDirectory(), 'media_cache'))
 
   // Auto-grant microphone permission for voice message recording
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -2140,6 +2142,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:show-media-in-folder', async (_event, { accountId, chatId, messageId }) => {
+    try {
+      return await accountManager.showMediaInFolder(accountId, chatId, messageId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] showMediaInFolder error:`, err)
+      return { success: false, error: err?.message || 'Failed to reveal media in folder' }
+    }
+  })
+
+  ipcMain.handle('telegram:open-media-file', async (_event, { accountId, chatId, messageId }) => {
+    try {
+      return await accountManager.openMediaFile(accountId, chatId, messageId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] openMediaFile error:`, err)
+      return { success: false, error: err?.message || 'Failed to open media file' }
+    }
+  })
+
   ipcMain.handle('telegram:get-chat-details', async (_event, { accountId, chatId }) => {
     try {
       return await accountManager.getChatDetails(accountId, chatId)
@@ -2262,6 +2282,42 @@ function setupIpcHandlers() {
       return await accountManager.toggleChatNotifications(accountId, chatId, mute)
     } catch (err: any) {
       Logger.warn(`[IPC] toggleChatNotifications error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:toggle-dialog-pin', async (_event, { accountId, chatId, pinned }) => {
+    try {
+      return await accountManager.toggleDialogPin(accountId, chatId, pinned)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleDialogPin error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:mark-dialog-unread', async (_event, { accountId, chatId, unread }) => {
+    try {
+      return await accountManager.markDialogUnread(accountId, chatId, unread)
+    } catch (err: any) {
+      Logger.warn(`[IPC] markDialogUnread error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:delete-chat-history', async (_event, { accountId, chatId, revoke }) => {
+    try {
+      return await accountManager.deleteChatHistory(accountId, chatId, revoke)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteChatHistory error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:leave-chat', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.leaveChat(accountId, chatId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] leaveChat error:`, err)
       return false
     }
   })

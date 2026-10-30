@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Pin, ShieldCheck, ShieldOff, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX, Calendar, Bot } from 'lucide-react'
+import { Search, Pin, ShieldCheck, ShieldOff, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX, Calendar, Bot, ExternalLink, Volume2, VolumeX } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
@@ -7,6 +7,7 @@ import { Avatar } from './Avatar'
 import { isRTL, formatFileSize, formatDuration } from '../utils/textUtils'
 import { CustomEmojiView } from './ChatViewport'
 import { useI18n } from '../i18n'
+import { SmartContextMenu } from './SmartContextMenu'
 
 const StoryViewerModal = React.lazy(() => import('./StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })))
 const StoryComposerModal = React.lazy(() => import('./StoryComposerModal').then((m) => ({ default: m.StoryComposerModal })))
@@ -76,6 +77,106 @@ export const ChatList = React.memo<ChatListProps>(({
   const [activeStoryPeers, setActiveStoryPeers] = useState<ActiveStoryPeer[]>([])
   const [storyRefreshKey, setStoryRefreshKey] = useState(0)
   const [pvFilter, setPvFilter] = useState<'all' | 'contacts' | 'non_contacts'>('all')
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    dialog: DialogItem
+  } | null>(null)
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClose = () => setContextMenu(null)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null)
+    }
+    window.addEventListener('click', handleClose)
+    window.addEventListener('scroll', handleClose, true)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('click', handleClose)
+      window.removeEventListener('scroll', handleClose, true)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [contextMenu])
+
+  const handleItemContextMenu = useCallback((e: React.MouseEvent, dialog: DialogItem) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      dialog,
+    })
+  }, [])
+
+  const handleToggleMute = useCallback(async (dialog: DialogItem) => {
+    setContextMenu(null)
+    const nextMuted = !dialog.isMuted
+    dialog.isMuted = nextMuted
+    if (window.guidegram?.toggleChatNotifications) {
+      await window.guidegram.toggleChatNotifications(dialog.accountId, dialog.id, nextMuted)
+    }
+  }, [])
+
+  const handleTogglePin = useCallback(async (dialog: DialogItem) => {
+    setContextMenu(null)
+    const nextPinned = !dialog.isPinned
+    dialog.isPinned = nextPinned
+    if (window.guidegram?.toggleDialogPin) {
+      await window.guidegram.toggleDialogPin(dialog.accountId, dialog.id, nextPinned)
+    }
+  }, [])
+
+  const handleToggleRead = useCallback(async (dialog: DialogItem) => {
+    setContextMenu(null)
+    if (dialog.unreadCount > 0) {
+      dialog.unreadCount = 0
+      if (window.guidegram?.markAsRead) {
+        await window.guidegram.markAsRead(dialog.accountId, dialog.id, dialog.readInboxMaxId || 0)
+      }
+    } else {
+      dialog.unreadCount = 1
+      if (window.guidegram?.markDialogUnread) {
+        await window.guidegram.markDialogUnread(dialog.accountId, dialog.id, true)
+      }
+    }
+  }, [])
+
+  const handleCopyLinkOrId = useCallback((dialog: DialogItem) => {
+    setContextMenu(null)
+    const textToCopy = dialog.username ? `https://t.me/${dialog.username}` : dialog.id
+    navigator.clipboard?.writeText(textToCopy).catch(() => {})
+  }, [])
+
+  const handleOpenInNewWindow = useCallback((dialog: DialogItem) => {
+    setContextMenu(null)
+    onSelectChat(dialog.id)
+    window.guidegram?.openAccountWindow?.(dialog.accountId)
+  }, [onSelectChat])
+
+  const handleClearHistory = useCallback(async (dialog: DialogItem) => {
+    setContextMenu(null)
+    if (window.confirm(t('chat.confirm_clear_history') || `Are you sure you want to clear history with "${dialog.title}"?`)) {
+      if (window.guidegram?.deleteChatHistory) {
+        await window.guidegram.deleteChatHistory(dialog.accountId, dialog.id, true)
+      }
+    }
+  }, [t])
+
+  const handleDeleteOrLeave = useCallback(async (dialog: DialogItem) => {
+    setContextMenu(null)
+    const actionLabel = dialog.isChannel
+      ? (t('chat.leave_channel') || 'Leave channel')
+      : dialog.isGroup
+      ? (t('chat.leave_group') || 'Leave group')
+      : (t('chat.delete_chat') || 'Delete chat')
+    if (window.confirm(t('chat.confirm_delete') || `Are you sure you want to ${actionLabel.toLowerCase()} "${dialog.title}"?`)) {
+      if (window.guidegram?.leaveChat) {
+        await window.guidegram.leaveChat(dialog.accountId, dialog.id)
+      }
+    }
+  }, [t])
 
   const dialogsRef = useRef(dialogs)
   useEffect(() => {
@@ -1070,6 +1171,7 @@ export const ChatList = React.memo<ChatListProps>(({
               onSelect={handleSelectDialog}
               story={storyPeerMap.get(dialog.id)}
               onOpenStory={handleOpenStory}
+              onContextMenu={handleItemContextMenu}
             />
           ))
         )}
@@ -1106,6 +1208,111 @@ export const ChatList = React.memo<ChatListProps>(({
             onPosted={handleStoryPosted}
           />
         </React.Suspense>
+      )}
+
+      {contextMenu && (
+        <SmartContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          className="w-56 p-1.5 shadow-2xl rounded-2xl bg-dark-900/95 backdrop-blur-xl border border-white/10 text-xs font-medium"
+        >
+          {/* Header preview of chat */}
+          <div className="px-2.5 py-1.5 mb-1 border-b border-white/5 flex items-center justify-between">
+            <span className="font-bold text-gray-200 truncate max-w-[140px]">{contextMenu.dialog.title}</span>
+            <span className="text-[10px] text-gray-400 font-mono">#{contextMenu.dialog.id.replace(/^-100/, '')}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleOpenInNewWindow(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+          >
+            <ExternalLink className="w-4 h-4 text-gray-400 shrink-0" />
+            <span>{t('chat.open_new_window') || 'Open in new window'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTogglePin(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+          >
+            <Pin className={`w-4 h-4 shrink-0 ${contextMenu.dialog.isPinned ? 'text-primary-400 fill-current' : 'text-gray-400'}`} />
+            <span>{contextMenu.dialog.isPinned ? (t('chat.unpin') || 'Unpin') : (t('chat.pin') || 'Pin')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleToggleMute(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+          >
+            {contextMenu.dialog.isMuted ? (
+              <>
+                <Volume2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{t('chat.unmute') || 'Unmute'}</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-4 h-4 text-gray-400 shrink-0" />
+                <span>{t('chat.mute') || 'Mute'}</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleToggleRead(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+          >
+            {contextMenu.dialog.unreadCount > 0 ? (
+              <>
+                <CheckCheck className="w-4 h-4 text-accent-cyan shrink-0" />
+                <span>{t('chat.mark_read') || 'Mark as read'}</span>
+              </>
+            ) : (
+              <>
+                <MessageSquare className="w-4 h-4 text-gray-400 shrink-0" />
+                <span>{t('chat.mark_unread') || 'Mark as unread'}</span>
+              </>
+            )}
+          </button>
+
+          <div className="h-px bg-white/5 my-1" />
+
+          <button
+            type="button"
+            onClick={() => handleCopyLinkOrId(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+          >
+            <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
+            <span>{contextMenu.dialog.username ? (t('chat.copy_link') || 'Copy Link') : (t('chat.copy_id') || 'Copy Chat ID')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleClearHistory(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+          >
+            <Trash2 className="w-4 h-4 text-gray-400 shrink-0" />
+            <span>{t('chat.clear_history') || 'Clear history'}</span>
+          </button>
+
+          <div className="h-px bg-white/5 my-1" />
+
+          <button
+            type="button"
+            onClick={() => handleDeleteOrLeave(contextMenu.dialog)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors text-left"
+          >
+            <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
+            <span>
+              {contextMenu.dialog.isChannel
+                ? (t('chat.leave_channel') || 'Leave channel')
+                : contextMenu.dialog.isGroup
+                ? (t('chat.leave_group') || 'Leave group')
+                : (t('chat.delete_chat') || 'Delete chat')}
+            </span>
+          </button>
+        </SmartContextMenu>
       )}
     </div>
   )

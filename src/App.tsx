@@ -569,6 +569,22 @@ export const App: React.FC = () => {
         }
         setDialogsByAccount((prev) => {
           const list = prev[accountId] || []
+          if ((!prev[accountId] || prev[accountId].length === 0) && window.guidegram?.getCachedDialogs) {
+            window.guidegram.getCachedDialogs(accountId).then((cached) => {
+              if (cached && cached.length > 0) {
+                setDialogsByAccount((latest) => {
+                  const currentList = latest[accountId] || []
+                  const mergedMap = new Map<string, DialogItem>()
+                  for (const d of cached) mergedMap.set(d.id, d)
+                  for (const d of currentList) {
+                    const existing = mergedMap.get(d.id)
+                    mergedMap.set(d.id, existing ? { ...existing, ...d } : d)
+                  }
+                  return { ...latest, [accountId]: Array.from(mergedMap.values()) }
+                })
+              }
+            }).catch(() => {})
+          }
           const msgDate = message?.date ? (message.date < 1e11 ? message.date * 1000 : message.date) : Date.now()
           const msgText = message?.text || (message?.mediaType ? `[${message.mediaType}]` : '')
           const isOutgoing = Boolean(message?.isOutgoing)
@@ -1186,7 +1202,16 @@ export const App: React.FC = () => {
           const cached = await window.guidegram.getCachedDialogs(accountId)
           if (cached && cached.length > 0) {
             hasCached = true
-            setDialogsByAccount((prev) => ({ ...prev, [accountId]: cached }))
+            setDialogsByAccount((prev) => {
+              const currentList = prev[accountId] || []
+              const mergedMap = new Map<string, DialogItem>()
+              for (const d of cached) mergedMap.set(d.id, d)
+              for (const d of currentList) {
+                const existing = mergedMap.get(d.id)
+                mergedMap.set(d.id, existing ? { ...existing, ...d } : d)
+              }
+              return { ...prev, [accountId]: Array.from(mergedMap.values()) }
+            })
           }
         } catch (cacheErr) {
           console.warn('Failed to read cached dialogs:', cacheErr)
@@ -1463,16 +1488,18 @@ export const App: React.FC = () => {
   const handleSelectChat = (
     chatId: string,
     targetMsgId?: number,
-    provisionalPeer?: Partial<DialogItem>
+    provisionalPeer?: Partial<DialogItem>,
+    explicitAccountId?: string
   ) => {
-    if (activeAccountId && provisionalPeer) {
+    const accId = explicitAccountId || activeAccountId
+    if (accId && provisionalPeer) {
       setDialogsByAccount((prev) => {
-        const list = prev[activeAccountId] || []
+        const list = prev[accId] || []
         const exists = list.some((d) => d.id === chatId)
         if (exists) return prev
         const newPeer: DialogItem = {
           id: chatId,
-          accountId: activeAccountId,
+          accountId: accId,
           title: provisionalPeer.title || 'Chat',
           unreadCount: provisionalPeer.unreadCount || 0,
           isUser: Boolean(provisionalPeer.isUser),
@@ -1485,14 +1512,30 @@ export const App: React.FC = () => {
           accessHash: provisionalPeer.accessHash,
           ...provisionalPeer,
         }
-        return { ...prev, [activeAccountId]: [newPeer, ...list] }
+        return { ...prev, [accId]: [newPeer, ...list] }
       })
     }
     setActiveChatId(chatId)
     setInitialScrollMsgId(targetMsgId ?? null)
-    if (activeAccountId) {
-      loadMessages(activeAccountId, chatId)
+    if (accId) {
+      loadMessages(accId, chatId)
     }
+  }
+
+  const navigateToChat = (accountId: string, chatId: string, messageId?: number) => {
+    window.guidegram?.focusWindow?.()
+    const isDifferentAccount = activeAccountIdRef.current !== accountId
+    if (isDifferentAccount) {
+      setActiveAccountId(accountId)
+      setIsUnifiedInboxOpen(false)
+      setActiveTab('all')
+      setSearchQuery('')
+      setCloudFolders([])
+      loadDialogsForAccount(accountId)
+    } else if (!dialogsByAccountRef.current[accountId] || dialogsByAccountRef.current[accountId].length <= 3) {
+      loadDialogsForAccount(accountId)
+    }
+    handleSelectChat(chatId, messageId, undefined, accountId)
   }
 
   const handleJoinedChat = async (chatId: string) => {
@@ -1976,12 +2019,7 @@ export const App: React.FC = () => {
 
   // Pro Notification HUD Interactions
   const handleSelectFromNotification = (accountId: string, chatId: string, messageId?: number) => {
-    window.guidegram?.focusWindow?.()
-    if (activeAccountId !== accountId) {
-      setActiveAccountId(accountId)
-      loadDialogsForAccount(accountId)
-    }
-    handleSelectChat(chatId, messageId)
+    navigateToChat(accountId, chatId, messageId)
     setActiveNotifications((prev) => prev.filter((n) => !(n.chatId === chatId && n.accountId === accountId)))
   }
 
@@ -2065,16 +2103,10 @@ export const App: React.FC = () => {
       })
       const unsubSelect = window.guidegram.on('notification:action:select', (payload: any) => {
         if (payload?.accountId && payload?.chatId) {
-          setActiveAccountId(payload.accountId)
-          setActiveChatId(payload.chatId)
-          loadMessages(payload.accountId, payload.chatId)
-          if (payload.messageId) {
-            setInitialScrollMsgId(payload.messageId)
-          }
+          navigateToChat(payload.accountId, payload.chatId, payload.messageId)
           if (payload.id) {
             handleDismissNotification(payload.id)
           }
-          window.guidegram?.focusWindow?.()
         }
       })
       const unsubRead = window.guidegram.on('notification:action:read', (payload: any) => {
@@ -2105,16 +2137,10 @@ export const App: React.FC = () => {
 
   // Notification History Management Handlers
   const handleSelectFromHistory = (item: NotificationHistoryItem) => {
-    setActiveAccountId(item.accountId)
-    setActiveChatId(item.chatId)
-    loadMessages(item.accountId, item.chatId)
-    if (item.messageId) {
-      setInitialScrollMsgId(item.messageId)
-    }
+    navigateToChat(item.accountId, item.chatId, item.messageId)
     setNotificationHistory((prev) =>
       prev.map((h) => (h.id === item.id ? { ...h, isRead: true } : h))
     )
-    window.guidegram?.focusWindow?.()
   }
 
   const handleMarkAllHistoryRead = () => {
@@ -2468,10 +2494,7 @@ export const App: React.FC = () => {
               accounts={accounts}
               allDialogs={dialogsByAccount}
               onSelectAccountAndChat={(accId, chatId) => {
-                setActiveAccountId(accId)
-                setIsUnifiedInboxOpen(false)
-                setActiveChatId(chatId)
-                loadMessages(accId, chatId)
+                navigateToChat(accId, chatId)
               }}
             />
           </React.Suspense>

@@ -480,6 +480,20 @@ const guidegramAPI = {
     defaultName?: string
   ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> =>
     ipcRenderer.invoke('telegram:save-media-to-file', { accountId, chatId, messageId, defaultName }),
+  showItemInFolder: (filePath: string): Promise<boolean> =>
+    ipcRenderer.invoke('system:show-in-folder', { filePath }),
+  showMediaInFolder: (
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke('telegram:show-media-in-folder', { accountId, chatId, messageId }),
+  openMediaFile: (
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke('telegram:open-media-file', { accountId, chatId, messageId }),
   getChatDetails: (accountId: string, chatId: string): Promise<ChatDetails> =>
     ipcRenderer.invoke('telegram:get-chat-details', { accountId, chatId }),
   getChatMembers: (
@@ -561,6 +575,14 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:resolve-peer', { accountId, target }),
   toggleChatNotifications: (accountId: string, chatId: string, mute: boolean): Promise<boolean> =>
     ipcRenderer.invoke('telegram:toggle-chat-notifications', { accountId, chatId, mute }),
+  toggleDialogPin: (accountId: string, chatId: string, pinned: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:toggle-dialog-pin', { accountId, chatId, pinned }),
+  markDialogUnread: (accountId: string, chatId: string, unread: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:mark-dialog-unread', { accountId, chatId, unread }),
+  deleteChatHistory: (accountId: string, chatId: string, revoke = true): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-chat-history', { accountId, chatId, revoke }),
+  leaveChat: (accountId: string, chatId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:leave-chat', { accountId, chatId }),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('system:open-external', { url }),
   getLinkPreview: (url: string, accountId?: string): Promise<WebPagePreview | null> =>

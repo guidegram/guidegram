@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import zlib from 'zlib'
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { TelegramClient, MemoryStorage } from '@mtcute/node'
 import { PersistentKvStorage } from './persistentKvStorage'
 import { tl, Long, InputMedia, User } from '@mtcute/core'
@@ -487,6 +487,112 @@ export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] |
     })
   }
   return result.length > 0 ? result : undefined
+}
+
+export function parseMtprotoReplyMarkup(
+  rawMarkup: any,
+  chatId: string,
+  messageId: number,
+  onCacheCallback?: (key: string, data: Buffer) => void
+): MessageItem['replyMarkup'] {
+  if (!rawMarkup) return undefined
+  if (rawMarkup._ === 'replyKeyboardHide') {
+    return { rows: [], _: 'replyKeyboardHide' }
+  }
+  if ((rawMarkup._ === 'replyInlineMarkup' || rawMarkup._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
+    const rows: InlineButton[][] = []
+    for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
+      const row = rawMarkup.rows[rIdx]
+      const btnRow: InlineButton[] = []
+      if (row?.buttons && Array.isArray(row.buttons)) {
+        for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
+          const b = row.buttons[cIdx]
+          if (!b) continue
+
+          let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
+          let iconCustomEmojiId: string | undefined = undefined
+
+          const rawStyle = b.style || (b as any).theme || (b as any).color
+          if (rawStyle) {
+            if (typeof rawStyle === 'object') {
+              if (rawStyle.bgSuccess) btnStyle = 'success'
+              else if (rawStyle.bgDanger) btnStyle = 'danger'
+              else if (rawStyle.bgPrimary) btnStyle = 'primary'
+              else {
+                const sName = String(rawStyle._ || rawStyle.type || '')
+                if (/success|green/i.test(sName)) btnStyle = 'success'
+                else if (/danger|red/i.test(sName)) btnStyle = 'danger'
+                else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
+              }
+
+              if (rawStyle.icon) {
+                iconCustomEmojiId = rawStyle.icon.toString()
+              }
+            } else if (typeof rawStyle === 'string') {
+              if (/success|green/i.test(rawStyle)) btnStyle = 'success'
+              else if (/danger|red/i.test(rawStyle)) btnStyle = 'danger'
+              else if (/primary|blue/i.test(rawStyle)) btnStyle = 'primary'
+            }
+          }
+
+          if (!iconCustomEmojiId && (b.iconCustomEmojiId || (b as any).icon_custom_emoji_id || (b as any).icon)) {
+            iconCustomEmojiId = String(b.iconCustomEmojiId || (b as any).icon_custom_emoji_id || (b as any).icon)
+          }
+
+          if (b._ === 'keyboardButtonRequestPhone') {
+            btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonRequestGeoLocation') {
+            btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonRequestPoll') {
+            btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonUrl') {
+            btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonCallback') {
+            const b64 = Buffer.isBuffer(b.data) ? b.data.toString('base64') : (typeof b.data === 'string' ? b.data : '')
+            if (onCacheCallback && b.data) {
+              onCacheCallback(`${chatId}_${messageId}_${rIdx}_${cIdx}`, Buffer.from(b.data))
+            }
+            btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
+            btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonSwitchInline') {
+            btnRow.push({
+              text: b.text,
+              type: 'switch_inline',
+              switchInlineQuery: b.query ?? '',
+              switchInlineQueryCurrentChat: Boolean(b.samePeer),
+              _: 'keyboardButtonSwitchInline',
+              style: btnStyle,
+              iconCustomEmojiId,
+            })
+          } else if (b._ === 'keyboardButtonBuy') {
+            btnRow.push({
+              text: b.text,
+              type: 'buy',
+              _: 'keyboardButtonBuy',
+              style: btnStyle || 'success',
+              iconCustomEmojiId,
+            })
+          } else if (b.text) {
+            btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
+          }
+        }
+      }
+      if (btnRow.length > 0) rows.push(btnRow)
+    }
+    if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
+      return {
+        rows,
+        _: rawMarkup._,
+        resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
+        singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
+        selective: Boolean(rawMarkup.selective),
+        persistent: Boolean(rawMarkup.persistent),
+        placeholder: rawMarkup.placeholder,
+      }
+    }
+  }
+  return undefined
 }
 
 export function parsePollFromMedia(media: any, messageId: number): PollItem | undefined {
@@ -2121,81 +2227,10 @@ export class AccountManager {
         }
       }
 
-      let replyMarkup: MessageItem['replyMarkup'] = undefined
       const rawMarkup = raw.replyMarkup || raw.reply_markup
-      if (rawMarkup?._ === 'replyKeyboardHide') {
-        replyMarkup = { rows: [], _: 'replyKeyboardHide' }
-      } else if ((rawMarkup?._ === 'replyInlineMarkup' || rawMarkup?._ === 'replyKeyboardMarkup') && Array.isArray(rawMarkup.rows)) {
-        const rows: InlineButton[][] = []
-        for (let rIdx = 0; rIdx < rawMarkup.rows.length; rIdx++) {
-          const row = rawMarkup.rows[rIdx]
-          const btnRow: InlineButton[] = []
-          if (row?.buttons && Array.isArray(row.buttons)) {
-            for (let cIdx = 0; cIdx < row.buttons.length; cIdx++) {
-              const b = row.buttons[cIdx]
-              let btnStyle: 'primary' | 'danger' | 'success' | undefined = undefined
-              const rawStyle = b.style || (b as any).theme || (b as any).color
-              if (rawStyle) {
-                const sName = typeof rawStyle === 'string' ? rawStyle : (rawStyle._ || rawStyle.type || '')
-                if (/success|green/i.test(sName)) btnStyle = 'success'
-                else if (/danger|red/i.test(sName)) btnStyle = 'danger'
-                else if (/primary|blue/i.test(sName)) btnStyle = 'primary'
-              }
-              const iconCustomEmojiId = b.iconCustomEmojiId
-                ? String(b.iconCustomEmojiId)
-                : ((b as any).icon_custom_emoji_id ? String((b as any).icon_custom_emoji_id) : undefined)
-
-              if (b._ === 'keyboardButtonRequestPhone') {
-                btnRow.push({ text: b.text, type: 'request_phone', _: 'keyboardButtonRequestPhone', style: btnStyle, iconCustomEmojiId })
-              } else if (b._ === 'keyboardButtonRequestGeoLocation') {
-                btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
-              } else if (b._ === 'keyboardButtonRequestPoll') {
-                btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
-              } else if (b._ === 'keyboardButtonUrl') {
-                btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
-              } else if (b._ === 'keyboardButtonCallback') {
-                const b64 = Buffer.from(b.data).toString('base64')
-                this.botButtonCache.set(`${chatId}_${msg.id}_${rIdx}_${cIdx}`, Buffer.from(b.data))
-                btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
-              } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
-                btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
-              } else if (b._ === 'keyboardButtonSwitchInline') {
-                btnRow.push({
-                  text: b.text,
-                  type: 'switch_inline',
-                  switchInlineQuery: b.query ?? '',
-                  switchInlineQueryCurrentChat: Boolean(b.samePeer),
-                  _: 'keyboardButtonSwitchInline',
-                  style: btnStyle,
-                  iconCustomEmojiId,
-                })
-              } else if (b._ === 'keyboardButtonBuy') {
-                btnRow.push({
-                  text: b.text,
-                  type: 'buy',
-                  _: 'keyboardButtonBuy',
-                  style: btnStyle || 'success',
-                  iconCustomEmojiId,
-                })
-              } else if (b.text) {
-                btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
-              }
-            }
-          }
-          if (btnRow.length > 0) rows.push(btnRow)
-        }
-        if (rows.length > 0 || rawMarkup._ === 'replyKeyboardMarkup') {
-          replyMarkup = {
-            rows,
-            _: rawMarkup._,
-            resize: Boolean(rawMarkup.resize || rawMarkup.resize_keyboard),
-            singleUse: Boolean(rawMarkup.single_use || rawMarkup.one_time_keyboard),
-            selective: Boolean(rawMarkup.selective),
-            persistent: Boolean(rawMarkup.persistent),
-            placeholder: rawMarkup.placeholder,
-          }
-        }
-      }
+      const replyMarkup = parseMtprotoReplyMarkup(rawMarkup, chatId, msg.id, (key, data) => {
+        this.botButtonCache.set(key, data)
+      })
 
       const item: MessageItem = {
         id: msg.id,
@@ -2496,17 +2531,26 @@ export class AccountManager {
         const unreadMentionsCount = d.unreadMentionsCount || 0
         const isPinned = Boolean(d.isPinned)
 
-        // Accurate isMuted calculation (Official MTProto & mtcute spec):
-        const rawNotify = (d.raw as any)?.notifySettings
+        // Accurate isMuted calculation (Official Telegram MTProto & TDesktop spec):
+        const rawNotify = (d.raw as any)?.notifySettings || (d.raw as any)?.notify_settings
         const muteUntil = rawNotify?.muteUntil ?? (rawNotify as any)?.mute_until
         const silent = Boolean(rawNotify?.silent)
+        const nowSec = Math.floor(Date.now() / 1000)
+
         let isMuted = false
-        if (d.isMuted === true || silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000)) {
+        if (silent || (typeof muteUntil === 'number' && (muteUntil > nowSec || muteUntil === 2147483647))) {
+          // Explicitly muted by user or timestamp in the future
           isMuted = true
-        } else if (d.isMuted === false || (typeof muteUntil === 'number' && muteUntil === 0)) {
+        } else if (typeof muteUntil === 'number' && muteUntil === 0) {
+          // Explicitly unmuted by user (Telegram MTProto sends mute_until: 0 on unmute)
           isMuted = false
         } else if (isBroadcast) {
-          isMuted = true // Broadcast channels in Telegram are muted by default unless explicitly unmuted
+          // Broadcast channels in Telegram are strictly muted by default unless explicitly unmuted (muteUntil === 0)
+          isMuted = true
+        } else if (d.isMuted === true) {
+          isMuted = true
+        } else if (d.isMuted === false) {
+          isMuted = false
         }
 
         const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
@@ -4354,6 +4398,117 @@ export class AccountManager {
     }
   }
 
+  /**
+   * Resolves the on-disk file path for a downloaded / cached media item.
+   */
+  public getExistingCachedMediaPath(
+    accountId: string,
+    chatId: string,
+    messageId: number,
+    candidateUrl?: string
+  ): string | null {
+    if (candidateUrl && candidateUrl.startsWith('guidegram-media://')) {
+      const decoded = decodeURIComponent(candidateUrl.replace(/^guidegram-media:\/\//, ''))
+      if (fs.existsSync(decoded) && fs.statSync(decoded).size > 0) {
+        return decoded
+      }
+    }
+
+    const cleanChatId = String(chatId).trim()
+    const bareId = cleanChatId.replace(/^-100/, '').replace(/^-/, '')
+    const prefixes = [
+      `media_${accountId}_${cleanChatId}_${messageId}`,
+      `media_${accountId}_${bareId}_${messageId}`,
+      `media_${accountId}_-100${bareId}_${messageId}`,
+      `media_${accountId}_-${bareId}_${messageId}`,
+      `${accountId}_${cleanChatId}_${messageId}`,
+      `${accountId}_${bareId}_${messageId}`,
+    ]
+
+    try {
+      if (fs.existsSync(this.mediaDir)) {
+        const files = fs.readdirSync(this.mediaDir)
+        for (const p of prefixes) {
+          const match = files.find((f) => f.startsWith(p) && !f.includes('_thumb'))
+          if (match) {
+            const full = path.join(this.mediaDir, match)
+            if (fs.existsSync(full) && fs.statSync(full).size > 0) {
+              return full
+            }
+          }
+        }
+      }
+    } catch (e) {
+      Logger.warn('[AccountManager] getExistingCachedMediaPath error:', e)
+    }
+
+    return null
+  }
+
+  /**
+   * Opens the host OS file explorer (Windows Explorer / Finder) and highlights the media file.
+   * If the file is not downloaded yet, downloads it first.
+   */
+  public async showMediaInFolder(
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> {
+    try {
+      let sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId)
+      if (!sourcePath) {
+        const mediaUrl = await this.downloadMedia(accountId, chatId, messageId, false)
+        if (mediaUrl) {
+          sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId, mediaUrl)
+        }
+      }
+
+      if (!sourcePath || !fs.existsSync(sourcePath)) {
+        return { success: false, error: 'File could not be found or downloaded.' }
+      }
+
+      shell.showItemInFolder(path.normalize(sourcePath))
+      return { success: true, filePath: sourcePath }
+    } catch (err: any) {
+      Logger.error('[AccountManager] showMediaInFolder error:', err)
+      return { success: false, error: err?.message || 'Failed to reveal file in folder' }
+    }
+  }
+
+  /**
+   * Opens the file with the default registered host application (e.g. PDF viewer, media player).
+   * If the file is not downloaded yet, downloads it first.
+   */
+  public async openMediaFile(
+    accountId: string,
+    chatId: string,
+    messageId: number
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> {
+    try {
+      let sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId)
+      if (!sourcePath) {
+        const mediaUrl = await this.downloadMedia(accountId, chatId, messageId, false)
+        if (mediaUrl) {
+          sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId, mediaUrl)
+        }
+      }
+
+      if (!sourcePath || !fs.existsSync(sourcePath)) {
+        return { success: false, error: 'File could not be found or downloaded.' }
+      }
+
+      const openErr = await shell.openPath(path.normalize(sourcePath))
+      if (openErr) {
+        Logger.warn('[AccountManager] shell.openPath error:', openErr)
+        return { success: false, error: openErr }
+      }
+      return { success: true, filePath: sourcePath }
+    } catch (err: any) {
+      Logger.error('[AccountManager] openMediaFile error:', err)
+      return { success: false, error: err?.message || 'Failed to open file' }
+    }
+  }
+
   public async saveMediaToFile(
     win: BrowserWindow | null,
     accountId: string,
@@ -4368,28 +4523,7 @@ export class AccountManager {
       const mediaUrl = await this.downloadMedia(accountId, chatId, messageId, false)
       if (!mediaUrl) return { success: false, error: 'Failed to download media' }
 
-      const cacheKey = `${accountId}_${chatId}_${messageId}`
-      let sourcePath = ''
-      const exts = ['.mp4', '.jpg', '.png', '.webp', '.ogg', '.pdf', '.bin', '']
-      for (const ext of exts) {
-        const p1 = path.join(this.mediaDir, `media_${cacheKey}${ext}`)
-        const p2 = path.join(this.mediaDir, `${cacheKey}${ext}`)
-        if (fs.existsSync(p1) && fs.statSync(p1).size > 0) {
-          sourcePath = p1
-          break
-        }
-        if (fs.existsSync(p2) && fs.statSync(p2).size > 0) {
-          sourcePath = p2
-          break
-        }
-      }
-
-      if (!sourcePath && mediaUrl.startsWith('guidegram-media://')) {
-        const candidate = mediaUrl.replace(/^guidegram-media:\/\//, '')
-        if (fs.existsSync(candidate) && fs.statSync(candidate).size > 0) {
-          sourcePath = candidate
-        }
-      }
+      let sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId, mediaUrl)
 
       if (!sourcePath || !fs.existsSync(sourcePath)) {
         return { success: false, error: 'Cached file not found' }
@@ -6074,18 +6208,23 @@ export class AccountManager {
           }
         }
 
-        const notifySettings = res.fullChat?.notifySettings
+        const rawNotify = res.fullChat?.notifySettings || res.fullChat?.notify_settings || res.fullChat?.notificationsSettings || (res.fullChat as any)?.fullChat?.notifySettings
         let isMuted = false
         const nowSec = Math.floor(Date.now() / 1000)
-        if (notifySettings) {
-          if (notifySettings.silent === true) {
+        const isBroadcastChannel = Boolean(c && ((c as any).broadcast || !(c as any).megagroup))
+        if (rawNotify) {
+          const muteVal = rawNotify.muteUntil !== undefined && rawNotify.muteUntil !== null
+            ? Number(rawNotify.muteUntil)
+            : (rawNotify.mute_until !== undefined ? Number(rawNotify.mute_until) : undefined)
+          if (rawNotify.silent === true || (muteVal !== undefined && (muteVal > nowSec || muteVal === 2147483647))) {
             isMuted = true
-          } else if (notifySettings.muteUntil !== undefined && notifySettings.muteUntil !== null) {
-            const muteVal = Number(notifySettings.muteUntil)
-            if (muteVal > nowSec || muteVal === 2147483647) {
-              isMuted = true
-            }
+          } else if (muteVal === 0) {
+            isMuted = false
+          } else if (isBroadcastChannel) {
+            isMuted = true
           }
+        } else if (isBroadcastChannel) {
+          isMuted = true
         }
 
         const rawCall = res.fullChat?.call
@@ -6220,17 +6359,17 @@ export class AccountManager {
           }
         }
 
-        const notifySettings = res.fullChat?.notifySettings
+        const rawNotify = res.fullChat?.notifySettings || res.fullChat?.notify_settings || res.fullChat?.notificationsSettings || (res.fullChat as any)?.fullChat?.notifySettings
         let isMuted = false
         const nowSec = Math.floor(Date.now() / 1000)
-        if (notifySettings) {
-          if (notifySettings.silent === true) {
+        if (rawNotify) {
+          const muteVal = rawNotify.muteUntil !== undefined && rawNotify.muteUntil !== null
+            ? Number(rawNotify.muteUntil)
+            : (rawNotify.mute_until !== undefined ? Number(rawNotify.mute_until) : undefined)
+          if (rawNotify.silent === true || (muteVal !== undefined && (muteVal > nowSec || muteVal === 2147483647))) {
             isMuted = true
-          } else if (notifySettings.muteUntil !== undefined && notifySettings.muteUntil !== null) {
-            const muteVal = Number(notifySettings.muteUntil)
-            if (muteVal > nowSec || muteVal === 2147483647) {
-              isMuted = true
-            }
+          } else if (muteVal === 0) {
+            isMuted = false
           }
         }
 
@@ -6931,6 +7070,117 @@ export class AccountManager {
       return true
     } catch (err) {
       Logger.error('[AccountManager] toggleChatNotifications error:', err)
+      return false
+    }
+  }
+
+  public async toggleDialogPin(accountId: string, chatId: string, pinned: boolean): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.call({
+        _: 'messages.toggleDialogPin',
+        pinned,
+        peer: { _: 'inputDialogPeer', peer: inputPeer },
+      })
+      const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        if (cached && cached.length > 0) {
+          const next = cached.map((d) => (d.id === chatId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanPeerId) ? { ...d, isPinned: pinned } : d)
+          this.store.saveDialogsCache(accountId, next)
+        }
+      } catch (_) {}
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] toggleDialogPin error:', err)
+      return false
+    }
+  }
+
+  public async markDialogUnread(accountId: string, chatId: string, unread: boolean): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      await holder.client.call({
+        _: 'messages.markDialogUnread',
+        unread,
+        peer: { _: 'inputDialogPeer', peer: inputPeer },
+      })
+      const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        if (cached && cached.length > 0) {
+          const next = cached.map((d) => (d.id === chatId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanPeerId) ? { ...d, unreadCount: unread ? Math.max(1, d.unreadCount || 1) : 0 } : d)
+          this.store.saveDialogsCache(accountId, next)
+        }
+      } catch (_) {}
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] markDialogUnread error:', err)
+      return false
+    }
+  }
+
+  public async deleteChatHistory(accountId: string, chatId: string, revoke = true): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      if (inputPeer._ === 'inputPeerChannel') {
+        await holder.client.call({
+          _: 'channels.deleteHistory',
+          channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
+          maxId: 2147483647,
+          forEveryone: revoke,
+        })
+      } else {
+        await holder.client.call({
+          _: 'messages.deleteHistory',
+          peer: inputPeer,
+          maxId: 2147483647,
+          revoke,
+        })
+      }
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] deleteChatHistory error:', err)
+      return false
+    }
+  }
+
+  public async leaveChat(accountId: string, chatId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    try {
+      const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      if (inputPeer._ === 'inputPeerChannel') {
+        await holder.client.call({
+          _: 'channels.leaveChannel',
+          channel: { _: 'inputChannel', channelId: inputPeer.channelId, accessHash: inputPeer.accessHash },
+        })
+      } else if (inputPeer._ === 'inputPeerChat') {
+        await holder.client.call({
+          _: 'messages.deleteChatUser',
+          chatId: inputPeer.chatId,
+          userId: { _: 'inputUserSelf' },
+        })
+      } else {
+        await this.deleteChatHistory(accountId, chatId, true)
+      }
+      const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        if (cached && cached.length > 0) {
+          const next = cached.filter((d) => d.id !== chatId && d.id.replace(/^-100/, '').replace(/^-/, '') !== cleanPeerId)
+          this.store.saveDialogsCache(accountId, next)
+        }
+      } catch (_) {}
+      return true
+    } catch (err) {
+      Logger.error('[AccountManager] leaveChat error:', err)
       return false
     }
   }
