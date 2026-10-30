@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 7,
-    "githubIssuesCommented": 2,
+    "totalActivities": 10,
+    "githubIssuesCommented": 5,
     "githubPullRequests": 1,
     "hackernewsPosts": 1,
     "hackernewsComments": 1,
@@ -17,6 +17,51 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_kotatogram_361",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "kotatogram/kotatogram-desktop",
+      "targetIssueNumber": 361,
+      "targetTitle": "[Feature Request] Local accounts hidden and can be unlocked by different passcode",
+      "targetUser": "hkfsc",
+      "url": "https://github.com/kotatogram/kotatogram-desktop/issues/361#issuecomment-6534027899",
+      "issueUrl": "https://github.com/kotatogram/kotatogram-desktop/issues/361",
+      "status": "live_public",
+      "summary": "Detailed architectural solution for plausible deniability, per-account isolated session vaults, independent key derivation (PBKDF2/Argon2id), and decoupled stealth unlock as implemented in Guidegram.",
+      "timestamp": "2026-10-30T21:39:39Z"
+    },
+    {
+      "id": "gh_comment_ayugram_203",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "AyuGram/AyuGramDesktop",
+      "targetIssueNumber": 203,
+      "targetTitle": "Better AntiRecall: Automatically download all updated posts in channel to prevent them from being deleted",
+      "targetUser": "yesingyesing",
+      "url": "https://github.com/AyuGram/AyuGramDesktop/issues/203#issuecomment-6534017317",
+      "issueUrl": "https://github.com/AyuGram/AyuGramDesktop/issues/203",
+      "status": "live_public",
+      "summary": "Explained Telegram server-side file_reference expiration upon message deletion and detailed Guidegram's proactive background stream ingress architecture for media Anti-Delete caching.",
+      "timestamp": "2026-10-30T21:39:08Z"
+    },
+    {
+      "id": "gh_comment_ayugram_231",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "AyuGram/AyuGramDesktop",
+      "targetIssueNumber": 231,
+      "targetTitle": "Add Download Speed Boost Option",
+      "targetUser": "ghost",
+      "url": "https://github.com/AyuGram/AyuGramDesktop/issues/231#issuecomment-6534002615",
+      "issueUrl": "https://github.com/AyuGram/AyuGramDesktop/issues/231",
+      "status": "live_public",
+      "summary": "Explained TCP windowing limitations on single-connection MTProto downloads and detailed Guidegram's 4-8 parallel worker chunk segmentation engine achieving 3x-5x speedups.",
+      "timestamp": "2026-10-30T21:38:23Z"
+    },
     {
       "id": "gh_comment_kotatogram_69",
       "platform": "github",
