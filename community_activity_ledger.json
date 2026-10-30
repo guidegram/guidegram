@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 26,
-    "githubIssuesCommented": 19,
+    "totalActivities": 27,
+    "githubIssuesCommented": 20,
     "githubPullRequests": 2,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_29485",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 29485,
+      "targetTitle": "Saved Messages sublists are no longer available for private channels without active subscription",
+      "targetUser": "reallyuniquename",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/29485#issuecomment-6535395946",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/29485",
+      "status": "live_public",
+      "summary": "Diagnosed SavedSublist resolution coupling with remote PeerData accessHash, explained why private channel expiration suppresses sublists while raw messages exist, and detailed Guidegram's immutable local originator snapshot architecture.",
+      "timestamp": "2026-10-30T23:07:04Z"
+    },
     {
       "id": "gh_pr_awesome_alternative_front_ends_41",
       "platform": "github",
