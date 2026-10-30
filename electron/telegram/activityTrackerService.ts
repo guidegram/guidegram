@@ -174,6 +174,27 @@ export class ActivityTrackerService {
       delete data[accountId]
       this.scheduleSaveStatus(accountId)
     }
+
+    // Auto-sanitization: deduplicate consecutive identical statuses and limit to 50
+    let didSanitize = false
+    for (const [userId, recs] of Object.entries(data)) {
+      if (!Array.isArray(recs) || recs.length === 0) continue
+      const dedup: UserStatusRecord[] = [recs[0]]
+      for (let i = 1; i < recs.length; i++) {
+        if (recs[i].status !== dedup[dedup.length - 1].status) {
+          dedup.push(recs[i])
+        }
+      }
+      const bounded = dedup.length > 50 ? dedup.slice(-50) : dedup
+      if (bounded.length !== recs.length) {
+        data[userId] = bounded
+        didSanitize = true
+      }
+    }
+    if (didSanitize) {
+      this.scheduleSaveStatus(accountId)
+    }
+
     this.statusCache.set(accountId, data)
     return data
   }
@@ -195,7 +216,17 @@ export class ActivityTrackerService {
     // Universal self-exclusion migration cleanup: never keep account's own changes
     const initialLen = data.length
     data = data.filter((c) => c.userId !== accountId)
-    if (data.length !== initialLen) {
+
+    // Strip inline base64 data URLs to prevent JSON bloat
+    let didSanitizeChanges = false
+    for (const c of data) {
+      if (c && c.userAvatarUrl && typeof c.userAvatarUrl === 'string' && c.userAvatarUrl.startsWith('data:image')) {
+        c.userAvatarUrl = undefined
+        didSanitizeChanges = true
+      }
+    }
+
+    if (data.length !== initialLen || didSanitizeChanges) {
       this.scheduleSaveChanges(accountId)
     }
     this.changesCache.set(accountId, data)
@@ -221,55 +252,68 @@ export class ActivityTrackerService {
       delete data[accountId]
       this.scheduleSaveSnapshots(accountId)
     }
+
+    // Strip inline base64 data URLs
+    let didSanitizeSnapshots = false
+    for (const [userId, s] of Object.entries(data)) {
+      if (s && s.avatarUrl && typeof s.avatarUrl === 'string' && s.avatarUrl.startsWith('data:image')) {
+        s.avatarUrl = undefined
+        didSanitizeSnapshots = true
+      }
+    }
+    if (didSanitizeSnapshots) {
+      this.scheduleSaveSnapshots(accountId)
+    }
+
     this.snapshotsCache.set(accountId, data)
     return data
   }
 
   private scheduleSaveStatus(accountId: string): void {
     if (this.saveStatusTimers.has(accountId)) return
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       this.saveStatusTimers.delete(accountId)
       try {
         const data = this.statusCache.get(accountId)
         if (data) {
-          fs.writeFileSync(this.getStatusFilePath(accountId), JSON.stringify(data), 'utf-8')
+          await fs.promises.writeFile(this.getStatusFilePath(accountId), JSON.stringify(data), 'utf-8')
         }
       } catch (err) {
         Logger.warn(`[ActivityTracker] Failed to save status for ${accountId}:`, err)
       }
-    }, 2000)
+    }, 4000)
     this.saveStatusTimers.set(accountId, timer)
   }
 
   private scheduleSaveChanges(accountId: string): void {
     if (this.saveChangesTimers.has(accountId)) return
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       this.saveChangesTimers.delete(accountId)
       try {
         const data = this.changesCache.get(accountId)
         if (data) {
-          fs.writeFileSync(this.getChangesFilePath(accountId), JSON.stringify(data), 'utf-8')
+          await fs.promises.writeFile(this.getChangesFilePath(accountId), JSON.stringify(data), 'utf-8')
         }
       } catch (err) {
         Logger.warn(`[ActivityTracker] Failed to save changes for ${accountId}:`, err)
       }
-    }, 1500)
+    }, 3000)
     this.saveChangesTimers.set(accountId, timer)
   }
 
   private scheduleSaveSnapshots(accountId: string): void {
     if (this.saveSnapshotsTimers.has(accountId)) return
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       this.saveSnapshotsTimers.delete(accountId)
       try {
         const data = this.snapshotsCache.get(accountId)
         if (data) {
-          fs.writeFileSync(this.getSnapshotsFilePath(accountId), JSON.stringify(data), 'utf-8')
+          await fs.promises.writeFile(this.getSnapshotsFilePath(accountId), JSON.stringify(data), 'utf-8')
         }
       } catch (err) {
         Logger.warn(`[ActivityTracker] Failed to save snapshots for ${accountId}:`, err)
       }
-    }, 2500)
+    }, 5000)
     this.saveSnapshotsTimers.set(accountId, timer)
   }
 
@@ -345,9 +389,9 @@ export class ActivityTrackerService {
     }
     const history = allStatus[userId]
 
-    // Deduplicate identical last status if within 15 seconds
+    // Deduplicate identical last status: only record when status ACTUALLY changes!
     const lastRec = history[history.length - 1]
-    if (lastRec && lastRec.status === parsed.status && Math.abs(now - lastRec.timestamp) < 15) {
+    if (lastRec && lastRec.status === parsed.status) {
       return
     }
 
@@ -359,9 +403,9 @@ export class ActivityTrackerService {
     }
     history.push(newRecord)
 
-    // Keep memory history bounded (max 500 events per user)
-    if (history.length > 500) {
-      allStatus[userId] = history.slice(-500)
+    // Keep memory history bounded (max 50 events per user instead of 500)
+    if (history.length > 50) {
+      allStatus[userId] = history.slice(-50)
     }
 
     // Active session handling
@@ -428,12 +472,22 @@ export class ActivityTrackerService {
       ...change,
     }
 
+    if (event.userAvatarUrl && typeof event.userAvatarUrl === 'string' && event.userAvatarUrl.startsWith('data:image')) {
+      event.userAvatarUrl = undefined
+    }
+    if ((event as any).oldPhotoUrl && typeof (event as any).oldPhotoUrl === 'string' && (event as any).oldPhotoUrl.startsWith('data:image')) {
+      ;(event as any).oldPhotoUrl = undefined
+    }
+    if ((event as any).newPhotoUrl && typeof (event as any).newPhotoUrl === 'string' && (event as any).newPhotoUrl.startsWith('data:image')) {
+      ;(event as any).newPhotoUrl = undefined
+    }
+
     // Prepend (newest first)
     changes.unshift(event)
 
-    // Bound maximum change history per account to 2000 events
-    if (changes.length > 2000) {
-      this.changesCache.set(accountId, changes.slice(0, 2000))
+    // Bound maximum change history per account to 500 events to prevent JSON bloat
+    if (changes.length > 500) {
+      this.changesCache.set(accountId, changes.slice(0, 500))
     }
 
     this.scheduleSaveChanges(accountId)
@@ -546,7 +600,8 @@ export class ActivityTrackerService {
 
     const isMutual = relation?.isMutual ?? (user.mutualContact !== undefined ? Boolean(user.mutualContact) : prev?.isMutualContact)
     const isContact = relation?.isContact ?? (user.contact !== undefined ? Boolean(user.contact) : prev?.isContact)
-    const currentAvatarUrl = meta?.avatarUrl || user.avatarUrl
+    const rawAvatarUrl = meta?.avatarUrl || user.avatarUrl
+    const currentAvatarUrl = rawAvatarUrl && typeof rawAvatarUrl === 'string' && !rawAvatarUrl.startsWith('data:image') ? rawAvatarUrl : undefined
 
     // Robust Photo Extraction
     const hasPhotoInfo = user.photo !== undefined || user.raw?.photo !== undefined

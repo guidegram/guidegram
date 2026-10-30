@@ -19,13 +19,13 @@ importers:
         version: 1.32.2(zod@4.6.7)
       '@mtcute/convert':
         specifier: 0.32.1
-        version: 0.32.1(@mtcute/node@0.32.1)
+        version: 0.32.1(@mtcute/node@0.32.1(ws@8.22.0))
       '@mtcute/core':
         specifier: 0.32.1
         version: 0.32.1
       '@mtcute/node':
         specifier: 0.32.1
-        version: 0.32.1
+        version: 0.32.1(ws@8.22.0)
       '@mtcute/wasm':
         specifier: 0.32.0
         version: 0.32.0
@@ -53,6 +53,9 @@ importers:
       tailwind-merge:
         specifier: ^3.0.1
         version: 3.6.0
+      ws:
+        specifier: ^8.22.0
+        version: 8.22.0
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -2891,6 +2894,18 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   xcode@3.0.1:
     resolution: {integrity: sha512-kCz5k7J7XbJtjABOvkc5lJmkiDh8VhjVCGNiqdKCscmVpdVUpEAyXv1xmCLkQJ5dsHqx3IPO4XW+NTDhU/fatA==}
     engines: {node: '>=10.0.0'}
@@ -3271,11 +3286,13 @@ snapshots:
       '@fuman/io': 0.0.21
       '@fuman/utils': 0.0.21
 
-  '@fuman/node@0.0.21':
+  '@fuman/node@0.0.21(ws@8.22.0)':
     dependencies:
       '@fuman/io': 0.0.21
       '@fuman/net': 0.0.21
       '@fuman/utils': 0.0.21
+    optionalDependencies:
+      ws: 8.22.0
 
   '@fuman/utils@0.0.21': {}
 
@@ -3428,14 +3445,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@mtcute/convert@0.32.1(@mtcute/node@0.32.1)':
+  '@mtcute/convert@0.32.1(@mtcute/node@0.32.1(ws@8.22.0))':
     dependencies:
       '@fuman/io': 0.0.21
       '@fuman/net': 0.0.21
       '@fuman/utils': 0.0.21
       '@mtcute/core': 0.32.1
     optionalDependencies:
-      '@mtcute/node': 0.32.1
+      '@mtcute/node': 0.32.1(ws@8.22.0)
 
   '@mtcute/core@0.32.1':
     dependencies:
@@ -3464,10 +3481,10 @@ snapshots:
       '@mtcute/core': 0.32.1
       long: 5.3.2
 
-  '@mtcute/node@0.32.1':
+  '@mtcute/node@0.32.1(ws@8.22.0)':
     dependencies:
       '@fuman/net': 0.0.21
-      '@fuman/node': 0.0.21
+      '@fuman/node': 0.0.21(ws@8.22.0)
       '@fuman/utils': 0.0.21
       '@mtcute/core': 0.32.1
       '@mtcute/html-parser': 0.32.1
@@ -6016,6 +6033,8 @@ snapshots:
       strip-ansi: 7.2.0
 
   wrappy@1.0.2: {}
+
+  ws@8.22.0: {}
 
   xcode@3.0.1:
     dependencies:

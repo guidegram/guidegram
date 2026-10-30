@@ -383,6 +383,16 @@ export const ChatList = React.memo<ChatListProps>(({
     return true
   })
 
+  // Incremental rendering to prevent allocating hundreds of DOM elements & React nodes
+  const [displayLimit, setDisplayLimit] = useState(40)
+  useEffect(() => {
+    setDisplayLimit(40)
+  }, [activeTab, searchQuery, pvFilter, dialogs.length])
+
+  const visibleDialogs = React.useMemo(() => {
+    return filteredDialogs.slice(0, displayLimit)
+  }, [filteredDialogs, displayLimit])
+
   // Seamlessly merge local matching dialogs with server myPeers (full Telegram parity)
   const chatsAndContacts = React.useMemo(() => {
     const map = new Map<string, DialogItem>()
@@ -969,12 +979,13 @@ export const ChatList = React.memo<ChatListProps>(({
         aria-label={t('app.all_chats') || 'Chat Conversations'}
         onScroll={(e) => {
           const el = e.currentTarget
-          if (
-            !searchQuery.trim() &&
-            (el.scrollTop + el.clientHeight >= el.scrollHeight - 500 ||
-             el.scrollTop + el.clientHeight >= el.scrollHeight - 180)
-          ) {
-            onLoadMoreDialogs?.()
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) {
+            if (displayLimit < filteredDialogs.length) {
+              setDisplayLimit((prev) => Math.min(prev + 30, filteredDialogs.length))
+            }
+            if (!searchQuery.trim()) {
+              onLoadMoreDialogs?.()
+            }
           }
         }}
         className="flex-1 overflow-y-auto min-h-0 focus-visible:outline-none smooth-scroll-physics"
@@ -1160,7 +1171,7 @@ export const ChatList = React.memo<ChatListProps>(({
             <span className="font-medium text-gray-300">{t('app.no_chats')}</span>
           </div>
         ) : (
-          filteredDialogs.map((dialog) => (
+          visibleDialogs.map((dialog) => (
             <DialogListItem
               key={dialog.id}
               dialog={dialog}

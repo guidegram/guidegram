@@ -1089,6 +1089,7 @@ export class AccountManager {
   private avatarCache = new Map<string, string>()
   private thumbCache = new Map<string, string>()
   private mediaCache = new Map<string, string>()
+  private failedMediaKeys = new Set<string>()
   private inFlightDownloads = new Map<string, Promise<string | null>>()
   private activeMediaDownloads = new Map<string, { abort: () => void; isCancelled: () => boolean }>()
   private customEmojiCache = new Map<string, CustomEmojiPayload>()
@@ -3128,6 +3129,9 @@ export class AccountManager {
       const keys = Array.from(this.mediaCache.keys()).slice(0, this.mediaCache.size - 50)
       for (const k of keys) this.mediaCache.delete(k)
     }
+    if (this.failedMediaKeys.size > 500) {
+      this.failedMediaKeys.clear()
+    }
   }
 
   public async getMessages(
@@ -4030,6 +4034,7 @@ export class AccountManager {
     const client = holder.client
 
     const cacheKey = `${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}`
+    if (this.failedMediaKeys.has(cacheKey)) return null
     if (this.mediaCache.has(cacheKey)) return this.mediaCache.get(cacheKey)!
 
     if (this.inFlightDownloads.has(cacheKey)) {
@@ -4277,7 +4282,17 @@ export class AccountManager {
         return null
       } catch (err) {
         this.activeMediaDownloads.delete(cacheKey)
-        Logger.error('[AccountManager] downloadMedia error:', err)
+        const errMsg = String((err as any)?.message || err)
+        if (errMsg.includes('FILE_REFERENCE_EXPIRED') || errMsg.includes('400')) {
+          this.failedMediaKeys.add(cacheKey)
+          if (this.failedMediaKeys.size > 2000) {
+            const first = this.failedMediaKeys.values().next().value
+            if (first) this.failedMediaKeys.delete(first)
+          }
+          Logger.warn(`[AccountManager] Media ${cacheKey} reference expired (cached failure, suppressed loop)`)
+        } else {
+          Logger.error('[AccountManager] downloadMedia error:', err)
+        }
         return null
       } finally {
         this.inFlightDownloads.delete(cacheKey)
@@ -15333,7 +15348,39 @@ export class AccountManager {
         }
         const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
         if (msg.id > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msg.id)
+        if (msg.id) {
+          this.rawMessagesCache.set(`${accountId}_${chatId}_${msg.id}`, msg.raw || msg)
+          const bareId = chatId.replace(/^-100/, '').replace(/^-/, '')
+          this.rawMessagesCache.set(`${accountId}_${bareId}_${msg.id}`, msg.raw || msg)
+          if (this.rawMessagesCache.size > 3000) {
+            const keys = Array.from(this.rawMessagesCache.keys()).slice(0, 500)
+            for (const k of keys) this.rawMessagesCache.delete(k)
+          }
+        }
         this.store.recordMessage(accountId, chatId, item)
+
+        // Ultra-fast auto-download for incoming photos in private chats so they are preserved locally even if deleted
+        const isPrivateChat = chat
+          ? (chat.chatType === 'private' || chat.chatType === 'bot')
+          : (!chatId.startsWith('-'))
+        if (mediaType === 'photo' && isPrivateChat && msg.id && !isOutgoing) {
+          this.downloadMedia(accountId, chatId, msg.id, false)
+            .then((downloadedUrl) => {
+              if (downloadedUrl) {
+                this.onEventCallback?.('telegram:media-downloaded', {
+                  accountId,
+                  chatId,
+                  messageId: msg.id,
+                  mediaUrl: downloadedUrl,
+                })
+              }
+            })
+            .catch((dlErr) => {
+              Logger.warn(`[AccountManager] Fast auto-download for PV photo ${msg.id} encountered error:`, dlErr)
+            })
+          this.downloadMedia(accountId, chatId, msg.id, true).catch(() => {})
+        }
+
         this.onEventCallback?.('telegram:new-message', {
           accountId,
           chatId,
