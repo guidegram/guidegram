@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 28,
-    "githubIssuesCommented": 21,
+    "totalActivities": 29,
+    "githubIssuesCommented": 22,
     "githubPullRequests": 2,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_gotd_1856",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "gotd/td",
+      "targetIssueNumber": 1856,
+      "targetTitle": "mtproto: local clock skew silently drops every server message, so the client hangs",
+      "targetUser": "sorokin-vladimir",
+      "url": "https://github.com/gotd/td/issues/1856#issuecomment-6535464417",
+      "issueUrl": "https://github.com/gotd/td/issues/1856",
+      "status": "live_public",
+      "summary": "Diagnosed silent message dropping and hangs caused by raw clock checks, detailed why external UDP NTP fails across proxies, and provided a thread-safe atomic SyncedClock in-band calibration pattern.",
+      "timestamp": "2026-10-30T23:12:07Z"
+    },
     {
       "id": "gh_comment_gotd_1800",
       "platform": "github",
