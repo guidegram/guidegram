@@ -35,6 +35,11 @@ export class PersistentKvStorage extends MemoryStorage {
       origDeleteAll()
       this.scheduleSave()
     }
+
+    try {
+      process.on('beforeExit', () => this.flush())
+      process.on('exit', () => this.flush())
+    } catch (_) {}
   }
 
   private loadFromDisk(): void {
@@ -45,7 +50,7 @@ export class PersistentKvStorage extends MemoryStorage {
         if (data && typeof data === 'object') {
           for (const [k, v] of Object.entries(data)) {
             if (typeof v === 'string') {
-              this.kv.set(k, Buffer.from(v, 'base64'))
+              this.kv.set(k, new Uint8Array(Buffer.from(v, 'base64')))
             }
           }
         }

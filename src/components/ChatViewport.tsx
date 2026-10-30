@@ -89,7 +89,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem, StarGiftItem } from '../types/telegram'
+import { DialogItem, MessageItem, ChatDetails, MessageEntityItem, WebPagePreview, InstantViewArticle, CustomEmojiPayload, ForumTopicItem, ScheduledMessageItem, MessageReactionItem, StickerItem, ChannelBoostStatus, AutoDownloadConfig, InlineBotResultsPayload, InlineBotResultItem, QuickReplyShortcutItem, StarGiftItem, SendMediaOptions } from '../types/telegram'
 import lottie from 'lottie-web'
 import { Avatar } from './Avatar'
 import { VideoPlayer } from './VideoPlayer'
@@ -145,6 +145,7 @@ import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
 import { MediaViewerModal } from './MediaViewerModal'
 import { ImageEditorModal } from './media/ImageEditorModal'
+import { SendMediaPreviewModal } from './media/SendMediaPreviewModal'
 import { SmartContextMenu } from './SmartContextMenu'
 
 interface ChatViewportProps {
@@ -1519,6 +1520,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }
   const [stagedAttachments, setStagedAttachments] = useState<StagedAttachment[]>([])
   const [editingAttachment, setEditingAttachment] = useState<{ index: number; attachment: StagedAttachment } | null>(null)
+  const [sendMediaModalState, setSendMediaModalState] = useState<{
+    items: StagedAttachment[]
+    initialCaption?: string
+  } | null>(null)
   const [uploadProgress, setUploadProgress] = useState<{
     isUploading: boolean
     percent: number
@@ -1694,9 +1699,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
 
     if (newAttachments.length > 0) {
-      setStagedAttachments((prev) => [...prev, ...newAttachments])
-      showToast(`Added ${newAttachments.length} file(s) to send tray`)
-      setTimeout(() => textareaRef.current?.focus(), 50)
+      const hasMedia = newAttachments.some((a) => a.type === 'media')
+      if (hasMedia) {
+        setSendMediaModalState({
+          items: newAttachments,
+          initialCaption: inputText.trim(),
+        })
+      } else {
+        setStagedAttachments((prev) => [...prev, ...newAttachments])
+        showToast(`Added ${newAttachments.length} file(s) to send tray`)
+        setTimeout(() => textareaRef.current?.focus(), 50)
+      }
     }
   }
 
@@ -2766,8 +2779,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     [messages, handleScrollToBottom, handleJumpToTimestamp]
   )
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const clipboardData = e.clipboardData
+  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement> | ClipboardEvent) => {
+    const clipboardData = (e as any).clipboardData
     if (!clipboardData) return
 
     const items = clipboardData.items
@@ -2800,6 +2813,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             console.warn('[Paste] Failed to save temp file:', err)
           }
         }
+        if (!filePath && file.type?.startsWith('image/')) {
+          filePath = URL.createObjectURL(file)
+        }
 
         if (filePath) {
           newAttachments.push({
@@ -2815,24 +2831,30 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         const item = items[i]
         if (item.kind === 'file') {
           const file = item.getAsFile()
-          if (file && window.guidegram?.saveTempFile) {
-            try {
-              const buffer = await file.arrayBuffer()
-              const ext = file.type.split('/')[1] || 'png'
-              const filePath = await window.guidegram.saveTempFile({
-                buffer,
-                filename: `Pasted_Image_${Date.now()}.${ext}`,
-              })
-              if (filePath) {
-                newAttachments.push({
-                  path: filePath,
-                  name: `Pasted_Image_${Date.now()}.${ext}`,
-                  size: file.size,
-                  type: 'media',
+          if (file) {
+            let filePath = ''
+            if (window.guidegram?.saveTempFile) {
+              try {
+                const buffer = await file.arrayBuffer()
+                const ext = file.type.split('/')[1] || 'png'
+                filePath = await window.guidegram.saveTempFile({
+                  buffer,
+                  filename: `Pasted_Image_${Date.now()}.${ext}`,
                 })
+              } catch (err) {
+                console.warn('[Paste] Failed to save in-memory clipboard image:', err)
               }
-            } catch (err) {
-              console.warn('[Paste] Failed to save in-memory clipboard image:', err)
+            }
+            if (!filePath) {
+              filePath = URL.createObjectURL(file)
+            }
+            if (filePath) {
+              newAttachments.push({
+                path: filePath,
+                name: `Pasted_Image_${Date.now()}.png`,
+                size: file.size,
+                type: 'media',
+              })
             }
           }
         }
@@ -2841,10 +2863,120 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     if (newAttachments.length > 0) {
       e.preventDefault()
-      setStagedAttachments((prev) => [...prev, ...newAttachments])
-      showToast(`Attached ${newAttachments.length} item(s) from clipboard!`)
+      const hasMedia = newAttachments.some((a) => a.type === 'media')
+      if (hasMedia) {
+        setSendMediaModalState({
+          items: newAttachments,
+          initialCaption: inputText.trim(),
+        })
+      } else {
+        setStagedAttachments((prev) => [...prev, ...newAttachments])
+        showToast(`Attached ${newAttachments.length} item(s) from clipboard!`)
+      }
     }
-  }, [])
+  }, [inputText])
+
+  // Global Ctrl+V Image Paste listener (Telegram Desktop Parity)
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (document.activeElement === textareaRef.current) return
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+
+      const clipboardData = e.clipboardData
+      if (!clipboardData) return
+      const items = clipboardData.items
+      const files = clipboardData.files
+
+      const hasMedia =
+        (files && files.length > 0 && Array.from(files).some((f) => classifyDroppedFile(f) === 'media')) ||
+        (items &&
+          items.length > 0 &&
+          Array.from(items).some((it) => it.kind === 'file' && it.type.startsWith('image/')))
+
+      if (hasMedia) {
+        handlePaste(e as any)
+      }
+    }
+
+    window.addEventListener('paste', handleGlobalPaste)
+    return () => window.removeEventListener('paste', handleGlobalPaste)
+  }, [handlePaste])
+
+  // Handler for sending media directly from the SendMediaPreviewModal
+  const handleSendFromPreviewModal = async (
+    mediaItems: StagedAttachment[],
+    options: {
+      caption: string
+      compress: boolean
+      isSpoiler?: boolean
+    }
+  ) => {
+    setSendMediaModalState(null)
+    const replyId = replyMessage?.id ?? (activeTopicId !== null ? activeTopicId : undefined)
+
+    setInputText('')
+    setReplyMessage(null)
+    if (chat && window.guidegram?.saveDraft) {
+      window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
+    }
+
+    setUploadProgress({
+      isUploading: true,
+      percent: 5,
+      fileName: mediaItems[0]?.name,
+    })
+
+    try {
+      for (let i = 0; i < mediaItems.length; i++) {
+        const item = mediaItems[i]
+        const fileCaption = i === 0 ? options.caption : undefined
+        setUploadProgress({
+          isUploading: true,
+          percent: Math.round((i / mediaItems.length) * 100),
+          fileName:
+            mediaItems.length > 1
+              ? `[${i + 1}/${mediaItems.length}] ${item.name}`
+              : item.name,
+        })
+
+        if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+          const typingAction = options.compress ? 'upload_photo' : 'upload_document'
+          window.guidegram.sendTyping(chat.accountId, chat.id, typingAction).catch(() => {})
+        }
+
+        const sendOptions: SendMediaOptions = {
+          caption: fileCaption,
+          replyToMsgId: replyId,
+          // When compress is true (DEFAULT): forceDocument is false -> sent as photo!
+          // When compress is false: forceDocument is true -> sent as uncompressed document!
+          forceDocument: !options.compress,
+        }
+
+        if (onSendMedia) {
+          await onSendMedia(item.path, sendOptions)
+        } else if (chat?.accountId && chat?.id && window.guidegram?.sendMedia) {
+          await window.guidegram.sendMedia(chat.accountId, chat.id, item.path, sendOptions)
+        }
+      }
+
+      if (chatDetails?.slowModeSeconds && !chatDetails.isAdmin && !chatDetails.isCreator) {
+        setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
+      }
+    } catch (err: any) {
+      console.error('Failed to send media from preview modal:', err)
+      showToast(`Failed to send attachment: ${err?.message || err}`)
+    } finally {
+      setUploadProgress({ isUploading: false, percent: 0 })
+    }
+  }
 
   // Scroll to replied message and highlight it, fetching historical context if not loaded
   const handleScrollToReply = async (replyId: number) => {
@@ -3607,8 +3739,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             name: p.split(/[\\/]/).pop() || 'file',
             type: category,
           }))
-          setStagedAttachments((prev) => [...prev, ...newItems])
-          setTimeout(() => textareaRef.current?.focus(), 50)
+          if (category === 'media') {
+            setSendMediaModalState({
+              items: newItems,
+              initialCaption: inputText.trim(),
+            })
+          } else {
+            setStagedAttachments((prev) => [...prev, ...newItems])
+            setTimeout(() => textareaRef.current?.focus(), 50)
+          }
         }
       } else {
         if (category === 'media') imageInputRef.current?.click()
@@ -8325,7 +8464,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 size: f.size,
                 type: 'media',
               }))
-              setStagedAttachments((prev) => [...prev, ...newItems])
+              setSendMediaModalState({
+                items: newItems,
+                initialCaption: inputText.trim(),
+              })
             }
             setIsAttachMenuOpen(false)
           }}
@@ -11598,6 +11740,17 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           fileName={editingAttachment.attachment.name}
           onClose={() => setEditingAttachment(null)}
           onSave={handleSaveEditedImage}
+        />
+      )}
+
+      {/* 29. Telegram-Parity Send Media Preview Modal (Ctrl+V, drop, pick) */}
+      {sendMediaModalState && (
+        <SendMediaPreviewModal
+          isOpen={Boolean(sendMediaModalState)}
+          items={sendMediaModalState.items}
+          initialCaption={sendMediaModalState.initialCaption}
+          onClose={() => setSendMediaModalState(null)}
+          onSend={handleSendFromPreviewModal}
         />
       )}
     </div>

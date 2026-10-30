@@ -2703,7 +2703,7 @@ export class AccountManager {
           accessHash: rawAccessHash ? rawAccessHash.toString() : undefined,
           draft,
           userStatus,
-          isContact: Boolean(peer.isContact || (peer as any).raw?.contact || (peer as any).contact),
+          isContact: Boolean(peer.isContact || (peer as any).raw?.contact || (peer as any).contact || this.isContactPeer(accountId, peerId)),
           isMutualContact: Boolean(peer.isMutualContact || (peer as any).raw?.mutualContact || (peer as any).mutualContact),
         }
         dialogs.push(item)
@@ -2752,6 +2752,7 @@ export class AccountManager {
             avatarInitials: initials,
             avatarUrl: topMsg.senderAvatarUrl,
             username: topMsg.senderUsername,
+            isContact: this.isContactPeer(accountId, cId),
           })
         }
         } catch (auditDialogErr) {
@@ -2761,7 +2762,23 @@ export class AccountManager {
 
       // Persist dialogs to disk cache for instant zero-latency startup on next app launch!
       if (!offsetDate || offsetDate === 0) {
-        this.store.saveDialogsCache(accountId, dialogs)
+        try {
+          const existingCached = this.store.loadDialogsCache(accountId) || []
+          const mergedMap = new Map<string, DialogItem>()
+          for (const cd of existingCached) {
+            if (cd.id) mergedMap.set(cd.id, cd)
+          }
+          for (const nd of dialogs) {
+            if (nd.id) {
+              const prevItem = mergedMap.get(nd.id)
+              mergedMap.set(nd.id, prevItem ? { ...prevItem, ...nd, isContact: nd.isContact || prevItem.isContact } : nd)
+            }
+          }
+          const fullCached = Array.from(mergedMap.values())
+          this.store.saveDialogsCache(accountId, fullCached)
+        } catch (_) {
+          this.store.saveDialogsCache(accountId, dialogs)
+        }
         // Background prefetch crystal-clear high-res avatars for top visible dialogs
         this.prefetchAvatars(accountId, dialogs.slice(0, 40))
       }
@@ -15212,7 +15229,7 @@ export class AccountManager {
                 isChannel: chat.chatType === 'channel',
                 isBroadcast: chat.chatType === 'channel',
                 isBot: chat.chatType === 'bot',
-                isContact: Boolean(chat.isContact || chat.contact || (chat as any).raw?.contact || msg.sender?.isContact),
+                isContact: Boolean(chat.isContact || chat.contact || (chat as any).raw?.contact || msg.sender?.isContact || this.isContactPeer(accountId, chatId)),
                 isMuted: isChatMuted,
               }
             : undefined,

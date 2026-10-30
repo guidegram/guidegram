@@ -385,6 +385,7 @@ export const App: React.FC = () => {
     let unsubscribeMsgEdited: (() => void) | undefined
     let unsubscribeReadOutbox: (() => void) | undefined
     let unsubscribeAvatarUpdated: (() => void) | undefined
+    let unsubscribeDialogsUpdated: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -781,6 +782,35 @@ export const App: React.FC = () => {
         })
       })
 
+      // Real-time Dialog Rehydration (e.g. contact sync, offline catchup)
+      unsubscribeDialogsUpdated = window.guidegram.on('telegram:dialogs-updated', (payload: { accountId: string; dialogs: DialogItem[] }) => {
+        if (!payload?.accountId || !Array.isArray(payload.dialogs)) return
+        setDialogsByAccount((prev) => {
+          const existing = prev[payload.accountId] || []
+          const map = new Map<string, DialogItem>()
+          for (const d of existing) map.set(d.id, d)
+          for (const d of payload.dialogs) {
+            const old = map.get(d.id)
+            if (old) {
+              map.set(d.id, {
+                ...old,
+                ...d,
+                isContact: Boolean(d.isContact || old.isContact),
+                lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
+                unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
+              })
+            } else {
+              map.set(d.id, d)
+            }
+          }
+          const fullList = Array.from(map.values())
+          const pinned = fullList.filter((d) => d.isPinned)
+          const unpinned = fullList.filter((d) => !d.isPinned)
+          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+          return { ...prev, [payload.accountId]: [...pinned, ...unpinned] }
+        })
+      })
+
       // Hourly Auto-Update listener
       unsubscribeUpdate = window.guidegram.on('app:update-available', (info: UpdateInfo) => {
         setUpdateInfo(info)
@@ -996,6 +1026,7 @@ export const App: React.FC = () => {
         unsubscribeReadHistory?.()
         unsubscribeReadOutbox?.()
         unsubscribeAvatarUpdated?.()
+        unsubscribeDialogsUpdated?.()
         unsubscribeDeepLink?.()
       }
     }
@@ -1169,17 +1200,37 @@ export const App: React.FC = () => {
       // Snappy initial fetch (80 dialogs = 1 network chunk, <400ms)
       const initialLimit = hasCached ? 150 : 80
       const dialogs = await window.guidegram.getDialogs(accountId, initialLimit)
-      const uniqueMap = new Map<string, DialogItem>()
-      for (const d of dialogs) {
-        if (!uniqueMap.has(d.id)) {
-          uniqueMap.set(d.id, d)
+      
+      setDialogsByAccount((prev) => {
+        const existing = prev[accountId] || []
+        const mergedMap = new Map<string, DialogItem>()
+        // Preserve all previously cached dialogs so older PVs/contacts are not evicted
+        for (const d of existing) {
+          mergedMap.set(d.id, d)
         }
-      }
-      const uniqueDialogs = Array.from(uniqueMap.values())
-      setDialogsByAccount((prev) => ({ ...prev, [accountId]: uniqueDialogs }))
+        for (const d of dialogs) {
+          const old = mergedMap.get(d.id)
+          if (!old) {
+            mergedMap.set(d.id, d)
+          } else {
+            mergedMap.set(d.id, {
+              ...old,
+              ...d,
+              isContact: Boolean(d.isContact || old.isContact),
+              lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
+              unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
+            })
+          }
+        }
+        const fullList = Array.from(mergedMap.values())
+        const pinned = fullList.filter((d) => d.isPinned)
+        const unpinned = fullList.filter((d) => !d.isPinned)
+        unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+        return { ...prev, [accountId]: [...pinned, ...unpinned] }
+      })
 
       // Progressive Background Dialog Hydration (Official Telegram UX parity: silently feeds chats in the background)
-      if (uniqueDialogs.length >= 50) {
+      if (dialogs.length >= 20) {
         scheduleBackgroundDialogSync(accountId)
       } else {
         hasMoreDialogsRef.current = false
@@ -1231,7 +1282,6 @@ export const App: React.FC = () => {
       if (!nextBatch || nextBatch.length === 0) {
         hasMoreDialogsRef.current = false
       } else {
-        let addedCount = 0
         setDialogsByAccount((prev) => {
           const existing = prev[accountId] || []
           const existingMap = new Map<string, DialogItem>()
@@ -1239,19 +1289,32 @@ export const App: React.FC = () => {
             existingMap.set(d.id, d)
           }
           for (const d of nextBatch) {
-            if (!existingMap.has(d.id)) {
+            const old = existingMap.get(d.id)
+            if (!old) {
               existingMap.set(d.id, d)
-              addedCount++
+            } else {
+              existingMap.set(d.id, {
+                ...old,
+                ...d,
+                isContact: Boolean(d.isContact || old.isContact),
+                lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
+                unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
+              })
             }
           }
-          if (addedCount === 0) {
-            hasMoreDialogsRef.current = false
-          }
-          return { ...prev, [accountId]: Array.from(existingMap.values()) }
+          const fullList = Array.from(existingMap.values())
+          const pinned = fullList.filter((d) => d.isPinned)
+          const unpinned = fullList.filter((d) => !d.isPinned)
+          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+          return { ...prev, [accountId]: [...pinned, ...unpinned] }
         })
 
-        if (addedCount > 0 && hasMoreDialogsRef.current) {
+        // Continue background sync as long as Telegram returned a full or sizable batch (>= 20)
+        // without killing hydration prematurely if items overlapped with local cache
+        if (nextBatch.length >= 20 && hasMoreDialogsRef.current) {
           scheduleBackgroundDialogSync(accountId)
+        } else {
+          hasMoreDialogsRef.current = false
         }
       }
     } catch (err) {
@@ -1293,18 +1356,29 @@ export const App: React.FC = () => {
           for (const d of existing) {
             existingMap.set(d.id, d)
           }
-          let addedCount = 0
           for (const d of nextBatch) {
-            if (!existingMap.has(d.id)) {
+            const old = existingMap.get(d.id)
+            if (!old) {
               existingMap.set(d.id, d)
-              addedCount++
+            } else {
+              existingMap.set(d.id, {
+                ...old,
+                ...d,
+                isContact: Boolean(d.isContact || old.isContact),
+                lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
+                unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
+              })
             }
           }
-          if (addedCount === 0) {
-            hasMoreDialogsRef.current = false
-          }
-          return { ...prev, [activeAccountId]: Array.from(existingMap.values()) }
+          const fullList = Array.from(existingMap.values())
+          const pinned = fullList.filter((d) => d.isPinned)
+          const unpinned = fullList.filter((d) => !d.isPinned)
+          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+          return { ...prev, [activeAccountId]: [...pinned, ...unpinned] }
         })
+        if (nextBatch.length < 20) {
+          hasMoreDialogsRef.current = false
+        }
       }
     } catch (err) {
       console.warn('Failed to load more dialogs:', err)
