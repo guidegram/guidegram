@@ -135,3 +135,120 @@ export function validateEditRequest(
     normalizedText: normalized
   };
 }
+
+export interface NavigationState {
+  isEditing: boolean;
+  currentIndex: number; // -1 means editing is inactive (draft mode)
+  currentMessage: EditableMessageCandidate | null;
+  textToDisplay: string;
+  isInitialDraft: boolean;
+}
+
+/**
+ * Manages history traversal of user's editable messages via Shift + Up/Down (Phase 178).
+ * Solves the restriction where standard Up arrow only edits the single latest message.
+ */
+export class EditableMessageHistoryNavigator {
+  private candidates: EditableMessageCandidate[] = [];
+  private initialDraft: string = '';
+  private currentIndex: number = -1; // -1: draft, 0: latest editable message, 1: second latest, etc.
+  private isAdminOrChannel: boolean = false;
+  private currentTimeSec?: number;
+
+  constructor(options?: { isAdminOrChannel?: boolean; currentTimeSec?: number }) {
+    this.isAdminOrChannel = options?.isAdminOrChannel || false;
+    this.currentTimeSec = options?.currentTimeSec;
+  }
+
+  /**
+   * Initializes or updates the history pool with messages from the active chat,
+   * automatically filtering down to editable candidates sorted descending by date.
+   */
+  public loadMessages(
+    messages: EditableMessageCandidate[],
+    initialDraft: string = '',
+    options?: { isAdminOrChannel?: boolean; currentTimeSec?: number }
+  ): void {
+    if (options?.isAdminOrChannel !== undefined) {
+      this.isAdminOrChannel = options.isAdminOrChannel;
+    }
+    if (options?.currentTimeSec !== undefined) {
+      this.currentTimeSec = options.currentTimeSec;
+    }
+
+    this.initialDraft = initialDraft;
+    // Filter only editable messages and sort descending (latest first)
+    this.candidates = messages
+      .filter((m) => canEditMessage(m, this.isAdminOrChannel, this.currentTimeSec))
+      .sort((a, b) => b.date - a.date || b.id - a.id);
+
+    this.currentIndex = -1;
+  }
+
+  /**
+   * Navigates to an older editable message (triggered by Shift+Up).
+   */
+  public navigateOlder(): NavigationState {
+    if (this.candidates.length === 0) {
+      return this.getState();
+    }
+
+    if (this.currentIndex < this.candidates.length - 1) {
+      this.currentIndex++;
+    }
+
+    return this.getState();
+  }
+
+  /**
+   * Navigates to a newer editable message (triggered by Shift+Down).
+   * If passing index 0, returns to the original draft text and exits editing mode.
+   */
+  public navigateNewer(): NavigationState {
+    if (this.currentIndex > 0) {
+      this.currentIndex--;
+    } else if (this.currentIndex === 0) {
+      // Returned past the latest editable message -> restore draft
+      this.currentIndex = -1;
+    }
+
+    return this.getState();
+  }
+
+  /**
+   * Clears editing mode and restores initial draft text.
+   */
+  public resetToDraft(): NavigationState {
+    this.currentIndex = -1;
+    return this.getState();
+  }
+
+  /**
+   * Gets current navigation state.
+   */
+  public getState(): NavigationState {
+    if (this.currentIndex < 0 || this.currentIndex >= this.candidates.length) {
+      return {
+        isEditing: false,
+        currentIndex: -1,
+        currentMessage: null,
+        textToDisplay: this.initialDraft,
+        isInitialDraft: true,
+      };
+    }
+
+    const msg = this.candidates[this.currentIndex];
+    return {
+      isEditing: true,
+      currentIndex: this.currentIndex,
+      currentMessage: msg,
+      textToDisplay: msg.text || '',
+      isInitialDraft: false,
+    };
+  }
+
+  public getCandidateCount(): number {
+    return this.candidates.length;
+  }
+}
+
