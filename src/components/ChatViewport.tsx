@@ -1075,15 +1075,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setIsMuted(!!chat?.isMuted || !!chatDetails?.isMuted)
   }, [chat?.id, chat?.isMuted, chatDetails?.isMuted])
 
-  // Cloud Drafts Sync: populate draft when opening chat
-  useEffect(() => {
-    if (chat?.draft?.text) {
-      setInputText(chat.draft.text)
-    } else {
-      setInputText('')
-    }
-  }, [chat?.id, chat?.accountId])
-
   // Slow Mode & Countdown Timer State (MTProto Layer 180+)
   const [slowModeSecondsLeft, setSlowModeSecondsLeft] = useState<number>(0)
 
@@ -1398,12 +1389,69 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const editingDraftBackupRef = useRef('')
   const messagesRef = useRef(messages)
 
-  // Debounced cloud draft synchronization
+  // Cloud Drafts Synchronization State (Telegram MTProto Layer 180+ Parity)
+  const activeChatKeyRef = useRef<string>('')
+  const lastCloudDraftRef = useRef<string>('')
+  const isInputDirtyRef = useRef<boolean>(false)
+  const currentInputTextRef = useRef<string>('')
+  const currentReplyRef = useRef<MessageItem | null>(null)
   const draftDebounceRef = useRef<NodeJS.Timeout | null>(null)
+
+  currentInputTextRef.current = inputText
+  currentReplyRef.current = replyMessage
+
+  // 1. Chat switch handling & immediate flush of previous chat dirty draft
   useEffect(() => {
-    if (!chat) return
-    // Skip saving cloud drafts in broadcast channels or read-only chats where posting is forbidden
+    if (!chat?.id || !chat?.accountId) return
+    const newChatKey = `${chat.accountId}_${chat.id}`
+
+    // If switching from another chat and there was an unpersisted dirty draft, flush it immediately!
+    if (activeChatKeyRef.current && activeChatKeyRef.current !== newChatKey && isInputDirtyRef.current) {
+      const prevParts = activeChatKeyRef.current.split('_')
+      const prevAccId = prevParts[0]
+      const prevChatId = prevParts.slice(1).join('_')
+      if (prevAccId && prevChatId && window.guidegram?.saveDraft) {
+        window.guidegram.saveDraft(prevAccId, prevChatId, currentInputTextRef.current, currentReplyRef.current?.id).catch(() => {})
+      }
+    }
+
+    if (draftDebounceRef.current) {
+      clearTimeout(draftDebounceRef.current)
+      draftDebounceRef.current = null
+    }
+
+    activeChatKeyRef.current = newChatKey
+    const initialDraft = chat?.draft?.text || ''
+    lastCloudDraftRef.current = initialDraft
+    isInputDirtyRef.current = false
+    setInputText(initialDraft)
+  }, [chat?.id, chat?.accountId])
+
+  // 2. Incoming remote cloud draft update (e.g. from mobile or another desktop instance)
+  useEffect(() => {
+    if (!chat?.id || !chat?.accountId) return
+    const cloudText = chat.draft?.text || ''
+    // If the local user has not typed dirty changes, or if local text matches the old cloud draft,
+    // seamlessly sync the incoming cloud text in real-time!
+    if (!isInputDirtyRef.current || currentInputTextRef.current === lastCloudDraftRef.current) {
+      if (currentInputTextRef.current !== cloudText) {
+        setInputText(cloudText)
+        lastCloudDraftRef.current = cloudText
+        isInputDirtyRef.current = false
+      }
+    }
+  }, [chat?.draft?.text, chat?.draft?.date])
+
+  // 3. User edits -> debounced cloud draft sync (750ms)
+  useEffect(() => {
+    if (!chat?.id || !chat?.accountId) return
     if (chat.isChannel && !canSendMessages) return
+
+    // Never auto-save if input is clean (was populated by initial load or remote sync)
+    if (!isInputDirtyRef.current) return
+    // Don't spam save if text hasn't changed compared to cloud
+    if (inputText === lastCloudDraftRef.current) return
+
     if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
 
     draftDebounceRef.current = setTimeout(() => {
@@ -1413,14 +1461,32 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           chat.id,
           inputText,
           replyMessage?.id
-        ).catch(() => {})
+        ).then(() => {
+          lastCloudDraftRef.current = inputText
+        }).catch(() => {})
       }
-    }, 1000)
+    }, 750)
 
     return () => {
       if (draftDebounceRef.current) clearTimeout(draftDebounceRef.current)
     }
-  }, [inputText, chat?.id, chat?.accountId, chat?.isChannel, chatDetails?.canSendMessages, replyMessage?.id])
+  }, [inputText, chat?.id, chat?.accountId, chat?.isChannel, canSendMessages, replyMessage?.id])
+
+  // 4. On component unmount / window unload, flush any dirty draft
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (chat && isInputDirtyRef.current && currentInputTextRef.current !== lastCloudDraftRef.current) {
+        window.guidegram?.saveDraft?.(chat.accountId, chat.id, currentInputTextRef.current, currentReplyRef.current?.id)
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (chat && isInputDirtyRef.current && currentInputTextRef.current !== lastCloudDraftRef.current) {
+        window.guidegram?.saveDraft?.(chat.accountId, chat.id, currentInputTextRef.current, currentReplyRef.current?.id)
+      }
+    }
+  }, [chat?.id, chat?.accountId])
 
   // Attachment popover menu & staging state
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false)
@@ -2967,6 +3033,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     setInputText('')
     setReplyMessage(null)
+    isInputDirtyRef.current = false
+    lastCloudDraftRef.current = ''
     if (chat && window.guidegram?.saveDraft) {
       window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
     }
@@ -4028,6 +4096,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         setEditingMessage(null)
         setInputText('')
         setDismissedComposerUrl(null)
+        isInputDirtyRef.current = false
+        lastCloudDraftRef.current = ''
         if (chat && window.guidegram?.saveDraft) {
           window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
         }
@@ -4048,6 +4118,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setStagedAttachments([])
       setInputText('')
       setReplyMessage(null)
+      isInputDirtyRef.current = false
+      lastCloudDraftRef.current = ''
       if (chat && window.guidegram?.saveDraft) {
         window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
       }
@@ -4148,6 +4220,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     setPendingCustomEmojis([])
     setReplyMessage(null)
     setDismissedComposerUrl(null)
+    isInputDirtyRef.current = false
+    lastCloudDraftRef.current = ''
     if (chat && window.guidegram?.saveDraft) {
       window.guidegram.saveDraft(chat.accountId, chat.id, '').catch(() => {})
     }
@@ -9247,6 +9321,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     onPaste={handlePaste}
                     onChange={(e) => {
                       const val = e.target.value
+                      isInputDirtyRef.current = true
                       setInputText(val)
                       if (!val) {
                         setPendingCustomEmojis([])
