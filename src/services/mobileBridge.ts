@@ -81,6 +81,65 @@ const sampleProxies: ProxyConfig[] = [
   },
 ]
 
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return bytes
+}
+
+export async function decryptAccountExportWebCrypto(
+  wirePacketStr: string,
+  pin: string
+): Promise<any[]> {
+  const parsed = JSON.parse(wirePacketStr)
+  const saltBuf = base64ToUint8Array(parsed.s)
+  const ivBuf = base64ToUint8Array(parsed.i)
+  const tagBuf = base64ToUint8Array(parsed.t)
+  const cipherBuf = base64ToUint8Array(parsed.c)
+
+  const fullCiphertext = new Uint8Array(cipherBuf.length + tagBuf.length)
+  fullCiphertext.set(cipherBuf, 0)
+  fullCiphertext.set(tagBuf, cipherBuf.length)
+
+  const baseKey = await window.crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(pin.trim()),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  )
+
+  const derivedKey = await window.crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: saltBuf as any,
+      iterations: 10000,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  )
+
+  const decryptedBuf = await window.crypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: ivBuf as any,
+      tagLength: 128,
+    },
+    derivedKey,
+    fullCiphertext
+  )
+
+  const decryptedText = new TextDecoder().decode(decryptedBuf)
+  const result = JSON.parse(decryptedText)
+  return result.accounts || []
+}
+
 export function initMobileBridge(): void {
   if (typeof window === 'undefined') return
 
@@ -124,8 +183,34 @@ export function initMobileBridge(): void {
       chunks: [],
       totalChunks: 0,
     }),
-    cancelAccountExport: async () => true,
-    decryptAccountExport: async () => [],
+    decryptAccountExport: async (wirePacket: string, pin: string) => {
+      try {
+        return await decryptAccountExportWebCrypto(wirePacket, pin)
+      } catch (err) {
+        console.error('[MobileBridge] Decryption failed:', err)
+        throw err
+      }
+    },
+    saveImportedAccounts: async (importedAccounts: AccountInfo[]): Promise<AccountInfo[]> => {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY_ACCOUNTS)
+        const current: AccountInfo[] = stored ? JSON.parse(stored) : []
+        const merged = [...current]
+        for (const acc of importedAccounts) {
+          const idx = merged.findIndex((a) => a.id === acc.id)
+          if (idx >= 0) {
+            merged[idx] = { ...merged[idx], ...acc, status: 'connected' }
+          } else {
+            merged.push({ ...acc, status: 'connected' })
+          }
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY_ACCOUNTS, JSON.stringify(merged))
+        return merged
+      } catch (err) {
+        console.error('[MobileBridge] Failed to save imported accounts:', err)
+        return importedAccounts
+      }
+    },
 
     // Config
     getConfig: async (): Promise<AppConfig> => {

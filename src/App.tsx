@@ -16,6 +16,7 @@ const AddAccountModal = React.lazy(() => import('./components/AddAccountModal').
 const ProxySettingsModal = React.lazy(() => import('./components/ProxySettingsModal').then((m) => ({ default: m.ProxySettingsModal })))
 const SettingsModal = React.lazy(() => import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal })))
 const AccountExportModal = React.lazy(() => import('./components/AccountExportModal').then((m) => ({ default: m.AccountExportModal })))
+const AccountImportModal = React.lazy(() => import('./components/AccountImportModal').then((m) => ({ default: m.AccountImportModal })))
 const UnifiedInbox = React.lazy(() => import('./components/UnifiedInbox').then((m) => ({ default: m.UnifiedInbox })))
 const MainMenuDrawer = React.lazy(() => import('./components/MainMenuDrawer').then((m) => ({ default: m.MainMenuDrawer })))
 const MyProfileDrawer = React.lazy(() => import('./components/MyProfileDrawer').then((m) => ({ default: m.MyProfileDrawer })))
@@ -112,6 +113,7 @@ export const App: React.FC = () => {
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(false)
   const [isMyProfileOpen, setIsMyProfileOpen] = useState(false)
   const [isAccountExportOpen, setIsAccountExportOpen] = useState(false)
+  const [isAccountImportOpen, setIsAccountImportOpen] = useState(false)
   const [isTonWalletOpen, setIsTonWalletOpen] = useState(false)
   const [isContactsOpen, setIsContactsOpen] = useState(false)
   const [isCallsOpen, setIsCallsOpen] = useState(false)
@@ -2630,6 +2632,7 @@ export const App: React.FC = () => {
       {accounts.length === 0 ? (
         <WelcomeScreen
           onOpenAddAccount={() => setIsAddAccountOpen(true)}
+          onOpenAccountImport={() => setIsAccountImportOpen(true)}
           onOpenProxyModal={() => setIsProxyModalOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
@@ -2975,6 +2978,28 @@ export const App: React.FC = () => {
           />
         )}
 
+        {isAccountImportOpen && (
+          <AccountImportModal
+            isOpen={isAccountImportOpen}
+            onClose={() => setIsAccountImportOpen(false)}
+            onAccountsImported={(importedAccs) => {
+              setAccounts((prev) => {
+                const merged = [...prev]
+                for (const acc of importedAccs) {
+                  const idx = merged.findIndex((a) => a.id === acc.id)
+                  if (idx >= 0) merged[idx] = { ...merged[idx], ...acc }
+                  else merged.push(acc)
+                }
+                return merged
+              })
+              if (importedAccs[0]?.id) {
+                setActiveAccountId(importedAccs[0].id)
+                loadDialogsForAccount(importedAccs[0].id)
+              }
+            }}
+          />
+        )}
+
         {isTonWalletOpen && (
           <React.Suspense fallback={null}>
             <TonWalletModal
@@ -3036,6 +3061,7 @@ export const App: React.FC = () => {
             isOpen={isAddAccountOpen}
             onClose={() => setIsAddAccountOpen(false)}
             onAccountAdded={handleAccountAdded}
+            onOpenAccountImport={() => setIsAccountImportOpen(true)}
           />
         )}
 

@@ -34,7 +34,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
   onClose,
   onOpenSettings,
 }) => {
-  const { t, isRTL } = useI18n()
+  const { t, isRTL, formatNumber } = useI18n()
   const [activeClient, setActiveClient] = useState<ClientTab>('claude')
   const [copiedTarget, setCopiedTarget] = useState<string | null>(null)
   const [status, setStatus] = useState<{
@@ -104,26 +104,23 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
     {
       id: 'customer_support',
       icon: MessageSquare,
-      title: 'پاسخ‌گویی خودکار به مشتریان',
-      prompt:
-        'پیام‌های خوانده‌نشده اکانت شماره یک من در گایدگرام رو بررسی کن و به مشتریان بگو: «سلام، وقت‌بخیر، پیام شما ثبت شد و همکاران ما تا دقایقی دیگر پاسخگوی شما خواهند بود.»',
-      tag: 'پشتیبانی',
+      title: t('mcp_hub.prompt_support_title'),
+      prompt: t('mcp_hub.prompt_support_text'),
+      tag: t('mcp_hub.prompt_support_tag'),
     },
     {
       id: 'download_channel',
       icon: Download,
-      title: 'دانلود فایل‌های PDF یا اسناد یک کانال',
-      prompt:
-        'برو توی کانال @xyz و فایل‌های PDF که در یک هفته گذشته ارسال شده رو بررسی کن و موارد با حجم زیر ۵۰ مگابایت رو در پوشه دانلود برام ذخیره کن.',
-      tag: 'دانلود خودکار',
+      title: t('mcp_hub.prompt_download_title'),
+      prompt: t('mcp_hub.prompt_download_text'),
+      tag: t('mcp_hub.prompt_download_tag'),
     },
     {
       id: 'accounts_summary',
       icon: ListFilter,
-      title: 'گزارش و مانیتورینگ اکانت‌ها',
-      prompt:
-        'لیست تمام اکانت‌های تلگرام من در گایدگرام رو با وضعیت اتصال و تعداد کل پیام‌های خوانده‌نشده نشون بده و بگو کدوم گفتگوها نیاز به رسیدگی فوری دارن.',
-      tag: 'گزارش‌گیری',
+      title: t('mcp_hub.prompt_summary_title'),
+      prompt: t('mcp_hub.prompt_summary_text'),
+      tag: t('mcp_hub.prompt_summary_tag'),
     },
   ]
 
@@ -133,24 +130,21 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
         return {
           title: 'Claude Desktop',
           path: '%APPDATA%\\Claude\\claude_desktop_config.json',
-          guide:
-            'فایل کانفیگ بالا را در ویرایشگر باز کنید و قطعه کد زیر را درون فیلد "mcpServers" قرار دهید، سپس Claude Desktop را ری‌استارت کنید.',
+          guide: t('mcp_hub.claude_guide'),
           snippet: snippets?.claudeDesktop || '{\n  "mcpServers": {\n    "guidegram": {\n      "command": "node",\n      "args": ["d:/Ershad Zolfi/programming/coding with Gemini/Guidegram/scripts/mcp-bridge.mjs"]\n    }\n  }\n}',
         }
       case 'cursor':
         return {
           title: 'Cursor IDE',
-          path: '.cursor/mcp.json (یا Settings > Features > MCP)',
-          guide:
-            'در پروژه خود فایل .cursor/mcp.json بسازید یا از بخش تنظیمات Cursor به تب MCP بروید و کانفیگ زیر را وارد کنید.',
+          path: t('mcp_hub.cursor_path'),
+          guide: t('mcp_hub.cursor_guide'),
           snippet: snippets?.cursor || '{\n  "mcpServers": {\n    "guidegram": {\n      "command": "node",\n      "args": ["d:/Ershad Zolfi/programming/coding with Gemini/Guidegram/scripts/mcp-bridge.mjs"]\n    }\n  }\n}',
         }
       case 'generic':
         return {
-          title: 'Windsurf / سایر ایجنت‌ها و اسکریپت‌ها',
-          path: 'اتصال از طریق Stdio یا SSE پورت 39527',
-          guide:
-            'می‌توانید مستقیماً اسکریپت mcp-bridge.mjs را از طریق Stdio به هر هاست سازگار با پروتکل MCP متصل نمایید.',
+          title: t('mcp_hub.generic_title'),
+          path: t('mcp_hub.generic_path'),
+          guide: t('mcp_hub.generic_guide'),
           snippet: snippets?.claudeDesktop || '{\n  "command": "node",\n  "args": ["d:/Ershad Zolfi/programming/coding with Gemini/Guidegram/scripts/mcp-bridge.mjs"]\n}',
         }
     }
@@ -183,14 +177,14 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-bold text-white tracking-wide">
-                      هاب هوش مصنوعی و پروتکل MCP
+                      {t('mcp.title')}
                     </h2>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 border border-primary-500/30">
                       v2.0
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    کنترل هوشمند تلگرام با Claude Desktop، Cursor و ایجنت‌های هوش مصنوعی
+                    {t('mcp.subtitle')}
                   </p>
                 </div>
               </div>
@@ -210,21 +204,21 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                   </span>
                   <span className="font-semibold text-gray-200">
                     {status?.isRunning
-                      ? `آنلاین (پورت ${status.port || 39527})`
-                      : 'آفلاین'}
+                      ? t('mcp.online_port', { port: String(status.port || 39527) })
+                      : t('mcp.offline')}
                   </span>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleToggleMcpServer}
-                    title={status?.enabled ? 'خاموش کردن سرور' : 'روشن کردن سرور'}
+                    title={status?.enabled ? t('mcp.stop_server') : t('mcp.start_server')}
                     className={`ml-1 text-[11px] px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer ${
                       status?.enabled
                         ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30'
                         : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30'
                     }`}
                   >
-                    {status?.enabled ? 'توقف' : 'فعال‌سازی'}
+                    {status?.enabled ? t('mcp.stop') : t('mcp.enable')}
                   </motion.button>
                 </div>
 
@@ -246,36 +240,36 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-start gap-3">
                   <div className="w-7 h-7 rounded-xl bg-primary-500/20 text-primary-400 border border-primary-500/30 flex items-center justify-center font-bold text-xs shrink-0">
-                    ۱
+                    {formatNumber(1)}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-gray-200">کپی کانفیگ</div>
+                    <div className="text-xs font-bold text-gray-200">{t('mcp.step1_title')}</div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
-                      کد آماده اتصال را با یک کلیک کپی کنید.
+                      {t('mcp.step1_desc')}
                     </div>
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-start gap-3">
                   <div className="w-7 h-7 rounded-xl bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30 flex items-center justify-center font-bold text-xs shrink-0">
-                    ۲
+                    {formatNumber(2)}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-gray-200">Paste و ری‌استارت</div>
+                    <div className="text-xs font-bold text-gray-200">{t('mcp.step2_title')}</div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
-                      داخل Claude یا Cursor پیست کرده و یک‌بار ببندید.
+                      {t('mcp.step2_desc')}
                     </div>
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-start gap-3">
                   <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs shrink-0">
-                    ۳
+                    {formatNumber(3)}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-gray-200">کنترل هوشمند</div>
+                    <div className="text-xs font-bold text-gray-200">{t('mcp.step3_title')}</div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
-                      دستور پاسخ به مشتری یا دانلود را صادر کنید!
+                      {t('mcp.step3_desc')}
                     </div>
                   </div>
                 </div>
@@ -287,7 +281,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Terminal className="w-4 h-4 text-primary-400" />
                     <span className="text-xs font-bold text-gray-200">
-                      انتخاب نرم‌افزار هوش مصنوعی شما:
+                      {t('mcp.select_ai_client')}
                     </span>
                   </div>
 
@@ -300,7 +294,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                           ? 'Claude Desktop'
                           : tabKey === 'cursor'
                           ? 'Cursor IDE'
-                          : 'سایر ایجنت‌ها'
+                          : t('mcp.other_agents')
                       return (
                         <button
                           key={tabKey}
@@ -327,7 +321,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                 <div className="flex items-center justify-between bg-dark-900/90 px-3.5 py-2.5 rounded-xl border border-white/5 text-xs text-gray-300">
                   <div className="flex items-center gap-2 min-w-0">
                     <FolderOpen className="w-4 h-4 text-accent-cyan shrink-0" />
-                    <span className="text-gray-400 shrink-0">مسیر فایل تنظیمات:</span>
+                    <span className="text-gray-400 shrink-0">{t('mcp.config_path_label')}</span>
                     <code className="text-accent-cyan font-mono text-[11px] truncate" dir="ltr">
                       {clientInfo.path}
                     </code>
@@ -336,7 +330,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => copyToClipboard(clientInfo.path, 'path')}
-                    title="کپی مسیر فایل"
+                    title={t('mcp.copy_path_title')}
                     className="shrink-0 flex items-center gap-1 text-[11px] text-gray-400 hover:text-white ml-2 transition-colors cursor-pointer"
                   >
                     {copiedTarget === 'path' ? (
@@ -344,7 +338,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}
-                    <span>{copiedTarget === 'path' ? 'کپی شد' : 'کپی مسیر'}</span>
+                    <span>{copiedTarget === 'path' ? t('mcp.copied') : t('mcp.copy_path')}</span>
                   </motion.button>
                 </div>
 
@@ -370,12 +364,12 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                     {copiedTarget === 'snippet' ? (
                       <>
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>کپی شد! ✅</span>
+                        <span>{t('mcp.copied_success')}</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3.5 h-3.5" />
-                        <span>کپی کانفیگ آماده (JSON)</span>
+                        <span>{t('mcp.copy_json_btn')}</span>
                       </>
                     )}
                   </motion.button>
@@ -392,10 +386,10 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-accent-cyan" />
                     <h3 className="text-xs font-bold text-gray-200">
-                      پرامپت‌های جادویی نمونه (کپی و ارسال به Claude یا Cursor)
+                      {t('mcp.prompts_title')}
                     </h3>
                   </div>
-                  <span className="text-[11px] text-gray-400">یک کلیک برای کپی</span>
+                  <span className="text-[11px] text-gray-400">{t('mcp.prompts_hint')}</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -439,12 +433,12 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                           {isCopied ? (
                             <>
                               <Check className="w-3 h-3 text-dark-950" />
-                              <span>پرامپت کپی شد!</span>
+                              <span>{t('mcp.prompt_copied')}</span>
                             </>
                           ) : (
                             <>
                               <Copy className="w-3 h-3" />
-                              <span>کپی پرامپت</span>
+                              <span>{t('mcp.copy_prompt')}</span>
                             </>
                           )}
                         </motion.button>
@@ -465,7 +459,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                 className="flex items-center gap-2 text-xs font-medium text-gray-400 hover:text-accent-cyan transition-colors cursor-pointer"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>تنظیمات پیشرفته (وایت‌لیست چت‌ها، پورت و پوشه دانلود)</span>
+                <span>{t('mcp.advanced_settings')}</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
 
@@ -475,7 +469,7 @@ export const McpHubModal: React.FC<McpHubModalProps> = ({
                 onClick={onClose}
                 className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition-colors cursor-pointer"
               >
-                بستن پنجره
+                {t('mcp.close')}
               </motion.button>
             </div>
           </motion.div>

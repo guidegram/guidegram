@@ -97,7 +97,7 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
 
   const handleStartExport = async () => {
     if (selectedIds.length === 0) {
-      setError(isRTL ? 'حداقل یک اکانت را انتخاب کنید' : 'Select at least one account')
+      setError(t('account_export.select_at_least_one'))
       return
     }
 
@@ -120,10 +120,10 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
         const dataUrl = await QRCode.toDataURL(chunk, {
           errorCorrectionLevel: 'M',
           margin: 2,
-          scale: 6,
+          scale: 7,
           color: {
-            dark: '#ffffff',
-            light: '#0c1017',
+            dark: '#000000',
+            light: '#ffffff',
           },
         })
         generatedQrs.push(dataUrl)
@@ -175,15 +175,13 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                {isRTL ? 'انتقال امن اکانت‌ها به موبایل' : 'Secure Account Transfer to Mobile'}
+                {t('account_export.title')}
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
                   Air-Gap
                 </span>
               </h2>
               <p className="text-xs text-gray-400">
-                {isRTL
-                  ? 'انتقال سریع و رمزنگاری‌شده بدون کابل و بدون واسطه'
-                  : 'Fast E2EE sync via Animated QR stream'}
+                {t('account_export.subtitle')}
               </p>
             </div>
           </div>
@@ -209,9 +207,7 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs text-gray-400">
                 <span>
-                  {isRTL
-                    ? `اکانت‌های مورد نظر برای انتقال (${selectedIds.length} از ${accounts.length})`
-                    : `Accounts to transfer (${selectedIds.length} of ${accounts.length})`}
+                  {t('account_export.select_accounts', { count: selectedIds.length, total: accounts.length })}
                 </span>
                 <button
                   type="button"
@@ -223,8 +219,8 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
                   className="text-primary-400 hover:text-primary-300 font-medium cursor-pointer"
                 >
                   {selectedIds.length === accounts.length
-                    ? isRTL ? 'لغو انتخاب همه' : 'Deselect All'
-                    : isRTL ? 'انتخاب همه' : 'Select All'}
+                    ? t('account_export.deselect_all')
+                    : t('account_export.select_all')}
                 </button>
               </div>
 
@@ -275,12 +271,10 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
               <div className="p-3.5 rounded-2xl bg-dark-800/60 border border-white/5 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
                   <Shield className="w-4 h-4" />
-                  <span>{isRTL ? 'معماری امنیتی Zero-Trust' : 'Zero-Trust Optical Security'}</span>
+                  <span>{t('account_export.zero_trust_title')}</span>
                 </div>
                 <p className="text-[11px] text-gray-400 leading-relaxed">
-                  {isRTL
-                    ? 'داده‌ها با الگوریتم AES-256-GCM رمزنگاری می‌شوند و فقط با پین اختصاصی روی گوشی شما قابل رمزگشایی هستند. هیچ داده‌ای به سرورهای واسط ارسال نمی‌شود.'
-                    : 'All session keys are encrypted with AES-256-GCM using a one-time 6-digit PIN. Transferred strictly air-gapped without any intermediary servers.'}
+                  {t('account_export.zero_trust_desc')}
                 </p>
               </div>
             </div>
@@ -291,7 +285,7 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
               <div className="p-4 rounded-2xl bg-gradient-to-b from-dark-800 to-dark-850 border border-cyan-500/20 relative group">
                 <div className="text-[11px] font-medium text-gray-400 mb-1 flex items-center justify-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{isRTL ? 'پین رمزگشایی یک‌بارمصرف (در موبایل وارد کنید)' : 'One-Time Decryption PIN'}</span>
+                  <span>{t('account_export.pin_title')}</span>
                 </div>
                 <div className="text-3xl font-mono font-extrabold tracking-widest text-cyan-300 my-1">
                   {exportData?.pin ? `${exportData.pin.slice(0, 3)} - ${exportData.pin.slice(3)}` : '------'}
@@ -304,40 +298,42 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
                   {copiedPin ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">{isRTL ? 'کپی شد!' : 'Copied!'}</span>
+                      <span className="text-emerald-400">{t('account_export.copied')}</span>
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>{isRTL ? 'کپی پین' : 'Copy PIN'}</span>
+                      <span>{t('account_export.copy_pin')}</span>
                     </>
                   )}
                 </button>
               </div>
 
               {/* Animated QR Code Player */}
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <div className="relative p-3 rounded-3xl bg-[#0c1017] border border-white/15 shadow-2xl inline-block">
+              <div className="flex flex-col items-center justify-center space-y-3.5">
+                {/* 100% Unobstructed High-Contrast QR Code Card */}
+                <div className="p-3.5 rounded-3xl bg-white border border-white/20 shadow-2xl inline-block">
                   {qrImages.length > 0 ? (
                     <img
                       src={qrImages[currentFrame]}
                       alt="Animated QR Stream"
-                      className="w-56 h-56 rounded-2xl"
+                      className="w-60 h-60 rounded-2xl block select-none"
                     />
                   ) : (
-                    <div className="w-56 h-56 flex items-center justify-center">
+                    <div className="w-60 h-60 flex items-center justify-center bg-gray-900 rounded-2xl">
                       <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
                     </div>
                   )}
+                </div>
 
-                  {/* Frame indicator pill */}
-                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-mono text-cyan-300">
-                    {isRTL ? `فریم ${currentFrame + 1} از ${qrImages.length}` : `Frame ${currentFrame + 1} / ${qrImages.length}`}
-                  </div>
+                {/* Frame indicator pill (Cleanly outside QR code) */}
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-dark-800 border border-cyan-500/30 text-xs font-mono font-bold text-cyan-300 shadow-md">
+                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>{t('account_export.frame_progress', { current: currentFrame + 1, total: qrImages.length })}</span>
                 </div>
 
                 {/* Progress Bar of Frames */}
-                <div className="w-56 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="w-60 h-1.5 rounded-full bg-white/10 overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-cyan-400 to-primary-500 transition-all duration-150"
                     style={{
@@ -349,17 +345,13 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                   <Clock className="w-3.5 h-3.5 text-accent-rose" />
                   <span>
-                    {isRTL
-                      ? `اعتبار این نشست: ${timeLeft} ثانیه دیگر`
-                      : `Expires in ${timeLeft}s`}
+                    {t('account_export.session_validity', { seconds: timeLeft })}
                   </span>
                 </div>
               </div>
 
               <p className="text-xs text-gray-400 leading-relaxed px-4">
-                {isRTL
-                  ? 'دوربین گایدگرام موبایل را جلوی مانیتور بگیرید. پس از پایان چرخه فریم‌ها، پین بالا را وارد کنید تا همه اکانت‌ها وارد شوند.'
-                  : 'Point the Guidegram Mobile camera at this screen. Once all frames are captured, enter the PIN above to import.'}
+                {t('account_export.scan_hint')}
               </p>
             </div>
           )}
@@ -374,7 +366,7 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
                 onClick={handleCancel}
                 className="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
-                {isRTL ? 'انصراف' : 'Cancel'}
+                {t('account_export.cancel')}
               </button>
               <button
                 type="button"
@@ -385,15 +377,13 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
                 {loading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>{isRTL ? 'در حال رمزنگاری...' : 'Encrypting...'}</span>
+                    <span>{t('account_export.encrypting')}</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
                     <span>
-                      {isRTL
-                        ? `شروع انتقال (${selectedIds.length} اکانت)`
-                        : `Start Sync (${selectedIds.length})`}
+                      {t('account_export.start_transfer', { count: selectedIds.length })}
                     </span>
                   </>
                 )}
@@ -406,14 +396,14 @@ export const AccountExportModal: React.FC<AccountExportModalProps> = ({
                 onClick={() => setStep('select')}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
-                {isRTL ? 'تغییر اکانت‌ها' : 'Back to Selection'}
+                {t('account_export.change_accounts')}
               </button>
               <button
                 type="button"
                 onClick={handleCancel}
                 className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition-colors cursor-pointer"
               >
-                {isRTL ? 'بستن' : 'Close'}
+                {t('account_export.close')}
               </button>
             </div>
           )}

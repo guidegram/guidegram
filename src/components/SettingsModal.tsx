@@ -104,6 +104,7 @@ import { playNotificationSound, AVAILABLE_NOTIFICATION_TONES } from '../utils/so
 import { useI18n } from '../i18n'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { ActiveSessionsModal } from './ActiveSessionsModal'
+import { useIsMobile } from '../utils/useIsMobile'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -220,6 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { t, language, setLanguage } = useI18n()
   const isPersian = language === 'fa'
+  const isMobile = useIsMobile(768)
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'features')
 
@@ -1065,7 +1067,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div>
               <div className="text-sm font-bold text-gray-100">{t('settings.title')}</div>
-              <div className="text-[10px] text-gray-400">Telegram Desktop & Advanced Power Preferences</div>
+              <div className="text-[10px] text-gray-400">
+                {isMobile
+                  ? isPersian
+                    ? 'تنظیمات پیشرفته گایدگرام موبایل'
+                    : 'Guidegram Mobile Settings'
+                  : 'Telegram Desktop & Advanced Power Preferences'}
+              </div>
             </div>
           </div>
           <button
@@ -1077,10 +1085,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Layout: Telegram Desktop Sidebar + Content */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Left Tab Navigation Sidebar */}
-          <div className="w-48 sm:w-56 bg-dark-900/50 border-r border-white/5 p-3 flex flex-col gap-1 overflow-y-auto shrink-0 select-none">
+        {/* Modal Layout: Responsive Tabs (Horizontal on mobile, vertical on desktop) */}
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
+          {/* Tab Navigation */}
+          <div className="w-full sm:w-56 bg-dark-900/60 border-b sm:border-b-0 sm:border-r border-white/5 p-2 sm:p-3 flex sm:flex-col gap-1.5 overflow-x-auto sm:overflow-y-auto shrink-0 select-none">
             {[
               { id: 'profile' as SettingsTab, label: t('app.my_profile'), icon: <User className="w-4 h-4" /> },
               { id: 'business' as SettingsTab, label: t('settings.telegram_business'), icon: <Briefcase className="w-4 h-4" /> },
@@ -1098,7 +1106,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  className={`shrink-0 relative flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                     isActive ? 'text-white' : 'text-gray-300 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -1109,18 +1117,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center gap-3 truncate">
+                  <span className="relative z-10 flex items-center gap-2 truncate">
                     {tab.icon}
-                    <span className="truncate">{tab.label}</span>
+                    <span>{tab.label}</span>
                   </span>
                 </button>
               )
             })}
 
+            {/* Desktop Only: Update Check Footer */}
             <div
               onClick={handleManualCheckUpdates}
               title="Click to check for software updates"
-              className="mt-auto pt-3 border-t border-white/5 space-y-1 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group"
+              className="hidden sm:block mt-auto pt-3 border-t border-white/5 space-y-1 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group"
             >
               <div className="px-1 py-0.5 text-[11px] text-gray-400 font-mono flex items-center justify-between">
                 <span className="font-bold text-gray-200 group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
@@ -1147,7 +1156,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Right Tab Content Viewport */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
             {/* TAB: MY PROFILE */}
             {activeTab === 'profile' && (
               <div className="space-y-4 animate-in fade-in duration-100">
@@ -1590,66 +1599,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Window Close Action */}
-                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-gray-200">When clicking the Close (X) button</div>
-                      <div className="text-[11px] text-gray-400">Control application lifecycle behavior</div>
+                {/* Window Close Action (Desktop Only) */}
+                {!isMobile && (
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-bold text-gray-200">When clicking the Close (X) button</div>
+                        <div className="text-[11px] text-gray-400">Control application lifecycle behavior</div>
+                      </div>
+                      <Power className="w-4 h-4 text-primary-400" />
                     </div>
-                    <Power className="w-4 h-4 text-primary-400" />
+
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCloseAction('ask')
+                          window.guidegram?.updateConfig?.({ closeAction: 'ask', rememberCloseAction: true })
+                        }}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          closeAction === 'ask'
+                            ? 'bg-primary-600/20 text-primary-300 border-primary-500/50 shadow-glow'
+                            : 'bg-dark-850 text-gray-400 border-white/5 hover:text-white'
+                        }`}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        <span>Ask every time</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCloseAction('minimize')
+                          window.guidegram?.updateConfig?.({ closeAction: 'minimize', rememberCloseAction: true })
+                        }}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          closeAction === 'minimize'
+                            ? 'bg-primary-600/20 text-primary-300 border-primary-500/50 shadow-glow'
+                            : 'bg-dark-850 text-gray-400 border-white/5 hover:text-white'
+                        }`}
+                      >
+                        <Minimize2 className="w-3.5 h-3.5" />
+                        <span>Minimize</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCloseAction('quit')
+                          window.guidegram?.updateConfig?.({ closeAction: 'quit', rememberCloseAction: true })
+                        }}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          closeAction === 'quit'
+                            ? 'bg-accent-rose/20 text-accent-rose border-accent-rose/50 shadow-glow'
+                            : 'bg-dark-850 text-gray-400 border-white/5 hover:text-white'
+                        }`}
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                        <span>Quit</span>
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCloseAction('ask')
-                        window.guidegram?.updateConfig?.({ closeAction: 'ask', rememberCloseAction: true })
-                      }}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        closeAction === 'ask'
-                          ? 'bg-primary-600/20 text-primary-300 border-primary-500/50 shadow-glow'
-                          : 'bg-dark-850 text-gray-400 border-white/5 hover:text-white'
-                      }`}
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      <span>Ask every time</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCloseAction('minimize')
-                        window.guidegram?.updateConfig?.({ closeAction: 'minimize', rememberCloseAction: true })
-                      }}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        closeAction === 'minimize'
-                          ? 'bg-primary-600/20 text-primary-300 border-primary-500/50 shadow-glow'
-                          : 'bg-dark-850 text-gray-400 border-white/5 hover:text-white'
-                      }`}
-                    >
-                      <Minimize2 className="w-3.5 h-3.5" />
-                      <span>Minimize</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCloseAction('quit')
-                        window.guidegram?.updateConfig?.({ closeAction: 'quit', rememberCloseAction: true })
-                      }}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        closeAction === 'quit'
-                          ? 'bg-accent-rose/20 text-accent-rose border-accent-rose/50 shadow-glow'
-                          : 'bg-dark-850 text-gray-400 border-white/5 hover:text-white'
-                      }`}
-                    >
-                      <Power className="w-3.5 h-3.5" />
-                      <span>Quit</span>
-                    </button>
-                  </div>
-                </div>
+                )}
 
                 {/* Project Support & Donation */}
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-500/15 via-rose-500/5 to-transparent bg-dark-800 border border-pink-500/20 space-y-3">
@@ -1670,12 +1681,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-white/5">
                     <span className="text-[11px] text-pink-300/80 font-mono">TON (GRAM) • Tron (TRX/USDT)</span>
                     <button
                       type="button"
                       onClick={() => onOpenSupport?.()}
-                      className="py-1.5 px-3.5 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="py-1.5 px-3.5 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 text-white shadow-md shadow-pink-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
                     >
                       <Heart className="w-3.5 h-3.5 fill-white" />
                       <span>{t('menu.support_guidegram')}</span>
@@ -4311,7 +4322,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-6 py-3.5 border-t border-white/10 bg-dark-900 flex items-center justify-between">
-          <div className="text-[11px] text-gray-500">Guidegram Desktop Edition</div>
+          <div className="text-[11px] text-gray-500">
+            {isMobile ? 'Guidegram Mobile Edition' : 'Guidegram Desktop Edition'}
+          </div>
           <button
             onClick={handleSave}
             className="px-5 py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all flex items-center gap-1.5 cursor-pointer"

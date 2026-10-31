@@ -14,14 +14,17 @@ import {
   ArrowLeft,
   Smartphone,
   Bot,
+  Camera,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { ProxyConfig, AccountInfo, QrTokenPayload } from '../types/telegram'
+import { useI18n } from '../i18n'
 
 interface AddAccountModalProps {
   isOpen: boolean
   onClose: () => void
   onAccountAdded: (account: AccountInfo) => void
+  onOpenAccountImport?: () => void
 }
 
 function cleanErrorMessage(raw?: string | null): string {
@@ -36,7 +39,9 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   isOpen,
   onClose,
   onAccountAdded,
+  onOpenAccountImport,
 }) => {
+  const { t } = useI18n()
   // Method selection: 'qr' (default) vs 'phone' vs 'bot'
   const [loginMethod, setLoginMethod] = useState<'qr' | 'phone' | 'bot'>('qr')
 
@@ -426,6 +431,28 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             )
           })}
         </div>
+
+        {/* Shortcut to Import from PC via Camera */}
+        {onOpenAccountImport && (
+          <div className="mx-6 mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                onClose()
+                onOpenAccountImport()
+              }}
+              className="w-full p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 hover:text-white transition-all flex items-center justify-between text-xs font-semibold cursor-pointer group shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 group-hover:scale-105 transition-transform">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+                <span>{t('account_import.scan_monitor_prompt')}</span>
+              </div>
+              <ArrowRight className="w-3.5 h-3.5 text-cyan-400 rtl:rotate-180" />
+            </button>
+          </div>
+        )}
 
         {/* Modal Content */}
         <div className="p-6">
