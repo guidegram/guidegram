@@ -489,6 +489,50 @@ export function parseMtprotoEntities(rawEntities?: any[]): MessageEntityItem[] |
   return result.length > 0 ? result : undefined
 }
 
+export function formatMtprotoEntities(entities?: MessageEntityItem[]): any[] | undefined {
+  if (!entities || !Array.isArray(entities) || entities.length === 0) return undefined
+  const result: any[] = []
+  for (const ent of entities) {
+    if (!ent) continue
+    const offset = Number(ent.offset) || 0
+    const length = Number(ent.length) || 0
+    if (length <= 0) continue
+
+    if (ent.type === 'custom_emoji' && ent.documentId) {
+      result.push({
+        _: 'messageEntityCustomEmoji',
+        offset,
+        length,
+        documentId: toLong(ent.documentId),
+      })
+    } else if (ent.type === 'bold') {
+      result.push({ _: 'messageEntityBold', offset, length })
+    } else if (ent.type === 'italic') {
+      result.push({ _: 'messageEntityItalic', offset, length })
+    } else if (ent.type === 'underline') {
+      result.push({ _: 'messageEntityUnderline', offset, length })
+    } else if (ent.type === 'strike') {
+      result.push({ _: 'messageEntityStrike', offset, length })
+    } else if (ent.type === 'spoiler') {
+      result.push({ _: 'messageEntitySpoiler', offset, length })
+    } else if (ent.type === 'code') {
+      result.push({ _: 'messageEntityCode', offset, length })
+    } else if (ent.type === 'pre') {
+      result.push({ _: 'messageEntityPre', offset, length, language: ent.language || '' })
+    } else if (ent.type === 'blockquote') {
+      result.push({ _: 'messageEntityBlockquote', offset, length })
+    } else if (ent.type === 'text_url' && ent.url) {
+      result.push({ _: 'messageEntityTextUrl', offset, length, url: ent.url })
+    } else if (ent.type === 'url') {
+      result.push({ _: 'messageEntityUrl', offset, length })
+    } else if (ent.type === 'mention') {
+      result.push({ _: 'messageEntityMention', offset, length })
+    }
+  }
+  return result.length > 0 ? result : undefined
+}
+
+
 export function parseMtprotoReplyMarkup(
   rawMarkup: any,
   chatId: string,

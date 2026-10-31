@@ -1,5 +1,5 @@
-import { sqliteDeadlockGuard } from './sqliteDeadlockGuard'
-import { SqliteTuner } from './sqliteTuner'
+import { sqliteDeadlockGuard } from './sqliteDeadlockGuard.ts'
+import { SqliteTuner } from './sqliteTuner.ts'
 
 /**
  * LocalDatabaseOptimizer (Phase 5: Local Database Integrity & Instant Message State Sync)

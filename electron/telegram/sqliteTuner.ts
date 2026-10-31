@@ -1,4 +1,4 @@
-import { sqliteDeadlockGuard } from './sqliteDeadlockGuard'
+import { sqliteDeadlockGuard } from './sqliteDeadlockGuard.ts'
 
 let Logger: any = {
   info: (...args: any[]) => console.log('[INFO]', ...args),
@@ -145,4 +145,4 @@ export class SqliteTuner {
   }
 }
 
-export { sqliteDeadlockGuard } from './sqliteDeadlockGuard'
+export { sqliteDeadlockGuard } from './sqliteDeadlockGuard.ts'

@@ -1087,7 +1087,9 @@ export interface SendMessageOptions {
   silent?: boolean
   scheduleDate?: number // unix timestamp in milliseconds
   scheduleWhenOnline?: boolean
+  entities?: MessageEntityItem[]
 }
+
 
 export interface SendMediaOptions {
   caption?: string
