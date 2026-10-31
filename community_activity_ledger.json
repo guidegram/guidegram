@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T11:35:25.781Z",
+  "lastUpdated": "2026-10-31T11:51:43.434Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 85,
-    "githubIssuesCommented": 76,
+    "totalActivities": 86,
+    "githubIssuesCommented": 77,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31540",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31540,
+      "commentId": 6542996370,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31540#issuecomment-6542996370",
+      "title": "Nonsensical message \"USER_NOT_PARTICIPANT\" pops up after adding a bot as admin that wasn't already member",
+      "targetComponent": "ManageAdminsBox / channels.editAdmin vs getParticipant server-side read-replica replication lag",
+      "status": "posted",
+      "timestamp": "2026-10-31T11:51:43.433Z",
+      "architecturalAngle": "Distributed supergroup participant read-replica lag, immediate getParticipant race condition, toast suppression, and optimistic admin synthesis."
+    },
     {
       "id": "gh_teloxide_1485",
       "platform": "github",
