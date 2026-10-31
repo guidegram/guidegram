@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T12:42:43.000Z",
+  "lastUpdated": "2026-10-31T12:51:22.000Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 90,
-    "githubIssuesCommented": 81,
+    "totalActivities": 91,
+    "githubIssuesCommented": 82,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31505",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31505,
+      "commentId": 6543590673,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31505#issuecomment-6543590673",
+      "title": "Copying selected messages clears the selection (regression in 7.3.2, ae5d273)",
+      "targetComponent": "HistoryInner::copySelectedText / ListWidget multi-message selection retention invariant",
+      "status": "posted",
+      "timestamp": "2026-10-31T12:51:22Z",
+      "architecturalAngle": "Conflating intra-message text selection with multi-message block selection, regression in ae5d273, and selection retention on batch copy."
+    },
     {
       "id": "gh_tdesktop_31533",
       "platform": "github",
