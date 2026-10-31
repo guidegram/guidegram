@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T06:18:19.286933+00:00",
+  "lastUpdated": "2026-10-31T06:34:48.164970+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 63,
-    "githubIssuesCommented": 54,
+    "totalActivities": 64,
+    "githubIssuesCommented": 55,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_16487",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 16487,
+      "targetTitle": "[Feature Request] Screen sharing is of somewhat low quality",
+      "targetUser": "Telegram Desktop Maintainers (John Preston & Aokromes)",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/16487#issuecomment-6540140399",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/16487",
+      "status": "live_public",
+      "summary": "Masterclass WebRTC architectural breakdown on group call SFU bandwidth downscaling vs P2P 1-on-1 calls, enforcing ContentHint::kDetailed on screen tracks and MAINTAIN_RESOLUTION degradation policy to lock 1080p/1440p spatial text sharpness over framerate, backed by Guidegram production implementation.",
+      "timestamp": "2026-10-31T06:34:48.164970+00:00"
+    },
     {
       "id": "gh_comment_tdesktop_6362",
       "platform": "github",
