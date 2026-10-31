@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T13:10:11.000Z",
+  "lastUpdated": "2026-10-31T13:18:47.000Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 92,
-    "githubIssuesCommented": 83,
+    "totalActivities": 93,
+    "githubIssuesCommented": 84,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31520",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31520,
+      "commentId": 6543875959,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31520#issuecomment-6543875959",
+      "title": "Windows: allow maximizing the media viewer without entering fullscreen",
+      "targetComponent": "MediaViewer / WM_GETMINMAXINFO workArea clamping & fullscreen decoupling (commit b2b8784)",
+      "status": "posted",
+      "timestamp": "2026-10-31T13:18:47Z",
+      "architecturalAngle": "Decoupling WorkArea maximization from kiosk fullscreen, native WM_GETMINMAXINFO rcWork clamping, and backdrop click-to-dismiss retention."
+    },
     {
       "id": "gh_tdesktop_31518",
       "platform": "github",
