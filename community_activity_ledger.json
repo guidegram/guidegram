@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T00:15:00Z",
+  "lastUpdated": "2026-10-31T00:16:20Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 45,
-    "githubIssuesCommented": 36,
+    "totalActivities": 46,
+    "githubIssuesCommented": 37,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_31544",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 31544,
+      "targetTitle": "How to disable sending text animation?",
+      "targetUser": "mosinnik",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31544#issuecomment-6536347444",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/31544",
+      "status": "live_public",
+      "summary": "Technical analysis of bundled Effects in messages setting: collateral damage on reactions vs composer send flight animation, proposing dedicated composerSendAnimation decoupling.",
+      "timestamp": "2026-10-31T00:16:20Z"
+    },
     {
       "id": "gh_comment_teloxide_1014",
       "platform": "github",
