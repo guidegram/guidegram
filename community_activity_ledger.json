@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T09:36:17.412Z",
+  "lastUpdated": "2026-10-31T09:51:01.726Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 76,
-    "githubIssuesCommented": 67,
+    "totalActivities": 77,
+    "githubIssuesCommented": 68,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_aiogram_1966",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "aiogram/aiogram",
+      "issueNumber": 1966,
+      "commentId": 6541896251,
+      "url": "https://github.com/aiogram/aiogram/issues/1966#issuecomment-6541896251",
+      "title": "Benchmarks: model backend alternatives, and two cheap wins inside the current pydantic path",
+      "targetComponent": "TelegramObject vs TelegramMethod remove_unset / model_validate_json fast-path",
+      "status": "posted",
+      "timestamp": "2026-10-31T09:51:01.728Z",
+      "architecturalAngle": "Inbound vs outbound deserialization decoupling, pydantic-core Rust fast-path unblocking, and GC churn reduction."
+    },
     {
       "id": "gh_tdesktop_31547",
       "platform": "github",
