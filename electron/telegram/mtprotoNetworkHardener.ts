@@ -19,6 +19,12 @@ export interface FakeTlsProfile {
   sanitizedSecret: string;
 }
 
+export interface LivenessStatus {
+  isHealthy: boolean;
+  reason: 'pong_received' | 'inbound_traffic_active' | 'packet_received' | 'idle_within_timeout' | 'connection_dead';
+  timeSinceLastActivityMs: number;
+}
+
 export interface NetworkHardenerTelemetry {
   fakeTlsProcessedCount: number;
   sniSpoofModernizedCount: number;
@@ -26,6 +32,7 @@ export interface NetworkHardenerTelemetry {
   proxyRacesConductedCount: number;
   circuitBreakerTripsCount: number;
   instantRejectionClampsCount: number;
+  inboundTrafficSavedDropsCount: number;
 }
 
 export class MtprotoNetworkHardener {
@@ -47,6 +54,7 @@ export class MtprotoNetworkHardener {
   private proxyRacesConducted: number = 0;
   private circuitBreakerTrips: number = 0;
   private instantRejectionClamps: number = 0;
+  private inboundTrafficSavedDrops: number = 0;
 
   private constructor() {}
 
@@ -247,6 +255,73 @@ export class MtprotoNetworkHardener {
     };
   }
 
+  /**
+   * Evaluates MTProto connection liveness using Progress-Aware Ping logic.
+   * Resolves gotd/td #1861: Slow links falsely declared dead when pong sits behind large responses.
+   *
+   * TDLib & Android Parity:
+   * A connection is NOT dead if:
+   * 1. A pong was received recently, OR
+   * 2. Any valid decrypted packet arrived recently (TDLib SessionConnection::on_main_packet), OR
+   * 3. Raw socket bytes are currently arriving (transport ReadCounter / lastReadAt).
+   *
+   * Only declared dead if:
+   * now - max(lastPongAt, lastPacketAt, lastBytesReadAt) > pingTimeoutMs AND a ping is outstanding.
+   */
+  public evaluateLiveness(
+    now: number,
+    lastPongAt: number,
+    lastPacketAt: number,
+    lastBytesReadAt: number,
+    pingSentAt: number,
+    pingTimeoutMs: number = 15000
+  ): LivenessStatus {
+    const mostRecentActivity = Math.max(lastPongAt, lastPacketAt, lastBytesReadAt);
+    const timeSinceActivity = Math.max(0, now - mostRecentActivity);
+
+    // If no ping is outstanding, connection is healthy
+    if (pingSentAt <= 0) {
+      return {
+        isHealthy: true,
+        reason: 'idle_within_timeout',
+        timeSinceLastActivityMs: timeSinceActivity,
+      };
+    }
+    if (lastPongAt >= pingSentAt) {
+      return {
+        isHealthy: true,
+        reason: 'pong_received',
+        timeSinceLastActivityMs: timeSinceActivity,
+      };
+    }
+
+    // Ping is outstanding. Did we receive raw bytes or valid packets since sending ping?
+    const hasActiveTraffic = Math.max(lastPacketAt, lastBytesReadAt) >= pingSentAt;
+    if (hasActiveTraffic) {
+      this.inboundTrafficSavedDrops++;
+      return {
+        isHealthy: true,
+        reason: lastPacketAt >= pingSentAt ? 'packet_received' : 'inbound_traffic_active',
+        timeSinceLastActivityMs: timeSinceActivity,
+      };
+    }
+
+    // Check if time since last activity is within pingTimeout
+    if (timeSinceActivity < pingTimeoutMs) {
+      return {
+        isHealthy: true,
+        reason: 'idle_within_timeout',
+        timeSinceLastActivityMs: timeSinceActivity,
+      };
+    }
+
+    return {
+      isHealthy: false,
+      reason: 'connection_dead',
+      timeSinceLastActivityMs: timeSinceActivity,
+    };
+  }
+
   public getTelemetry(): NetworkHardenerTelemetry {
     return {
       fakeTlsProcessedCount: this.fakeTlsProcessed,
@@ -255,6 +330,7 @@ export class MtprotoNetworkHardener {
       proxyRacesConductedCount: this.proxyRacesConducted,
       circuitBreakerTripsCount: this.circuitBreakerTrips,
       instantRejectionClampsCount: this.instantRejectionClamps,
+      inboundTrafficSavedDropsCount: this.inboundTrafficSavedDrops,
     };
   }
 }
