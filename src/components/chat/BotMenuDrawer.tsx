@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { DialogItem, ChatDetails } from '../../types/telegram'
 import { isRTL } from '../../utils/textUtils'
+import { formatCommandForChat } from '../../utils/telegramBotCommandParser'
 
 export interface BotCommandItem {
   command: string
@@ -46,6 +47,8 @@ export interface CommandAutocompleteProps {
   cursorPosition?: number
   commands: BotCommandItem[]
   isOpen?: boolean
+  botUsername?: string
+  isGroupChat?: boolean
   onSelectCommand: (command: string) => void
   onClose?: () => void
   className?: string
@@ -61,6 +64,8 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
   cursorPosition,
   commands,
   isOpen: forcedIsOpen,
+  botUsername,
+  isGroupChat,
   onSelectCommand,
   onClose,
   className = '',
@@ -124,9 +129,7 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
         e.stopPropagation()
         const selected = matchingCommands[selectedIndex]
         if (selected) {
-          const cmdFormatted = selected.command.startsWith('/')
-            ? selected.command
-            : `/${selected.command}`
+          const cmdFormatted = formatCommandForChat(selected.command, botUsername, isGroupChat)
           onSelectCommand(cmdFormatted)
         }
       } else if (e.key === 'Tab') {
@@ -134,9 +137,7 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
         e.stopPropagation()
         const selected = matchingCommands[selectedIndex]
         if (selected) {
-          const cmdFormatted = selected.command.startsWith('/')
-            ? selected.command
-            : `/${selected.command}`
+          const cmdFormatted = formatCommandForChat(selected.command, botUsername, isGroupChat)
           onSelectCommand(cmdFormatted)
         }
       } else if (e.key === 'Escape') {
@@ -150,7 +151,7 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [isVisible, matchingCommands, selectedIndex, onSelectCommand, onClose])
+  }, [isVisible, matchingCommands, selectedIndex, onSelectCommand, onClose, botUsername, isGroupChat])
 
   if (!isVisible || matchingCommands.length === 0) {
     return null
@@ -176,17 +177,15 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
       <div className="flex flex-col gap-0.5 mt-1">
         {matchingCommands.map((item, idx) => {
           const isSelected = idx === selectedIndex
-          const cmdName = item.command.startsWith('/')
-            ? item.command
-            : `/${item.command}`
+          const cmdFormatted = formatCommandForChat(item.command, botUsername, isGroupChat)
           const isRtl = isRTL(item.description)
 
           return (
             <button
-              key={cmdName}
+              key={item.command}
               type="button"
               onMouseEnter={() => setSelectedIndex(idx)}
-              onClick={() => onSelectCommand(cmdName)}
+              onClick={() => onSelectCommand(cmdFormatted)}
               className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl transition-all text-left cursor-pointer ${
                 isSelected
                   ? 'bg-primary-600/30 text-white border border-primary-500/40 shadow-sm'
@@ -552,6 +551,7 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
   }
 
   const botUsername = chat.username || chatDetails?.username
+  const isGroupChat = Boolean(chat.isGroup || chat.isSupergroup || chat.type === 'group' || chat.type === 'supergroup')
 
   return (
     <div className={`relative shrink-0 ${className}`}>
@@ -561,6 +561,8 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
         cursorPosition={cursorPosition}
         commands={resolvedCommands}
         isOpen={isAutocompleteOpen}
+        botUsername={botUsername}
+        isGroupChat={isGroupChat}
         onSelectCommand={handleSelectCommand}
         onClose={() => {}}
       />
