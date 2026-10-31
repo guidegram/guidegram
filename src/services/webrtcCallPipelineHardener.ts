@@ -41,6 +41,14 @@ export interface QualityAdaptation {
   reason: string;
 }
 
+export interface ScreenShareOptimization {
+  contentHint: 'detail' | 'motion';
+  degradationPreference: 'maintain-resolution' | 'maintain-framerate' | 'balanced';
+  maxBitrateBps: number;
+  minBitrateBps: number;
+  maxFramerate: number;
+}
+
 export class WebrtcCallPipelineHardener {
   private static instance: WebrtcCallPipelineHardener | null = null;
   private sessions: Map<string, CallSession> = new Map();
@@ -201,6 +209,30 @@ export class WebrtcCallPipelineHardener {
 
   public getActiveSessions(): CallSession[] {
     return Array.from(this.sessions.values()).filter(s => s.state === 'connected' || s.state === 'connecting');
+  }
+
+  /**
+   * Generates optimal WebRTC track parameters for Screen Sharing (resolves tdesktop #16487).
+   * Prioritizes high spatial resolution for text readability in group SFU calls
+   * by setting contentHint to 'detail' and degradationPreference to 'maintain-resolution'.
+   */
+  public getScreenShareProfile(mode: 'text_detail' | 'motion_video' = 'text_detail'): ScreenShareOptimization {
+    if (mode === 'text_detail') {
+      return {
+        contentHint: 'detail',
+        degradationPreference: 'maintain-resolution',
+        maxBitrateBps: 3500000, // 3.5 Mbps for crisp 1080p/1440p text
+        minBitrateBps: 600000,  // Prevents aggressive SFU downscaling
+        maxFramerate: 15,       // 15 fps allocates bandwidth to pixel sharpness
+      };
+    }
+    return {
+      contentHint: 'motion',
+      degradationPreference: 'maintain-framerate',
+      maxBitrateBps: 2500000,
+      minBitrateBps: 400000,
+      maxFramerate: 30,
+    };
   }
 
   public reset(): void {

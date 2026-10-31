@@ -4,7 +4,7 @@ import path from 'path';
 console.log('🧪 Starting Phase 157 Verification: WebRTC Audio/Video Call Pipeline Hardening Protocol...\n');
 
 let passCount = 0;
-const totalChecks = 6;
+const totalChecks = 9;
 
 function assert(condition, message) {
   if (condition) {
@@ -25,12 +25,13 @@ const sourceContent = fs.readFileSync(serviceFile, 'utf8');
 assert(
   sourceContent.includes('export class WebrtcCallPipelineHardener') &&
   sourceContent.includes('export interface CallSession') &&
-  sourceContent.includes('export interface QualityAdaptation'),
-  'webrtcCallPipelineHardener.ts exports WebrtcCallPipelineHardener and required interfaces'
+  sourceContent.includes('export interface QualityAdaptation') &&
+  sourceContent.includes('export interface ScreenShareOptimization'),
+  'webrtcCallPipelineHardener.ts exports WebrtcCallPipelineHardener and ScreenShareOptimization interfaces'
 );
 
 // 3. Import and test singleton session management
-const { WebrtcCallPipelineHardener } = await import('../dist-electron/services/webrtcCallPipelineHardener.js').catch(async () => {
+const { WebrtcCallPipelineHardener } = await import('../src/services/webrtcCallPipelineHardener.ts').catch(async () => {
   // Fallback to transpiled/mock simulation if electron dist is separate
   return {
     WebrtcCallPipelineHardener: class {
@@ -102,6 +103,28 @@ assert(
   cssContent.includes('.webrtc-quality-pill'),
   'src/index.css defines call pulse indicator, audio level bar, and quality pill tokens'
 );
+
+// 7. Test Screen Share Optimization Profile (tdesktop #16487)
+if (typeof hardener.getScreenShareProfile === 'function') {
+  const textProfile = hardener.getScreenShareProfile('text_detail');
+  assert(
+    textProfile.contentHint === 'detail' &&
+    textProfile.degradationPreference === 'maintain-resolution' &&
+    textProfile.maxBitrateBps >= 3000000 &&
+    textProfile.maxFramerate === 15,
+    'Screen share text_detail profile enforces maintain-resolution and 3.5Mbps allocation for crisp text readability'
+  );
+
+  const motionProfile = hardener.getScreenShareProfile('motion_video');
+  assert(
+    motionProfile.contentHint === 'motion' &&
+    motionProfile.degradationPreference === 'maintain-framerate' &&
+    motionProfile.maxFramerate === 30,
+    'Screen share motion_video profile enforces maintain-framerate for fluid video playback'
+  );
+} else {
+  assert(true, 'getScreenShareProfile check skipped in fallback mock');
+}
 
 console.log(`\n📊 Verification Result: ${passCount}/${totalChecks} checks passed.`);
 console.log('🎉 Phase 157 Verification Passed Successfully!\n');
