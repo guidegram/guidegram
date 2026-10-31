@@ -6501,6 +6501,8 @@ export class AccountManager {
           antiSpamEnabled: Boolean(res.fullChat?.antispam),
           canToggleAntiSpam: isSupergroup && (isCreator || Boolean(adminRights?.changeInfo || adminRights?.banUsers)),
           slowmodeNextSendDate: res.fullChat?.slowmodeNextSendDate ? Number(res.fullChat.slowmodeNextSendDate) : undefined,
+          migratedFromChatId: res.fullChat?.migratedFromChatId ? String(res.fullChat.migratedFromChatId) : undefined,
+          migratedFromMaxId: res.fullChat?.migratedFromMaxId ? Number(res.fullChat.migratedFromMaxId) : undefined,
         }
       } else if (inputPeer._ === 'inputPeerChat') {
         const res: any = await holder.client.call({
@@ -15243,6 +15245,60 @@ export class AccountManager {
           hasMore = false
         } else {
           lastOffsetId = oldestInBatch.id
+        }
+      }
+
+      // Stage 2: Unified Legacy Export Bridge (Telegram Desktop Migration Parity)
+      // If supergroup was upgraded from a basic group, fetch pre-upgrade legacy group history
+      if (fetchedMessages.length < maxLimit && (chatId.startsWith('-100') || !chatId.startsWith('-'))) {
+        try {
+          const chatDetails = await this.getChatDetails(accountId, chatId)
+          if (chatDetails?.migratedFromChatId) {
+            const legacyChatId = chatDetails.migratedFromChatId.startsWith('-')
+              ? chatDetails.migratedFromChatId
+              : `-${chatDetails.migratedFromChatId}`
+            let legacyOffsetId = chatDetails.migratedFromMaxId || 0
+            let hasMoreLegacy = true
+
+            while (hasMoreLegacy && fetchedMessages.length < maxLimit) {
+              const batchLimit = Math.min(batchSize, maxLimit - fetchedMessages.length)
+              const legacyBatch = await this.getMessages(accountId, legacyChatId, batchLimit, legacyOffsetId)
+              if (!legacyBatch || legacyBatch.length === 0) {
+                hasMoreLegacy = false
+                break
+              }
+
+              for (const m of legacyBatch) {
+                if (options.fromDate && m.date < options.fromDate) {
+                  hasMoreLegacy = false
+                  break
+                }
+                if (options.toDate && m.date > options.toDate) {
+                  continue
+                }
+                if (options.selectedTypes && options.selectedTypes.length > 0) {
+                  const mType = m.mediaType || 'text'
+                  if (!options.selectedTypes.includes(mType as any)) {
+                    continue
+                  }
+                }
+                // Disambiguate legacy basic group messages so their IDs do not collide with supergroup IDs starting at 1
+                fetchedMessages.push({
+                  ...m,
+                  id: -(Math.abs(m.id)), // Negative synthetic ID preserves chronological sorting while preventing ID collisions
+                })
+              }
+
+              const oldestInLegacy = legacyBatch[legacyBatch.length - 1]
+              if (!oldestInLegacy || oldestInLegacy.id === legacyOffsetId || legacyBatch.length < batchLimit) {
+                hasMoreLegacy = false
+              } else {
+                legacyOffsetId = oldestInLegacy.id
+              }
+            }
+          }
+        } catch (migErr) {
+          Logger.warn(`[AccountManager] Failed to fetch pre-migration history for ${chatId}:`, migErr)
         }
       }
 

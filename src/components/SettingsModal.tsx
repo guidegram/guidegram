@@ -22,6 +22,7 @@ import {
   CornerDownLeft,
   Bookmark,
   Trash2,
+  Send,
   Code,
   Zap,
   CheckCheck,
@@ -269,6 +270,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [markAllReadEnabled, setMarkAllReadEnabled] = useState(true)
   const [copyCallbackData, setCopyCallbackData] = useState(true)
   const [disableAnimations, setDisableAnimations] = useState(false)
+  const [composerSendAnimation, setComposerSendAnimation] = useState(true)
   const [enableThanosDust, setEnableThanosDust] = useState(true)
   const [suppressLinkWarning, setSuppressLinkWarning] = useState(false)
   const [antiFingerprinting, setAntiFingerprinting] = useState(true)
@@ -745,6 +747,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setMarkAllReadEnabled(cfg.markAllReadEnabled ?? true)
         setCopyCallbackData(cfg.copyCallbackData ?? true)
         setDisableAnimations(cfg.disableAnimations ?? false)
+        setComposerSendAnimation(cfg.composerSendAnimation ?? true)
         setEnableThanosDust(cfg.enableThanosDust ?? true)
         setSuppressLinkWarning(cfg.suppressLinkWarning ?? false)
         setAntiFingerprinting(cfg.antiFingerprinting ?? true)
@@ -962,6 +965,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       markAllReadEnabled,
       copyCallbackData,
       disableAnimations,
+      composerSendAnimation,
       enableThanosDust,
       suppressLinkWarning,
       antiFingerprinting,
@@ -2934,6 +2938,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       icon={<Zap className="w-3.5 h-3.5 text-amber-400" />}
                       checked={disableAnimations}
                       onChange={setDisableAnimations}
+                    />
+                    <ToggleItem
+                      title="Composer Send Animation"
+                      desc="Smooth flight micro-animation when sending messages. Disable for instant terminal-like sending without disabling reactions or particles."
+                      icon={<Send className="w-3.5 h-3.5 text-accent-cyan" />}
+                      checked={composerSendAnimation}
+                      onChange={setComposerSendAnimation}
                     />
                   </div>
 

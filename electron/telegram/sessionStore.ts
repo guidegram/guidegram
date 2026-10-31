@@ -105,6 +105,7 @@ export class SessionStore {
       markAllReadEnabled: true,
       copyCallbackData: true,
       disableAnimations: false,
+      composerSendAnimation: true,
       suppressLinkWarning: false,
       antiFingerprinting: true,
       autoDownload: {

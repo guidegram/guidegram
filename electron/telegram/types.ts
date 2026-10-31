@@ -605,6 +605,8 @@ export interface ChatDetails {
   chatTheme?: string
   chatWallpaper?: string
   userStatus?: UserStatusInfo
+  migratedFromChatId?: string
+  migratedFromMaxId?: number
 }
 
 export interface DiscussionThreadInfo {
@@ -1010,6 +1012,7 @@ export interface AppConfig {
   markAllReadEnabled: boolean
   copyCallbackData: boolean
   disableAnimations?: boolean
+  composerSendAnimation?: boolean
   enableThanosDust?: boolean
   suppressLinkWarning?: boolean
   // Device & Privacy Spoofing
