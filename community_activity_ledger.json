@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T01:17:00Z",
+  "lastUpdated": "2026-10-31T01:31:00Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 47,
-    "githubIssuesCommented": 38,
+    "totalActivities": 48,
+    "githubIssuesCommented": 39,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_go_tg_bot_154",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "go-telegram/bot",
+      "targetIssueNumber": 154,
+      "targetTitle": "update.From when it came from unknown source (CallbackQuery/Message)",
+      "targetUser": "BeyCoder",
+      "url": "https://github.com/go-telegram/bot/issues/154#issuecomment-6537200716",
+      "issueUrl": "https://github.com/go-telegram/bot/issues/154",
+      "status": "live_public",
+      "summary": "Architectural solution for EffectiveUser and EffectiveChat: analyzed panic hazard and schema drift in PR #158, providing zero-allocation, non-panicking Go helpers for hybrid message/callback routing.",
+      "timestamp": "2026-10-31T01:31:00Z"
+    },
     {
       "id": "gh_comment_go_tg_bot_134",
       "platform": "github",
