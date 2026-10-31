@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T07:58:41.152Z",
+  "lastUpdated": "2026-10-31T08:03:50.818Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 69,
-    "githubIssuesCommented": 60,
+    "totalActivities": 70,
+    "githubIssuesCommented": 61,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_5325",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 5325,
+      "targetTitle": "Switching proxy bumps the upload speed",
+      "targetUser": "TDesktop Community & Maintainers",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/5325#issuecomment-6540932147",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/5325",
+      "status": "live_public",
+      "summary": "Kinetics of TCP cwnd collapse vs MTP::Instance::restart() in TDesktop: explained why proxy switching bumps speed (TCP Slow-Start reset + queue flush), provided multi-session 1MB part pipelining and autonomous EWMA stall cycling remedy from Guidegram Phase 159.",
+      "timestamp": "2026-10-31T08:03:50.817Z"
+    },
     {
       "id": "gh_comment_teloxide_1121",
       "platform": "github",
