@@ -94,7 +94,7 @@ export class MultiLanguageAndInputGovernor {
 
     if (baseDirection === 'rtl') {
       // In RTL context: wrap pure LTR alphanumeric / URL tokens in LRI (\u2066) ... PDI (\u2069)
-      const ltrTokenRegex = /([a-zA-Z0-9_\-\.\:\/]+(?:@[a-zA-Z0-9_\-\.]+)?)/g;
+      const ltrTokenRegex = /(?:@)?[a-zA-Z0-9_\-\.\:\/]+(?:@[a-zA-Z0-9_\-\.]+)?/g;
       return text.replace(ltrTokenRegex, (match) => {
         // If match contains any Latin letters, isolate it
         if (/[a-zA-Z]/.test(match)) {
