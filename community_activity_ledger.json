@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T08:36:59.993Z",
+  "lastUpdated": "2026-10-31T08:54:37.029Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 72,
-    "githubIssuesCommented": 63,
+    "totalActivities": 73,
+    "githubIssuesCommented": 64,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_teloxide_978",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "teloxide/teloxide",
+      "targetIssueNumber": 978,
+      "targetTitle": "Bot stops responding after some time: Only to commands in group chats it seems",
+      "targetUser": "DuckyBlender, LasterAlex & Teloxide maintainers",
+      "url": "https://github.com/teloxide/teloxide/issues/978#issuecomment-6541387853",
+      "issueUrl": "https://github.com/teloxide/teloxide/issues/978",
+      "status": "live_public",
+      "summary": "Definitive documentation guide for Telegram Group Privacy Mode & command targeting: dissected the last-speaker update filtering invariant, why client autocomplete appends @bot_username, and provided copy-pasteable Rust code for set_my_commands and multi-bot collision prevention from Guidegram Phase 162.",
+      "timestamp": "2026-10-31T08:54:37.028Z"
+    },
     {
       "id": "gh_comment_tdesktop_27419",
       "platform": "github",
