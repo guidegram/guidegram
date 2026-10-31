@@ -79,7 +79,7 @@ export const SecretChatFingerprintModal: React.FC<SecretChatFingerprintModalProp
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">
-                  {isPersian ? 'کلید رمزنگاری سرتاسری' : 'End-to-End Encryption'}
+                  {t('secret_chat.encryption_key')}
                 </h3>
                 <p className="text-[11px] text-gray-400 truncate max-w-[240px]">{chatTitle}</p>
               </div>
@@ -116,9 +116,7 @@ export const SecretChatFingerprintModal: React.FC<SecretChatFingerprintModalProp
             </div>
 
             <p className="mt-4 text-center text-xs text-gray-300 leading-relaxed max-w-sm">
-              {isPersian
-                ? 'این ۴ ایموجی و اثر انگشت هگزادسیمال روی دستگاه شما و مخاطب کاملاً یکسان هستند. تطابق آن‌ها اثبات می‌کند که هیچ شنود یا واسطه‌ای (Man-in-the-Middle) وجود ندارد.'
-                : 'These 4 emojis and hexadecimal key fingerprint are identical on your device and your chat partner’s. If they match, your communication is 200% secure with zero third-party interception.'}
+              {t('secret_chat.fingerprint_desc')}
             </p>
           </div>
 
@@ -126,7 +124,7 @@ export const SecretChatFingerprintModal: React.FC<SecretChatFingerprintModalProp
           <div className="pt-4 border-t border-white/5">
             <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-gray-200">
               <Clock className="w-3.5 h-3.5 text-accent-cyan" />
-              <span>{isPersian ? 'تایمر تخریب خودکار پیام‌ها (TTL)' : 'Self-Destruct Timer (TTL)'}</span>
+              <span>{t('secret_chat.self_destruct_ttl')}</span>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
               {TTL_OPTIONS.map((opt) => (
@@ -149,7 +147,7 @@ export const SecretChatFingerprintModal: React.FC<SecretChatFingerprintModalProp
           {/* Verification Badge */}
           <div className="mt-5 flex items-center justify-center gap-2 text-[11px] text-accent-emerald/90 bg-accent-emerald/10 border border-accent-emerald/20 py-2 rounded-xl">
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            <span>{isPersian ? 'رمزنگاری MTProto AES-256-IGE فعال است' : 'MTProto AES-256-IGE & Diffie-Hellman Active'}</span>
+            <span>{t('secret_chat.mtproto_active')}</span>
           </div>
         </motion.div>
       </div>

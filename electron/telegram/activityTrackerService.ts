@@ -63,16 +63,20 @@ export class ActivityTrackerService {
 
   // Local contact renames suppression map: `${accountId}:${userId}` -> timestamp
   private recentlyRenamedLocally = new Map<string, number>()
+  private onExcludeUserCallback?: (accountId: string, userId: string, reason: string) => void
+  private clockNameChangeCounts = new Map<string, number>()
 
   constructor(
     baseDataDir: string,
     onEvent?: (event: string, payload: any) => void,
-    getConfig?: () => AppConfig
+    getConfig?: () => AppConfig,
+    onExcludeUser?: (accountId: string, userId: string, reason: string) => void
   ) {
     this.baseDir = baseDataDir
     this.activityDir = path.join(baseDataDir, 'activity_tracker')
     this.onEventCallback = onEvent
     this.getConfig = getConfig || (() => ({} as AppConfig))
+    this.onExcludeUserCallback = onExcludeUser
     this.ensureDirectory()
     this.initUptimeTracker()
     this.sanitizeAllDiskFiles().catch(() => {})
@@ -577,6 +581,10 @@ export class ActivityTrackerService {
     const cfg = this.getConfig()
     if (cfg.activityTrackerEnabled === false) return
     if (cfg.ignoredUserTrackingIds?.includes(userId)) return
+    if (cfg.profileAuditContactsOnly) {
+      const snap = this.loadSnapshots(accountId)[userId]
+      if (!snap?.isContact && !(meta as any)?.isContact) return
+    }
 
     const parsed = this.parseUserStatusType(rawStatus)
     if (parsed.status === 'empty') return // Ignore empty/unspecified status updates
@@ -662,6 +670,7 @@ export class ActivityTrackerService {
     const cfg = this.getConfig()
     if (cfg.profileChangeAuditorEnabled === false) return
     if (cfg.ignoredUserTrackingIds?.includes(change.userId)) return
+    if (cfg.profileAuditContactsOnly && !change.isMyContact) return
 
     const changes = this.loadChanges(accountId)
     const now = Math.floor(Date.now() / 1000)
@@ -761,6 +770,62 @@ export class ActivityTrackerService {
     }
   }
 
+  /**
+   * Detects whether a display name change is purely a clock/time bot update.
+   * Users who connect a userbot changing clock in their name (e.g. "Name 03:52" or "Name 𝟬𝟯:𝟱𝟮")
+   * have their name change every minute.
+   * If a colon exists, and changes between oldName and newName are localized within 6 characters
+   * around the colon and involve digits, this returns true.
+   */
+  public isClockNameChange(oldName?: string, newName?: string): boolean {
+    if (!oldName || !newName || oldName === newName) return false
+
+    const colonRegex = /[:：﹕ː∶]/
+    if (!colonRegex.test(oldName) && !colonRegex.test(newName)) return false
+
+    // Multi-script digit detection: ASCII 0-9, Arabic/Persian digits, Unicode mathematical bold/monospace digits
+    const digitRegex = /[0-9\u0660-\u0669\u06F0-\u06F9\u{1D7CE}-\u{1D805}]/u
+
+    let prefixLen = 0
+    const minLen = Math.min(oldName.length, newName.length)
+    while (prefixLen < minLen && oldName[prefixLen] === newName[prefixLen]) {
+      prefixLen++
+    }
+
+    let suffixLen = 0
+    const maxSuffixLen = minLen - prefixLen
+    while (
+      suffixLen < maxSuffixLen &&
+      oldName[oldName.length - 1 - suffixLen] === newName[newName.length - 1 - suffixLen]
+    ) {
+      suffixLen++
+    }
+
+    const oldDiff = oldName.slice(prefixLen, oldName.length - suffixLen)
+    const newDiff = newName.slice(prefixLen, newName.length - suffixLen)
+
+    if (oldDiff.length > 16 || newDiff.length > 16) return false
+
+    // Check if colon exists within 6 characters of the diff
+    const oldStart = Math.max(0, prefixLen - 6)
+    const oldEnd = Math.min(oldName.length, oldName.length - suffixLen + 6)
+    const oldWindow = oldName.slice(oldStart, oldEnd)
+
+    const newStart = Math.max(0, prefixLen - 6)
+    const newEnd = Math.min(newName.length, newName.length - suffixLen + 6)
+    const newWindow = newName.slice(newStart, newEnd)
+
+    const hasColonInWindow = colonRegex.test(oldWindow) || colonRegex.test(newWindow)
+    if (!hasColonInWindow) return false
+
+    const hasDigits =
+      digitRegex.test(oldDiff) ||
+      digitRegex.test(newDiff) ||
+      (digitRegex.test(oldWindow) && digitRegex.test(newWindow))
+
+    return hasDigits
+  }
+
   public inspectUserSnapshot(
     accountId: string,
     user: any,
@@ -778,6 +843,9 @@ export class ActivityTrackerService {
 
     const snapshots = this.loadSnapshots(accountId)
     const prev = snapshots[userId]
+    if (cfg.profileAuditContactsOnly && !relation?.isContact && !user.contact && !prev?.isContact) {
+      return
+    }
     const now = Math.floor(Date.now() / 1000)
 
     // Extract current fields safely, respecting partial updates
@@ -869,6 +937,38 @@ export class ActivityTrackerService {
         // Silently update local snapshot to reflect user's phonebook name edit without cluttering timeline
         prev.name = currentName
       } else {
+        const isClock = this.isClockNameChange(prev.name, currentName)
+        if (isClock) {
+          const countKey = `${accountId}:${userId}`
+          const count = (this.clockNameChangeCounts.get(countKey) || 0) + 1
+          this.clockNameChangeCounts.set(countKey, count)
+
+          if (count >= 5) {
+            Logger.info(
+              `[ActivityTracker] Auto-excluding user ${userId} (${currentName}) after 5 clock bot name changes`
+            )
+            this.onExcludeUserCallback?.(accountId, userId, 'clock_bot_detected')
+            prev.name = currentName
+            this.scheduleSaveSnapshots(accountId)
+
+            // Purge repetitive spam clock name_change events for this user
+            const changes = this.loadChanges(accountId)
+            const filtered = changes.filter(
+              (c) =>
+                !(
+                  c.userId === userId &&
+                  c.changeType === 'name_change' &&
+                  (this.isClockNameChange(c.oldValue, c.newValue) || (c.newValue && /[:：﹕ː∶]/.test(c.newValue)))
+                )
+            )
+            this.changesCache.set(accountId, filtered)
+            this.scheduleSaveChanges(accountId)
+            return
+          }
+        } else {
+          this.clockNameChangeCounts.delete(`${accountId}:${userId}`)
+        }
+
         this.recordContactChange(accountId, {
           userId,
           changeType: 'name_change',
@@ -1125,6 +1225,15 @@ export class ActivityTrackerService {
     const changes = this.loadChanges(accountId)
     let result = [...changes]
 
+    const cfg = this.getConfig()
+    if (cfg.ignoredUserTrackingIds && cfg.ignoredUserTrackingIds.length > 0) {
+      const ignored = new Set(cfg.ignoredUserTrackingIds)
+      result = result.filter((c) => !ignored.has(c.userId))
+    }
+    if (cfg.profileAuditContactsOnly) {
+      result = result.filter((c) => c.isMyContact === true)
+    }
+
     if (filter) {
       // 1. Relationship filter
       if (filter.relation === 'mutual') {
@@ -1310,15 +1419,19 @@ export class ActivityTrackerService {
 
     const allSessions: ContactOnlineSessionItem[] = []
     const usersMap = new Map<string, AccountOnlineTimelineUser>()
+    const cfg = this.getConfig()
+    const ignoredSet = new Set(cfg.ignoredUserTrackingIds || [])
 
     for (const [userId, history] of Object.entries(allStatus)) {
-      if (userId === accountId) continue
+      if (userId === accountId || ignoredSet.has(userId)) continue
       const snap = snapshots[userId]
+      const isContact = snap?.isContact
+      if (cfg.profileAuditContactsOnly && !isContact) continue
+
       const userName = snap?.name || 'کاربر تلگرام'
       const userUsername = snap?.username
       const avatarUrl = snap?.avatarUrl
       const isMutual = snap?.isMutualContact
-      const isContact = snap?.isContact
 
       let currentStatus: UserOnlineStatusType = 'empty'
       let lastSeenTimestamp: number | undefined = undefined

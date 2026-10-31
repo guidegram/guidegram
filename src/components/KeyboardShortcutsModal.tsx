@@ -65,10 +65,10 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ 
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                {isPersian ? 'میانبرهای صفحه کلید (Telegram Desktop)' : 'Keyboard Shortcuts (Telegram Desktop)'}
+                {t('shortcuts.title')}
               </h3>
               <p className="text-[11px] text-gray-400">
-                {isPersian ? 'ناوبری سریع، سوئیچ گفتگوها و کنترل بدون ماوس' : 'Power navigation & full keyboard control'}
+                {t('shortcuts.subtitle')}
               </p>
             </div>
           </div>
@@ -87,7 +87,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ 
           <div>
             <div className="flex items-center gap-2 mb-3 text-xs font-bold text-accent-cyan uppercase tracking-wider">
               <Navigation className="w-3.5 h-3.5" />
-              <span>{isPersian ? 'ناوبری و جابجایی' : 'Navigation'}</span>
+              <span>{t('shortcuts.nav_section')}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {navigationShortcuts.map((s, idx) => (
@@ -109,7 +109,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ 
           <div>
             <div className="flex items-center gap-2 mb-3 text-xs font-bold text-primary-400 uppercase tracking-wider">
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>{isPersian ? 'عملیات پیام و چت' : 'Chat & Messages'}</span>
+              <span>{t('shortcuts.chat_section')}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {chatShortcuts.map((s, idx) => (
@@ -131,7 +131,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ 
           <div>
             <div className="flex items-center gap-2 mb-3 text-xs font-bold text-accent-violet uppercase tracking-wider">
               <Settings className="w-3.5 h-3.5" />
-              <span>{isPersian ? 'سیستم و راهنما' : 'System & Help'}</span>
+              <span>{t('shortcuts.system_section')}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {systemShortcuts.map((s, idx) => (
@@ -152,13 +152,13 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ 
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-white/5 bg-dark-900/40 flex items-center justify-between text-xs text-gray-500">
-          <span>{isPersian ? 'کلید Esc برای بستن پنجره' : 'Press Esc to close'}</span>
+          <span>{t('shortcuts.esc_hint')}</span>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold transition-colors cursor-pointer"
           >
-            {isPersian ? 'متوجه شدم' : 'Got it'}
+            {t('shortcuts.got_it')}
           </button>
         </div>
       </motion.div>

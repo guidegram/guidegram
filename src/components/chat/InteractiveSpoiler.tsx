@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react'
+import { useI18n } from '../../i18n'
 
 export interface InteractiveSpoilerProps {
   children: React.ReactNode
@@ -15,6 +16,7 @@ export interface InteractiveSpoilerProps {
  */
 export const InteractiveSpoiler: React.FC<InteractiveSpoilerProps> = React.memo(
   ({ children, className = '', title }) => {
+    const { t } = useI18n()
     const [revealed, setRevealed] = useState(false)
     const [isBursting, setIsBursting] = useState(false)
 
@@ -35,7 +37,7 @@ export const InteractiveSpoiler: React.FC<InteractiveSpoilerProps> = React.memo(
     return (
       <span
         onClickCapture={handleClickCapture}
-        title={revealed ? undefined : (title || 'کلیک برای نمایش متن مخفی • Click to reveal spoiler')}
+        title={revealed ? undefined : (title || t('spoiler.click_reveal'))}
         className={`telegram-spoiler inline-block align-baseline rounded px-1 transition-all duration-300 relative select-none ${
           revealed ? 'is-revealed select-text cursor-text' : 'is-hidden cursor-pointer'
         } ${isBursting ? 'is-bursting' : ''} ${className}`}

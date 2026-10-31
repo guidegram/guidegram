@@ -1152,7 +1152,26 @@ export class AccountManager {
     this.activityTrackerService = new ActivityTrackerService(
       this.store.getDataDirectory(),
       (event, payload) => this.onEventCallback?.(event, payload),
-      () => this.store.getConfig()
+      () => this.store.getConfig(),
+      (accountId, userId, reason) => {
+        try {
+          const cfg = this.store.getConfig()
+          const current = cfg.ignoredUserTrackingIds || []
+          if (!current.includes(userId)) {
+            const next = Array.from(new Set([...current, userId]))
+            this.store.updateConfig({ ignoredUserTrackingIds: next })
+            Logger.info(`[AccountManager] User ${userId} auto-excluded from tracking (${reason})`)
+            this.onEventCallback?.('telegram:user-tracking-changed', {
+              accountId,
+              userId,
+              enabled: false,
+              reason,
+            })
+          }
+        } catch (err) {
+          Logger.error(`[AccountManager] Failed to auto-exclude user ${userId}:`, err)
+        }
+      }
     )
     this.avatarsDir = path.join(this.store.getDataDirectory(), 'avatars')
     this.mediaDir = path.join(this.store.getDataDirectory(), 'media_cache')
@@ -2819,7 +2838,7 @@ export class AccountManager {
         const item: DialogItem = {
           id: peerId,
           accountId,
-          title: isSelf && title === 'Unknown Chat' ? 'Saved Messages' : title,
+          title: isSelf ? 'Saved Messages' : title,
           unreadCount,
           readInboxMaxId,
           readOutboxMaxId,
@@ -3150,6 +3169,9 @@ export class AccountManager {
         for (const d of cached) {
           const peerId = d.id
           if (peerId && !peerId.startsWith('-') && peerId !== accountId) {
+            if (cfg.profileAuditContactsOnly && !(d as any).isContact) {
+              continue
+            }
             const lastDate = d.lastMessageDate || 0
             if (cutoffSeconds === Infinity || now - lastDate <= cutoffSeconds) {
               this.enqueueUserForAudit(accountId, peerId)

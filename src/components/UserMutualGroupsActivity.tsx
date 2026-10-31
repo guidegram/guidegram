@@ -35,19 +35,14 @@ interface UserMutualGroupsActivityProps {
   onJumpToMessage: (chatId: string, messageId: number) => void
 }
 
-function toPersianDigits(num: number | string): string {
-  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
-  return String(num).replace(/[0-9]/g, (w) => farsiDigits[+w])
+function formatClockTime(timestamp: number | Date, locale: string): string {
+  const d = typeof timestamp === 'number' ? new Date(timestamp * 1000) : timestamp
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
 }
 
-function formatClockTime(timestamp: number | Date): string {
+function formatDate(timestamp: number | Date, locale: string): string {
   const d = typeof timestamp === 'number' ? new Date(timestamp * 1000) : timestamp
-  return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function formatDate(timestamp: number | Date): string {
-  const d = typeof timestamp === 'number' ? new Date(timestamp * 1000) : timestamp
-  return d.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
 export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> = ({
@@ -57,7 +52,8 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
   currentChatId,
   onJumpToMessage,
 }) => {
-  const { t } = useI18n()
+  const { t, formatNumber, language } = useI18n()
+  const locale = language === 'fa' ? 'fa-IR' : 'en-US'
   const [groups, setGroups] = useState<CommonGroupItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
@@ -82,7 +78,7 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
             if (curDetails && (curDetails.isGroup || curDetails.isChannel)) {
               list.unshift({
                 id: currentChatId,
-                title: curDetails.title || 'گروه فعلی',
+                title: curDetails.title || t('mutual_groups.current_group'),
                 avatarUrl: curDetails.avatarUrl,
                 memberCount: curDetails.participantsCount,
                 username: curDetails.username,
@@ -155,19 +151,19 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
           </div>
           <div>
             <div className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
-              <span>فعالیت در گروه‌های مشترک</span>
+              <span>{t('mutual_groups.title')}</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary-500/20 text-primary-300 border border-primary-500/30">
-                {toPersianDigits(groups.length)} گروه
+                {t('mutual_groups.groups_count', { count: formatNumber(groups.length) })}
               </span>
             </div>
-            <div className="text-[10px] text-gray-400">تاریخچه پیام‌ها، مشارکت و پرش به گفتگو</div>
+            <div className="text-[10px] text-gray-400">{t('mutual_groups.subtitle')}</div>
           </div>
         </div>
 
         <button
           type="button"
           onClick={loadCommonChats}
-          title="بروزرسانی گروه‌های مشترک"
+          title={t('mutual_groups.refresh_title')}
           className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-accent-cyan' : ''}`} />
@@ -178,14 +174,14 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-8 text-gray-400 space-y-2">
           <RefreshCw className="w-5 h-5 animate-spin text-accent-cyan" />
-          <span className="text-xs">در حال واکشی گروه‌های مشترک...</span>
+          <span className="text-xs">{t('mutual_groups.fetching')}</span>
         </div>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-6 text-center space-y-2 text-gray-400">
           <Users className="w-8 h-8 text-gray-600" />
-          <div className="text-xs font-semibold text-gray-300">هیچ گروه مشترکی با این کاربر یافت نشد</div>
+          <div className="text-xs font-semibold text-gray-300">{t('mutual_groups.no_groups_title')}</div>
           <p className="text-[11px] text-gray-500 max-w-xs">
-            برای این کاربر در گروه‌های مشترک شما فعالیتی ثبت نشده است یا گروه مشترکی ندارید.
+            {t('mutual_groups.no_groups_desc')}
           </p>
         </div>
       ) : (
@@ -219,17 +215,17 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
                         <span>{group.title}</span>
                         {group.id === currentChatId && (
                           <span className="text-[9px] px-1 py-0.2 rounded bg-accent-cyan/20 text-accent-cyan font-normal">
-                            گروه فعلی
+                            {t('mutual_groups.current_badge')}
                           </span>
                         )}
                       </div>
                       <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2">
                         {group.memberCount && (
-                          <span>{toPersianDigits(group.memberCount)} عضو</span>
+                          <span>{t('mutual_groups.members_count', { count: formatNumber(group.memberCount) })}</span>
                         )}
                         {count !== undefined ? (
                           <span className="text-accent-cyan font-medium">
-                            • {toPersianDigits(count)} پیام از این کاربر
+                            {t('mutual_groups.user_messages', { count: formatNumber(count) })}
                           </span>
                         ) : null}
                       </div>
@@ -251,22 +247,22 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
                     {isMsgsLoading ? (
                       <div className="flex items-center justify-center py-4 gap-2 text-xs text-gray-400">
                         <RefreshCw className="w-3.5 h-3.5 animate-spin text-accent-cyan" />
-                        <span>در حال جستجوی پیام‌های کاربر در این گروه...</span>
+                        <span>{t('mutual_groups.searching_messages')}</span>
                       </div>
                     ) : msgs.length === 0 ? (
                       <div className="text-center py-3 text-[11px] text-gray-500">
-                        پیامی از این کاربر در تاریخچه اخیر این گروه یافت نشد.
+                        {t('mutual_groups.no_messages')}
                       </div>
                     ) : (
                       <div className="space-y-1.5">
                         <div className="text-[10px] text-gray-400 font-semibold px-1 flex items-center justify-between">
-                          <span>آخرین پیام‌های ارسالی ({toPersianDigits(msgs.length)} مورد اخیر):</span>
+                          <span>{t('mutual_groups.latest_messages', { count: formatNumber(msgs.length) })}</span>
                         </div>
 
                         {msgs.map((m) => {
-                          const previewText = m.text || (m.mediaType ? `[${m.mediaType}]` : 'پیام')
-                          const msgDate = m.date ? formatDate(m.date) : ''
-                          const msgTime = m.date ? formatClockTime(m.date) : ''
+                          const previewText = m.text || (m.mediaType ? `[${m.mediaType}]` : t('mutual_groups.message_fallback'))
+                          const msgDate = m.date ? formatDate(m.date, locale) : ''
+                          const msgTime = m.date ? formatClockTime(m.date, locale) : ''
 
                           return (
                             <div
@@ -287,10 +283,10 @@ export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> =
                               <button
                                 type="button"
                                 onClick={() => onJumpToMessage(group.id, m.id)}
-                                title="پرش مستقیم به این پیام در گفتگوی گروه"
+                                title={t('mutual_groups.jump_title')}
                                 className="px-2 py-1 rounded-lg bg-primary-600/30 hover:bg-primary-600 text-primary-300 hover:text-white border border-primary-500/40 text-[11px] font-semibold flex items-center gap-1 shrink-0 transition-all cursor-pointer shadow-xs active:scale-95"
                               >
-                                <span>پرش به پیام</span>
+                                <span>{t('mutual_groups.jump_button')}</span>
                                 <ArrowLeft className="w-3 h-3" />
                               </button>
                             </div>

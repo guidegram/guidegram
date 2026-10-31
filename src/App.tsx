@@ -48,6 +48,7 @@ import { playNotificationSound } from './utils/soundEffects'
 import { NotificationHUD, ActiveNotificationItem } from './components/NotificationHUD'
 import { NotificationHistoryDrawer, NotificationHistoryItem } from './components/NotificationHistoryDrawer'
 import logoImg from './assets/logo.png'
+import { useI18n } from './i18n'
 
 export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
   if (!a || !b) return false
@@ -58,6 +59,7 @@ export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
 }
 
 export const App: React.FC = () => {
+  const { isRTL } = useI18n()
   const isMobile = useIsMobile(768)
   const [isLoaded, setIsLoaded] = useState(false)
   const [accounts, setAccounts] = useState<AccountInfo[]>([])
@@ -2163,11 +2165,21 @@ export const App: React.FC = () => {
     if (savedChat) {
       handleSelectChat(savedChat.id)
     } else if (currentAcc?.id) {
-      handleSelectChat(currentAcc.id)
+      const provisional: Partial<DialogItem> = {
+        title: 'Saved Messages',
+        isSavedMessages: true,
+        isUser: true,
+      }
+      handleSelectChat(currentAcc.id, undefined, provisional)
     } else if (currentAcc?.username) {
       handleSelectUserOrChat(currentAcc.username)
     } else {
-      handleSelectChat('me')
+      const provisional: Partial<DialogItem> = {
+        title: 'Saved Messages',
+        isSavedMessages: true,
+        isUser: true,
+      }
+      handleSelectChat('me', undefined, provisional)
     }
   }
 
@@ -2335,9 +2347,9 @@ export const App: React.FC = () => {
         accountId: activeAccountId || accounts[0]?.id || 'acc_test',
         chatId: activeChatId || 'chat_test',
         messageId: 9999,
-        senderName: 'پاول دورف (Telegram)',
-        chatTitle: 'راهنمای گایدگرام',
-        text: 'این یک اعلان آزمایشی از موتور اعلان فوق‌پیشرفته گایدگرامه! می‌تونی همین الان رپلای بزنی یا دکمه خوانده شد رو کلیک کنی 🚀',
+        senderName: (document.documentElement.dir === 'rtl' ? 'پاول دورف (Telegram)' : 'Pavel Durov (Telegram)'),
+        chatTitle: (document.documentElement.dir === 'rtl' ? 'راهنمای گایدگرام' : 'Guidegram Guide'),
+        text: (document.documentElement.dir === 'rtl' ? 'این یک اعلان آزمایشی از موتور اعلان فوق‌پیشرفته گایدگرامه! می‌تونی همین الان رپلای بزنی یا دکمه خوانده شد رو کلیک کنی 🚀' : 'This is a test notification from Guidegram ultra-advanced notification engine! You can reply or mark as read 🚀'),
         date: Date.now(),
         isGroup: false,
       }
@@ -2389,7 +2401,7 @@ export const App: React.FC = () => {
       )
     } catch (err: any) {
       console.error('Failed to set account proxy:', err)
-      setAppToast('خطا در اعمال پروکسی: ' + (err?.message || 'نامشخص'))
+      setAppToast(document.documentElement.dir === 'rtl' ? ('خطا در اعمال پروکسی: ' + (err?.message || 'نامشخص')) : ('Failed to apply proxy: ' + (err?.message || 'Unknown error')))
     }
   }
 
@@ -2971,33 +2983,37 @@ export const App: React.FC = () => {
         )}
 
         {isAccountExportOpen && (
-          <AccountExportModal
-            isOpen={isAccountExportOpen}
-            onClose={() => setIsAccountExportOpen(false)}
-            accounts={accounts}
-          />
+          <React.Suspense fallback={null}>
+            <AccountExportModal
+              isOpen={isAccountExportOpen}
+              onClose={() => setIsAccountExportOpen(false)}
+              accounts={accounts}
+            />
+          </React.Suspense>
         )}
 
         {isAccountImportOpen && (
-          <AccountImportModal
-            isOpen={isAccountImportOpen}
-            onClose={() => setIsAccountImportOpen(false)}
-            onAccountsImported={(importedAccs) => {
-              setAccounts((prev) => {
-                const merged = [...prev]
-                for (const acc of importedAccs) {
-                  const idx = merged.findIndex((a) => a.id === acc.id)
-                  if (idx >= 0) merged[idx] = { ...merged[idx], ...acc }
-                  else merged.push(acc)
+          <React.Suspense fallback={null}>
+            <AccountImportModal
+              isOpen={isAccountImportOpen}
+              onClose={() => setIsAccountImportOpen(false)}
+              onAccountsImported={(importedAccs) => {
+                setAccounts((prev) => {
+                  const merged = [...prev]
+                  for (const acc of importedAccs) {
+                    const idx = merged.findIndex((a) => a.id === acc.id)
+                    if (idx >= 0) merged[idx] = { ...merged[idx], ...acc }
+                    else merged.push(acc)
+                  }
+                  return merged
+                })
+                if (importedAccs[0]?.id) {
+                  setActiveAccountId(importedAccs[0].id)
+                  loadDialogsForAccount(importedAccs[0].id)
                 }
-                return merged
-              })
-              if (importedAccs[0]?.id) {
-                setActiveAccountId(importedAccs[0].id)
-                loadDialogsForAccount(importedAccs[0].id)
-              }
-            }}
-          />
+              }}
+            />
+          </React.Suspense>
         )}
 
         {isTonWalletOpen && (

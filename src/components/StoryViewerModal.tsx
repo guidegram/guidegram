@@ -61,7 +61,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   initialStoryId,
   onDeleted,
 }) => {
-  const { language, isRTL } = useI18n()
+  const { t, language, isRTL } = useI18n()
   const isPersian = language === 'fa' || isRTL
   const [peerStories, setPeerStories] = useState<PeerStoriesPayload | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -151,7 +151,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
 
     if (!request) {
-      setLoadError(isPersian ? 'سرویس استوری در دسترس نیست.' : 'Stories are unavailable.')
+      setLoadError(t('story_viewer.service_unavailable'))
       setLoading(false)
       return
     }
@@ -162,10 +162,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         if (!data) {
           setLoadError(
             storyTab === 'pinned'
-              ? (isPersian ? 'هیچ پستی در پروفایل کاربر پین نشده است.' : 'No pinned stories found.')
+              ? t('story_viewer.no_pinned')
               : storyTab === 'archive'
-                ? (isPersian ? 'هیچ استوری در آرشیو یافت نشد.' : 'No archived stories found.')
-                : (isPersian ? 'استوری فعالی در ۲۴ ساعت گذشته وجود ندارد.' : 'Unable to load stories for this contact.')
+                ? t('story_viewer.no_archived')
+                : t('story_viewer.no_active')
           )
           setLoading(false)
           return
@@ -175,10 +175,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         if (sortedStories.length === 0) {
           setLoadError(
             storyTab === 'pinned'
-              ? (isPersian ? 'هیچ پستی در پروفایل کاربر پین نشده است.' : 'No pinned stories found on profile.')
+              ? t('story_viewer.no_pinned')
               : storyTab === 'archive'
-                ? (isPersian ? 'هیچ استوری در آرشیو یافت نشد.' : 'No archived stories found.')
-                : (isPersian ? 'استوری فعالی در ۲۴ ساعت گذشته وجود ندارد.' : 'No active stories for this contact.')
+                ? t('story_viewer.no_archived')
+                : t('story_viewer.no_active')
           )
           setLoading(false)
           return
@@ -199,10 +199,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         if (!active) return
         setLoadError(
           storyTab === 'pinned'
-            ? (isPersian ? 'هیچ پستی در پروفایل کاربر پین نشده است.' : 'No pinned stories found.')
+            ? t('story_viewer.no_pinned')
             : storyTab === 'archive'
-              ? (isPersian ? 'هیچ استوری در آرشیو یافت نشد.' : 'No archived stories found.')
-              : (isPersian ? 'استوری فعالی در ۲۴ ساعت گذشته وجود ندارد.' : 'Unable to load stories for this contact.')
+              ? t('story_viewer.no_archived')
+              : t('story_viewer.no_active')
         )
         setLoading(false)
       })
@@ -556,7 +556,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     : 'text-gray-300 hover:text-white'
                 }`}
               >
-                {isPersian ? 'استوری‌های ۲۴ساعته' : 'Active'}
+                {t('story_viewer.tab_active')}
               </button>
               <button
                 type="button"
@@ -567,7 +567,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     : 'text-gray-300 hover:text-white'
                 }`}
               >
-                {isPersian ? 'پست‌های پروفایل (پین)' : 'Profile Posts'}
+                {t('story_viewer.tab_pinned')}
               </button>
               {isOwnStory && (
                 <button
@@ -579,7 +579,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  {isPersian ? 'آرشیو' : 'Archive'}
+                  {t('story_viewer.tab_archive')}
                 </button>
               )}
             </div>
@@ -591,7 +591,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           {loading && (
             <div className="flex flex-col items-center gap-3 text-white/70">
               <Loader2 className="h-7 w-7 animate-spin text-primary-400" />
-              <span className="text-xs">{isPersian ? 'در حال دریافت استوری‌ها…' : 'Loading stories…'}</span>
+              <span className="text-xs">{t('story_viewer.loading')}</span>
             </div>
           )}
 
@@ -606,7 +606,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     onClick={() => setStoryTab('pinned')}
                     className="rounded-full bg-accent-cyan/20 border border-accent-cyan/40 px-3.5 py-1 text-xs font-semibold text-accent-cyan transition-colors hover:bg-accent-cyan/35 cursor-pointer"
                   >
-                    {isPersian ? 'مشاهده پست‌های پروفایل' : 'Check Profile Posts'}
+                    {t('story_viewer.check_profile')}
                   </button>
                 ) : (
                   <button
@@ -614,7 +614,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     onClick={() => setStoryTab('active')}
                     className="rounded-full bg-primary-600/30 border border-primary-500/40 px-3.5 py-1 text-xs font-semibold text-primary-300 transition-colors hover:bg-primary-600/50 cursor-pointer"
                   >
-                    {isPersian ? 'بررسی استوری‌های فعال' : 'Check Active Stories'}
+                    {t('story_viewer.check_active')}
                   </button>
                 )}
                 <button
@@ -622,7 +622,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   onClick={onClose}
                   className="rounded-full bg-white/10 px-3.5 py-1 text-xs font-medium text-white transition-colors hover:bg-white/20 cursor-pointer"
                 >
-                  {isPersian ? 'بستن' : 'Close'}
+                  {t('story_viewer.close')}
                 </button>
               </div>
             </div>

@@ -401,7 +401,7 @@ const LinkPreviewCard: React.FC<LinkPreviewCardProps> = React.memo(({ url, exist
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold tracking-wide transition-all duration-150 border border-cyan-500/30 shadow-sm"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span>مشاهده پیام</span>
+                <span>{document.documentElement.dir === 'rtl' ? 'مشاهده پیام' : 'View Message'}</span>
               </button>
               <span className="text-[10px] text-gray-400 opacity-60">Telegram Message</span>
             </div>
@@ -797,7 +797,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const dragStartYRef = useRef<number | null>(null)
   const dragStartSelectionRef = useRef<Set<number>>(new Set())
   const hasMovedPastThresholdRef = useRef(false)
-  const { t, formatNumber: formatLocalizedNumber } = useI18n()
+  const { t, language, formatNumber: formatLocalizedNumber } = useI18n()
+  const isFa = language === 'fa'
   const [toast, setToast] = useState<string | null>(null)
   const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
   const [thanosTarget, setThanosTarget] = useState<{ id: number; rect: DOMRect } | null>(null)
@@ -2767,7 +2768,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         month: 'short',
         day: 'numeric',
       }).format(displayTime)
-      showToast(`📅 پرش به پیام‌های ${pDate} (${gDate})`)
+      showToast(isFa ? `📅 پرش به پیام‌های ${pDate} (${gDate})` : `📅 Jumped to messages of ${gDate}`)
       setIsDateNavOpen(false)
     },
     [messages]
@@ -2785,7 +2786,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         const firstMsg = messages[0]
         handleScrollToReply(firstMsg.id)
         setIsDateNavOpen(false)
-        showToast('⏮ پرش به اولین پیام چت')
+        showToast(isFa ? '⏮ پرش به اولین پیام چت' : '⏮ Jumped to first chat message')
         return
       }
       const now = Date.now()
@@ -6733,7 +6734,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <RefreshCw className="w-5 h-5 animate-spin" />
             </div>
             <div className="text-sm font-semibold text-gray-200">
-              {t('saved_messages.searching_remote') || 'در حال جستجو در میان تمام پیام‌های ذخیره‌شده تلگرام...'}
+              {t('saved_messages.searching_remote') || (isFa ? 'در حال جستجو در میان تمام پیام‌های ذخیره‌شده تلگرام...' : 'Searching remote Telegram Saved Messages...')}
             </div>
             <div className="text-[11px] text-gray-500 font-mono">
               MTProto: messages.search
@@ -6748,11 +6749,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 </div>
                 <div className="text-sm font-bold text-gray-200 mb-1">
                   {savedSearchQuery
-                    ? `هیچ پیامی با عبارت «${savedSearchQuery}» در پیام‌های ذخیره‌شده پیدا نشد`
-                    : 'هیچ پیامی با فیلترهای انتخابی یافت نشد'}
+                    ? (isFa ? `هیچ پیامی با عبارت «${savedSearchQuery}» در پیام‌های ذخیره‌شده پیدا نشد` : `No messages matching "${savedSearchQuery}" found in Saved Messages`)
+                    : (isFa ? 'هیچ پیامی با فیلترهای انتخابی یافت نشد' : 'No messages found matching selected filters')}
                 </div>
                 <div className="text-xs text-gray-400 mb-4">
-                  سرچ از سرور تلگرام نتیجه‌ای برنگرداند یا فیلترهای انتخاب‌شده با هیچ پیامی مطابقت ندارند.
+                  {isFa ? 'سرچ از سرور تلگرام نتیجه‌ای برنگرداند یا فیلترهای انتخاب‌شده با هیچ پیامی مطابقت ندارند.' : 'Remote Telegram search returned no results, or active filters do not match any messages.'}
                 </div>
                 <button
                   type="button"
@@ -6765,7 +6766,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-4 py-2 rounded-xl bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 border border-primary-500/40 text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
                   <X className="w-3.5 h-3.5" />
-                  <span>پاک کردن فیلترها و نمایش همه پیام‌ها</span>
+                  <span>{isFa ? 'پاک کردن فیلترها و نمایش همه پیام‌ها' : 'Clear filters and show all messages'}</span>
                 </button>
               </div>
             ) : (chat.isBot || chatDetails?.isBot) && !searchQuery ? (
@@ -8161,7 +8162,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-white/10">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-accent-cyan" />
-                  <span className="text-xs font-bold text-white">پرش به تاریخ / Jump to Date</span>
+                  <span className="text-xs font-bold text-white">{isFa ? "پرش به تاریخ" : "Jump to Date"}</span>
                 </div>
                 <button
                   type="button"
@@ -8175,7 +8176,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {/* Current View Date Banner */}
               {floatingScrollDate && (
                 <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-0.5">
-                  <span className="text-[10px] text-gray-400 font-medium">تاریخ پیام فعلی در کادر:</span>
+                  <span className="text-[10px] text-gray-400 font-medium">{isFa ? "تاریخ پیام فعلی در کادر:" : "Current visible date:"}</span>
                   <span className="text-xs font-bold text-accent-cyan">
                     {new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
                       weekday: 'long',
@@ -8203,7 +8204,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Clock className="w-3 h-3 text-accent-cyan" />
-                  <span>امروز (Today)</span>
+                  <span>{isFa ? "امروز (Today)" : "Today"}</span>
                 </button>
                 <button
                   type="button"
@@ -8211,7 +8212,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Clock className="w-3 h-3 text-amber-400" />
-                  <span>دیروز (Yesterday)</span>
+                  <span>{isFa ? "دیروز (Yesterday)" : "Yesterday"}</span>
                 </button>
                 <button
                   type="button"
@@ -8219,7 +8220,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Calendar className="w-3 h-3 text-emerald-400" />
-                  <span>۱ هفته پیش</span>
+                  <span>{isFa ? "۱ هفته پیش" : "1 Week Ago"}</span>
                 </button>
                 <button
                   type="button"
@@ -8227,7 +8228,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Calendar className="w-3 h-3 text-indigo-400" />
-                  <span>۱ ماه پیش</span>
+                  <span>{isFa ? "۱ ماه پیش" : "1 Month Ago"}</span>
                 </button>
                 <button
                   type="button"
@@ -8235,7 +8236,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Calendar className="w-3 h-3 text-violet-400" />
-                  <span>۳ ماه پیش</span>
+                  <span>{isFa ? "۳ ماه پیش" : "3 Months Ago"}</span>
                 </button>
                 <button
                   type="button"
@@ -8243,14 +8244,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white text-[11px] font-medium border border-white/5 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <ChevronUp className="w-3 h-3 text-pink-400" />
-                  <span>اولین پیام چت</span>
+                  <span>{isFa ? "اولین پیام چت" : "First Message"}</span>
                 </button>
               </div>
 
               {/* Custom Date Picker */}
               <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5">
                 <label className="text-[10px] text-gray-400 font-medium">
-                  انتخاب تاریخ تقویم (Calendar Date):
+                  {isFa ? "انتخاب تاریخ تقویم (Calendar Date):" : "Select Calendar Date:"}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -8270,7 +8271,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     disabled={!targetJumpDate}
                     className="px-3 py-1.5 rounded-xl bg-accent-cyan hover:bg-cyan-400 disabled:opacity-50 text-dark-950 font-bold text-xs transition-all cursor-pointer"
                   >
-                    برو
+                    {isFa ? 'برو' : 'Go'}
                   </button>
                 </div>
               </div>

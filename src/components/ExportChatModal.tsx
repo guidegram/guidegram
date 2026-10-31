@@ -131,7 +131,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm text-white">
-                {isPersian ? 'خروجی تاریخچه گفتگو' : 'Export Chat History'}
+                {t('export_chat.title')}
               </h3>
               <p className="text-[11px] text-gray-400 truncate max-w-[280px]">{chat.title}</p>
             </div>
@@ -150,7 +150,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
           {/* Format Selection */}
           <div>
             <label className="text-xs font-semibold text-gray-300 block mb-2">
-              {isPersian ? 'قالب فایل خروجی' : 'Export Format'}
+              {t('export_chat.format')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -164,10 +164,10 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <FileText className={`w-4 h-4 ${format === 'html' ? 'text-accent-cyan' : 'text-gray-400'}`} />
-                  <span className="text-xs">{isPersian ? 'صفحه وب HTML آفلاین' : 'HTML Web Archive'}</span>
+                  <span className="text-xs">{t('export_chat.format_html')}</span>
                 </div>
                 <span className="text-[10px] text-gray-400 font-normal">
-                  {isPersian ? 'قابل مشاهده در تمام مرورگرها با ظاهر تلگرام' : 'Human-readable standalone web page with Telegram styling'}
+                  {t('export_chat.format_html_desc')}
                 </span>
               </button>
 
@@ -182,10 +182,10 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <FileCode className={`w-4 h-4 ${format === 'json' ? 'text-accent-cyan' : 'text-gray-400'}`} />
-                  <span className="text-xs">{isPersian ? 'داده خام JSON' : 'JSON Data'}</span>
+                  <span className="text-xs">{t('export_chat.format_json')}</span>
                 </div>
                 <span className="text-[10px] text-gray-400 font-normal">
-                  {isPersian ? 'ساختار داده‌ای مناسب برنامه‌نویسی و پردازش' : 'Raw machine-readable structured message objects'}
+                  {t('export_chat.format_json_desc')}
                 </span>
               </button>
             </div>
@@ -194,7 +194,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
           {/* Message Limit */}
           <div>
             <label className="text-xs font-semibold text-gray-300 block mb-2">
-              {isPersian ? 'سقف تعداد پیام‌ها' : 'Message Count Limit'}
+              {t('export_chat.limit')}
             </label>
             <div className="flex items-center gap-2">
               {[100, 500, 1000, 3000, 10000].map((amt) => (
@@ -217,7 +217,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
           {/* Media Types Filter */}
           <div>
             <label className="text-xs font-semibold text-gray-300 block mb-2">
-              {isPersian ? 'فیلتر رسانه‌ها (اختیاری)' : 'Media Filters (Optional)'}
+              {t('export_chat.media_filter')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {MEDIA_TYPES.map((m) => {
@@ -246,7 +246,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-medium text-gray-400 block mb-1">
-                {isPersian ? 'از تاریخ' : 'From Date'}
+                {t('export_chat.from_date')}
               </label>
               <input
                 type="date"
@@ -257,7 +257,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
             </div>
             <div>
               <label className="text-[11px] font-medium text-gray-400 block mb-1">
-                {isPersian ? 'تا تاریخ' : 'To Date'}
+                {t('export_chat.to_date')}
               </label>
               <input
                 type="date"
@@ -272,10 +272,10 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
           <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold text-white">
-                {isPersian ? 'شامل متادیتای فایل‌ها' : 'Include Media Metadata'}
+                {t('export_chat.include_metadata')}
               </div>
               <div className="text-[11px] text-gray-400">
-                {isPersian ? 'نام فایل، ابعاد، پسوند و حجم رسانه‌ها' : 'File name, duration, size, and mime-type'}
+                {t('export_chat.include_metadata_desc')}
               </div>
             </div>
             <button
@@ -306,7 +306,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
                 <>
                   <Check className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
                   <div>
-                    <div className="font-bold">{isPersian ? 'خروجی با موفقیت ذخیره شد!' : 'Chat Export Successful!'}</div>
+                    <div className="font-bold">{t('export_chat.success')}</div>
                     <div className="text-[11px] opacity-80 mt-0.5">
                       {exportResult.totalMessages} messages
                       {exportResult.filePath ? ` ➔ ${exportResult.filePath}` : ''}
@@ -317,7 +317,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
                 <>
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
                   <div>
-                    <div className="font-bold">{isPersian ? 'خطا در استخراج' : 'Export Incomplete'}</div>
+                    <div className="font-bold">{t('export_chat.error')}</div>
                     <div className="text-[11px] opacity-80 mt-0.5">{exportResult.error}</div>
                   </div>
                 </>
@@ -333,7 +333,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            {isPersian ? 'انصراف' : 'Cancel'}
+            {t('export_chat.cancel')}
           </button>
           <button
             type="button"
@@ -342,7 +342,7 @@ export const ExportChatModal: React.FC<ExportChatModalProps> = ({
             className="px-5 py-2 rounded-xl bg-accent-cyan text-dark-950 font-bold text-xs hover:bg-accent-cyan/90 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
-            <span>{isExporting ? (isPersian ? 'در حال خروجی...' : 'Exporting...') : (isPersian ? 'ذخیره و دریافت فایل' : 'Save & Export')}</span>
+            <span>{isExporting ? t('export_chat.exporting') : t('export_chat.export')}</span>
           </button>
         </div>
       </motion.div>

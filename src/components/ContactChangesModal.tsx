@@ -31,6 +31,8 @@ import {
   Eye,
   Check,
   Zap,
+  EyeOff,
+  Ban,
 } from 'lucide-react'
 import type {
   ContactChangeEvent,
@@ -40,6 +42,7 @@ import type {
   AccountOnlineTimelineUser,
 } from '../types/telegram'
 import { Avatar } from './Avatar'
+import { SmartContextMenu } from './SmartContextMenu'
 import { useI18n } from '../i18n'
 
 interface ContactChangesModalProps {
@@ -55,35 +58,42 @@ interface ContactChangesModalProps {
 type RelationFilterType = 'all' | 'mutual' | 'my_contacts' | 'saved'
 type TimelineDayRange = 'today' | 'yesterday' | '48h'
 
-// Convert English digits to Persian digits
-function toPersianDigits(num: number | string): string {
-  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
+// Convert English digits to localized digits based on language
+function toLocalizedDigits(num: number | string, isFa: boolean): string {
+  if (!isFa) return String(num)
+  const farsiDigits = ['\u06F0', '\u06F1', '\u06F2', '\u06F3', '\u06F4', '\u06F5', '\u06F6', '\u06F7', '\u06F8', '\u06F9']
   return String(num).replace(/[0-9]/g, (w) => farsiDigits[+w])
 }
 
-function formatDurationHuman(seconds: number): string {
-  if (seconds < 60) return `${toPersianDigits(Math.max(1, Math.round(seconds)))} ثانیه`
+function formatDurationHuman(seconds: number, isFa: boolean): string {
+  const roundedSec = Math.max(1, Math.round(seconds))
+  if (seconds < 60) {
+    return isFa ? `${toLocalizedDigits(roundedSec, true)} s` : `${roundedSec}s`
+  }
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   if (hours > 0) {
-    return `${toPersianDigits(hours)} ساعت ${remainingMinutes > 0 ? `و ${toPersianDigits(remainingMinutes)} دقیقه` : ''}`
+    if (isFa) {
+      return isFa ? `${toLocalizedDigits(hours, true)}h ${remainingMinutes > 0 ? `${toLocalizedDigits(remainingMinutes, true)}m` : ''}`.trim() : `${hours}h ${remainingMinutes > 0 ? `${remainingMinutes}m` : ''}`.trim()
+    }
+    return `${hours}h ${remainingMinutes > 0 ? `${remainingMinutes}m` : ''}`.trim()
   }
-  return `${toPersianDigits(minutes)} دقیقه`
+  return isFa ? `${toLocalizedDigits(minutes, true)}m` : `${minutes}m`
 }
 
-function formatClockTime(timestamp: number): string {
+function formatClockTime(timestamp: number, isFa: boolean): string {
   const d = new Date(timestamp * 1000)
-  const h = toPersianDigits(String(d.getHours()).padStart(2, '0'))
-  const m = toPersianDigits(String(d.getMinutes()).padStart(2, '0'))
+  const h = toLocalizedDigits(String(d.getHours()).padStart(2, '0'), isFa)
+  const m = toLocalizedDigits(String(d.getMinutes()).padStart(2, '0'), isFa)
   return `${h}:${m}`
 }
 
-function formatClockTimeWithSeconds(timestamp: number): string {
+function formatClockTimeWithSeconds(timestamp: number, isFa: boolean): string {
   const d = new Date(timestamp * 1000)
-  const h = toPersianDigits(String(d.getHours()).padStart(2, '0'))
-  const m = toPersianDigits(String(d.getMinutes()).padStart(2, '0'))
-  const s = toPersianDigits(String(d.getSeconds()).padStart(2, '0'))
+  const h = toLocalizedDigits(String(d.getHours()).padStart(2, '0'), isFa)
+  const m = toLocalizedDigits(String(d.getMinutes()).padStart(2, '0'), isFa)
+  const s = toLocalizedDigits(String(d.getSeconds()).padStart(2, '0'), isFa)
   return `${h}:${m}:${s}`
 }
 
@@ -111,6 +121,7 @@ const ContactChangePhotoItem: React.FC<ContactChangePhotoItemProps> = ({
   onClick,
   isNew = false,
 }) => {
+  const { t } = useI18n()
   const isHd = isHdPhoto(photoUrl)
   const [displayUrl, setDisplayUrl] = useState<string | null>(
     isHd ? (photoUrl || null) : (photoUrl || fallbackAvatar || null)
@@ -164,12 +175,12 @@ const ContactChangePhotoItem: React.FC<ContactChangePhotoItemProps> = ({
       {displayUrl ? (
         <img
           src={displayUrl}
-          alt={isNew ? 'عکس جدید' : 'عکس قبلی'}
+          alt={isNew ? t('contact_changes.new_photo') : t('contact_changes.old_photo')}
           className="w-full h-full object-cover group-hover:brightness-110 transition-all"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-gray-500 text-[10px]">
-          بدون عکس
+          {t('contact_changes.no_photo')}
         </div>
       )}
       <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
@@ -188,7 +199,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   initialSelectedUserId,
   initialTab = 'timeline_map',
 }) => {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const isFa = language === 'fa'
   const [activeTab, setActiveTab] = useState<'timeline_map' | 'profile_changes'>(initialTab)
   const [isMaximized, setIsMaximized] = useState(false)
 
@@ -234,6 +246,51 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
   const [panScrollLeft, setPanScrollLeft] = useState(0)
 
   const timelineContainerRef = useRef<HTMLDivElement>(null)
+
+  // Context menu state for right-clicking user to exclude/include from monitoring
+  const [contextMenu, setContextMenu] = useState<{
+    x: number
+    y: number
+    userId: string
+    userName: string
+    userUsername?: string
+    userAvatarUrl?: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClick = () => setContextMenu(null)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null)
+    }
+    window.addEventListener('click', handleClick)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [contextMenu])
+
+  const handleToggleUserTracking = async (userId: string, enable: boolean) => {
+    try {
+      await window.guidegram?.setUserTracking?.(userId, enable)
+      if (!enable) {
+        setEvents((prev) => prev.filter((ev) => ev.userId !== userId))
+        setTimelineData((prev) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            users: prev.users.filter((u) => u.userId !== userId),
+            sessions: prev.sessions.filter((s) => s.userId !== userId),
+          }
+        })
+      }
+    } catch (err) {
+      console.warn('[ContactChangesModal] Failed to toggle tracking:', err)
+    } finally {
+      setContextMenu(null)
+    }
+  }
 
   // Load Contact Changes
   const fetchChanges = async (forceSync = false) => {
@@ -479,8 +536,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
         const hourNum = d.getHours()
         const isEndMarker = markerSec === viewEndSec
         const showLabel = isEndMarker ? false : (hourNum % labelStepHours === 0)
-        // Clean Persian hour digits: "۲۱", "۲۲", with "۰۰" for midnight
-        const hourStr = hourNum === 0 ? '۰۰' : toPersianDigits(hourNum)
+        // Clean hour digits
+        const hourStr = isFa ? (hourNum === 0 ? '\u06F0\u06F0' : toLocalizedDigits(hourNum, true)) : String(hourNum).padStart(2, '0')
         const posPercent = ((markerSec - viewStartSec) / viewDurationSec) * 100
 
         markers.push({
@@ -588,12 +645,12 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
 
   const formatRelativeTime = (timestamp: number) => {
     const diff = nowSec - timestamp
-    if (diff < 60) return 'همین چند لحظه پیش'
-    if (diff < 3600) return `${toPersianDigits(Math.floor(diff / 60))} دقیقه پیش`
-    if (diff < 86400) return `${toPersianDigits(Math.floor(diff / 3600))} ساعت پیش`
-    if (diff < 172800) return 'دیروز'
-    const days = Math.floor(diff / 86400)
-    if (days < 30) return `${toPersianDigits(days)} روز پیش`
+    if (diff < 60) return isFa ? t('contact_changes.just_now') || 'Just now' : 'Just now'
+      if (diff < 3600) return `${toLocalizedDigits(Math.floor(diff / 60), isFa)}${isFa ? ' \u062F\u0642\u06CC\u0642\u0647 \u067E\u06CC\u0634' : 'm ago'}`
+      if (diff < 86400) return `${toLocalizedDigits(Math.floor(diff / 3600), isFa)}${isFa ? ' \u0633\u0627\u0639\u062A \u067E\u06CC\u0634' : 'h ago'}`
+      if (diff < 172800) return isFa ? t('contact_changes.range_yesterday') : 'Yesterday'
+      const days = Math.floor(diff / 86400)
+      if (days < 30) return `${toLocalizedDigits(days, isFa)}${isFa ? ' \u0631\u0648\u0632 \u067E\u06CC\u0634' : 'd ago'}`
     return new Date(timestamp * 1000).toLocaleDateString('fa-IR', {
       month: 'short',
       day: 'numeric',
@@ -604,43 +661,43 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
     switch (type) {
       case 'name_change':
         return {
-          label: 'تغییر نام',
+          label: t('contact_changes.name_change'),
           icon: <User className="w-3.5 h-3.5" />,
           color: 'bg-primary-500/15 text-primary-300 border-primary-500/30',
         }
       case 'username_change':
         return {
-          label: 'تغییر نام کاربری',
+          label: t('contact_changes.username_change'),
           icon: <AtSign className="w-3.5 h-3.5" />,
           color: 'bg-accent-violet/15 text-accent-violet border-accent-violet/30',
         }
       case 'bio_change':
         return {
-          label: 'ویرایش بیوگرافی',
+          label: t('contact_changes.bio_change'),
           icon: <FileText className="w-3.5 h-3.5" />,
           color: 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30',
         }
       case 'photo_change':
         return {
-          label: 'تغییر عکس پروفایل',
+          label: t('contact_changes.photo_change'),
           icon: <Camera className="w-3.5 h-3.5" />,
           color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
         }
       case 'photo_delete':
         return {
-          label: 'حذف عکس پروفایل',
+          label: t('contact_changes.photo_deleted'),
           icon: <Camera className="w-3.5 h-3.5" />,
           color: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
         }
       case 'personal_channel_change':
         return {
-          label: 'کانال متصل به بیو',
+          label: t('contact_changes.channel_change'),
           icon: <Radio className="w-3.5 h-3.5" />,
           color: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
         }
       default:
         return {
-          label: 'تغییر مشخصات',
+          label: t('contact_changes.all_events'),
           icon: <Sparkles className="w-3.5 h-3.5" />,
           color: 'bg-gray-700/20 text-gray-300 border-white/10',
         }
@@ -679,7 +736,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                 }`}
               >
                 <Activity className="w-3.5 h-3.5 animate-pulse" />
-                <span>نقشه و تایم‌لاین آنلاین مخاطبان</span>
+                <span>{t('contact_changes.timeline_tab')}</span>
                 {activeOnlineUsersCount > 0 && (
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 )}
@@ -695,7 +752,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                <span>تغییرات پروفایل مخاطبین</span>
+                <span>{t('contact_changes.profile_changes_tab')}</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 font-mono">
                   {events.length}
                 </span>
@@ -711,7 +768,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                 fetchChanges(true)
                 fetchTimeline()
               }}
-              title="اسکن و استعلام زنده"
+              title={t('contact_changes.scan_tooltip')}
               className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
             >
               <RefreshCw
@@ -724,7 +781,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
             <button
               type="button"
               onClick={() => setIsMaximized((prev) => !prev)}
-              title={isMaximized ? 'کوچک‌نمایی پنجره' : 'بزرگ‌نمایی تمام‌صفحه'}
+              title={isMaximized ? t('contact_changes.minimize') : t('contact_changes.maximize')}
               className="p-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
             >
               {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -733,7 +790,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              title="بستن (Esc)"
+              title={t('contact_changes.close')}
               className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -754,7 +811,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     type="text"
                     value={timelineSearch}
                     onChange={(e) => setTimelineSearch(e.target.value)}
-                    placeholder="جستجوی مخاطب در نقشه آنلاین..."
+                    placeholder={t('contact_changes.search_online_map')}
                     className="w-full pl-3 pr-9 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan transition-colors"
                   />
                   {timelineSearch && (
@@ -771,9 +828,9 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                 {/* Day Range Selector */}
                 <div className="flex items-center gap-1 p-0.5 rounded-xl bg-dark-900 border border-white/10 text-xs">
                   {[
-                    { id: 'today' as TimelineDayRange, label: 'امروز' },
-                    { id: 'yesterday' as TimelineDayRange, label: 'دیروز' },
-                    { id: '48h' as TimelineDayRange, label: '۴۸ ساعت اخیر' },
+                    { id: 'today' as TimelineDayRange, label: t('contact_changes.range_today') },
+                    { id: 'yesterday' as TimelineDayRange, label: t('contact_changes.range_yesterday') },
+                    { id: '48h' as TimelineDayRange, label: t('contact_changes.range_48h') },
                   ].map((dr) => {
                     const active = timelineDayRange === dr.id
                     return (
@@ -798,7 +855,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                   <button
                     type="button"
                     onClick={handleZoomIn}
-                    title="بزرگ‌نمایی محور زمان (+)"
+                    title={t('contact_changes.zoom_in')}
                     className="p-1 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     <ZoomIn className="w-3.5 h-3.5" />
@@ -809,7 +866,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                   <button
                     type="button"
                     onClick={handleZoomOut}
-                    title="کوچک‌نمایی محور زمان (-)"
+                    title={t('contact_changes.zoom_out')}
                     className="p-1 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     <ZoomOut className="w-3.5 h-3.5" />
@@ -818,7 +875,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     <button
                       type="button"
                       onClick={handleResetZoom}
-                      title="بازنشانی زوم"
+                      title={t('contact_changes.zoom_reset')}
                       className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
@@ -832,13 +889,13 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[11px] text-gray-400 ml-1 flex items-center gap-1">
                     <Filter className="w-3 h-3 text-gray-400" />
-                    <span>فیلتر نمایش:</span>
+                    <span>{t('contact_changes.filter_view')}</span>
                   </span>
 
                   {[
-                    { id: 'all' as RelationFilterType, label: 'همه افراد' },
-                    { id: 'mutual' as RelationFilterType, label: 'مخاطبین دوطرفه' },
-                    { id: 'my_contacts' as RelationFilterType, label: 'مخاطبین من' },
+                    { id: 'all' as RelationFilterType, label: t('contact_changes.filter_all') },
+                    { id: 'mutual' as RelationFilterType, label: t('contact_changes.filter_mutual') },
+                    { id: 'my_contacts' as RelationFilterType, label: t('contact_changes.filter_my_contacts') },
                   ].map((rf) => {
                     const active = relationFilter === rf.id
                     return (
@@ -871,7 +928,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                         onlyOnlineFilter ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'
                       }`}
                     />
-                    <span>فقط آنلاین‌ها ({activeOnlineUsersCount})</span>
+                    <span>{t('contact_changes.only_online').replace('{count}', toLocalizedDigits(activeOnlineUsersCount, isFa))}</span>
                   </button>
                 </div>
 
@@ -882,7 +939,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     onClick={() => setSelectedUserId(null)}
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan border border-accent-cyan/30 transition-all cursor-pointer shadow-xs"
                   >
-                    <span>نمایش همه افراد در تایم‌لاین</span>
+                    <span>{t('contact_changes.show_all_timeline')}</span>
                     <X className="w-3 h-3" />
                   </button>
                 )}
@@ -913,20 +970,20 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                       {selectedUserObj.currentStatus === 'online' ? (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                          <span>آنلاین</span>
+                          <span>{t('contact_changes.online')}</span>
                         </span>
                       ) : (
                         <span className="text-[10px] text-gray-400">
-                          آخرین حضور: {selectedUserObj.lastSeen ? formatClockTime(selectedUserObj.lastSeen) : 'نامشخص'}
+                          t('contact_changes.last_seen') + ': ' + (selectedUserObj.lastSeen ? formatClockTime(selectedUserObj.lastSeen, isFa) : '—')
                         </span>
                       )}
                     </div>
                     <div className="text-[11px] text-gray-300 font-sans mt-0.5">
-                      مجموع زمان آنلاین در این بازه:{' '}
+                      {t('contact_changes.total_online_duration')}{': '}
                       <strong className="text-accent-cyan font-bold">
-                        {formatDurationHuman(selectedUserMetrics?.totalSecs || 0)}
+                        {formatDurationHuman(selectedUserMetrics?.totalSecs || 0, isFa)}
                       </strong>{' '}
-                      • تعداد ورود و خروج: {toPersianDigits(selectedUserMetrics?.count || 0)} بار
+                      • {t('contact_changes.sessions_count').replace('{count}', toLocalizedDigits(selectedUserMetrics?.count || 0, isFa))}
                     </div>
                   </div>
                 </div>
@@ -948,7 +1005,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                       className="px-2.5 py-1 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                     >
                       <MessageSquare className="w-3 h-3" />
-                      <span>گفتگو</span>
+                      <span>{t('contact_changes.chat')}</span>
                     </button>
                   )}
                 </div>
@@ -969,7 +1026,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               {isTimelineLoading ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2 p-12">
                   <RefreshCw className="w-7 h-7 animate-spin text-accent-cyan" />
-                  <span className="text-xs">در حال بارگذاری نقشه فعالیت و تایم‌لاین آنلاین...</span>
+                  <span className="text-xs">{t('contact_changes.loading_map')}</span>
                 </div>
               ) : sortedSwimlaneUsers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-6 space-y-3">
@@ -977,11 +1034,10 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     <Clock className="w-6 h-6" />
                   </div>
                   <div className="text-sm font-bold text-gray-200">
-                    مخاطب یا نشستی در این بازه زمانی یافت نشد
+                    {t('contact_changes.no_contacts_in_range')}
                   </div>
                   <p className="text-xs text-gray-400 max-w-sm">
-                    گایدگرام حضور و آنلاین شدن مخاطبان را با دقت ثانیه‌ای ثبت می‌کند. فیلترها را بررسی کنید
-                    یا بازه زمانی را تغییر دهید.
+                    {t('contact_changes.no_contacts_hint')}
                   </p>
                 </div>
               ) : (
@@ -996,7 +1052,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     <div className="w-60 shrink-0 sticky left-0 z-50 bg-dark-900 border-r border-white/15 px-3.5 flex items-center justify-between text-xs font-bold text-gray-300 shadow-md font-sans">
                       <span className="flex items-center gap-1.5" dir="rtl">
                         <Users className="w-3.5 h-3.5 text-accent-cyan" />
-                        <span>مخاطبان ({toPersianDigits(sortedSwimlaneUsers.length)})</span>
+                        <span>{t('contact_changes.contacts_count').replace('{count}', toLocalizedDigits(sortedSwimlaneUsers.length, isFa))}</span>
                       </span>
                       {selectedUserId && (
                         <button
@@ -1004,7 +1060,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           onClick={() => setSelectedUserId(null)}
                           className="text-[10px] text-accent-cyan hover:underline cursor-pointer font-normal"
                         >
-                          نمایش همه
+                          {t('contact_changes.show_all')}
                         </button>
                       )}
                     </div>
@@ -1037,7 +1093,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           className="absolute top-0 bottom-0 z-30 flex flex-col items-center pointer-events-none -translate-x-1/2"
                         >
                           <span className="text-[9px] bg-accent-cyan text-dark-950 font-bold px-1.5 py-0.5 rounded-xs shadow-md font-sans">
-                            اکنون ({formatClockTime(nowSec)})
+                            {t('contact_changes.now')} ({formatClockTime(nowSec, isFa)})
                           </span>
                           <div className="w-0.5 h-full bg-accent-cyan shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
                         </div>
@@ -1063,6 +1119,18 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           {/* Sticky Left Column: User Profile Card (Sticky on horizontal scroll!) */}
                           <div
                             onClick={() => setSelectedUserId(isSelected ? null : user.userId)}
+                            onContextMenu={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setContextMenu({
+                                x: e.clientX,
+                                y: e.clientY,
+                                userId: user.userId,
+                                userName: user.userName,
+                                userUsername: user.userUsername,
+                                userAvatarUrl: user.avatarUrl,
+                              })
+                            }}
                             className="w-60 shrink-0 sticky left-0 z-20 bg-dark-900 group-hover:bg-dark-850 px-3.5 h-full border-r border-white/10 flex items-center gap-2.5 cursor-pointer shadow-sm transition-colors"
                           >
                             <div className="relative shrink-0">
@@ -1089,18 +1157,18 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                 {isOnline ? (
                                   <span className="text-emerald-400 font-semibold flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                                    <span>هم‌اکنون آنلاین</span>
+                                    <span>{t('contact_changes.currently_online')}</span>
                                   </span>
                                 ) : totalSecs > 0 ? (
                                   <span className="text-accent-cyan font-sans font-medium" dir="rtl">
-                                    <bdi>{formatDurationHuman(totalSecs)} مجموع آنلاین</bdi>
+                                    <bdi>{formatDurationHuman(totalSecs, isFa)} {t('contact_changes.total_online_duration')}</bdi>
                                   </span>
                                 ) : user.lastSeen ? (
                                   <span className="text-gray-400 font-sans text-[10px]" dir="rtl">
-                                    <bdi>{formatDurationHuman(Math.max(1, nowSec - user.lastSeen))} پیش</bdi>
+                                    <bdi>{formatDurationHuman(Math.max(1, nowSec - user.lastSeen), isFa)} {isFa ? '\u067E\u06CC\u0634' : 'ago'}</bdi>
                                   </span>
                                 ) : (
-                                  <span className="text-gray-500">نشستی ثبت نشده</span>
+                                  <span className="text-gray-500">{t('contact_changes.no_sessions_recorded')}</span>
                                 )}
                               </div>
                             </div>
@@ -1160,9 +1228,9 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                     e.stopPropagation()
                                     setSelectedUserId(sess.userId)
                                   }}
-                                  title={`${sess.userName}: ${formatClockTime(sess.startTime)} تا ${
-                                    isLive ? 'اکنون' : formatClockTime(sess.endTime)
-                                  } (${formatDurationHuman(sess.durationSeconds)})`}
+                                  title={`${sess.userName}: ${formatClockTime(sess.startTime, isFa)} ${isFa ? '\u062A\u0627' : 'to'} ${
+                                    isLive ? t('contact_changes.now') : formatClockTime(sess.endTime, isFa)
+                                  } (${formatDurationHuman(sess.durationSeconds, isFa)})`}
                                   className={`interactive-session absolute h-2.5 rounded-full cursor-pointer transition-all duration-150 z-10 ${
                                     isLive
                                       ? 'h-3 bg-gradient-to-r from-emerald-400 via-teal-300 to-accent-cyan ring-1 ring-accent-cyan shadow-[0_0_12px_rgba(34,211,238,0.8)] animate-pulse z-20'
@@ -1215,23 +1283,23 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                         )}
                         {hoveredSession.isCurrentSession && (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
-                            هم‌اکنون آنلاین
+                            {t('contact_changes.currently_online')}
                           </span>
                         )}
                       </div>
 
                       <div className="text-[11px] text-gray-300 mt-1 flex items-center gap-2">
                         <span>
-                          زمان نشست: <strong>{formatClockTimeWithSeconds(hoveredSession.startTime)}</strong> تا{' '}
+                          {t('contact_changes.session_time')}: <strong>{formatClockTimeWithSeconds(hoveredSession.startTime, isFa)}</strong> \u062A\u0627{' '}
                           <strong>
                             {hoveredSession.isCurrentSession
-                              ? 'اکنون'
-                              : formatClockTimeWithSeconds(hoveredSession.endTime)}
+                              ? t('contact_changes.now')
+                              : formatClockTimeWithSeconds(hoveredSession.endTime, isFa)}
                           </strong>
                         </span>
                         <span>•</span>
                         <span className="text-accent-cyan font-bold">
-                          مدت آنلاین: {formatDurationHuman(hoveredSession.durationSeconds)}
+                          {t('contact_changes.session_duration')}: {formatDurationHuman(hoveredSession.durationSeconds, isFa)}
                         </span>
                       </div>
                     </div>
@@ -1242,7 +1310,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                         onClick={() => setSelectedUserId(hoveredSession.userId)}
                         className="px-2.5 py-1.5 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan font-bold text-xs transition-colors cursor-pointer"
                       >
-                        تمرکز روی این کاربر
+                        {t('contact_changes.focus_user')}
                       </button>
                     </div>
                   </motion.div>
@@ -1254,8 +1322,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
             {selectedUserId && filteredSessions.length > 0 && (
               <div className="p-3 bg-dark-850/90 border-t border-white/10 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 shrink-0">
                 <div className="text-xs font-bold text-gray-300 mb-2 flex items-center justify-between">
-                  <span>جزئیات دقیقه‌های آنلاین این کاربر ({toPersianDigits(filteredSessions.length)} سشن)</span>
-                  <span className="text-[10px] text-gray-400">ثبت‌شده در حافظه محلی رادار</span>
+                  <span>{t('contact_changes.session_details').replace('{count}', toLocalizedDigits(filteredSessions.length, isFa))}</span>
+                  <span className="text-[10px] text-gray-400">{t('contact_changes.stored_locally')}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {filteredSessions.map((sess, idx) => (
@@ -1265,11 +1333,11 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         <span className="w-5 h-5 rounded-lg bg-dark-800 text-gray-400 flex items-center justify-center font-mono text-[10px]">
-                          {toPersianDigits(idx + 1)}
+                          {toLocalizedDigits(idx + 1, isFa)}
                         </span>
                         <div>
                           <div className="text-gray-200 font-semibold">
-                            {formatClockTime(sess.startTime)} تا {sess.isCurrentSession ? 'اکنون' : formatClockTime(sess.endTime)}
+                            {formatClockTime(sess.startTime, isFa)} \u062A\u0627 {sess.isCurrentSession ? t('contact_changes.now') : formatClockTime(sess.endTime, isFa)}
                           </div>
                           <div className="text-[10px] text-gray-400">
                             {new Date(sess.startTime * 1000).toLocaleDateString('fa-IR', {
@@ -1280,7 +1348,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                         </div>
                       </div>
                       <span className="text-accent-cyan font-bold text-[11px]">
-                        {formatDurationHuman(sess.durationSeconds)}
+                        {formatDurationHuman(sess.durationSeconds, isFa)}
                       </span>
                     </div>
                   ))}
@@ -1302,7 +1370,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="جستجو بر اساس نام، نام‌کاربری یا متن تغییر..."
+                  placeholder={t('contact_changes.search_placeholder')}
                   className="w-full pl-4 pr-10 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan transition-colors"
                 />
                 {searchQuery && (
@@ -1320,14 +1388,14 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="text-[11px] text-gray-400 ml-1 flex items-center gap-1">
                   <Users className="w-3 h-3 text-gray-400" />
-                  <span>ارتباط:</span>
+                  <span>{t('contact_changes.relation_label')}</span>
                 </span>
 
                 {[
-                  { id: 'all' as RelationFilterType, label: 'همه مخاطبان', icon: Users },
-                  { id: 'mutual' as RelationFilterType, label: 'اونایی که شماره منو دارن (دوطرفه)', icon: UserCheck },
-                  { id: 'my_contacts' as RelationFilterType, label: 'اونایی که من شمارشونو دارم', icon: UserPlus },
-                  { id: 'saved' as RelationFilterType, label: 'سایر چت‌ها / غریبه‌ها', icon: Bookmark },
+                  { id: 'all' as RelationFilterType, label: t('contact_changes.all_contacts'), icon: Users },
+                  { id: 'mutual' as RelationFilterType, label: t('contact_changes.filter_mutual'), icon: UserCheck },
+                  { id: 'my_contacts' as RelationFilterType, label: t('contact_changes.filter_my_contacts'), icon: UserPlus },
+                  { id: 'saved' as RelationFilterType, label: t('contact_changes.filter_saved'), icon: Bookmark },
                 ].map((rf) => {
                   const active = relationFilter === rf.id
                   const Icon = rf.icon
@@ -1353,16 +1421,16 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="text-[11px] text-gray-400 ml-1 flex items-center gap-1">
                   <Filter className="w-3 h-3 text-gray-400" />
-                  <span>نوع رویداد:</span>
+                  <span>{t('contact_changes.event_type_label')}</span>
                 </span>
 
                 {[
-                  { id: 'all', label: 'همه رویدادها' },
-                  { id: 'photo_change', label: 'تغییر عکس' },
-                  { id: 'bio_change', label: 'ویرایش بیوگرافی' },
-                  { id: 'personal_channel_change', label: 'کانال متصل به بیو' },
-                  { id: 'name_change', label: 'تغییر نام' },
-                  { id: 'username_change', label: 'نام‌کاربری' },
+                  { id: 'all', label: t('contact_changes.all_events') },
+                  { id: 'photo_change', label: t('contact_changes.photo_change') },
+                  { id: 'bio_change', label: t('contact_changes.bio_change') },
+                  { id: 'personal_channel_change', label: t('contact_changes.channel_change') },
+                  { id: 'name_change', label: t('contact_changes.name_change') },
+                  { id: 'username_change', label: t('contact_changes.username_change') },
                 ].map((tf) => {
                   const active = typeFilter === tf.id
                   return (
@@ -1388,17 +1456,16 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               {isEventsLoading ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
                   <RefreshCw className="w-6 h-6 animate-spin text-accent-cyan" />
-                  <span className="text-xs">در حال بارگذاری تایم‌لاین تغییرات...</span>
+                  <span className="text-xs">{t('contact_changes.loading_timeline')}</span>
                 </div>
               ) : filteredEvents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-6 space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-dark-800 border border-white/10 flex items-center justify-center text-gray-500">
                     <History className="w-6 h-6" />
                   </div>
-                  <div className="text-sm font-bold text-gray-200">تغییری با این فیلترها ثبت نشده است</div>
+                  <div className="text-sm font-bold text-gray-200">{t('contact_changes.no_changes_title')}</div>
                   <p className="text-xs text-gray-400 max-w-sm">
-                    به محض اینکه مخاطبی نام، عکس، بیوگرافی یا کانال متصل خود را تغییر دهد یا حذف کند،
-                    فوراً در این تایم‌لاین ثبت خواهد شد.
+                    {t('contact_changes.no_changes_desc')}
                   </p>
                 </div>
               ) : (
@@ -1414,7 +1481,19 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                         layout
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-4 rounded-2xl bg-dark-850 border border-white/5 hover:border-white/15 transition-all shadow-sm space-y-3 group"
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setContextMenu({
+                            x: e.clientX,
+                            y: e.clientY,
+                            userId: evt.userId,
+                            userName: evt.userName || evt.title || (isFa ? 'کاربر' : 'User'),
+                            userUsername: evt.userUsername,
+                            userAvatarUrl: evt.newPhotoUrl || evt.userAvatarUrl,
+                          })
+                        }}
+                        className="p-4 rounded-2xl bg-dark-850 border border-white/5 hover:border-white/15 transition-all shadow-sm space-y-3 group cursor-default"
                       >
                         {/* Event Header */}
                         <div className="flex items-center justify-between">
@@ -1429,7 +1508,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-white truncate">
-                                  {evt.userName || 'کاربر تلگرام'}
+                                  {evt.userName || t('contact_changes.telegram_user')}
                                 </span>
                                 {evt.userUsername && (
                                   <span className="text-[11px] text-gray-400 font-normal">
@@ -1438,19 +1517,19 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                 )}
                                 {evt.isMutualContact && (
                                   <span
-                                    title="این شخص شماره شما را دارد (مخاطب دوطرفه)"
+                                    title={t('contact_changes.mutual_tooltip')}
                                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold"
                                   >
                                     <UserCheck className="w-2.5 h-2.5" />
-                                    <span>دوطرفه</span>
+                                    <span>{t('contact_changes.mutual_badge')}</span>
                                   </span>
                                 )}
                                 {evt.isMyContact && !evt.isMutualContact && (
                                   <span
-                                    title="این شخص در مخاطبان شما ذخیره است"
+                                    title={t('contact_changes.my_contact_tooltip')}
                                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-500/15 border border-primary-500/30 text-primary-300 text-[10px] font-medium"
                                   >
-                                    <span>مخاطب من</span>
+                                    <span>{t('contact_changes.my_contact_badge')}</span>
                                   </span>
                                 )}
                               </div>
@@ -1478,8 +1557,8 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                   <Camera className="w-5 h-5" />
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-xs">عکس پروفایل حذف شد</span>
-                                  <span className="text-[10px] text-rose-400/80">کاربر تصویر پروفایل خود را حذف کرد</span>
+                                  <span className="font-bold text-xs">{t('contact_changes.photo_deleted')}</span>
+                                  <span className="text-[10px] text-rose-400/80">{t('contact_changes.photo_deleted_desc')}</span>
                                 </div>
                               </div>
                             ) : (
@@ -1498,7 +1577,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                   <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-1.5">
                                       <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold text-[10px]">
-                                        عکس جدید
+                                        {t('contact_changes.new_photo')}
                                       </span>
                                     </div>
                                   </div>
@@ -1507,7 +1586,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                                 {/* Right: Old photo (if recorded and different from new) */}
                                 {evt.oldPhotoUrl && evt.oldPhotoUrl !== evt.newPhotoUrl && (
                                   <div className="flex flex-col items-center gap-1 opacity-75 hover:opacity-100 transition-opacity shrink-0">
-                                    <span className="text-[9px] text-gray-400">عکس قبلی</span>
+                                    <span className="text-[9px] text-gray-400">{t('contact_changes.old_photo')}</span>
                                     <ContactChangePhotoItem
                                       accountId={accountId}
                                       userId={evt.userId}
@@ -1525,19 +1604,19 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                           <div className="p-3 rounded-xl bg-dark-900/80 border border-white/5 space-y-2 text-xs">
                             <div className="flex items-start gap-2">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20 shrink-0">
-                                مقدار قبلی
+                                {t('contact_changes.old_value')}
                               </span>
                               <span className="text-gray-400 line-through select-text break-words">
-                                {evt.oldValue || 'خالی'}
+                                {evt.oldValue || t('contact_changes.empty_val')}
                               </span>
                             </div>
 
                             <div className="flex items-start gap-2">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shrink-0">
-                                مقدار جدید
+                                {t('contact_changes.new_value')}
                               </span>
                               <span className="text-emerald-300 font-semibold select-text break-words">
-                                {evt.newValue || 'حذف شد'}
+                                {evt.newValue || t('contact_changes.removed_val')}
                               </span>
                             </div>
                           </div>
@@ -1545,6 +1624,17 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
 
                         {/* Quick Action Footer Buttons */}
                         <div className="flex items-center justify-end gap-2 pt-1">
+                          {/* Button to exclude from monitoring */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleUserTracking(evt.userId, false)}
+                            title={t('contact_changes.exclude_tooltip') || (isFa ? "خروج کامل این کاربر از رصد" : "Exclude user from monitoring")}
+                            className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                          >
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>{t('contact_changes.exclude_btn') || (isFa ? "خروج از رصد" : "Exclude")}</span>
+                          </button>
+
                           {/* Button to view on timeline */}
                           <button
                             type="button"
@@ -1555,7 +1645,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                             className="px-3 py-1.5 rounded-xl bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan border border-accent-cyan/30 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                           >
                             <Activity className="w-3.5 h-3.5" />
-                            <span>مشاهده در نقشه آنلاین</span>
+                            <span>{t('contact_changes.view_in_online_map')}</span>
                           </button>
 
                           {onOpenUserProfile && (
@@ -1574,7 +1664,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                               className="px-3 py-1.5 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white border border-white/10 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
                             >
                               <User className="w-3.5 h-3.5" />
-                              <span>پروفایل</span>
+                              <span>{t('contact_changes.profile')}</span>
                             </button>
                           )}
 
@@ -1594,7 +1684,7 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
                               className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                             >
                               <MessageSquare className="w-3.5 h-3.5" />
-                              <span>باز کردن چت</span>
+                              <span>{t('contact_changes.open_chat')}</span>
                             </button>
                           )}
                         </div>
@@ -1643,17 +1733,114 @@ export const ContactChangesModal: React.FC<ContactChangesModalProps> = ({
               {loadingPreviewHd && (
                 <div className="absolute top-4 left-4 px-2.5 py-1 rounded-xl bg-primary-500/20 text-primary-300 border border-primary-500/30 text-[10px] flex items-center gap-1.5 z-20">
                   <div className="w-2.5 h-2.5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
-                  <span>در حال دریافت کیفیت بالا...</span>
+                  <span>{t('contact_changes.fetching_high_res')}</span>
                 </div>
               )}
 
               <img
                 src={previewPhotoUrl}
-                alt="عکس پروفایل"
+                alt={t('contact_changes.profile_photo_alt')}
                 className="max-w-full max-h-[75vh] w-auto h-auto object-contain rounded-2xl shadow-xl select-none"
               />
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Right-Click Smart Context Menu for User Tracking Exclusion */}
+      <AnimatePresence>
+        {contextMenu && (
+          <SmartContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            className="w-64"
+          >
+            {/* Header with Avatar & Name */}
+            <div className="px-3 py-2 border-b border-white/10 flex items-center gap-2.5" dir="rtl">
+              <Avatar
+                accountId={accountId}
+                peerId={contextMenu.userId}
+                title={contextMenu.userName}
+                avatarUrl={contextMenu.userAvatarUrl}
+                size="sm"
+              />
+              <div className="min-w-0 flex-1 text-right">
+                <div className="text-xs font-bold text-white truncate">
+                  {contextMenu.userName}
+                </div>
+                <div className="text-[10px] text-gray-400 font-mono truncate">
+                  ID: {contextMenu.userId}
+                </div>
+              </div>
+            </div>
+
+            {/* Exclude From Monitoring Action */}
+            <button
+              type="button"
+              onClick={() => handleToggleUserTracking(contextMenu.userId, false)}
+              className="w-full px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-500/15 flex items-center gap-2.5 text-xs font-semibold transition-colors cursor-pointer text-right"
+              dir="rtl"
+            >
+              <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{t('contact_changes.exclude_full_btn') || (isFa ? "خروج کامل این کاربر از رصد" : "Exclude from monitoring")}</span>
+            </button>
+
+            <div className="h-px bg-white/5 my-0.5" />
+
+            {/* Profile Action */}
+            {onOpenUserProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  const uId = contextMenu.userId
+                  const uName = contextMenu.userName
+                  const uUsername = contextMenu.userUsername
+                  const uAvatar = contextMenu.userAvatarUrl
+                  setContextMenu(null)
+                  onClose()
+                  onOpenUserProfile(uId, {
+                    id: uId,
+                    title: uName,
+                    username: uUsername,
+                    avatarUrl: uAvatar,
+                    isUser: true,
+                  })
+                }}
+                className="w-full px-3 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 flex items-center gap-2.5 text-xs font-medium transition-colors cursor-pointer text-right"
+                dir="rtl"
+              >
+                <User className="w-4 h-4 text-gray-400 shrink-0" />
+                <span>{t('contact_changes.view_profile_btn') || (isFa ? "مشاهده مشخصات پروفایل" : "View profile")}</span>
+              </button>
+            )}
+
+            {/* Open Chat Action */}
+            {onOpenChat && (
+              <button
+                type="button"
+                onClick={() => {
+                  const uId = contextMenu.userId
+                  const uName = contextMenu.userName
+                  const uUsername = contextMenu.userUsername
+                  const uAvatar = contextMenu.userAvatarUrl
+                  setContextMenu(null)
+                  onClose()
+                  onOpenChat(uId, {
+                    id: uId,
+                    title: uName,
+                    username: uUsername,
+                    avatarUrl: uAvatar,
+                    isUser: true,
+                  })
+                }}
+                className="w-full px-3 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 flex items-center gap-2.5 text-xs font-medium transition-colors cursor-pointer text-right"
+                dir="rtl"
+              >
+                <MessageSquare className="w-4 h-4 text-gray-400 shrink-0" />
+                <span>{t('contact_changes.send_message_btn') || (isFa ? "ارسال پیام و باز کردن گفتگو" : "Open conversation")}</span>
+              </button>
+            )}
+          </SmartContextMenu>
         )}
       </AnimatePresence>
     </div>

@@ -73,7 +73,7 @@ export const GameScoreModal: React.FC<GameScoreModalProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-white">{gameTitle}</h3>
                 <p className="text-[11px] text-gray-400">
-                  {isPersian ? 'جدول برترین امتیازات' : 'High Scores Leaderboard'}
+                  {t('game_score.leaderboard')}
                 </p>
               </div>
             </div>
@@ -102,11 +102,11 @@ export const GameScoreModal: React.FC<GameScoreModalProps> = ({
             {isLoading && scores.length === 0 ? (
               <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
                 <Loader2 className="w-6 h-6 animate-spin text-accent-cyan" />
-                <span className="text-xs">{isPersian ? 'در حال بارگذاری امتیازها...' : 'Loading scores...'}</span>
+                <span className="text-xs">{t('game_score.loading')}</span>
               </div>
             ) : scores.length === 0 ? (
               <div className="py-8 text-center text-xs text-gray-400">
-                {isPersian ? 'هنوز امتیازی برای این بازی ثبت نشده است.' : 'No scores recorded yet for this game.'}
+                {t('game_score.no_scores')}
               </div>
             ) : (
               scores.map((item, index) => (
@@ -141,7 +141,7 @@ export const GameScoreModal: React.FC<GameScoreModalProps> = ({
               onClick={onClose}
               className="w-full py-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-white font-medium text-xs transition-colors cursor-pointer"
             >
-              {isPersian ? 'بستن' : 'Close'}
+              {t('game_score.close')}
             </button>
           </div>
         </motion.div>

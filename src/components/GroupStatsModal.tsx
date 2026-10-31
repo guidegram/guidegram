@@ -261,20 +261,20 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     }
     if (code === 'not_supergroup') {
       return isPersian
-        ? 'آمار رسمی فقط برای سوپرگروه‌ها و کانال‌ها در دسترس است.'
+        ? t('stats.err_only_supergroups') || 'Official statistics are only available for supergroups and channels.'
         : 'Official statistics are only available for supergroups and channels.'
     }
     if (code === 'not_channel') {
       return isPersian
-        ? 'این گفتگو کانال پخش (Broadcast) نیست.'
+        ? t('stats.err_not_broadcast') || 'This chat is not a broadcast channel.'
         : 'This chat is not a broadcast channel.'
     }
     if (code === 'unavailable') {
       return isPersian
-        ? 'آمار رسمی این گفتگو در دسترس نیست.'
+        ? t('stats.err_not_available') || 'Official statistics are not available for this chat.'
         : 'Official statistics are not available for this chat.'
     }
-    return fallback || (isPersian ? 'آمار رسمی در دسترس نیست.' : 'Official statistics are not available.')
+    return fallback || t('stats.err_not_available') || 'Official statistics are not available.'
   }
 
   // Fetch real server-side stats whenever the modal opens. This is independent
@@ -1044,7 +1044,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
               <span>{t('stats.timeframe_coverage', { percent: formatNumber(syncProgressPercent) })}</span>
               <span>
-                {formatNumber(allMessages.length)} / {formatNumber(MAX_MESSAGES_CEILING)} پیام
+                {formatNumber(allMessages.length)} / {formatNumber(MAX_MESSAGES_CEILING)} {t('stats.messages') || 'messages'}
               </span>
             </div>
           </div>
@@ -1066,7 +1066,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
               </span>
               {allMessages.length >= MAX_MESSAGES_CEILING && (
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25">
-                  {isPersian ? 'سقف ۵۰,۰۰۰ پیام' : '50k cap'}
+                  {t('stats.cap_50k') || '50k cap'}
                 </span>
               )}
               {oldestMessageDate > 0 && (
@@ -1233,7 +1233,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   {officialStats.kind === 'broadcast' && officialStats.enabledNotifications && officialStats.enabledNotifications.total > 0 && (
                     <div className="px-4 pb-3 -mt-1">
                       <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                        <span>{isPersian ? 'اعلان‌های فعال' : 'Notifications enabled'}</span>
+                        <span>{t('stats.notifications_enabled') || 'Notifications enabled'}</span>
                         <span className="font-mono text-emerald-300">
                           {formatNumber(Math.round((officialStats.enabledNotifications.part / officialStats.enabledNotifications.total) * 100))}%
                         </span>
@@ -1358,7 +1358,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                         <div className="flex flex-col items-end shrink-0 font-mono">
                           <span className="font-bold text-white">{formatNumber(poster.messages)}</span>
                           <span className="text-[10px] text-gray-500">
-                            {formatNumber(poster.avgChars)} {isPersian ? 'کاراکتر/پیام' : 'chars/msg'}
+                            {formatNumber(poster.avgChars)} {t('stats.chars_per_msg') || 'chars/msg'}
                           </span>
                         </div>
                       </div>
@@ -1378,7 +1378,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                             <span className="text-gray-200 truncate">{admin.title}</span>
                             <span className="text-gray-500 font-mono shrink-0">
                               {isPersian
-                                ? `${formatNumber(admin.deleted)} حذف • ${formatNumber(admin.banned)} مسدود`
+                                ? `${formatNumber(admin.deleted)} ${t('stats.deleted') || 'deleted'} • ${formatNumber(admin.banned)} ${t('stats.banned') || 'banned'}`
                                 : `${formatNumber(admin.deleted)} del • ${formatNumber(admin.banned)} ban`}
                             </span>
                           </div>

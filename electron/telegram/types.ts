@@ -1046,6 +1046,7 @@ export interface AppConfig {
   ignoredUserTrackingIds?: string[]
   profileAuditInteractionRange?: '24h' | '7d' | '30d' | '90d' | '180d' | 'all'
   profileAuditScanOnOnline?: boolean
+  profileAuditContactsOnly?: boolean
   // Model Context Protocol (MCP) Server for AI Agents
   mcp?: McpServerConfig
 }

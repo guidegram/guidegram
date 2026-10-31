@@ -14,6 +14,7 @@ import {
   Layers,
 } from 'lucide-react'
 import { ImageEditorModal } from './ImageEditorModal'
+import { useI18n } from '../../i18n'
 
 export interface SendMediaItem {
   path: string
@@ -64,6 +65,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
   onClose,
   onSend,
 }) => {
+  const { t } = useI18n()
   const [items, setItems] = useState<SendMediaItem[]>(initialItems)
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   // Default to compressed photo sending like Telegram Desktop parity
@@ -289,7 +291,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
                   type="button"
                   onClick={() => setIsEditing(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary-600 text-gray-200 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
-                  title="Crop & Edit photo (کراپ، چرخش، نقاشی و فیلترها)"
+                  title={t('media_preview.crop_edit')}
                 >
                   <Crop className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Edit / Crop</span>
@@ -301,7 +303,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
                   onClick={handleQuickRotate}
                   disabled={isRotating}
                   className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-                  title="Rotate 90° clockwise (چرخش ۹۰ درجه)"
+                  title={t('media_preview.rotate_90')}
                 >
                   <RotateCw
                     className={`w-3.5 h-3.5 ${isRotating ? 'animate-spin' : ''}`}
@@ -317,7 +319,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       : 'bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white'
                   }`}
-                  title="Hide with Spoiler (اسپویلر)"
+                  title={t('media_preview.spoiler')}
                 >
                   <EyeOff className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Spoiler</span>
@@ -388,7 +390,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
                   <div className="text-xs font-bold text-gray-200 group-hover:text-white transition-colors flex items-center gap-2">
                     <span>Compress image</span>
                     <span className="text-[10px] text-primary-400 font-normal">
-                      (حالت فشرده - پیش‌فرض تلگرام)
+                      {t('media_preview.compressed_hint')}
                     </span>
                   </div>
                   <div className="text-[11px] text-gray-400">

@@ -1898,6 +1898,7 @@ function setupIpcHandlers() {
         next = Array.from(new Set([...current, userId]))
       }
       sessionStore.updateConfig({ ignoredUserTrackingIds: next })
+      mainWindow?.webContents.send('telegram:user-tracking-changed', { userId, enabled })
       return true
     } catch (err: any) {
       Logger.error(`[IPC] setUserTracking failed:`, err)

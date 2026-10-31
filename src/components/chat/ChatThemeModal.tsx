@@ -76,7 +76,7 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                {isPersian ? 'تم گفتگو و پس‌زمینه' : 'Chat Theme & Wallpaper'}
+                {t('chat_theme.title')}
               </h3>
               <p className="text-[11px] text-gray-400 truncate max-w-[240px]">{chatTitle}</p>
             </div>
@@ -93,9 +93,7 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
         {/* Themes Grid */}
         <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
           <p className="text-xs text-gray-400">
-            {isPersian
-              ? 'یک تم رنگی یا پس‌زمینه اختصاصی برای این گفتگو انتخاب کنید:'
-              : 'Choose a dedicated color theme or background wallpaper for this conversation:'}
+            {t('chat_theme.subtitle')}
           </p>
 
           <div className="grid grid-cols-3 gap-2.5">
@@ -137,10 +135,10 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
           <div className="p-3 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold text-white">
-                {isPersian ? 'اعمال برای هر دو مخاطب' : 'Apply for both users'}
+                {t('chat_theme.apply_both')}
               </div>
               <div className="text-[11px] text-gray-400">
-                {isPersian ? 'مخاطب مقابل نیز این تم را مشاهده خواهد کرد' : 'Both participants will see the customized theme'}
+                {t('chat_theme.apply_both_desc')}
               </div>
             </div>
             <button
@@ -166,7 +164,7 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            {isPersian ? 'انصراف' : 'Cancel'}
+            {t('chat_theme.cancel')}
           </button>
           <button
             type="button"
@@ -175,7 +173,7 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
             className="px-5 py-2 rounded-xl bg-accent-cyan text-dark-950 font-bold text-xs hover:bg-accent-cyan/90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <CheckCheck className="w-4 h-4" />
-            <span>{isApplying ? (isPersian ? 'در حال اعمال...' : 'Applying...') : (isPersian ? 'اعمال تم گفتگو' : 'Apply Theme')}</span>
+            <span>{isApplying ? t('chat_theme.applying') : t('chat_theme.apply')}</span>
           </button>
         </div>
       </motion.div>

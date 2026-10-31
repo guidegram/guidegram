@@ -186,6 +186,7 @@ export class SessionStore {
       ignoredUserTrackingIds: [],
       profileAuditInteractionRange: '180d',
       profileAuditScanOnOnline: true,
+      profileAuditContactsOnly: false,
       mcp: {
         enabled: true,
         port: 39527,

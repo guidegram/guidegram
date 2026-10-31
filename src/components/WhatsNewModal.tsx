@@ -43,26 +43,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'جراحی بزرگ مصرف رم، دیسک و پردازنده' : 'Supercharged Performance & Zero-I/O Surgery',
-          desc: isRTL
-            ? 'کاهش ۹۰٪ نوشتن روی دیسک، کش غیرهمگام سشن و پیام ربات‌ها، جستجوی مستقیم مدیا بدون اسکن هزاران فایل و مهار حلقه‌های خطای فایل.'
-            : '90%+ reduction in disk writes, async bot & session persistence, direct O(1) media lookups without directory scanning, and loop suppression.',
+          title: t('whatsnew.v2_feat_1_title'),
+          desc: t('whatsnew.v2_feat_1_desc'),
         },
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'تطابق کامل رابط ربات‌ها با تلگرام رسمی' : 'Official Telegram Bot UI Parity & Colors',
-          desc: isRTL
-            ? 'پشتیبانی کامل از رنگ دکمه‌های شیشه‌ای و چسبیده تلگرام (سبز، قرمز، آبی)، آیکون ایموجی‌های پرمیوم و منوی دستورات در لایه رویی.'
-            : 'Full support for Layer 180+ bot button colors (success, danger, primary), custom emoji icons in buttons, and accessible bot command menu.',
+          title: t('whatsnew.v2_feat_2_title'),
+          desc: t('whatsnew.v2_feat_2_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'قفل پس‌کد و رندرینگ پنجره‌ای سبک چت‌ها' : 'Master Passcode & Windowed Chat List',
-          desc: isRTL
-            ? 'امنیت کامل گفتگوها با قفل پس‌کد، قفل خودکار و دستی، به همراه رندرینگ پنجره‌ای لیست گفتگوها و ترنزیشن‌های فوق‌سبک بومی.'
-            : 'Master passcode app lock screen with auto-lock timers, combined with windowed dialog list rendering and lightweight transitions.',
+          title: t('whatsnew.v2_feat_3_title'),
+          desc: t('whatsnew.v2_feat_3_desc'),
         },
       ]
     }
@@ -73,26 +67,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'کاهش ۹۵٪ مصرف رم با معماری چت فعال منفرد' : 'Ultra-Low Memory & Single Active Chat Parity',
-          desc: isRTL
-            ? 'تطابق کامل با تلگرام دسکتاپ رسمی با نگهداری فقط چت فعال در رم، تخلیه خودکار کش پس‌زمینه و کاهش ۹۵٪ حجم لاگ‌های ادیت و دیلیت.'
-            : 'Official Telegram Desktop parity by maintaining only the active chat in memory, auto-evicting background cache, and reducing audit log overhead by 95%.',
+          title: t('whatsnew.v2_feat_4_title'),
+          desc: t('whatsnew.v2_feat_4_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'تاریخچه نامحدود ادیت‌ها و کنترل اختصاصی چت‌ها' : 'Unlimited Edit History & Granular Tracking',
-          desc: isRTL
-            ? 'ثبت تمام نسخه‌های ویرایش‌شده پیام، تفکیک مستقل ردگیری پیام‌های دیلیت/ادیت در پی‌وی، گروه‌ها و کانال‌ها با سقف عددی سفارشی.'
-            : 'Track complete revision history per message with dedicated tracking scopes and adjustable limits for Private Chats, Groups, and Channels.',
+          title: t('whatsnew.v2_feat_5_title'),
+          desc: t('whatsnew.v2_feat_5_desc'),
         },
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'گالری چندعکس پروفایل، کپی شناسه ایموجی و خواب گرافیک' : 'Multi-Photo Gallery, Emoji ID & GPU Sleep',
-          desc: isRTL
-            ? 'مشاهده تمام عکس‌های پروفایل کاربران در گالری ورق‌زن، کپی شناسه ایموجی‌های پریمیوم، بهینه‌سازی کامل گرافیک و اصلاح پنجره امکانات جدید.'
-            : 'Browse full profile photo history in a carousel gallery, copy custom emoji IDs, native GPU occlusion sleep, and dynamic version highlights.',
+          title: t('whatsnew.v2_feat_6_title'),
+          desc: t('whatsnew.v2_feat_6_desc'),
         },
       ]
     }
@@ -103,26 +91,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'پشتیبانی از چند پنجره همزمان برای اکانت‌ها' : 'Multi-Window Parallel Account Workspaces',
-          desc: isRTL
-            ? 'امکان باز کردن حساب‌های کاربری در پنجره‌های مستقل و همزمان با فرآیند رندرینگ ایزوله و نوار وظیفه اختصاصی.'
-            : 'Open multiple accounts simultaneously in dedicated standalone windows with isolated rendering contexts and custom taskbar badges.',
+          title: t('whatsnew.v2_feat_7_title'),
+          desc: t('whatsnew.v2_feat_7_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'بج اعلان هوشمند روی داک و تسک‌بار' : 'Dynamic Dock Badges & Taskbar Parity',
-          desc: isRTL
-            ? 'نمایش تعداد پیام‌های خوانده‌نشده هر اکانت روی آیکون نوار وظیفه و داک با به‌روزرسانی آنی.'
-            : 'Accurate unread notification badge counts rendered directly on the taskbar icon and dock with zero latency.',
+          title: t('whatsnew.v2_feat_8_title'),
+          desc: t('whatsnew.v2_feat_8_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'پیش‌گرمایش نشست‌ها و ورود فوق‌سریع' : 'Zero-Freeze Session Pre-Warming',
-          desc: isRTL
-            ? 'بارگذاری موازی سشن‌ها و سوکت‌های فعال در بک‌گراند برای سوییچ فوری و بدون تأخیر بین اکانت‌ها.'
-            : 'Background session and socket pre-warming engine for instantaneous account switching with zero frame drops.',
+          title: t('whatsnew.v2_feat_9_title'),
+          desc: t('whatsnew.v2_feat_9_desc'),
         },
       ]
     }
@@ -133,26 +115,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'تماس صوتی و تصویری نیتیو WebRTC' : 'Native WebRTC Voice & Video Calling',
-          desc: isRTL
-            ? 'برقراری تماس‌های صوتی و تصویری با کیفیت بالا، رمزنگاری نقطه به نقطه و حداقل تأخیر در شبکه.'
-            : 'Full end-to-end encrypted high-fidelity voice and video calls powered by native WebRTC integration.',
+          title: t('whatsnew.v2_feat_10_title'),
+          desc: t('whatsnew.v2_feat_10_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'موتور دانلود توربو و چند مسیره فایل‌ها' : 'Turbo Multi-DC Media Pipeline',
-          desc: isRTL
-            ? 'دانلود چند مسیره و همزمان فایل‌های حجیم، ویدیوها و اسناد با حداکثر پهنای باند و بدون افت سرعت.'
-            : 'High-speed multi-part parallel chunk downloading across Telegram DCs with zero buffer bottlenecks.',
+          title: t('whatsnew.v2_feat_11_title'),
+          desc: t('whatsnew.v2_feat_11_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'انیمیشن‌های ستاره‌ای و هدایای تعاملی' : 'Interactive Telegram Star Gifts & 3D Visuals',
-          desc: isRTL
-            ? 'مشاهده و ارسال هدایای ستاره‌ای تلگرام با افکت‌های نوری سه‌بعدی و انیمیشن‌های روان فیزیک‌محور.'
-            : 'Full support for sending and viewing Telegram Star Gifts with rich interactive 3D particle animations.',
+          title: t('whatsnew.v2_feat_12_title'),
+          desc: t('whatsnew.v2_feat_12_desc'),
         },
       ]
     }
@@ -163,26 +139,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'سپر امنیتی ضد دستکاری نشست‌ها' : 'Session Tamper Guard & Data Shield',
-          desc: isRTL
-            ? 'محافظت سخت‌افزاری و ایزوله‌سازی سشن‌ها برای جلوگیری از خروج ناخواسته یا تداخل در حالت پرتابل.'
-            : 'Hardware-isolated session protection and atomic data mirroring to prevent unexpected session termination.',
+          title: t('whatsnew.v2_feat_13_title'),
+          desc: t('whatsnew.v2_feat_13_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'پایداری اتصال در نوسانات شدید اینترنت' : 'Deep MTProto Reconnect Resilience',
-          desc: isRTL
-            ? 'اتصال مجدد خودکار و هوشمند در اختلالات شبکه بدون ایجاد تداخل یا قطع شدن ارتباط کاربر.'
-            : 'Automatic socket health monitoring and silent reconnection fallback during heavy network disruptions.',
+          title: t('whatsnew.v2_feat_14_title'),
+          desc: t('whatsnew.v2_feat_14_desc'),
         },
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'بهینه‌سازی مصرف حافظه و ذخیره‌سازی' : 'Zero-Leak Background Memory Management',
-          desc: isRTL
-            ? 'آزادسازی خودکار منابع پس‌زمینه و جلوگیری از انباشت کش پیام‌های غیرضروری.'
-            : 'Automated background garbage collection and stale cache purging to maintain smooth performance.',
+          title: t('whatsnew.v2_feat_15_title'),
+          desc: t('whatsnew.v2_feat_15_desc'),
         },
       ]
     }
@@ -193,26 +163,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'تب‌های تمام‌عرض پوشه‌ها با اسکرول افقی ماوس' : 'Full-Width Kinetic Tabs & Mouse-Wheel Scroll',
-          desc: isRTL
-            ? 'تب‌های بالای صفحه حالا تمام عرض را پر کرده و با چرخش چرخ ماوس به نرمی اسکرول می‌شوند.'
-            : 'Tabs now span the entire top header with seamless mouse-wheel horizontal navigation, zero vertical clipping, and instant folder switching.',
+          title: t('whatsnew.v2_feat_16_title'),
+          desc: t('whatsnew.v2_feat_16_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'پاکسازی کامل داده‌های ساختگی و لایه ۲۲۹' : 'Zero-Fake & MTProto Layer 229 Hardening',
-          desc: isRTL
-            ? 'حذف کامل داده‌های فرضی، اتصال مستقیم به تنظیمات حریم خصوصی MTProto و آمار زنده بوست کانال‌ها.'
-            : '100% purged mock data, deterministic transaction IDs, live MTProto privacy querying, and real channel boost statistics.',
+          title: t('whatsnew.v2_feat_17_title'),
+          desc: t('whatsnew.v2_feat_17_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'رنگ‌بندی رسمی پروفایل و ناوبری خودکار' : 'Wired Interactive UI & Profile Color Parity',
-          desc: isRTL
-            ? 'تطابق کامل پالت رنگی مخاطبان با تلگرام رسمی، دیالوگ تغییر آواتار و دسترسی سریع به تنظیمات پروکسی.'
-            : 'Avatar change dialog, proxy navigation shortcut, official Telegram peer color palettes, and automated chat navigation.',
+          title: t('whatsnew.v2_feat_18_title'),
+          desc: t('whatsnew.v2_feat_18_desc'),
         },
       ]
     }
@@ -223,26 +187,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'سرور جامع MCP و جستجوی هوشمند فارسی' : 'Universal MCP Server & Persian AI Engine',
-          desc: isRTL
-            ? 'پشتیبانی از دستیار هوش مصنوعی با ۲۱ ابزار عملیاتی، متدهای کامل لایه ۲۲۹ و جستجوی فازی نام‌ها و پیام‌های فارسی.'
-            : '2-tier hybrid architecture with 21 high-level tools, full MTProto Layer 229 parity (859 methods), and fuzzy Persian name/message search.',
+          title: t('whatsnew.v2_feat_19_title'),
+          desc: t('whatsnew.v2_feat_19_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'رادار آنلاین و تاریخچه تغییرات مخاطبان' : 'Online Radar & Contact Audit Timeline',
-          desc: isRTL
-            ? 'نمایش دقیق زمان آنلاین بودن، ثبت تغییرات نام و تصویر پروفایل مخاطبان و تاریخچه کامل فعالیت‌ها.'
-            : 'Track exact user status, live online transitions, contact profile/name change histories, and Star Gifts with 3D orbit visuals.',
+          title: t('whatsnew.v2_feat_20_title'),
+          desc: t('whatsnew.v2_feat_20_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'پخش پایدار صوت و استریم مدیا' : 'Hardened Media Streaming & Audio Fixes',
-          desc: isRTL
-            ? 'رفع نشت صدا در حالت بی‌صدا، سریال‌سازی امن مقادیر عددی بزرگ و تطابق شمارنده پیام‌های خوانده‌نشده.'
-            : 'Muted audio leak protection, BigInt-safe MCP serialization, and unread counter bi-directional sync across all Telegram sessions.',
+          title: t('whatsnew.v2_feat_21_title'),
+          desc: t('whatsnew.v2_feat_21_desc'),
         },
       ]
     }
@@ -253,26 +211,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'منوی پیوست پیشرفته تلگرام' : 'Telegram Premium Attachment Suite',
-          desc: isRTL
-            ? 'منوی شناور پیوست با دسترسی سریع به تصاویر، اسناد، چک‌لیست‌ها، مقالات، موقعیت زنده، نظرسنجی و فایل صوتی.'
-            : 'Docked popover right above the paperclip with Photos, Documents, Checklists, Articles, Live Location, Polls, and Audio.',
+          title: t('whatsnew.v2_feat_22_title'),
+          desc: t('whatsnew.v2_feat_22_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'پست‌های وسط‌چین در کانال‌ها' : 'Centered Channel Feed & Dynamic Widths',
-          desc: isRTL
-            ? 'چینش شکیل و خوانای پست‌های کانال در مرکز صفحه و باز شدن فرم‌های ربات بدون فشردگی افقی.'
-            : 'Channels now center posts beautifully with wide cards, while bot forms expand smoothly without horizontal compression.',
+          title: t('whatsnew.v2_feat_23_title'),
+          desc: t('whatsnew.v2_feat_23_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'پیست مستقیم تصویر با کلید میانبر' : 'Clipboard Instant Paste & 60m Auto-Update',
-          desc: isRTL
-            ? 'ارسال مستقیم اسکرین‌شات‌ها با Ctrl+V، فعال‌سازی حالت روح با یک کلیک و به‌روزرسانی ایمن پس‌زمینه.'
-            : 'Paste screenshots directly with Ctrl+V, toggle Ghost Mode with a single click, and enjoy hands-free zero-data-loss background updates.',
+          title: t('whatsnew.v2_feat_24_title'),
+          desc: t('whatsnew.v2_feat_24_desc'),
         },
       ]
     }
@@ -283,26 +235,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Sparkles,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'انیمیشن‌ها و فیزیک سیال اپل و تلگرام' : 'Apple & Telegram Fluid Kinematics',
-          desc: isRTL
-            ? 'طراحی بصری پیشرفته با فیزیک فنری روان، جابجایی نرم بین تب‌ها و تعاملات میکرو دقیق.'
-            : '50-phase comprehensive visual evolution with high-fidelity spring physics, shared layout tabs, and ultra-fluid micro-interactions.',
+          title: t('whatsnew.v2_feat_25_title'),
+          desc: t('whatsnew.v2_feat_25_desc'),
         },
         {
           icon: Zap,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'بازخورد لمسی و هپتیک دکمه‌ها' : 'Haptic Tactile Micro-Interactions',
-          desc: isRTL
-            ? 'فیدبک حسی در هنگام کلیک روی دکمه‌ها، پنجره‌ها، پلیرهای صوتی و تصویری و لیست گفتگوها.'
-            : 'Tactile responsive feedback on all action buttons, dialogs, drawers, audio/video players, and unified inbox rows.',
+          title: t('whatsnew.v2_feat_26_title'),
+          desc: t('whatsnew.v2_feat_26_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'سازگاری با پروتکل لایه ۲۲۹+' : 'MTProto Layer 229+ & Zero-Loss Vault',
-          desc: isRTL
-            ? 'پوشش کامل پروتکل تلگرام با امنیت فوق‌العاده سشن‌ها و پایپ‌لاین آنی دانلود رسانه‌ها.'
-            : 'Complete Telegram protocol coverage with bulletproof session security and instant multi-DC media pipeline.',
+          title: t('whatsnew.v2_feat_27_title'),
+          desc: t('whatsnew.v2_feat_27_desc'),
         },
       ]
     }
@@ -313,26 +259,20 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
         {
           icon: Zap,
           bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
-          title: isRTL ? 'سازگاری کامل با لایه ۲۲۹ تلگرام' : 'MTProto Layer 229+ Full Parity',
-          desc: isRTL
-            ? 'پشتیبانی از ۸۵۹ متد پروتکل در ۲۸ بخش مختلف شامل کانال‌ها، استوری‌ها، پرداخت‌ها، ستاره‌ها و بات‌ها.'
-            : 'Complete protocol parity with 859 methods connected across 28 namespaces (Channels, Stories, Payments, Stars, Bots & Security).',
+          title: t('whatsnew.v2_feat_28_title'),
+          desc: t('whatsnew.v2_feat_28_desc'),
         },
         {
           icon: ShieldCheck,
           bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-          title: isRTL ? 'موتور دانلود پرسرعت چند مسیره' : 'Turbo Multi-DC Media Engine',
-          desc: isRTL
-            ? 'دانلود آنی و با کیفیت اصلی تصاویر، ویدیوها و اسناد با ترجمه محلی ساختار فایل‌ها.'
-            : 'Instant full-resolution download pipeline for photos, documents, and videos with native InputFileLocation translation.',
+          title: t('whatsnew.v2_feat_29_title'),
+          desc: t('whatsnew.v2_feat_29_desc'),
         },
         {
           icon: Sparkles,
           bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-          title: isRTL ? 'محافظت از نشست‌های چندگانه' : 'Multi-Account Session Vault',
-          desc: isRTL
-            ? 'حفظ پایدار و بدون خطای تمام اکانت‌های لاگین‌شده در مهاجرت‌ها و به‌روزرسانی‌های نرم‌افزار.'
-            : 'Bulletproof portable deployment with automatic session preservation across all authenticated accounts.',
+          title: t('whatsnew.v2_feat_30_title'),
+          desc: t('whatsnew.v2_feat_30_desc'),
         },
       ]
     }

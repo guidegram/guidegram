@@ -118,7 +118,8 @@ export const ChatList = React.memo<ChatListProps>(({
   onLoadMoreDialogs,
   onOpenProxyModal,
 }) => {
-  const { t, isRTL: isAppRtl, formatNumber } = useI18n()
+  const { t, language, isRTL: isAppRtl, formatNumber } = useI18n()
+  const isFa = language === 'fa'
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchFilter, setSearchFilter] = useState<SearchFilterCategory>('all')
   const [searchScope, setSearchScope] = useState<SearchScopeCategory>('all')
@@ -674,8 +675,8 @@ export const ChatList = React.memo<ChatListProps>(({
             onClick={onOpenProxyModal}
             title={
               account.proxyConfig?.enabled
-                ? `پروکسی ${(account.proxyConfig.type || 'SOCKS5').toUpperCase()} فعال است (${account.proxyConfig.host}:${account.proxyConfig.port}) — کلیک برای تنظیمات`
-                : 'اتصال مستقیم (بدون پروکسی) — کلیک برای فعال‌سازی پروکسی'
+                ? (isFa ? `پروکسی ${(account.proxyConfig.type || 'SOCKS5').toUpperCase()} فعال است (${account.proxyConfig.host}:${account.proxyConfig.port}) — کلیک برای تنظیمات` : `Proxy ${(account.proxyConfig.type || 'SOCKS5').toUpperCase()} is active (${account.proxyConfig.host}:${account.proxyConfig.port}) — click to configure`)
+                : (isFa ? 'اتصال مستقیم (بدون پروکسی) — کلیک برای فعال‌سازی پروکسی' : 'Direct connection (no proxy) — click to enable proxy')
             }
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border shrink-0 transition-all cursor-pointer shadow-sm ${
               account.proxyConfig?.enabled
@@ -732,7 +733,7 @@ export const ChatList = React.memo<ChatListProps>(({
             <button
               type="button"
               onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-              title="فیلتر بازه زمانی و تاریخ"
+              title={isFa ? "فیلتر بازه زمانی و تاریخ" : "Filter by date range"}
               aria-label="Filter by date"
               className={`p-1.5 rounded-lg transition-colors cursor-pointer relative ${
                 searchDateFilter !== 'all'
@@ -754,7 +755,7 @@ export const ChatList = React.memo<ChatListProps>(({
             <div className="flex items-center justify-between text-[11px] font-bold text-gray-300 px-1 border-b border-white/5 pb-2">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
-                <span>بازه زمانی جستجو</span>
+                <span>{isFa ? "بازه زمانی جستجو" : "Search date range"}</span>
               </span>
               {searchDateFilter !== 'all' && (
                 <button
@@ -766,7 +767,7 @@ export const ChatList = React.memo<ChatListProps>(({
                   }}
                   className="text-accent-rose hover:underline text-[10.5px] cursor-pointer"
                 >
-                  پاک کردن فیلتر
+                  {isFa ? 'پاک کردن فیلتر' : 'Clear filter'}
                 </button>
               )}
             </div>
@@ -802,7 +803,7 @@ export const ChatList = React.memo<ChatListProps>(({
 
             <div className="pt-1.5 border-t border-white/5">
               <label className="block text-[10.5px] text-gray-400 font-medium mb-1 px-1">
-                انتخاب تاریخ مشخص:
+                {isFa ? 'انتخاب تاریخ مشخص:' : 'Select specific date:'}
               </label>
               <input
                 type="date"
@@ -832,7 +833,7 @@ export const ChatList = React.memo<ChatListProps>(({
                   { key: 'private', label: t('search.private_chats') || 'مخاطبین', icon: UserCheck },
                   { key: 'groups', label: t('search.group_chats') || 'گروه‌ها', icon: Users },
                   { key: 'channels', label: t('search.channels') || 'کانال‌ها', icon: Radio },
-                  { key: 'bots', label: 'ربات‌ها', icon: Bot },
+                  { key: 'bots', label: isFa ? 'ربات‌ها' : 'Bots', icon: Bot },
                 ] as const
               ).map((scope) => {
                 const IconComp = (scope as any).icon
@@ -859,7 +860,7 @@ export const ChatList = React.memo<ChatListProps>(({
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px] font-medium text-gray-400 no-scrollbar">
               {(
                 [
-                  { key: 'all', label: 'همه پیام‌ها' },
+                  { key: 'all', label: isFa ? 'همه پیام‌ها' : 'All Messages' },
                   { key: 'media', label: 'Media', icon: Image },
                   { key: 'links', label: 'Links', icon: Link2 },
                   { key: 'files', label: 'Files', icon: FileText },
@@ -894,12 +895,12 @@ export const ChatList = React.memo<ChatListProps>(({
                   <Calendar className="w-3 h-3" />
                   <span>
                     {searchDateFilter === 'today'
-                      ? '۲۴ ساعت گذشته'
+                      ? (isFa ? '۲۴ ساعت گذشته' : 'Last 24 hours')
                       : searchDateFilter === 'week'
-                      ? '۷ روز گذشته'
+                      ? (isFa ? '۷ روز گذشته' : 'Last 7 days')
                       : searchDateFilter === 'month'
-                      ? '۳۰ روز گذشته'
-                      : `تاریخ: ${customDate}`}
+                      ? (isFa ? '۳۰ روز گذشته' : 'Last 30 days')
+                      : `${isFa ? 'تاریخ: ' : 'Date: '}${customDate}`}
                   </span>
                   <button
                     type="button"
@@ -1084,7 +1085,7 @@ export const ChatList = React.memo<ChatListProps>(({
         aria-label={t('app.all_chats') || 'Chat Conversations'}
         onScroll={(e) => {
           const el = e.currentTarget
-          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) {
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 180) {
             if (displayLimit < filteredDialogs.length) {
               setDisplayLimit((prev) => Math.min(prev + 30, filteredDialogs.length))
             }

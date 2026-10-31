@@ -24,6 +24,9 @@ import {
   Play,
   Layers,
   Calendar,
+  EyeOff,
+  Eye,
+  Check,
 } from 'lucide-react'
 import type { ChatDetails, StoryItemPayload } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -61,13 +64,64 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
   onMentionUser,
   onShowToast,
 }) => {
-  const { language, isRTL: contextIsRTL } = useI18n()
+  const { t, language, isRTL: contextIsRTL, formatNumber } = useI18n()
   const isPersian = language === 'fa' || contextIsRTL
   const [details, setDetails] = useState<ChatDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [isBlocking, setIsBlocking] = useState(false)
   const [profileTab, setProfileTab] = useState<'activity_radar' | 'mutual_groups'>('mutual_groups')
+
+  // User Profile & Activity Tracking State
+  const [isTrackingEnabled, setIsTrackingEnabled] = useState(true)
+  const [isUpdatingTracking, setIsUpdatingTracking] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen || !peerId || !accountId) return
+    let isMounted = true
+    if (window.guidegram?.getUserTracking) {
+      window.guidegram
+        .getUserTracking(accountId, peerId)
+        .then((enabled) => {
+          if (isMounted) setIsTrackingEnabled(enabled !== false)
+        })
+        .catch(() => {})
+    }
+
+    const unsub = window.guidegram?.on?.('telegram:user-tracking-changed', (data: any) => {
+      if (data?.userId === peerId && isMounted) {
+        setIsTrackingEnabled(Boolean(data.enabled))
+      }
+    })
+
+    return () => {
+      isMounted = false
+      unsub?.()
+    }
+  }, [isOpen, peerId, accountId])
+
+  const handleToggleTracking = async () => {
+    if (!peerId) return
+    const next = !isTrackingEnabled
+    setIsUpdatingTracking(true)
+    try {
+      await window.guidegram?.setUserTracking?.(peerId, next)
+      setIsTrackingEnabled(next)
+      onShowToast?.(
+        next
+          ? isPersian
+            ? (isPersian ? 'رصد آنلاین و تغییرات پروفایل این کاربر فعال شد' : 'User profile & presence monitoring enabled')
+            : 'User monitoring enabled'
+          : isPersian
+          ? (isPersian ? 'این کاربر با موفقیت از رصد خارج شد' : 'User excluded from monitoring successfully')
+          : 'User excluded from monitoring'
+      )
+    } catch (err) {
+      console.warn('[UserProfileDrawer] Failed to toggle tracking:', err)
+    } finally {
+      setIsUpdatingTracking(false)
+    }
+  }
 
   // Estimated Account Creation Date based on ID anchor interpolation
   const estimatedAge = useMemo(() => {
@@ -209,7 +263,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
 
   const handleCopy = async (text: string, label: string) => {
     await copyTextToClipboard(text)
-    onShowToast?.(isPersian ? `${label} کپی شد` : `Copied ${label}`)
+    onShowToast?.(t('user_profile.copied', { label }))
   }
 
   const handleToggleBlock = async () => {
@@ -221,14 +275,12 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
       setDetails((prev) => (prev ? { ...prev, isBlocked: nextBlocked } : null))
       onShowToast?.(
         nextBlocked
-          ? (isPersian ? 'کاربر مسدود شد' : 'User blocked')
-          : (isPersian ? 'کاربر رفع انسداد شد' : 'User unblocked')
+          ? t('user_profile.user_blocked')
+          : t('user_profile.user_unblocked')
       )
     } catch (err: any) {
       onShowToast?.(
-        isPersian
-          ? `خطا در تغییر وضعیت انسداد: ${err?.message || err}`
-          : `Failed to update block status: ${err?.message || err}`
+        t('user_profile.block_error', { error: err?.message || String(err) })
       )
     } finally {
       setIsBlocking(false)
@@ -256,7 +308,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
     try {
       // 1. Try fetching all profile photos (active and historical)
       if (window.guidegram?.getUserProfilePhotos) {
-        onShowToast?.(isPersian ? 'در حال دریافت عکس‌های پروفایل...' : 'Loading profile photos...')
+        onShowToast?.(t('user_profile.loading_photos'))
         const photos = await window.guidegram.getUserProfilePhotos(accountId, peerId)
         if (photos && photos.length > 0) {
           setPhotoGallery(photos)
@@ -272,20 +324,20 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
         setActivePhotoIndex(0)
         setLightboxUrl(details.avatarUrl)
       } else if (window.guidegram?.getProfilePhoto) {
-        onShowToast?.(isPersian ? 'در حال بارگذاری عکس باکیفیت...' : 'Loading full profile photo...')
+        onShowToast?.(t('user_profile.loading_full_photo'))
         const big = await window.guidegram.getProfilePhoto(accountId, peerId, true)
         if (big) {
           setPhotoGallery([big])
           setActivePhotoIndex(0)
           setLightboxUrl(big)
         } else {
-          onShowToast?.(isPersian ? 'عکس پروفایلی یافت نشد' : 'No profile photo found')
+          onShowToast?.(t('user_profile.no_photo'))
         }
       } else {
-        onShowToast?.(isPersian ? 'عکس پروفایلی یافت نشد' : 'No profile photo found')
+        onShowToast?.(t('user_profile.no_photo'))
       }
     } catch {
-      onShowToast?.(isPersian ? 'خطا در بارگذاری عکس پروفایل' : 'Could not load profile photo')
+      onShowToast?.(t('user_profile.photo_error'))
     }
   }
 
@@ -311,12 +363,12 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              title={isPersian ? 'بازگشت' : 'Back'}
+              title={t('user_profile.back')}
             >
               <ChevronLeft className="w-5 h-5 rtl:rotate-180" />
             </button>
             <span className="text-sm font-bold text-gray-100">
-              {isPersian ? 'پروفایل کاربر' : 'User Profile'}
+              {t('user_profile.title')}
             </span>
           </div>
 
@@ -326,7 +378,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               type="button"
               onClick={onClose}
               className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              title={isPersian ? 'بستن' : 'Close'}
+              title={t('user_profile.close')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -375,7 +427,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                       initialStoryId: pinnedStories[0]?.id || activeStories[0]?.id,
                     })
                   }
-                  title={isPersian ? 'مشاهده استوری‌ها و پست‌های پروفایل' : 'View Profile Posts & Stories'}
+                  title={t('user_profile.view_stories')}
                   className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-gradient-to-tr from-accent-cyan to-primary-600 text-white shadow-md hover:scale-110 transition-transform cursor-pointer border border-white/30"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
@@ -407,7 +459,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
 
             <div className="text-xs text-gray-400 flex items-center gap-1.5">
               <User className="w-3 h-3 text-accent-cyan" />
-              <span>{isPersian ? 'اطلاعات کاربری' : 'Personal Profile'}</span>
+              <span>{t('user_profile.personal_info')}</span>
             </div>
           </div>
 
@@ -424,7 +476,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               className="p-2.5 rounded-xl bg-primary-600/20 hover:bg-primary-600/35 border border-primary-500/30 text-primary-300 hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
               <MessageSquare className="w-4 h-4 text-primary-400" />
-              <span className="text-[11px]">{isPersian ? 'گفتگو' : 'Message'}</span>
+              <span className="text-[11px]">{t('user_profile.action_message')}</span>
             </button>
 
             <button
@@ -440,7 +492,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               className="p-2.5 rounded-xl bg-accent-cyan/15 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
               <Search className="w-4 h-4 text-accent-cyan" />
-              <span className="text-[11px]">{isPersian ? 'جستجو' : 'Search'}</span>
+              <span className="text-[11px]">{t('user_profile.action_search')}</span>
             </button>
 
             <button
@@ -455,7 +507,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               className="p-2.5 rounded-xl bg-accent-violet/15 hover:bg-accent-violet/30 border border-accent-violet/30 text-accent-violet hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
               <AtSign className="w-4 h-4 text-accent-violet" />
-              <span className="text-[11px]">{isPersian ? 'منشن' : 'Mention'}</span>
+              <span className="text-[11px]">{t('user_profile.action_mention')}</span>
             </button>
           </div>
 
@@ -470,12 +522,12 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
-                      <span>{isPersian ? 'پست‌ها و استوری‌های پروفایل' : 'Profile Posts & Stories'}</span>
+                      <span>{t('user_profile.posts_and_stories')}</span>
                     </h4>
                     <span className="text-[10px] text-gray-400">
-                      {pinnedStories.length > 0 && `${pinnedStories.length} ${isPersian ? 'پست پین‌شده' : 'pinned'}`}
+                      {pinnedStories.length > 0 && t('user_profile.pinned_count', { count: formatNumber(pinnedStories.length) })}
                       {pinnedStories.length > 0 && activeStories.length > 0 && ' · '}
-                      {activeStories.length > 0 && `${activeStories.length} ${isPersian ? 'استوری فعال' : 'active'}`}
+                      {activeStories.length > 0 && t('user_profile.active_count', { count: formatNumber(activeStories.length) })}
                     </span>
                   </div>
                 </div>
@@ -491,7 +543,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   }
                   className="px-2.5 py-1 rounded-xl bg-primary-600/25 hover:bg-primary-600/40 border border-primary-500/30 text-primary-300 hover:text-white text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 shadow-xs"
                 >
-                  <span>{isPersian ? 'نمایش کامل' : 'View All'}</span>
+                  <span>{t('user_profile.view_all')}</span>
                   <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
                 </button>
               </div>
@@ -500,7 +552,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               {isLoadingStories ? (
                 <div className="flex items-center justify-center py-6 text-gray-400 gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-accent-cyan" />
-                  <span className="text-xs">{isPersian ? 'در حال دریافت پست‌های پروفایل...' : 'Loading profile posts...'}</span>
+                  <span className="text-xs">{t('user_profile.loading_posts')}</span>
                 </div>
               ) : (
                 <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10 snap-x">
@@ -537,14 +589,14 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                           {isPinned ? (
                             <span
                               className="p-1 rounded-md bg-accent-cyan/80 text-dark-950 backdrop-blur-xs font-bold text-[9px] flex items-center gap-0.5 shadow-xs"
-                              title={isPersian ? 'پست پین‌شده در پروفایل' : 'Pinned to profile'}
+                              title={t('user_profile.pinned_badge')}
                             >
                               <Pin className="w-2.5 h-2.5 fill-current" />
                             </span>
                           ) : (
                             <span
                               className="p-1 rounded-md bg-accent-violet/80 text-white backdrop-blur-xs font-bold text-[9px] flex items-center gap-0.5 shadow-xs"
-                              title={isPersian ? 'استوری فعال ۲۴ساعته' : 'Active 24h story'}
+                              title={t('user_profile.active_badge')}
                             >
                               <Clock className="w-2.5 h-2.5" />
                             </span>
@@ -604,23 +656,77 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                 )}
                 <span>
                   {details?.isBlocked
-                    ? (isPersian ? 'رفع مسدودیت کاربر' : 'Unblock User')
-                    : (isPersian ? 'مسدود کردن کاربر' : 'Block User')}
+                    ? t('user_profile.unblock_btn')
+                    : t('user_profile.block_btn')}
                 </span>
               </span>
               <span className="text-[10px] opacity-70">
                 {details?.isBlocked
-                  ? (isPersian ? 'فعال‌سازی مجدد' : 'Restore contact')
-                  : (isPersian ? 'قطع دریافت پیام' : 'Stop messages')}
+                  ? t('user_profile.restore_contact')
+                  : t('user_profile.stop_messages')}
               </span>
             </button>
+          )}
+
+          {/* Activity & Profile Monitoring Toggle Card */}
+          {peerId !== currentChatId && !details?.isBot && peerId !== accountId && (
+            <div className="w-full p-3 rounded-2xl bg-dark-850/90 border border-white/5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`p-2 rounded-xl shrink-0 ${
+                    isTrackingEnabled
+                      ? 'bg-accent-cyan/15 text-accent-cyan'
+                      : 'bg-rose-500/15 text-rose-400'
+                  }`}
+                >
+                  {isTrackingEnabled ? (
+                    <Activity className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4" />
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-semibold text-gray-200">
+                    {t('user_profile.monitoring_title') || (isPersian ? 'رصد آنلاین و تغییرات پروفایل' : 'Profile & Online Monitoring')}
+                  </span>
+                  <span className="text-[10px] text-gray-400 truncate">
+                    {isTrackingEnabled
+                      ? (t('user_profile.monitoring_active') || (isPersian ? 'فعال (تغییرات و نشست‌ها ثبت می‌شوند)' : 'Active (Logging changes & sessions)'))
+                      : (t('user_profile.monitoring_excluded') || (isPersian ? 'متوقف شده (خارج از رصد)' : 'Excluded from monitoring'))}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleTracking}
+                disabled={isUpdatingTracking}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  isTrackingEnabled
+                    ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    : 'bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan border-accent-cyan/35'
+                } ${isUpdatingTracking ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isTrackingEnabled ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5" />
+                    <span>{t('user_profile.btn_exclude') || (isPersian ? 'خروج از رصد' : 'Exclude')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{t('user_profile.btn_enable') || (isPersian ? 'فعال‌سازی رصد' : 'Enable')}</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
           {/* Bio / About */}
           {details?.about && (
             <div className="p-3.5 rounded-2xl bg-dark-850/90 border border-white/5 space-y-1">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                {isPersian ? 'بیوگرافی' : 'Bio'}
+                {t('user_profile.bio')}
               </div>
               <p
                 dir={isRTL(details.about) ? 'rtl' : 'ltr'}
@@ -639,15 +745,15 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                 <Hash className="w-4 h-4 text-accent-cyan shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                    {isPersian ? 'شناسه عددی کاربر' : 'User ID'}
+                    {t('user_profile.user_id')}
                   </span>
                   <span className="font-mono text-xs text-gray-200">{peerId}</span>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => handleCopy(peerId, isPersian ? 'شناسه کاربری' : 'User ID')}
-                title={isPersian ? 'کپی شناسه عددی' : 'Copy User ID'}
+                onClick={() => handleCopy(peerId, t('user_profile.user_id'))}
+                title={t('user_profile.copy_user_id')}
                 className="p-1.5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
@@ -664,7 +770,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                        {isPersian ? 'تاریخ ساخت اکانت' : 'Account Created'}
+                        {t('user_profile.account_created')}
                       </span>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
                         estimatedAge.isOfficialPeerSettings
@@ -672,8 +778,8 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                           : 'bg-white/10 text-gray-300'
                       }`}>
                         {estimatedAge.isOfficialPeerSettings
-                          ? (isPersian ? 'رسمی تلگرام' : 'Verified')
-                          : (isPersian ? 'تخمینی' : 'Estimated')}
+                          ? t('user_profile.verified')
+                          : t('user_profile.estimated')}
                       </span>
                     </div>
                     <span className="text-xs text-gray-100 font-semibold truncate">
@@ -694,15 +800,15 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   <AtSign className="w-4 h-4 text-accent-cyan shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                      {isPersian ? 'نام کاربری' : 'Username'}
+                      {t('user_profile.username')}
                     </span>
                     <span className="text-xs text-gray-200 font-mono">@{displayUsername}</span>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopy(`@${displayUsername}`, isPersian ? 'نام کاربری' : 'Username')}
-                  title={isPersian ? 'کپی نام کاربری' : 'Copy Username'}
+                  onClick={() => handleCopy(`@${displayUsername}`, t('user_profile.username'))}
+                  title={t('user_profile.copy_username')}
                   className="p-1.5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -717,15 +823,15 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   <Phone className="w-4 h-4 text-accent-emerald shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                      {isPersian ? 'شماره تماس' : 'Phone'}
+                      {t('user_profile.phone')}
                     </span>
                     <span className="text-xs text-gray-200 font-mono">{details.phone}</span>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopy(details.phone!, isPersian ? 'شماره تماس' : 'Phone')}
-                  title={isPersian ? 'کپی شماره' : 'Copy Phone'}
+                  onClick={() => handleCopy(details.phone!, t('user_profile.phone'))}
+                  title={t('user_profile.copy_phone')}
                   className="p-1.5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -748,7 +854,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               <div className="text-[10px] font-bold text-primary-400 uppercase tracking-wider flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <Radio className="w-3 h-3" />
-                  <span>{isPersian ? 'کانال شخصی کاربر' : 'Personal Channel'}</span>
+                  <span>{t('user_profile.personal_channel')}</span>
                 </span>
                 <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
               </div>
@@ -772,7 +878,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
-                  <span>{isPersian ? 'گروه‌های مشترک و فعالیت' : 'Mutual Groups'}</span>
+                  <span>{t('user_profile.mutual_groups')}</span>
                 </button>
                 <button
                   type="button"
@@ -784,7 +890,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   }`}
                 >
                   <Activity className="w-3.5 h-3.5" />
-                  <span>{isPersian ? 'رادار آنلاین مخاطب' : 'Online Radar'}</span>
+                  <span>{t('user_profile.online_radar')}</span>
                 </button>
               </div>
 
@@ -847,7 +953,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                       setActivePhotoIndex((prev) => (prev - 1 + photoGallery.length) % photoGallery.length)
                     }}
                     className="absolute -left-14 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-dark-900/80 hover:bg-dark-900 text-white/90 hover:text-white transition-all cursor-pointer border border-white/10 shadow-xl"
-                    title={isPersian ? 'عکس قبلی' : 'Previous photo'}
+                    title={t('user_profile.prev_photo')}
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
@@ -858,7 +964,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                       setActivePhotoIndex((prev) => (prev + 1) % photoGallery.length)
                     }}
                     className="absolute -right-14 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-dark-900/80 hover:bg-dark-900 text-white/90 hover:text-white transition-all cursor-pointer border border-white/10 shadow-xl"
-                    title={isPersian ? 'عکس بعدی' : 'Next photo'}
+                    title={t('user_profile.next_photo')}
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>

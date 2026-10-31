@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { ProxyConfig, AccountInfo, AutoHarvestStatus, WarpStatus } from '../types/telegram'
+import { useI18n } from '../i18n'
 
 interface ProxySettingsModalProps {
   isOpen: boolean
@@ -154,6 +155,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
   onClose,
   onUpdateAccountProxy,
 }) => {
+  const { t, formatNumber } = useI18n()
   const [activeTab, setActiveTab] = useState<ProxyTab>('hunter')
   const [harvestStatus, setHarvestStatus] = useState<AutoHarvestStatus>({
     enabled: true,
@@ -280,7 +282,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
   const isAllAccountsSelected = selectedAccountId === 'all'
   const targetAccount = accounts.find((a) => a.id === selectedAccountId) || (isAllAccountsSelected ? null : accounts[0])
   const targetName = isAllAccountsSelected
-    ? `همه اکانت‌ها (${accounts.length})`
+    ? t('proxy.all_accounts', { count: formatNumber(accounts.length) })
     : targetAccount?.firstName || targetAccount?.phone || 'Account'
   const isTargetAccountProxyActive = isAllAccountsSelected
     ? accounts.some((a) => a.proxyConfig?.enabled)
@@ -294,7 +296,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     for (const acc of accounts) {
       onUpdateAccountProxy(acc.id, undefined)
     }
-    setDistributionSuccess(`تمام ${accounts.length} اکانت روی حالت مستقیم (بدون پروکسی) تنظیم شدند.`)
+    setDistributionSuccess(t('proxy.all_direct_success', { count: formatNumber(accounts.length) }))
     setTimeout(() => setDistributionSuccess(null), 3500)
   }
 
@@ -303,7 +305,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     for (const acc of accounts) {
       onUpdateAccountProxy(acc.id, proxy)
     }
-    setDistributionSuccess(`پروکسی ${proxy.name} روی تمام ${accounts.length} اکانت فعال شد.`)
+    setDistributionSuccess(t('proxy.all_applied_success', { name: proxy.name, count: formatNumber(accounts.length) }))
     setTimeout(() => setDistributionSuccess(null), 3500)
   }
 
@@ -453,7 +455,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     // If proxy is undefined, turn off proxy for this account (switch to direct)
     if (!proxy) {
       onUpdateAccountProxy(targetId, undefined)
-      setDistributionSuccess(`اتصال ${targetName} به وضعیت مستقیم (بدون پروکسی) تغییر یافت.`)
+      setDistributionSuccess(t('proxy.direct_success', { name: targetName }))
       setTimeout(() => setDistributionSuccess(null), 3500)
       return
     }
@@ -466,13 +468,13 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
 
     if (isAlreadyActive) {
       onUpdateAccountProxy(targetId, undefined)
-      setDistributionSuccess(`پروکسی غیرفعال شد — ${targetName} به حالت مستقیم رفت.`)
+      setDistributionSuccess(t('proxy.disabled_success', { name: targetName }))
       setTimeout(() => setDistributionSuccess(null), 3500)
       return
     }
 
     onUpdateAccountProxy(targetId, proxy)
-    setDistributionSuccess(`در حال اتصال ${targetName} به پروکسی ${proxy.name}...`)
+    setDistributionSuccess(t('proxy.connecting', { name: targetName, proxy: proxy.name }))
     setTimeout(() => setDistributionSuccess(null), 3500)
   }
 
@@ -529,7 +531,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
         await window.guidegram.copyToClipboard(link)
       }
       setCopiedId(proxy.id)
-      setDistributionSuccess(`لینک پروکسی کپی شد: ${link.slice(0, 40)}...`)
+      setDistributionSuccess(t('proxy.link_copied', { link: link.slice(0, 40) }))
       setTimeout(() => {
         setCopiedId(null)
         setDistributionSuccess(null)
@@ -547,19 +549,19 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
           setQuickPasteInput(text.trim())
           setQuickPasteError(null)
         } else {
-          setQuickPasteError('کلیپ‌بورد خالی است یا دسترسی مجاز نیست.')
+          setQuickPasteError(t('proxy.clipboard_empty'))
         }
       }
     } catch (err) {
       console.warn('Clipboard read failed:', err)
-      setQuickPasteError('امکان خواندن مستقیم از کلیپ‌بورد وجود ندارد. لطفاً با Ctrl+V پیست کنید.')
+      setQuickPasteError(t('proxy.clipboard_manual'))
     }
   }
 
   const handleImportProxy = async (autoAssign: boolean = false) => {
     const raw = quickPasteInput.trim()
     if (!raw) {
-      setQuickPasteError('لطفاً آدرس یا لینک پروکسی را وارد یا پیست کنید.')
+      setQuickPasteError(t('proxy.enter_proxy'))
       return
     }
 
@@ -576,7 +578,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
 
       if (!parsed || !parsed.host || !parsed.port) {
         setQuickPasteError(
-          'فرمت پروکسی شناسایی نشد. نمونه‌های معتبر: tg://proxy?server=... یا socks5://... یا host:port:secret'
+          t('proxy.invalid_format')
         )
         return
       }
@@ -595,14 +597,14 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
       if (autoAssign) {
         handleAssignProxyToAccount(parsed)
       } else {
-        setDistributionSuccess(`پروکسی ${parsed.name} با موفقیت افزوده شد!`)
+        setDistributionSuccess(t('proxy.added_success', { name: parsed.name }))
         setTimeout(() => setDistributionSuccess(null), 3000)
       }
 
       setQuickPasteInput('')
     } catch (err: any) {
       console.error('Import proxy error:', err)
-      setQuickPasteError(err?.message || 'خطا در پردازش و ذخیره پروکسی')
+      setQuickPasteError(err?.message || t('proxy.process_error'))
     } finally {
       setIsImporting(false)
     }
@@ -643,7 +645,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
     setUser('')
     setPass('')
     setSecret('')
-    setDistributionSuccess(`پروکسی ${newProxy.name} ذخیره شد.`)
+    setDistributionSuccess(t('proxy.saved_success', { name: newProxy.name }))
     setTimeout(() => setDistributionSuccess(null), 3000)
   }
 
@@ -699,7 +701,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                 onChange={(e) => setSelectedAccountId(e.target.value)}
                 className="bg-dark-850 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-accent-cyan/40 font-semibold cursor-pointer"
               >
-                <option value="all">🌟 همه اکانت‌ها ({accounts.length} اکانت)</option>
+                <option value="all">{t('proxy.all_accounts_option', { count: formatNumber(accounts.length) })}</option>
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.firstName || acc.phone || acc.id} ({acc.proxyConfig?.enabled ? 'Proxy ON' : 'Direct'})
@@ -715,16 +717,16 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
             {isAllAccountsSelected ? (
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-lg bg-primary-500/15 text-primary-300 border border-primary-500/30 text-[11px] font-semibold">
-                  {proxyOnCount} پروکسی • {directCount} مستقیم
+                  {t('proxy.status_counts', { proxies: formatNumber(proxyOnCount), direct: formatNumber(directCount) })}
                 </span>
                 <button
                   type="button"
                   onClick={handleDirectAllAccounts}
-                  title="خاموش کردن پروکسی تمام اکانت‌ها و اتصال مستقیم به اینترنت"
+                  title={t('proxy.direct_all_title')}
                   className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-red-500/10"
                 >
                   <ShieldOff className="w-3.5 h-3.5" />
-                  <span>خاموش کردن همه (Direct All)</span>
+                  <span>{t('proxy.direct_all_btn')}</span>
                 </button>
               </div>
             ) : (
@@ -740,7 +742,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleAssignProxyToAccount(undefined)}
-                      title="خاموش کردن پروکسی این اکانت و اتصال مستقیم"
+                      title={t('proxy.direct_account_title')}
                       className="px-2 py-0.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       <ShieldOff className="w-3 h-3" />
@@ -756,11 +758,11 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                   <button
                     type="button"
                     onClick={handleDirectAllAccounts}
-                    title="خاموش کردن پروکسی روی تمام اکانت‌ها با یک کلیک"
+                    title={t('proxy.turn_off_all_title')}
                     className="px-2 py-0.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <ShieldOff className="w-3 h-3" />
-                    <span>خاموشی همه ({proxyOnCount})</span>
+                    <span>{t('proxy.turn_off_all_btn', { count: formatNumber(proxyOnCount) })}</span>
                   </button>
                 )}
               </div>
@@ -774,10 +776,10 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-gray-200 font-bold">
                 <Clipboard className="w-3.5 h-3.5 text-accent-cyan" />
-                <span>Quick Proxy Import & Paste (ورود سریع پروکسی)</span>
+                <span>{t('proxy.quick_import_title')}</span>
               </div>
               <span className="text-[10px] text-gray-400">
-                پشتیبانی از tg://proxy، socks5://، t.me و host:port:secret
+                {t('proxy.quick_import_sub')}
               </span>
             </div>
 
@@ -785,7 +787,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
               <div className="relative flex-1">
                 <input
                   type="text"
-                  placeholder="لینک پروکسی را اینجا پیست کنید (tg://proxy?server=... یا host:port:secret)"
+                  placeholder={t('proxy.quick_import_placeholder')}
                   value={quickPasteInput}
                   onChange={(e) => {
                     setQuickPasteInput(e.target.value)
@@ -813,22 +815,22 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
               <button
                 type="button"
                 onClick={handlePasteFromClipboard}
-                title="خواندن و الصاق مستقیم از کلیپ‌بورد سیستم"
+                title={t('proxy.paste_from_clipboard')}
                 className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
                 <Clipboard className="w-3.5 h-3.5 text-accent-cyan" />
-                <span>پیست</span>
+                <span>{t('proxy.paste_btn')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleImportProxy(false)}
                 disabled={isImporting || !quickPasteInput.trim()}
-                title="افزودن به لیست پروکسی‌ها"
+                title={t('proxy.add_to_list')}
                 className="px-3 py-1.5 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan border border-accent-cyan/30 text-xs font-bold flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>افزودن</span>
+                <span>{t('proxy.add_btn')}</span>
               </button>
 
               {accounts.length > 0 && (
@@ -838,13 +840,13 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                   disabled={isImporting || !quickPasteInput.trim()}
                   title={
                     isAllAccountsSelected
-                      ? 'افزودن و اتصال فوری به تمام اکانت‌ها'
-                      : `افزودن و اتصال فوری به ${targetName}`
+                      ? t('proxy.add_and_connect_all')
+                      : t('proxy.add_and_connect_target', { name: targetName })
                   }
                   className="px-3 py-1.5 rounded-xl bg-accent-emerald text-dark-900 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-accent-emerald/20 hover:brightness-110 disabled:opacity-40 cursor-pointer shrink-0"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  <span>{isAllAccountsSelected ? 'افزودن و اتصال به همه' : 'افزودن و اتصال'}</span>
+                  <span>{isAllAccountsSelected ? t('proxy.add_and_connect_all_btn') : t('proxy.add_and_connect_btn')}</span>
                 </button>
               )}
             </div>
@@ -1006,7 +1008,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                     <div>
                       <div className="font-semibold text-gray-200">Auto-connect if VPN disconnects</div>
                       <div className="text-[10px] text-gray-400">
-                        اتصال خودکار و هوشمند به سالم‌ترین پروکسی شکارشده در صورت قطع شدن VPN
+                        {t('proxy.auto_vpn_sub')}
                       </div>
                     </div>
                   </div>
@@ -1094,7 +1096,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                 <span>{p.name}</span>
                                 {isActiveOnTarget && (
                                   <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded font-semibold border border-emerald-500/30">
-                                    {isAllAccountsSelected ? 'روی همه فعال' : 'Active'}
+                                    {isAllAccountsSelected ? t('proxy.active_on_all') : 'Active'}
                                   </span>
                                 )}
                                 {accountsUsingThis.length > 0 && !isAllAccountsSelected && (
@@ -1134,7 +1136,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleCopyProxy(p)}
-                                title="کپی لینک پروکسی (tg://proxy...)"
+                                title={t('proxy.copy_link')}
                                 className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
                                   copiedId === p.id
                                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
@@ -1156,10 +1158,10 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                     onClick={() => handleAssignProxyToAccount(p)}
                                     title={
                                       isAllAccountsSelected
-                                        ? 'اعمال و فعال‌سازی این پروکسی روی تمام اکانت‌ها'
+                                        ? t('proxy.apply_to_all_title')
                                         : isActiveOnTarget
-                                        ? 'کلیک جهت قطع اتصال پروکسی'
-                                        : `اتصال این پروکسی به ${targetName}`
+                                        ? t('proxy.disconnect_title')
+                                        : t('proxy.connect_to_target', { name: targetName })
                                     }
                                     className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
                                       isActiveOnTarget
@@ -1172,12 +1174,12 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                     {isActiveOnTarget ? (
                                       <>
                                         <ShieldCheck className="w-3 h-3" />
-                                        <span>{isAllAccountsSelected ? 'روی همه فعال' : 'In Use'}</span>
+                                        <span>{isAllAccountsSelected ? t('proxy.active_on_all') : t('proxy.in_use')}</span>
                                       </>
                                     ) : isAllAccountsSelected ? (
                                       <>
                                         <Sparkles className="w-3 h-3" />
-                                        <span>روشن کردن همه</span>
+                                        <span>{t('proxy.enable_all')}</span>
                                       </>
                                     ) : (
                                       <>
@@ -1191,10 +1193,10 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                     <button
                                       type="button"
                                       onClick={() => handleApplyProxyToAll(p)}
-                                      title="اعمال فوری این پروکسی روی تمام اکانت‌ها"
+                                      title={t('proxy.apply_to_all_title')}
                                       className="px-2 py-1.5 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-primary-500/20 text-gray-300 hover:text-primary-300 border border-white/10 hover:border-primary-500/30 transition-all cursor-pointer"
                                     >
-                                      همه
+                                      {t('proxy.all_badge')}
                                     </button>
                                   )}
                                 </div>
@@ -1233,9 +1235,9 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                 {proxies.length === 0 ? (
                   <div className="p-6 text-center rounded-2xl bg-dark-800/50 border border-white/5 space-y-1">
                     <Globe className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                    <div className="text-xs text-gray-300 font-semibold">هیچ پروکسی سفارشی ثبت نشده است</div>
+                    <div className="text-xs text-gray-300 font-semibold">{t('proxy.no_proxies_title')}</div>
                     <div className="text-[11px] text-gray-500">
-                      از کادر الصاق سریع در بالا یا فرم دستی زیر برای ثبت پروکسی استفاده کنید.
+                      {t('proxy.no_proxies_desc')}
                     </div>
                   </div>
                 ) : (
@@ -1276,7 +1278,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                 <span>{p.name}</span>
                                 {isActiveOnTarget && (
                                   <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded font-semibold border border-emerald-500/30">
-                                    {isAllAccountsSelected ? 'روی همه فعال' : 'Active'}
+                                    {isAllAccountsSelected ? t('proxy.active_on_all') : 'Active'}
                                   </span>
                                 )}
                                 {accountsUsingThis.length > 0 && !isAllAccountsSelected && (
@@ -1316,7 +1318,7 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleCopyProxy(p)}
-                                title="کپی لینک پروکسی"
+                                title={t('proxy.copy_link')}
                                 className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
                                   copiedId === p.id
                                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
@@ -1338,10 +1340,10 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                     onClick={() => handleAssignProxyToAccount(p)}
                                     title={
                                       isAllAccountsSelected
-                                        ? 'اعمال و فعال‌سازی این پروکسی روی تمام اکانت‌ها'
+                                        ? t('proxy.apply_to_all_title')
                                         : isActiveOnTarget
-                                        ? 'کلیک جهت قطع اتصال پروکسی'
-                                        : `اتصال این پروکسی به ${targetName}`
+                                        ? t('proxy.disconnect_title')
+                                        : t('proxy.connect_to_target', { name: targetName })
                                     }
                                     className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
                                       isActiveOnTarget
@@ -1354,12 +1356,12 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                     {isActiveOnTarget ? (
                                       <>
                                         <ShieldCheck className="w-3 h-3" />
-                                        <span>{isAllAccountsSelected ? 'روی همه فعال' : 'In Use'}</span>
+                                        <span>{isAllAccountsSelected ? t('proxy.active_on_all') : t('proxy.in_use')}</span>
                                       </>
                                     ) : isAllAccountsSelected ? (
                                       <>
                                         <Sparkles className="w-3 h-3" />
-                                        <span>روشن کردن همه</span>
+                                        <span>{t('proxy.enable_all')}</span>
                                       </>
                                     ) : (
                                       <>
@@ -1373,10 +1375,10 @@ export const ProxySettingsModal: React.FC<ProxySettingsModalProps> = ({
                                     <button
                                       type="button"
                                       onClick={() => handleApplyProxyToAll(p)}
-                                      title="اعمال فوری این پروکسی روی تمام اکانت‌ها"
+                                      title={t('proxy.apply_to_all_title')}
                                       className="px-2 py-1.5 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-primary-500/20 text-gray-300 hover:text-primary-300 border border-white/10 hover:border-primary-500/30 transition-all cursor-pointer"
                                     >
-                                      همه
+                                      {t('proxy.all_badge')}
                                     </button>
                                   )}
                                 </div>

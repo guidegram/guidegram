@@ -244,6 +244,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activityRetentionPeriod, setActivityRetentionPeriod] = useState<ActivityLogRetentionPeriod>('30d')
   const [profileAuditInteractionRange, setProfileAuditInteractionRange] = useState<'24h' | '7d' | '30d' | '90d' | '180d' | 'all'>('180d')
   const [profileAuditScanOnOnline, setProfileAuditScanOnOnline] = useState(true)
+  const [profileAuditContactsOnly, setProfileAuditContactsOnly] = useState(false)
   const [activityStats, setActivityStats] = useState<{ totalEvents: number; totalSessions: number; totalUsersTracked: number; dataSizeBytes: number } | null>(null)
   const [isPurgingData, setIsPurgingData] = useState(false)
   const [purgeToast, setPurgeToast] = useState<string | null>(null)
@@ -771,6 +772,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setActivityRetentionPeriod(cfg.activityRetentionPeriod || '30d')
         setProfileAuditInteractionRange(cfg.profileAuditInteractionRange || '180d')
         setProfileAuditScanOnOnline(cfg.profileAuditScanOnOnline ?? true)
+        setProfileAuditContactsOnly(cfg.profileAuditContactsOnly ?? false)
         if (cfg.autoDownload) {
           setAutoDownload({
             ...cfg.autoDownload,
@@ -987,6 +989,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       activityRetentionPeriod,
       profileAuditInteractionRange,
       profileAuditScanOnOnline,
+      profileAuditContactsOnly,
     })
     setConfig(updated)
     onConfigUpdated?.(updated)
@@ -1032,13 +1035,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setPurgeToast(null)
     try {
       await window.guidegram.clearActivityData(activeAccountId, 'all')
-      setPurgeToast(isPersian ? 'تمام داده‌های رادار آنلاین و تغییرات پاکسازی شد.' : 'Activity data purged successfully.')
+      setPurgeToast(t('settings.auto_migrated_1'))
       if (window.guidegram.getActivityStats) {
         const refreshed = await window.guidegram.getActivityStats(activeAccountId)
         setActivityStats(refreshed)
       }
     } catch {
-      setPurgeToast(isPersian ? 'خطا در پاکسازی داده‌ها' : 'Failed to purge data')
+      setPurgeToast(t('settings.purge_failed') || 'Failed to purge data')
     } finally {
       setIsPurgingData(false)
       setTimeout(() => setPurgeToast(null), 3000)
@@ -1070,7 +1073,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="text-[10px] text-gray-400">
                 {isMobile
                   ? isPersian
-                    ? 'تنظیمات پیشرفته گایدگرام موبایل'
+                    ? t('settings.mobile_adv_title') || 'Guidegram Mobile Settings'
                     : 'Guidegram Mobile Settings'
                   : 'Telegram Desktop & Advanced Power Preferences'}
               </div>
@@ -1096,7 +1099,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
               { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
               { id: 'chat' as SettingsTab, label: t('settings.chat_settings'), icon: <MessageSquare className="w-4 h-4" /> },
-              { id: 'features' as SettingsTab, label: isPersian ? 'قابلیت‌های گایدگرام' : 'Guidegram Features', icon: <Sparkles className="w-4 h-4 text-accent-cyan" /> },
+              { id: 'features' as SettingsTab, label: t('settings.auto_migrated_2'), icon: <Sparkles className="w-4 h-4 text-accent-cyan" /> },
               { id: 'mcp' as SettingsTab, label: 'AI & MCP Agents', icon: <Zap className="w-4 h-4 text-amber-400" /> },
               { id: 'advanced' as SettingsTab, label: t('settings.advanced'), icon: <HardDrive className="w-4 h-4" /> },
             ].map((tab) => {
@@ -1709,10 +1712,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div>
                     <div className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-primary-400" />
-                      <span>موتور اعلان اختصاصی گایدگرام (Pro HUD)</span>
+                      <span>{t('settings.hud_engine_title') || 'Guidegram Native Notification Engine (Pro HUD)'}</span>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
-                      پیش‌نمایش زنده کارت‌های اعلان شناور با پاسخ سریع و ژست‌های حرکتی اندروید
+                      {t('settings.hud_engine_desc') || 'Live floating notification preview with inline quick reply and Android gestures'}
                     </div>
                   </div>
                   <button
@@ -1723,36 +1726,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
                   >
                     <Bell className="w-3.5 h-3.5" />
-                    <span>تست اعلان</span>
+                    <span>{t('settings.hud_test_btn') || 'Test Notification'}</span>
                   </button>
                 </div>
 
                 {/* Master Switches */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <ToggleItem
-                    title="نمایش اعلان‌ها (Notifications HUD)"
-                    desc="نمایش کارت‌های شناور در گوشه صفحه با انیمیشن نرم"
+                    title={t('settings.hud_enable_title') || "Floating Notifications (HUD)"}
+                    desc={t('settings.hud_enable_desc') || "Display smooth floating notification cards in screen corner"}
                     icon={<Bell className="w-3.5 h-3.5 text-primary-400" />}
                     checked={notificationsEnabled}
                     onChange={setNotificationsEnabled}
                   />
                   <ToggleItem
-                    title="جلوه‌های صوتی (Sound Effects)"
-                    desc="پخش آوای پیام‌های دریافتی با وب‌آدیو"
+                    title={t('settings.hud_sound_title') || "Sound Effects"}
+                    desc={t('settings.hud_sound_desc') || "Play audio tone for incoming messages via WebAudio"}
                     icon={<Volume2 className="w-3.5 h-3.5 text-accent-cyan" />}
                     checked={soundEnabled}
                     onChange={setSoundEnabled}
                   />
                   <ToggleItem
-                    title="ویبره و هپتیک (Haptic Feedback)"
-                    desc="الگوی لرزش اختصاصی برای اندروید و تبلت"
+                    title={t('settings.hud_haptic_title') || "Haptic Feedback & Vibration"}
+                    desc={t('settings.hud_haptic_desc') || "Tactile vibration pattern for touchscreens and mobile"}
                     icon={<Smartphone className="w-3.5 h-3.5 text-emerald-400" />}
                     checked={notificationVibrate}
                     onChange={setNotificationVibrate}
                   />
                   <ToggleItem
-                    title="چشمک در تسک‌بار (Taskbar Flash)"
-                    desc="جلب توجه آیکون در نوار وظیفه هنگام دریافت پیام"
+                    title={t('settings.hud_taskbar_title') || "Taskbar Flash"}
+                    desc={t('settings.hud_taskbar_desc') || "Flash app icon in taskbar when message is received"}
                     icon={<Laptop className="w-3.5 h-3.5 text-amber-400" />}
                     checked={notificationFlashTaskbar}
                     onChange={setNotificationFlashTaskbar}
@@ -1761,7 +1764,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Chat Categories Matrix */}
                 <div className="p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
-                  <div className="text-xs font-bold text-gray-200">تفکیک اعلان بر اساس نوع گفتگو</div>
+                  <div className="text-xs font-bold text-gray-200">{t('settings.hud_scopes_title') || "Notification Scopes"}</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -1774,7 +1777,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         <User className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">چت‌های خصوصی</span>
+                        <span className="text-xs font-semibold">{t('settings.hud_scope_private') || "Private Chats"}</span>
                       </div>
                       {notificationPrivateChats && <Check className="w-3.5 h-3.5 text-primary-400" />}
                     </button>
@@ -1790,7 +1793,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         <Users className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">گروه‌ها</span>
+                        <span className="text-xs font-semibold">{t('settings.hud_scope_groups') || "Groups"}</span>
                       </div>
                       {notificationGroups && <Check className="w-3.5 h-3.5 text-primary-400" />}
                     </button>
@@ -1806,7 +1809,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         <Megaphone className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">کانال‌ها</span>
+                        <span className="text-xs font-semibold">{t('settings.hud_scope_channels') || "Channels"}</span>
                       </div>
                       {notificationChannels && <Check className="w-3.5 h-3.5 text-primary-400" />}
                     </button>
@@ -1816,15 +1819,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* HUD Behaviors: Quick Reply & Batching */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <ToggleItem
-                    title="پاسخ مستقیم (Inline Quick Reply)"
-                    desc="امکان ارسال پاسخ از داخل همان کارت اعلان بدون باز کردن صفحه"
+                    title={t('settings.hud_inline_reply_title') || "Inline Quick Reply"}
+                    desc={t('settings.hud_inline_reply_desc') || "Send reply directly from the notification card"}
                     icon={<CornerDownLeft className="w-3.5 h-3.5 text-primary-400" />}
                     checked={notificationQuickReply}
                     onChange={setNotificationQuickReply}
                   />
                   <ToggleItem
-                    title="تجمیع ضد اسپم (Anti-Spam Digest)"
-                    desc="ادغام پیام‌های پیاپی از یک گفتگو در یک کارت مشترک"
+                    title={t('settings.hud_digest_title') || "Anti-Spam Digest"}
+                    desc={t('settings.hud_digest_desc') || "Group consecutive messages from same chat into one card"}
                     icon={<CheckCheck className="w-3.5 h-3.5 text-cyan-400" />}
                     checked={notificationBatching}
                     onChange={setNotificationBatching}
@@ -1835,17 +1838,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-bold text-gray-200">موقعیت قرارگیری روی مانیتور</div>
-                      <div className="text-[11px] text-gray-400">گوشه مورد نظر جهت نمایش کارت‌های شناور را انتخاب کنید</div>
+                      <div className="text-xs font-bold text-gray-200">{t('settings.hud_position_title') || "Screen Position"}</div>
+                      <div className="text-[11px] text-gray-400">{t('settings.hud_position_desc') || "Choose corner for floating notification cards"}</div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { id: 'bottom-right' as const, label: 'پایین - راست' },
-                      { id: 'top-right' as const, label: 'بالا - راست' },
-                      { id: 'bottom-left' as const, label: 'پایین - چپ' },
-                      { id: 'top-left' as const, label: 'بالا - چپ' },
+                      { id: 'bottom-right' as const, label: t('settings.hud_pos_br') || 'Bottom-Right' },
+                      { id: 'top-right' as const, label: t('settings.hud_pos_tr') || 'Top-Right' },
+                      { id: 'bottom-left' as const, label: t('settings.hud_pos_bl') || 'Bottom-Left' },
+                      { id: 'top-left' as const, label: t('settings.hud_pos_tl') || 'Top-Left' },
                     ].map((pos) => {
                       const isSel = notificationPosition === pos.id
                       return (
@@ -1867,8 +1870,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-medium text-gray-200">حداکثر تعداد کارت‌های همزمان</div>
-                      <div className="text-[11px] text-gray-400">بین ۱ تا ۵ کارت روی صفحه استک می‌شوند</div>
+                      <div className="text-xs font-medium text-gray-200">{t('settings.hud_max_cards') || "Maximum Concurrent Cards"}</div>
+                      <div className="text-[11px] text-gray-400">{t('settings.notif_stack_desc')}</div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {[1, 2, 3, 4, 5].map((num) => {
@@ -1897,18 +1900,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div>
                     <div className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
                       <Lock className="w-3.5 h-3.5 text-accent-cyan" />
-                      <span>سپر حریم خصوصی پیش‌نمایش (Privacy Shield)</span>
+                      <span>{t('settings.notif_privacy_title')}</span>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
-                      میزان اطلاعات نمایش داده شده در کارت اعلان را مدیریت کنید
+                      {t('settings.notif_privacy_desc')}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
-                      { id: 'full' as const, label: 'نمایش کامل', desc: 'نام و متن کامل پیام' },
-                      { id: 'hide-text' as const, label: 'مخفی‌سازی متن', desc: 'فقط نمایش نام فرستنده' },
-                      { id: 'hide-all' as const, label: 'حریم خصوصی مطلق', desc: 'مخفی‌سازی نام و متن' },
+                      { id: 'full' as const, label: t('settings.notif_privacy_full'), desc: t('settings.notif_privacy_full_desc') },
+                      { id: 'hide-text' as const, label: t('settings.notif_privacy_hidetext'), desc: t('settings.notif_privacy_hidetext_desc') },
+                      { id: 'hide-all' as const, label: t('settings.notif_privacy_hideall'), desc: t('settings.notif_privacy_hideall_desc') },
                     ].map((mode) => {
                       const isSel = notificationPrivacyMode === mode.id
                       return (
@@ -3810,15 +3813,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <div>
                       <div className="text-xs font-bold text-gray-100 flex items-center gap-2">
-                        <span>{isPersian ? 'قابلیت‌های اختصاصی گایدگرام' : 'Guidegram Exclusive Power Suite'}</span>
+                        <span>{t('settings.features_banner_title')}</span>
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30">
                           PRO
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-400 mt-0.5">
-                        {isPersian
-                          ? 'رادار آنلاین، تایم‌لاین تغییرات مخاطبین، حفظ پیام‌های پاک‌شده، حالت روح و ابزارهای پیشرفته'
-                          : 'Online activity radar, contact change auditing, local message vault & power utilities'}
+                        {t('settings.auto_migrated_3')}
                       </p>
                     </div>
                   </div>
@@ -3829,7 +3830,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center gap-2 px-1">
                     <Activity className="w-4 h-4 text-accent-cyan" />
                     <span className="text-xs font-bold text-accent-cyan">
-                      {isPersian ? '۱. رادار آنلاین و تحلیل زمان‌بندی حضور' : '1. Online Activity Radar & Attendance Graph'}
+                      {t('settings.auto_migrated_4')}
                     </span>
                   </div>
 
@@ -3838,12 +3839,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'فعال‌سازی رادار آنلاین و آفلاین' : 'Enable Online/Offline Radar'}
+                          {t('settings.features_radar_enable')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'محاسبه سشن‌های آنلاین، توزیع ساعات شبانه‌روز و رسم نمودار در پروفایل کاربران'
-                            : 'Logs user presence sessions, builds 24h hourly distribution graphs and profiles'}
+                          {t('settings.auto_migrated_5')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -3862,11 +3861,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <ShieldCheck className="w-4 h-4 text-accent-cyan shrink-0 mt-0.5" />
                       <div>
                         <span className="font-semibold text-gray-200">
-                          {isPersian ? 'نحوه کارکرد با حفظ حریم خصوصی تلگرام:' : 'Telegram MTProto Privacy Handling:'}
+                          {t('settings.auto_migrated_6')}
                         </span>{' '}
-                        {isPersian
-                          ? 'تلگرام آخرین بازدید افرادی که شما را بلاک کرده‌اند یا وضعیت خود را روی «اخیراً» (Recently) یا «هیچ‌کس» گذاشته‌اند مخفی می‌کند. رادار گایدگرام با پایش رویدادهای زنده سشن، هر زمان کاربر پیامی ارسال کند یا آنلاین شود، آن لحظه را ثبت کرده و روی نمودار ۲۴ ساعته نمایش می‌دهد.'
-                          : 'Telegram masks exact timestamps for users with hidden last seen or blocked states. Guidegram tracks real-time update pulses to record sessions whenever activity is detected.'}
+                        {t('settings.auto_migrated_7')}
                       </div>
                     </div>
 
@@ -3875,22 +3872,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{isPersian ? 'دوره نگهداری تاریخچه فعالیت‌ها' : 'Data Retention Policy'}</span>
+                          <span>{t('settings.features_radar_retention_title')}</span>
                         </div>
                         <span className="text-[10px] text-gray-400">
-                          {isPersian ? 'حذف خودکار داده‌های قدیمی‌تر' : 'Auto-purge older entries'}
+                          {t('settings.features_radar_retention_desc')}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
                         {[
-                          { id: '1d' as ActivityLogRetentionPeriod, label: isPersian ? '۱ روز' : '1 Day' },
-                          { id: '7d' as ActivityLogRetentionPeriod, label: isPersian ? '۷ روز' : '7 Days' },
-                          { id: '30d' as ActivityLogRetentionPeriod, label: isPersian ? '۳۰ روز (پیش‌فرض)' : '30 Days' },
-                          { id: '90d' as ActivityLogRetentionPeriod, label: isPersian ? '۳ ماه' : '3 Months' },
-                          { id: '180d' as ActivityLogRetentionPeriod, label: isPersian ? '۶ ماه' : '6 Months' },
-                          { id: '365d' as ActivityLogRetentionPeriod, label: isPersian ? '۱ سال' : '1 Year' },
-                          { id: 'forever' as ActivityLogRetentionPeriod, label: isPersian ? 'همیشه نگه‌دار' : 'Forever' },
+                          { id: '1d' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_8') },
+                          { id: '7d' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_9') },
+                          { id: '30d' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_10') },
+                          { id: '90d' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_11') },
+                          { id: '180d' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_12') },
+                          { id: '365d' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_13') },
+                          { id: 'forever' as ActivityLogRetentionPeriod, label: t('settings.auto_migrated_14') },
                         ].map((option) => {
                           const isSelected = activityRetentionPeriod === option.id
                           return (
@@ -3916,7 +3913,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
                           <Database className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{isPersian ? 'وضعیت حافظه و داده‌های رادار' : 'Activity Radar Storage Telemetry'}</span>
+                          <span>{t('settings.features_radar_telemetry_title')}</span>
                         </div>
                         <button
                           type="button"
@@ -3925,7 +3922,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                         >
                           <Trash2 className="w-3 h-3" />
-                          <span>{isPurgingData ? (isPersian ? 'در حال پاکسازی...' : 'Purging...') : (isPersian ? 'پاکسازی کامل دیتای رادار' : 'Purge Activity Data')}</span>
+                          <span>{isPurgingData ? (t('settings.auto_migrated_15')) : (t('settings.auto_migrated_16'))}</span>
                         </button>
                       </div>
 
@@ -3937,25 +3934,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                         <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
-                          <div className="text-[10px] text-gray-400">{isPersian ? 'رویدادهای ثبت‌شده' : 'Events Logged'}</div>
+                          <div className="text-[10px] text-gray-400">{t('settings.features_radar_stat_events')}</div>
                           <div className="text-xs font-bold text-accent-cyan font-mono mt-0.5">
                             {activityStats?.totalEvents?.toLocaleString() ?? '0'}
                           </div>
                         </div>
                         <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
-                          <div className="text-[10px] text-gray-400">{isPersian ? 'سشن‌های آنلاین' : 'Online Sessions'}</div>
+                          <div className="text-[10px] text-gray-400">{t('settings.features_radar_stat_sessions')}</div>
                           <div className="text-xs font-bold text-emerald-400 font-mono mt-0.5">
                             {activityStats?.totalSessions?.toLocaleString() ?? '0'}
                           </div>
                         </div>
                         <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
-                          <div className="text-[10px] text-gray-400">{isPersian ? 'کاربران پایش‌شده' : 'Users Tracked'}</div>
+                          <div className="text-[10px] text-gray-400">{t('settings.features_radar_stat_users')}</div>
                           <div className="text-xs font-bold text-amber-400 font-mono mt-0.5">
                             {activityStats?.totalUsersTracked?.toLocaleString() ?? '0'}
                           </div>
                         </div>
                         <div className="p-2.5 rounded-xl bg-dark-900/80 border border-white/5">
-                          <div className="text-[10px] text-gray-400">{isPersian ? 'حجم دیتابیس' : 'Disk Storage'}</div>
+                          <div className="text-[10px] text-gray-400">{t('settings.features_radar_stat_disk')}</div>
                           <div className="text-xs font-bold text-purple-400 font-mono mt-0.5">
                             {activityStats
                               ? activityStats.dataSizeBytes < 1024 * 1024
@@ -3974,7 +3971,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center gap-2 px-1">
                     <History className="w-4 h-4 text-primary-400" />
                     <span className="text-xs font-bold text-primary-400">
-                      {isPersian ? '۲. حسابرس تغییرات پروفایل مخاطبین' : '2. Contact Changes Auditor & Timeline'}
+                      {t('settings.features_auditor_header')}
                     </span>
                   </div>
 
@@ -3983,12 +3980,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'ثبت هوشمند تغییرات مخاطبین' : 'Audit Contact Profile Changes'}
+                          {t('settings.features_auditor_enable')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'پایش تغییر نام، نام کاربری، عکس، بیوگرافی و کانال متصل به بیو'
-                            : 'Tracks edits to name, username, bio, photo additions/deletions, and linked personal channels'}
+                          {t('settings.auto_migrated_17')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4006,12 +4001,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'اسکن و استعلام فوری هنگام آنلاین شدن کاربر' : 'Auto-Audit on Online Event'}
+                          {t('settings.auto_migrated_18')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'به محض آنلاین شدن هر مخاطب، بیوگرافی و کانال شخصی او با صف ایمن ۳.۵ ثانیه‌ای استعلام می‌شود'
-                            : 'Safely queries user full profile & bio into the throttled queue the moment they come online'}
+                          {t('settings.auto_migrated_19')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4025,26 +4018,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </label>
                     </div>
 
+                    {/* Only Audit Saved Contacts Toggle */}
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          {t('settings.auditor_only_contacts') || (isPersian ? 'رصد اختصاصی فقط برای مخاطبان ذخیره‌شده (دفترچه تلفن)' : 'Only Audit Saved Phonebook Contacts')}
+                        </div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {isPersian
+                            ? 'نادیده گرفتن افراد متفرقه، غریبه‌ها یا چت‌هایی که به عنوان مخاطب در گوشی/تلگرام ذخیره نشده‌اند'
+                            : 'Ignore strangers, groups and unsaved chats from automatic profile and online audits'}
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={profileAuditContactsOnly}
+                          onChange={(e) => setProfileAuditContactsOnly(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent-emerald"></div>
+                      </label>
+                    </div>
+
                     {/* Interaction Range Selector for Background Audit */}
                     <div className="pt-2 border-t border-white/5 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-accent-cyan" />
-                          <span>{isPersian ? 'بازه تعامل چت‌ها برای صف استعلام پس‌زمینه' : 'Active Interaction Range for Profile Audit'}</span>
+                          <span>{t('settings.auto_migrated_20')}</span>
                         </div>
                         <span className="text-[10px] text-gray-400">
-                          {isPersian ? 'سپر ضد بن تلگرام (فاصله ۳.۵ ثانیه)' : 'Anti-Flood Rate Limiter'}
+                          {t('settings.features_auditor_queue_rate')}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
                         {[
-                          { id: '24h', label: isPersian ? '۲۴ ساعت اخیر' : 'Last 24 Hours' },
-                          { id: '7d', label: isPersian ? '۷ روز اخیر' : 'Last 7 Days' },
-                          { id: '30d', label: isPersian ? '۳۰ روز اخیر' : 'Last 30 Days' },
-                          { id: '90d', label: isPersian ? '۳ ماه اخیر' : 'Last 3 Months' },
-                          { id: '180d', label: isPersian ? '۶ ماه اخیر (پیش‌فرض)' : 'Last 6 Months (Default)' },
-                          { id: 'all', label: isPersian ? 'همه مخاطبان و چت‌ها' : 'All Contacts & Chats' },
+                          { id: '24h', label: t('settings.auto_migrated_21') },
+                          { id: '7d', label: t('settings.auto_migrated_22') },
+                          { id: '30d', label: t('settings.auto_migrated_23') },
+                          { id: '90d', label: t('settings.auto_migrated_24') },
+                          { id: '180d', label: t('settings.auto_migrated_25') },
+                          { id: 'all', label: t('settings.auto_migrated_26') },
                         ].map((option) => {
                           const isSelected = profileAuditInteractionRange === option.id
                           return (
@@ -4068,9 +4084,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Open Timeline Button */}
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div className="text-[11px] text-gray-400">
-                        {isPersian
-                          ? 'مشاهده گزارش کامل با نقشه تعاملی آنلاین، فیلتر مخاطبین، جستجو و تفکیک رویدادها'
-                          : 'Inspect all historical changes and interactive online map with mutual filters and search'}
+                        {t('settings.auto_migrated_27')}
                       </div>
                       <button
                         type="button"
@@ -4081,7 +4095,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 border border-primary-500/30 flex items-center gap-2 transition-colors cursor-pointer group"
                       >
                         <History className="w-3.5 h-3.5 group-hover:rotate-[-20deg] transition-transform" />
-                        <span>{isPersian ? 'مشاهده تایم‌لاین و نقشه آنلاین' : 'Open Changes & Online Timeline'}</span>
+                        <span>{t('settings.features_auditor_open_btn')}</span>
                       </button>
                     </div>
                   </div>
@@ -4092,7 +4106,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center gap-2 px-1">
                     <EyeOff className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-bold text-amber-400">
-                      {isPersian ? '۳. حالت روح و امنیت نشست' : '3. Ghost Mode & Stealth Guard'}
+                      {t('settings.features_ghost_header')}
                     </span>
                   </div>
 
@@ -4100,12 +4114,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'حالت روح (Ghost Mode)' : 'Ghost Mode'}
+                          {t('settings.features_ghost_enable')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'خواندن پیام‌ها بدون ارسال تیک دوم (سین) و جلوگیری از آنلاین شدن'
-                            : 'Read messages without sending read receipts and suppress typing status'}
+                          {t('settings.auto_migrated_28')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4122,12 +4134,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'محافظت از فینگرپرینت دسکتاپ' : 'Anti-Fingerprinting Guard'}
+                          {t('settings.features_antiban_enable')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'خنثی‌سازی مشخصات سخت‌افزاری و سیستم‌عامل در درخواست‌های تلگرام'
-                            : 'Anonymizes device hardware IDs and desktop parameters'}
+                          {t('settings.auto_migrated_29')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4148,7 +4158,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center gap-2 px-1">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     <span className="text-xs font-bold text-emerald-400">
-                      {isPersian ? '۴. سپر پیام‌ها و نگهداری بومی' : '4. Message Shield & Local Vault'}
+                      {t('settings.features_shield_header')}
                     </span>
                   </div>
 
@@ -4156,12 +4166,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'حفظ پیام‌های حذف‌شده طرف مقابل' : 'Keep Deleted Messages Locally'}
+                          {t('settings.features_shield_keep_deleted')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'اگر فردی پیامی را برای هر دو نفر پاک کند، پیام با نشان قرمز در چت شما باقی می‌ماند'
-                            : 'Retains messages deleted for everyone locally in SQLite cache with a visual badge'}
+                          {t('settings.auto_migrated_30')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4178,12 +4186,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'انیمیشن پودر شدن پیام‌ها (Thanos Dust)' : 'Thanos Dust Deletion Effect'}
+                          {t('settings.features_shield_thanos')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'تجزیه ذرات پیام حذف شده با الگوریتم باد شبیه‌ساز تلگرام اصلی'
-                            : 'Disintegrate deleted message bubbles with progressive wind drift math'}
+                          {t('settings.auto_migrated_31')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4200,12 +4206,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'پیش‌فرض حذف دوطرفه پیام‌ها' : 'Always Delete for Both by Default'}
+                          {t('settings.features_shield_both_default')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'تیک «حذف برای طرف مقابل» در دیالوگ‌های حذف همیشه به‌طور خودکار فعال باشد'
-                            : 'Pre-checks the delete for both parties checkbox automatically in dialogs'}
+                          {t('settings.auto_migrated_32')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4222,12 +4226,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                       <div>
                         <div className="text-xs font-semibold text-gray-200">
-                          {isPersian ? 'انیمیشن پودر شدن پیام‌ها (Thanos Dust)' : 'Thanos Dust Deletion Effect'}
+                          {t('settings.features_shield_thanos')}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-0.5">
-                          {isPersian
-                            ? 'تجزیه ذرات پیام حذف شده با الگوریتم باد شبیه‌ساز تلگرام اصلی'
-                            : 'Disintegrate deleted message bubbles with progressive wind drift math'}
+                          {t('settings.auto_migrated_31')}
                         </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -4248,7 +4250,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="flex items-center gap-2 px-1">
                     <Zap className="w-4 h-4 text-purple-400" />
                     <span className="text-xs font-bold text-purple-400">
-                      {isPersian ? '۵. بهینه‌سازهای چت و تجربه کاربری' : '5. Chat Enhancements & Power Utilities'}
+                      {t('settings.auto_migrated_34')}
                     </span>
                   </div>
 
@@ -4256,43 +4258,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {[
                       {
                         id: 'showChatId',
-                        label: isPersian ? 'نمایش شناسه‌عددی چت (Chat ID)' : 'Show Chat ID in header',
-                        desc: isPersian ? 'نمایش شناسه تلگرامی در هدر چت برای فوروارد و بات‌ها' : 'Displays peer ID in conversation header',
+                        label: t('settings.features_power_chat_id'),
+                        desc: t('settings.auto_migrated_35'),
                         val: showChatId,
                         set: setShowChatId,
                       },
                       {
                         id: 'showMessageId',
-                        label: isPersian ? 'نمایش شناسه پیام (Message ID)' : 'Show Message ID in bubbles',
-                        desc: isPersian ? 'نمایش شماره دقیق پیام کنار تایم‌استمپ' : 'Renders message sequence number in message card',
+                        label: t('settings.features_power_msg_id'),
+                        desc: t('settings.auto_migrated_36'),
                         val: showMessageId,
                         set: setShowMessageId,
                       },
                       {
                         id: 'showSeconds',
-                        label: isPersian ? 'نمایش ثانیه‌شمار دقیق در زمان پیام‌ها' : 'Show seconds in message timestamps',
-                        desc: isPersian ? 'فرمت زمان به‌صورت HH:MM:SS' : 'Precise timestamps including seconds',
+                        label: t('settings.features_power_seconds'),
+                        desc: t('settings.auto_migrated_37'),
                         val: showSeconds,
                         set: setShowSeconds,
                       },
                       {
                         id: 'showSenderAvatar',
-                        label: isPersian ? 'نمایش آواتار فرستنده در گروه‌ها' : 'Show sender avatars in group chats',
-                        desc: isPersian ? 'تصویر پروفایل کوچک کنار پیام‌های گروه' : 'Visual avatar thumbnail next to group messages',
+                        label: t('settings.auto_migrated_38'),
+                        desc: t('settings.auto_migrated_39'),
                         val: showSenderAvatar,
                         set: setShowSenderAvatar,
                       },
                       {
                         id: 'quickForwardToSaved',
-                        label: isPersian ? 'فوروارد سریع به پیام‌های ذخیره‌شده (Saved Messages)' : 'Quick forward to Saved Messages',
-                        desc: isPersian ? 'دکمه تک‌کلیک نشانه‌گذاری مستقیم به Saved Messages' : 'Single-click bookmark button on message hover',
+                        label: t('settings.auto_migrated_40'),
+                        desc: t('settings.auto_migrated_41'),
                         val: quickForwardToSaved,
                         set: setQuickForwardToSaved,
                       },
                       {
                         id: 'markAllReadEnabled',
-                        label: isPersian ? 'کلید میانبر و دکمه خواندن همه چت‌ها' : 'Mark all chats as read shortcut',
-                        desc: isPersian ? 'پاکسازی یکجای نشانگر پیام‌های خوانده‌نشده' : 'One-click badge dismiss for all dialogs',
+                        label: t('settings.auto_migrated_42'),
+                        desc: t('settings.auto_migrated_43'),
                         val: markAllReadEnabled,
                         set: setMarkAllReadEnabled,
                       },
@@ -5096,13 +5098,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="p-3 rounded-xl bg-dark-900 border border-white/5 text-xs text-gray-300 space-y-1">
               <div className="font-semibold text-primary-400">Sample Preview:</div>
               <p>Guidegram Desktop Client: Fast, secure, and modern.</p>
-              <p className="font-persian">گایدگرام: پیام‌رسان سریع، سبک و امن برای ویندوز</p>
+              <p className="font-persian">{t('settings.font_preview_persian') || 'Guidegram: Fast, lightweight, and secure for Windows'}</p>
             </div>
 
             <div className="space-y-1.5 max-h-56 overflow-y-auto">
               {[
                 { name: 'Default', css: '', desc: 'Open Sans & Vazirmatn System' },
-                { name: 'Vazirmatn', css: "'Vazirmatn', sans-serif", desc: 'بهینه‌سازی شده برای متون فارسی و دوزبانه' },
+                { name: 'Vazirmatn', css: "'Vazirmatn', sans-serif", desc: t('settings.font_desc_vazir') || 'Optimized for Persian & Multilingual typography' },
                 { name: 'Inter', css: "'Inter', sans-serif", desc: 'Modern Minimalist Sans' },
                 { name: 'Roboto', css: "'Roboto', sans-serif", desc: 'Google Clean & Crisp' },
                 { name: 'Segoe UI', css: "'Segoe UI', sans-serif", desc: 'Windows Fluent Native' },

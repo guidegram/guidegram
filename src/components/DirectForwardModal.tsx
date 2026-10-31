@@ -18,6 +18,7 @@ import {
   Bot,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ContactItem } from '../types/telegram'
+import { useI18n } from '../i18n'
 
 export interface DirectForwardPayload {
   toChatIds: string[]
@@ -104,6 +105,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   onClose,
   onForward,
 }) => {
+  const { t } = useI18n()
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([])
   const [withoutQuote, setWithoutQuote] = useState(true) // Default true (Telegraph direct style)
   const [dropMediaCaptions, setDropMediaCaptions] = useState(false)
@@ -585,7 +587,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
               </div>
               <input
                 type="text"
-                placeholder="جستجو در گفتگوها، مخاطبین و ربات‌ها..."
+                placeholder={t('forward.search_placeholder') || "Search chats, contacts and bots..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-dark-800 border border-white/5 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
@@ -622,7 +624,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
                     </div>
                     <div>
                       <div className="truncate font-semibold text-gray-100">Saved Messages</div>
-                      <div className="text-[10px] text-gray-400">پیام‌های ذخیره‌شده</div>
+                      <div className="text-[10px] text-gray-400">{t('common.saved_messages') || "Saved Messages"}</div>
                     </div>
                   </div>
                   <div
@@ -673,19 +675,19 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
                           {isBroadcast && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30 flex items-center gap-0.5 shrink-0">
                               <Megaphone className="w-2.5 h-2.5" />
-                              <span>{isOwner ? 'مالک' : 'ادمین'}</span>
+                              <span>{isOwner ? (t('chat.owner') || 'Owner') : (t('chat.admin') || 'Admin')}</span>
                             </span>
                           )}
                           {isGroup && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-primary-500/15 text-primary-300 border border-primary-500/30 flex items-center gap-0.5 shrink-0">
                               <Users className="w-2.5 h-2.5" />
-                              <span>گروه</span>
+                              <span>{t('chat.group') || 'Group'}</span>
                             </span>
                           )}
                           {isBot && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent-amber/15 text-accent-amber border border-accent-amber/30 flex items-center gap-0.5 shrink-0">
                               <Bot className="w-2.5 h-2.5" />
-                              <span>ربات</span>
+                              <span>{t('chat.bot') || 'Bot'}</span>
                             </span>
                           )}
                         </div>
@@ -711,7 +713,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
 
               {filtered.length === 0 && !showSavedMessages && (
                 <div className="py-8 text-center text-xs text-gray-500">
-                  گفتگویی مطابق با جستجو پیدا نشد
+                  {t('forward.no_chats_found') || 'No chats found matching search'}
                 </div>
               )}
             </div>

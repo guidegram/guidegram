@@ -81,7 +81,7 @@ export const AutoDeleteModal: React.FC<AutoDeleteModalProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">
-                  {isPersian ? 'تایمر حذف خودکار پیام‌ها' : 'Auto-Delete Messages'}
+                  {t('auto_delete.title')}
                 </h3>
                 <p className="text-[11px] text-gray-400 truncate max-w-[220px]">{chatTitle}</p>
               </div>
@@ -96,9 +96,7 @@ export const AutoDeleteModal: React.FC<AutoDeleteModalProps> = ({
 
           {/* Description */}
           <p className="mt-4 text-xs text-gray-300 leading-relaxed">
-            {isPersian
-              ? 'پیام‌های جدیدی که در این گفتگو ارسال می‌شوند، پس از گذشت زمان تعیین‌شده به‌طور خودکار برای هر دو طرف حذف خواهند شد.'
-              : 'New messages sent in this chat will be automatically deleted for everyone after the chosen period.'}
+            {t('auto_delete.desc')}
           </p>
 
           {/* Preset Buttons */}
@@ -134,7 +132,7 @@ export const AutoDeleteModal: React.FC<AutoDeleteModalProps> = ({
               onChange={(e) => setIsGlobalDefault(e.target.checked)}
               className="rounded bg-dark-900 border-white/20 text-accent-cyan focus:ring-0 focus:ring-offset-0"
             />
-            <span>{isPersian ? 'تنظیم به عنوان پیش‌فرض تمام گفتگوهای جدید' : 'Set as default for all new chats'}</span>
+            <span>{t('auto_delete.default_for_new')}</span>
           </label>
 
           {error && (
@@ -151,7 +149,7 @@ export const AutoDeleteModal: React.FC<AutoDeleteModalProps> = ({
               onClick={onClose}
               className="flex-1 py-2 rounded-xl bg-dark-800 hover:bg-dark-750 text-gray-300 hover:text-white font-medium text-xs transition-colors cursor-pointer"
             >
-              {isPersian ? 'انصراف' : 'Cancel'}
+              {t('auto_delete.cancel')}
             </button>
             <button
               type="button"
@@ -162,7 +160,7 @@ export const AutoDeleteModal: React.FC<AutoDeleteModalProps> = ({
               {isApplying ? (
                 <span>Saving...</span>
               ) : (
-                <span>{isPersian ? 'ذخیره تغییرات' : 'Set Timer'}</span>
+                <span>{t('auto_delete.set_timer')}</span>
               )}
             </button>
           </div>

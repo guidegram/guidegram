@@ -386,7 +386,7 @@ export const ForumTopicsModal: React.FC<ForumTopicsModalProps> = ({
                   <span className="text-[10px] text-rose-300 break-words">{createError}</span>
                 ) : (
                   <span className="text-[10px] text-gray-500">
-                    {formatNumber(utf8Length(createTitle))} / ۱۲۸
+                    {formatNumber(utf8Length(createTitle))} / {formatNumber(128)}
                   </span>
                 )}
                 <span className="text-[10px] text-gray-500 shrink-0">{t('forum_topics.manage_hint')}</span>

@@ -58,7 +58,7 @@ export const QuickRepliesPanel: React.FC<QuickRepliesPanelProps> = ({
       <div className="px-3.5 py-2 border-b border-white/5 flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5 text-accent-cyan font-bold">
           <Zap className="w-3.5 h-3.5 fill-current" />
-          <span>{isPersian ? 'پاسخ‌های سریع (میانبرها)' : 'Quick Replies (/shortcuts)'}</span>
+          <span>{t('quick_replies.title')}</span>
         </div>
         <button
           type="button"
@@ -72,16 +72,14 @@ export const QuickRepliesPanel: React.FC<QuickRepliesPanelProps> = ({
       {/* Shortcuts List */}
       <div className="p-1.5 overflow-y-auto space-y-1 max-h-52">
         {loading ? (
-          <div className="p-3 text-center text-xs text-gray-400">Loading shortcuts...</div>
+          <div className="p-3 text-center text-xs text-gray-400">{t('quick_replies.loading')}</div>
         ) : filteredShortcuts.length === 0 ? (
           <div className="p-4 text-center text-xs text-gray-400 flex flex-col items-center gap-1.5">
             <MessageSquare className="w-5 h-5 text-gray-600" />
             <span>
-              {isPersian
-                ? 'هیچ میانبری پیدا نشد'
-                : normalizedQuery
-                ? `No shortcuts matching "/${normalizedQuery}"`
-                : 'No quick reply shortcuts set'}
+              {normalizedQuery
+                ? t('quick_replies.no_match', { query: normalizedQuery })
+                : t('quick_replies.no_shortcuts')}
             </span>
           </div>
         ) : (

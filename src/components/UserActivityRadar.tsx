@@ -45,26 +45,28 @@ interface UserActivityRadarProps {
   onOpenFullTimeline?: (userId?: string) => void
 }
 
-// Convert English digits to Persian digits
-function toPersianDigits(num: number | string): string {
-  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
+// Convert English digits to localized digits
+function toLocalizedDigits(num: number | string, isFa = false): string {
+  if (!isFa) return String(num)
+  const farsiDigits = ['\u06F0', '\u06F1', '\u06F2', '\u06F3', '\u06F4', '\u06F5', '\u06F6', '\u06F7', '\u06F8', '\u06F9']
   return String(num).replace(/[0-9]/g, (w) => farsiDigits[+w])
 }
 
-function formatDurationHuman(seconds: number): string {
-  if (seconds < 60) return `${toPersianDigits(Math.max(1, Math.round(seconds)))} ثانیه`
+function formatDurationHuman(seconds: number, isFa = false): string {
+  const roundedSec = Math.max(1, Math.round(seconds))
+  if (seconds < 60) return isFa ? `${toLocalizedDigits(roundedSec, true)}s` : `${roundedSec}s`
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const remainingMinutes = minutes % 60
   if (hours > 0) {
-    return `${toPersianDigits(hours)} ساعت ${remainingMinutes > 0 ? `و ${toPersianDigits(remainingMinutes)} دقیقه` : ''}`
+    return `${hours}h ${remainingMinutes > 0 ? `${remainingMinutes}m` : ''}`.trim()
   }
-  return `${toPersianDigits(minutes)} دقیقه`
+  return `${minutes}m`
 }
 
-function formatTime(timestamp: number): string {
+function formatTime(timestamp: number, isFa = false): string {
   const d = new Date(timestamp * 1000)
-  return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString(isFa ? 'fa-IR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
 function formatDate(timestamp: number): string {
@@ -81,7 +83,8 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
   lastSeen: propLastSeen,
   onOpenFullTimeline,
 }) => {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const isFa = language === 'fa'
   const componentInstanceId = useId()
   const [stats, setStats] = useState<UserActivityStats | null>(null)
   const [changes, setChanges] = useState<ContactChangeEvent[]>([])
@@ -318,7 +321,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>هم‌اکنون آنلاین</span>
+            <span>{t('radar.currently_online')}</span>
           </span>
         )
       case 'offline':
@@ -327,8 +330,8 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             <Clock className="w-3.5 h-3.5 text-accent-cyan" />
             <span>
               {effectiveLastSeen
-                ? `آخرین بازدید: ${formatTime(effectiveLastSeen)}`
-                : 'آفلاین'}
+                ? `${t('radar.last_seen_prefix')}: ${formatTime(effectiveLastSeen, isFa)}`
+                : t('radar.offline')}
             </span>
           </span>
         )
@@ -336,20 +339,20 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-amber/15 border border-accent-amber/30 text-accent-amber text-xs font-medium">
             <EyeOff className="w-3.5 h-3.5" />
-            <span>آخرین بازدید اخیراً (مخفی)</span>
+            <span>{t('radar.last_seen_recently')}</span>
           </span>
         )
       case 'within_week':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-violet/15 border border-accent-violet/30 text-accent-violet text-xs font-medium">
             <Calendar className="w-3.5 h-3.5" />
-            <span>آخرین بازدید طی یک هفته اخیر</span>
+            <span>{t('radar.last_seen_week')}</span>
           </span>
         )
       case 'within_month':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-700/30 border border-white/10 text-gray-400 text-xs font-medium">
-            <span>آخرین بازدید طی یک ماه اخیر</span>
+            <span>{t('radar.last_seen_month')}</span>
           </span>
         )
       case 'long_time_ago':
@@ -357,13 +360,13 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-medium">
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>خیلی وقت پیش / مسدود</span>
+            <span>{t('radar.last_seen_long_ago')}</span>
           </span>
         )
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-dark-800 border border-white/10 text-gray-400 text-xs font-medium">
-            <span>نامشخص</span>
+            <span>{t('radar.unknown')}</span>
           </span>
         )
     }
@@ -374,9 +377,9 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
   )
 
   const getDayLabel = (offset: number) => {
-    if (offset === 0) return 'امروز'
-    if (offset === 1) return 'دیروز'
-    return `${toPersianDigits(offset)} روز قبل`
+    if (offset === 0) return t('radar.today')
+    if (offset === 1) return t('radar.yesterday')
+    return t('radar.days_ago').replace('{count}', toLocalizedDigits(offset, isFa))
   }
 
   return (
@@ -391,12 +394,12 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             </div>
             <div>
               <div className="text-xs font-bold text-gray-100 flex items-center gap-1.5">
-                <span>رادار فعالیت و تایم‌لاین آنلاین</span>
+                <span>{t('radar.title')}</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-300 border border-primary-500/30">
-                  زنده
+                  {t('radar.live_badge')}
                 </span>
               </div>
-              <div className="text-[10px] text-gray-400">تحلیل رفتاری و حضور بر حسب ثانیه</div>
+              <div className="text-[10px] text-gray-400">{t('radar.subtitle')}</div>
             </div>
           </div>
 
@@ -405,11 +408,11 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenFullTimeline(userId)}
-                title="مشاهده در نقشه و تایم‌لاین بزرگ"
+                title={t('radar.big_map_btn')}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-accent-cyan/15 hover:bg-accent-cyan/25 text-accent-cyan border border-accent-cyan/30 transition-all cursor-pointer shadow-xs"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
-                <span>نقشه بزرگ</span>
+                <span>{t('radar.big_map_btn')}</span>
               </button>
             )}
 
@@ -419,8 +422,8 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               onClick={handleToggleTracking}
               title={
                 isTrackingEnabled
-                  ? 'ردیابی این شخص فعال است (کلیک برای غیرفعال‌سازی)'
-                  : 'ردیابی این شخص متوقف است (کلیک برای فعال‌سازی)'
+                  ? t('radar.tracking_on_tooltip')
+                  : t('radar.tracking_off_tooltip')
               }
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
                 isTrackingEnabled
@@ -433,7 +436,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                   isTrackingEnabled ? 'bg-primary-400 animate-pulse' : 'bg-gray-500'
                 }`}
               />
-              <span>{isTrackingEnabled ? 'روشن' : 'خاموش'}</span>
+              <span>{isTrackingEnabled ? t('radar.on') : t('radar.off')}</span>
             </button>
           </div>
         </div>
@@ -449,7 +452,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               className="text-[11px] text-accent-amber hover:text-accent-amber/80 flex items-center gap-1 cursor-pointer transition-colors"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>چرا ساعت دقیق مشخص نیست؟</span>
+              <span>{t('radar.privacy_help_title')}</span>
             </button>
           )}
         </div>
@@ -465,16 +468,10 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             >
               <div className="font-bold text-accent-amber flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5" />
-                <span>حریم خصوصی در پروتکل MTProto تلگرام:</span>
+                <span>{t('radar.privacy_help_title')}</span>
               </div>
               <p className="text-[11px] text-gray-300 leading-normal">
-                این مخاطب در تنظیمات تلگرام خود آخرین بازدید را روی «Nobody» یا «مخاطبین من» قرار داده
-                است. تلگرام در این حالت مقدار ثانیه‌ای دقیق را به سرور نمی‌فرستد و صرفاً یکی از ۴ وضعیت
-                فازی (اخیراً، هفته اخیر، ماه اخیر، یا خیلی وقت پیش) را مخابره می‌کند.
-              </p>
-              <p className="text-[11px] text-gray-300 leading-normal">
-                با این حال، <strong>گایدگرام به محض آنلاین شدن این شخص</strong> و حضور زنده در چت،
-                نشست آنلاین او را با ثانیه دقیق در این نمودار ثبت می‌کند!
+                {t('radar.privacy_help_desc')}
               </p>
             </motion.div>
           )}
@@ -511,7 +508,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               onClick={() => setZoomedHour(null)}
               className="flex items-center gap-1 text-[11px] text-accent-cyan hover:text-accent-cyan/80 font-medium px-2 py-0.5 rounded-lg bg-accent-cyan/10 border border-accent-cyan/25 cursor-pointer shrink-0"
             >
-              <span>بازگشت به ۲۴ ساعت</span>
+              <span>{t('radar.back_to_24h')}</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           )}
@@ -525,32 +522,20 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               <TrendingUp className="w-3.5 h-3.5 text-accent-cyan" />
               <span>
                 {zoomedHour !== null
-                  ? `بزرگنمایی دقیقه به دقیقه: ساعت ${toPersianDigits(
-                      String(zoomedHour).padStart(2, '0')
-                    )}:۰۰ تا ${toPersianDigits(
-                      String(zoomedHour).padStart(2, '0')
-                    )}:۵۹`
-                  : `پراکندگی فعالیت در شبانه‌روز (${getDayLabel(selectedDayOffset)})`}
+                  ? t('radar.minute_zoom_title').replace('{hour}', toLocalizedDigits(String(zoomedHour).padStart(2, '0'), isFa))
+                  : `${t('radar.activity_distribution')} (${getDayLabel(selectedDayOffset)})`}
               </span>
             </span>
 
             <span className="text-[11px] text-accent-cyan font-medium">
               {zoomedHour !== null ? (
                 hoveredMinute !== null ? (
-                  `دقیقه ${toPersianDigits(
-                    String(hoveredMinute).padStart(2, '0')
-                  )}: ${formatDurationHuman(
-                    minuteData[hoveredMinute]?.durationSeconds || 0
-                  )} آنلاین`
+                  t('radar.hover_minute_hint').replace('{min}', toLocalizedDigits(hoveredMinute, isFa)).replace('{dur}', formatDurationHuman(minuteData[hoveredMinute]?.durationSeconds || 0, isFa))
                 ) : (
-                  'روی دقایق اشاره کنید'
+                  t('radar.hover_minute_hint_default')
                 )
               ) : hoveredHour !== null ? (
-                `ساعت ${toPersianDigits(hoveredHour)}:۰۰ تا ${toPersianDigits(
-                  hoveredHour + 1
-                )}:۰۰ (${formatDurationHuman(
-                  hourlyData[hoveredHour]?.durationSeconds || 0
-                )})`
+                t('radar.hover_hour_hint').replace('{hour}', toLocalizedDigits(hoveredHour, isFa)).replace('{dur}', formatDurationHuman(hourlyData[hoveredHour]?.durationSeconds || 0, isFa))
               ) : null}
             </span>
           </div>
@@ -560,7 +545,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             dir="ltr"
             onClick={() => onOpenFullTimeline?.(userId)}
             className="group/chart h-20 flex items-end gap-1 bg-dark-900/90 p-2.5 rounded-xl border border-white/10 hover:border-accent-cyan/30 transition-all relative overflow-hidden cursor-pointer"
-            title="کلیک برای باز کردن در نقشه و تایم‌لاین تمام‌صفحه"
+            title={t('radar.big_map_btn')}
           >
             {/* Top-Right Expand Icon Button */}
             {onOpenFullTimeline && (
@@ -570,7 +555,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                   e.stopPropagation()
                   onOpenFullTimeline(userId)
                 }}
-                title="نمایش تایم‌لاین بزرگ"
+                title={t('radar.big_map_btn')}
                 className="absolute top-2 right-2 z-30 p-1 rounded-lg bg-dark-800/80 hover:bg-accent-cyan/20 text-gray-400 hover:text-accent-cyan border border-white/10 hover:border-accent-cyan/40 backdrop-blur-xs transition-all shadow-xs cursor-pointer"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
@@ -585,7 +570,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               >
                 <div className="w-0.5 h-full bg-accent-cyan shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
                 <span className="absolute top-1 text-[8px] bg-accent-cyan text-dark-950 font-bold px-1 rounded-xs -translate-x-1/2">
-                  اکنون
+                  {t('radar.now') || 'Now'}
                 </span>
               </div>
             )}
@@ -606,7 +591,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                     key={mItem.minute}
                     onMouseEnter={() => setHoveredMinute(mItem.minute)}
                     onMouseLeave={() => setHoveredMinute(null)}
-                    title={`دقیقه ${mItem.minute}: ${mItem.durationSeconds} ثانیه آنلاین`}
+                    title={`${mItem.minute}m: ${mItem.durationSeconds}s`}
                     className="flex-1 h-full flex items-end justify-center group relative cursor-pointer"
                   >
                     <motion.div
@@ -650,9 +635,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                     }}
                     onMouseEnter={() => setHoveredHour(hItem.hour)}
                     onMouseLeave={() => setHoveredHour(null)}
-                    title={`ساعت ${hItem.hour}:00: ${formatDurationHuman(
-                      hItem.durationSeconds
-                    )} آنلاین - کلیک برای زوم دقیقه‌ای`}
+                    title={`${hItem.hour}:00 - click to zoom`}
                     className="flex-1 h-full flex items-end justify-center group relative cursor-pointer"
                   >
                     <motion.div
@@ -692,28 +675,28 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             {zoomedHour !== null ? (
               <>
                 <span>
-                  {toPersianDigits(String(zoomedHour).padStart(2, '0'))}:۰۰
+                  {toLocalizedDigits(String(zoomedHour).padStart(2, '0'), isFa)}:00
                 </span>
                 <span>
-                  {toPersianDigits(String(zoomedHour).padStart(2, '0'))}:۱۵
+                  {toLocalizedDigits(String(zoomedHour).padStart(2, '0'), isFa)}:15
                 </span>
                 <span>
-                  {toPersianDigits(String(zoomedHour).padStart(2, '0'))}:۳۰
+                  {toLocalizedDigits(String(zoomedHour).padStart(2, '0'), isFa)}:30
                 </span>
                 <span>
-                  {toPersianDigits(String(zoomedHour).padStart(2, '0'))}:۴۵
+                  {toLocalizedDigits(String(zoomedHour).padStart(2, '0'), isFa)}:45
                 </span>
                 <span>
-                  {toPersianDigits(String(zoomedHour).padStart(2, '0'))}:۵۹
+                  {toLocalizedDigits(String(zoomedHour).padStart(2, '0'), isFa)}:59
                 </span>
               </>
             ) : (
               <>
-                <span>۰۰:۰۰</span>
-                <span>۰۶:۰۰</span>
-                <span>۱۲:۰۰</span>
-                <span>۱۸:۰۰</span>
-                <span>۲۳:۵۹</span>
+                <span>00:00</span>
+                <span>06:00</span>
+                <span>12:00</span>
+                <span>18:00</span>
+                <span>23:59</span>
               </>
             )}
           </div>
@@ -722,15 +705,15 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
           <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1.5 border-t border-white/5 font-sans px-1">
             <span className="flex items-center gap-1.5 text-gray-300">
               <span className="w-2 h-2 rounded-xs bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
-              <span>آنلاین (بر حسب دقیقه)</span>
+              <span>{t('radar.legend_online')}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-xs bg-white/10 border border-white/20" />
-              <span>آفلاین</span>
+              <span>{t('radar.legend_offline')}</span>
             </span>
             <span className="flex items-center gap-1.5 text-gray-500">
               <span className="w-2 h-2 rounded-xs border border-dashed border-white/20" />
-              <span>عدم اتصال پلتفرم</span>
+              <span>{t('radar.legend_disconnected')}</span>
             </span>
           </div>
         </div>
@@ -739,28 +722,28 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
         <div className="grid grid-cols-3 gap-2 pt-1">
           <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex flex-col items-center text-center">
             <span className="text-[10px] text-gray-400 font-medium">
-              آنلاین {getDayLabel(selectedDayOffset)}
+              {t('radar.online_label')} {getDayLabel(selectedDayOffset)}
             </span>
             <span className="text-xs font-bold text-emerald-400 mt-1">
-              {formatDurationHuman(dayTotalSeconds)}
+              {formatDurationHuman(dayTotalSeconds, isFa)}
             </span>
           </div>
 
           <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex flex-col items-center text-center">
-            <span className="text-[10px] text-gray-400 font-medium">آنلاین ۷ روز</span>
+            <span className="text-[10px] text-gray-400 font-medium">{t('radar.online_7d')}</span>
             <span className="text-xs font-bold text-accent-cyan mt-1">
               {stats?.totalOnlineSecondsWeek
-                ? formatDurationHuman(stats.totalOnlineSecondsWeek)
-                : '۰ دقیقه'}
+                ? formatDurationHuman(stats.totalOnlineSecondsWeek, isFa)
+                : (isFa ? '0m' : '0m')}
             </span>
           </div>
 
           <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex flex-col items-center text-center">
             <span className="text-[10px] text-gray-400 font-medium">
-              نشست‌های {getDayLabel(selectedDayOffset)}
+              {t('radar.sessions_label')} {getDayLabel(selectedDayOffset)}
             </span>
             <span className="text-xs font-bold text-accent-violet mt-1">
-              {toPersianDigits(dayTotalSessions)} مرتبه
+              {toLocalizedDigits(dayTotalSessions, isFa)}
             </span>
           </div>
         </div>
@@ -771,10 +754,10 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3 h-3 text-accent-cyan" />
-                <span>بازه‌های آنلاین ثبت‌شده ({getDayLabel(selectedDayOffset)}):</span>
+                <span>{t('radar.recorded_ranges')} ({getDayLabel(selectedDayOffset)}):</span>
               </span>
               <span className="text-gray-500 font-normal">
-                {toPersianDigits(daySessions.length)} بازه
+                {toLocalizedDigits(daySessions.length, isFa)}
               </span>
             </div>
             <div className="space-y-1 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 pr-1">
@@ -789,14 +772,14 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       <span className="text-gray-300">
-                        {formatTime(sess.startTime)} الی {formatTime(sess.endTime)}
+                        {formatTime(sess.startTime, isFa)} - {formatTime(sess.endTime, isFa)}
                       </span>
                       {sess.isApproximate && (
-                        <span className="text-[9px] text-gray-500">(تخمینی)</span>
+                        <span className="text-[9px] text-gray-500">({t('radar.estimated') || 'est'})</span>
                       )}
                     </div>
                     <span className="text-emerald-400 font-semibold text-[10px]">
-                      {formatDurationHuman(sess.durationSeconds)}
+                      {formatDurationHuman(sess.durationSeconds, isFa)}
                     </span>
                   </div>
                 ))}
@@ -816,9 +799,9 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
             <div className="w-6 h-6 rounded-lg bg-accent-violet/15 text-accent-violet flex items-center justify-center">
               <History className="w-3.5 h-3.5" />
             </div>
-            <span>تاریخچه تغییرات پروفایل این کاربر</span>
+            <span>{t('radar.profile_changes_title')}</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-gray-300">
-              {toPersianDigits(changes.length)}
+              {toLocalizedDigits(changes.length)}
             </span>
           </div>
           {isChangesExpanded ? (
@@ -839,7 +822,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               {changes.length === 0 ? (
                 <div className="p-4 rounded-xl bg-dark-900/50 text-center text-xs text-gray-400 space-y-1">
                   <Sparkles className="w-5 h-5 mx-auto text-gray-500 opacity-60" />
-                  <div>هنوز تغییری (نام، عکس، بیوگرافی یا کانال) برای این کاربر ثبت نشده است.</div>
+                  <div>{t('radar.no_changes_user')}</div>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 pr-1">
@@ -859,17 +842,17 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                             {change.changeType === 'personal_channel_change' && <Radio className="w-3 h-3" />}
                             <span>
                               {change.changeType === 'name_change'
-                                ? 'تغییر نام'
+                                ? t('contact_changes.name_change')
                                 : change.changeType === 'username_change'
-                                ? 'تغییر نام‌کاربری'
+                                ? t('contact_changes.username_change')
                                 : change.changeType === 'bio_change'
-                                ? 'ویرایش بیوگرافی'
+                                ? t('contact_changes.bio_change')
                                 : change.changeType === 'photo_change'
-                                ? 'تعویض عکس پروفایل'
+                                ? t('contact_changes.photo_change')
                                 : change.changeType === 'photo_delete'
-                                ? 'حذف عکس پروفایل'
+                                ? t('contact_changes.photo_deleted')
                                 : change.changeType === 'personal_channel_change'
-                                ? 'تغییر کانال بیو'
+                                ? t('contact_changes.channel_change')
                                 : change.title}
                             </span>
                           </span>
@@ -880,7 +863,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                         <div className="space-y-1 text-[11px] leading-snug">
                           {change.oldValue && (
                             <div className="text-gray-400 flex items-start gap-1.5">
-                              <span className="text-rose-400 font-bold shrink-0">قبلی:</span>
+                              <span className="text-rose-400 font-bold shrink-0">{t('radar.prev_label')}:</span>
                               <span className="line-through text-gray-500 select-text truncate">
                                 {change.oldValue}
                               </span>
@@ -888,7 +871,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                           )}
                           {change.newValue && (
                             <div className="text-gray-200 flex items-start gap-1.5">
-                              <span className="text-emerald-400 font-bold shrink-0">جدید:</span>
+                              <span className="text-emerald-400 font-bold shrink-0">{t('radar.new_label')}:</span>
                               <span className="text-emerald-300 font-medium select-text truncate">
                                 {change.newValue}
                               </span>

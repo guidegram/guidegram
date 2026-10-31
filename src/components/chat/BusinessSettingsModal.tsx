@@ -120,7 +120,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
         )
       }
 
-      setStatusMsg(isPersian ? 'تنظیمات بیزینس با موفقیت ذخیره شد' : 'Business settings saved successfully!')
+      setStatusMsg(t('business_modal.saved_success'))
       setTimeout(() => {
         onClose()
       }, 900)
@@ -157,10 +157,10 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                {isPersian ? 'تنظیمات تلگرام بیزینس' : 'Telegram Business Settings'}
+                {t('business_modal.title')}
               </h3>
               <p className="text-[11px] text-gray-400">
-                {isPersian ? 'ساعات کاری، پیام خوش‌آمدگویی و پیام عدم حضور' : 'Working hours, greeting & away auto-replies'}
+                {t('business_modal.subtitle')}
               </p>
             </div>
           </div>
@@ -169,7 +169,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             onClick={onClose}
             className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -185,7 +185,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>{isPersian ? 'ساعات کاری' : 'Business Hours'}</span>
+            <span>{t('business_modal.hours_tab')}</span>
           </button>
           <button
             type="button"
@@ -197,7 +197,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>{isPersian ? 'پیام خوش‌آمدگویی' : 'Greeting'}</span>
+            <span>{t('business_modal.greeting_tab')}</span>
           </button>
           <button
             type="button"
@@ -209,7 +209,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             }`}
           >
             <Moon className="w-3.5 h-3.5" />
-            <span>{isPersian ? 'پیام عدم حضور' : 'Away Message'}</span>
+            <span>{t('business_modal.away_tab')}</span>
           </button>
         </div>
 
@@ -447,7 +447,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            {isPersian ? 'انصراف' : 'Cancel'}
+            {t('business_modal.cancel')}
           </button>
           <button
             type="button"
@@ -456,7 +456,7 @@ export const BusinessSettingsModal: React.FC<BusinessSettingsModalProps> = ({
             className="px-5 py-2 rounded-xl bg-accent-cyan text-dark-950 font-bold text-xs hover:bg-accent-cyan/90 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <CheckCheck className="w-4 h-4" />
-            <span>{isSaving ? (isPersian ? 'در حال ذخیره...' : 'Saving...') : (isPersian ? 'ذخیره تنظیمات' : 'Save Business Settings')}</span>
+            <span>{isSaving ? t('business_modal.saving') : t('business_modal.save')}</span>
           </button>
         </div>
       </motion.div>

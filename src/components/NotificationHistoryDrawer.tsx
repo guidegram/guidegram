@@ -55,6 +55,7 @@ const NotificationMediaThumbnail: React.FC<{
   item: NotificationHistoryItem
   onOpenPreview: (item: NotificationHistoryItem, url: string) => void
 }> = ({ item, onOpenPreview }) => {
+  const { t } = useI18n()
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(item.photoUrl || item.thumbUrl)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -96,7 +97,7 @@ const NotificationMediaThumbnail: React.FC<{
         }
       }}
       className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/15 bg-black/40 group/photo cursor-pointer shadow-sm hover:border-primary-500/50 transition-all hover:scale-105"
-      title="مشاهده تصویر بزرگ (ذخیره‌شده در لوکال)"
+      title={t('notification_history.view_large_photo')}
     >
       {effectiveUrl ? (
         <img
@@ -124,7 +125,7 @@ const NotificationMediaThumbnail: React.FC<{
       {/* Anti-delete local shield badge */}
       <div
         className="absolute bottom-0 right-0 p-0.5 rounded-tl bg-black/75 text-emerald-400"
-        title="ذخیره‌شده در حافظه لوکال"
+        title={t('notification_history.saved_locally')}
       >
         <ShieldCheck className="w-2.5 h-2.5" />
       </div>
@@ -142,7 +143,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
   onDeleteItem,
   onMarkItemAsRead,
 }) => {
-  const { isRTL } = useI18n()
+  const { t, isRTL, formatNumber } = useI18n()
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [previewPhotoItem, setPreviewPhotoItem] = useState<{
@@ -182,10 +183,10 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
 
-    if (minutes < 1) return isRTL ? 'همین الان' : 'Just now'
-    if (minutes < 60) return isRTL ? `${minutes} دقیقه پیش` : `${minutes}m ago`
-    if (hours < 24) return isRTL ? `${hours} ساعت پیش` : `${hours}h ago`
-    if (days === 1) return isRTL ? 'دیروز' : 'Yesterday'
+    if (minutes < 1) return t('notification_history.just_now')
+    if (minutes < 60) return t('notification_history.minutes_ago', { count: formatNumber(minutes) })
+    if (hours < 24) return t('notification_history.hours_ago', { count: formatNumber(hours) })
+    if (days === 1) return t('notification_history.yesterday')
     return new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })
   }
 
@@ -228,12 +229,13 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
               </div>
               <div>
                 <h3 className="text-sm font-bold text-gray-100">
-                  {isRTL ? 'تاریخچه اعلان‌ها' : 'Notification History'}
+                  {t('notification_history.title')}
                 </h3>
                 <p className="text-[11px] text-gray-400">
-                  {isRTL
-                    ? `${history.length} اعلان ثبت شده (${unreadCount} خوانده نشده)`
-                    : `${history.length} notifications (${unreadCount} unread)`}
+                  {t('notification_history.subtitle', {
+                    total: formatNumber(history.length),
+                    unread: formatNumber(unreadCount),
+                  })}
                 </p>
               </div>
             </div>
@@ -243,7 +245,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                 <button
                   type="button"
                   onClick={onMarkAllAsRead}
-                  title={isRTL ? 'علامت‌گذاری همه به عنوان خوانده‌شده' : 'Mark all as read'}
+                  title={t('notification_history.mark_all_read')}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-accent-cyan hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   <CheckCheck className="w-4 h-4" />
@@ -253,7 +255,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                 <button
                   type="button"
                   onClick={onClearHistory}
-                  title={isRTL ? 'پاک‌سازی تمام تاریخچه' : 'Clear history'}
+                  title={t('notification_history.clear_all')}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -277,7 +279,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isRTL ? 'جستجو در اعلان‌ها...' : 'Search notifications...'}
+                placeholder={t('notification_history.search_placeholder')}
                 className={`w-full bg-white/5 border border-white/10 rounded-xl py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50 transition-colors ${
                   isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'
                 }`}
@@ -297,10 +299,10 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
           {/* Filter Tabs */}
           <div className="flex items-center gap-1 px-4 pb-2 border-b border-white/5 overflow-x-auto scrollbar-none">
             {[
-              { id: 'all' as FilterTab, label: isRTL ? 'همه' : 'All', count: history.length },
-              { id: 'unread' as FilterTab, label: isRTL ? 'خوانده‌نشده' : 'Unread', count: unreadCount },
-              { id: 'private' as FilterTab, label: isRTL ? 'شخصی' : 'Private' },
-              { id: 'groups_channels' as FilterTab, label: isRTL ? 'گروه و کانال' : 'Groups' },
+              { id: 'all' as FilterTab, label: t('notification_history.tab_all'), count: history.length },
+              { id: 'unread' as FilterTab, label: t('notification_history.tab_unread'), count: unreadCount },
+              { id: 'private' as FilterTab, label: t('notification_history.tab_private') },
+              { id: 'groups_channels' as FilterTab, label: t('notification_history.tab_groups') },
             ].map((tab) => {
               const isActive = activeFilter === tab.id
               return (
@@ -321,7 +323,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                         isActive ? 'bg-primary-500 text-white' : 'bg-white/10 text-gray-300'
                       }`}
                     >
-                      {tab.count}
+                      {formatNumber(tab.count)}
                     </span>
                   )}
                 </button>
@@ -337,12 +339,10 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                   <Bell className="w-6 h-6 stroke-1" />
                 </div>
                 <h4 className="text-sm font-semibold text-gray-300">
-                  {isRTL ? 'هیچ اعلانی یافت نشد' : 'No notifications'}
+                  {t('notification_history.no_notifications')}
                 </h4>
                 <p className="text-xs text-gray-500 mt-1 max-w-xs">
-                  {isRTL
-                    ? 'اعلان‌های جدید به‌صورت خودکار در این تاریخچه ذخیره می‌شوند و می‌توانید آن‌ها را مرور کنید.'
-                    : 'New incoming notifications will automatically be recorded here for later review.'}
+                  {t('notification_history.no_notifications_desc')}
                 </p>
               </div>
             ) : (
@@ -398,7 +398,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                           )}
                           {item.isDeletedLocally && (
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-accent-rose/20 text-accent-rose font-medium border border-accent-rose/30">
-                              {isRTL ? 'حذف‌شده' : 'Deleted'}
+                              {t('notification_history.deleted_badge')}
                             </span>
                           )}
                         </h4>
@@ -412,10 +412,10 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                         {item.mediaType === 'photo' ? (
                           <span className="inline-flex items-center gap-1 text-accent-cyan font-medium">
                             <ImageIcon className="w-3.5 h-3.5" />
-                            <span>{item.text || (isRTL ? 'تصویر' : 'Photo')}</span>
+                            <span>{item.text || t('notification_history.photo_fallback')}</span>
                           </span>
                         ) : (
-                          item.text || (item.mediaType ? `[${item.mediaType}]` : (isRTL ? 'پیام جدید' : 'New message'))
+                          item.text || (item.mediaType ? `[${item.mediaType}]` : t('notification_history.new_message_fallback'))
                         )}
                       </div>
                     </div>
@@ -439,7 +439,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                             e.stopPropagation()
                             onMarkItemAsRead(item.id)
                           }}
-                          title={isRTL ? 'علامت به عنوان خوانده‌شده' : 'Mark as read'}
+                          title={t('notification_history.mark_read')}
                           className="p-1 rounded-lg text-primary-400 hover:text-primary-300 hover:bg-primary-500/15 transition-colors cursor-pointer"
                         >
                           <Check className="w-3.5 h-3.5" />
@@ -453,7 +453,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                           e.stopPropagation()
                           onDeleteItem(item.id)
                         }}
-                        title={isRTL ? 'حذف از تاریخچه' : 'Delete'}
+                        title={t('notification_history.delete_item')}
                         className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-400 hover:text-accent-rose hover:bg-white/5 transition-all cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -496,9 +496,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                         {previewPhotoItem.item.senderName}
                       </h4>
                       <p className="text-[10px] text-gray-400">
-                        {isRTL
-                          ? 'تصویر در حافظه لوکال دانلود و محافظت شده است (ضد حذف)'
-                          : 'Photo downloaded and preserved in local cache (Anti-Delete)'}
+                        {t('notification_history.anti_delete_hint')}
                       </p>
                     </div>
                   </div>
@@ -515,7 +513,7 @@ export const NotificationHistoryDrawer: React.FC<NotificationHistoryDrawerProps>
                       className="px-2.5 py-1 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>{isRTL ? 'مشاهده در چت' : 'Open in chat'}</span>
+                      <span>{t('notification_history.open_in_chat')}</span>
                     </button>
                     <button
                       type="button"
