@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T12:51:22.000Z",
+  "lastUpdated": "2026-10-31T13:10:11.000Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 91,
-    "githubIssuesCommented": 82,
+    "totalActivities": 92,
+    "githubIssuesCommented": 83,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31518",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31518,
+      "commentId": 6543784124,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31518#issuecomment-6543784124",
+      "title": "Shortcuts doesn't work inside toggles in articles",
+      "targetComponent": "ToggleBlock::Editor / BlockContainer::convertBlockType nested markdown shortcut bubbling",
+      "status": "posted",
+      "timestamp": "2026-10-31T13:10:11Z",
+      "architecturalAngle": "Transparent prefix event bubbling from child toggle layouts, permitted nested block transmutations, and caret preservation."
+    },
     {
       "id": "gh_tdesktop_31505",
       "platform": "github",
