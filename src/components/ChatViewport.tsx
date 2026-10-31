@@ -2818,14 +2818,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       ...(isCurrentYear ? {} : { year: 'numeric' }),
     }).format(d)
 
-    const gStr = d.toLocaleDateString(undefined, {
+    const gStr = d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       ...(isCurrentYear ? {} : { year: 'numeric' }),
     })
 
-    return `${pStr} • ${gStr}`
-  }, [t])
+    if (!isFa) return gStr
+    return pStr
+  }, [t, isFa])
 
   // Advanced Date Navigator Jump Handler
   const handleJumpToTimestamp = useCallback(
@@ -4574,7 +4575,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
 
     const isCurrentYear = date.getFullYear() === now.getFullYear()
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString(isFa ? 'fa-IR' : 'en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

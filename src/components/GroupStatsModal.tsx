@@ -340,6 +340,52 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const MAX_MESSAGES_CEILING = 50000
   const BATCH_SIZE = 100
 
+  // Compute contiguous history boundary from recent messages to prevent isolated jumped/pinned messages from aborting history sync
+  const getContiguousHistoryRange = (msgs: MessageItem[]): {
+    lowestContiguousId: number
+    oldestContiguousDate: number
+    latestId: number
+  } => {
+    if (msgs.length === 0) {
+      return { lowestContiguousId: 0, oldestContiguousDate: Date.now(), latestId: 0 }
+    }
+
+    const valid = msgs.filter((m) => m && typeof m.id === 'number' && m.id > 0)
+    if (valid.length === 0) {
+      return { lowestContiguousId: 0, oldestContiguousDate: Date.now(), latestId: 0 }
+    }
+
+    // Sort descending by message ID (newest to oldest)
+    const sorted = [...valid].sort((a, b) => b.id - a.id)
+    const latestId = sorted[0].id
+
+    let boundaryMsg = sorted[0]
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]
+      const curr = sorted[i]
+      const idGap = prev.id - curr.id
+      const prevTime = prev.date ? (prev.date < 1e11 ? prev.date * 1000 : prev.date) : Date.now()
+      const currTime = curr.date ? (curr.date < 1e11 ? curr.date * 1000 : curr.date) : Date.now()
+      const timeGap = Math.abs(prevTime - currTime)
+
+      // In Telegram groups, a gap of > 400 IDs AND > 24 hours indicates an isolated anchor/pinned message
+      if (idGap > 400 && timeGap > 24 * 3600 * 1000) {
+        break
+      }
+      boundaryMsg = curr
+    }
+
+    const rawDate = boundaryMsg.date || Date.now()
+    const oldestContiguousDate = rawDate < 1e11 ? rawDate * 1000 : rawDate
+
+    return {
+      lowestContiguousId: boundaryMsg.id,
+      oldestContiguousDate,
+      latestId,
+    }
+  }
+
   // Compute required start timestamp for the selected timeframe
   const getTimeframeStartTime = (tf: Timeframe) => {
     const now = new Date()
@@ -350,10 +396,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     return 0 // all
   }
 
-  const oldestMessageDate = useMemo(() => {
-    if (allMessages.length === 0) return Date.now()
-    return Math.min(...allMessages.map((m) => normalizeTimestamp(m.date)))
-  }, [allMessages])
+  const contiguousRange = useMemo(() => getContiguousHistoryRange(allMessages), [allMessages])
+  const oldestMessageDate = contiguousRange.oldestContiguousDate
 
   const requiredStart = useMemo(() => getTimeframeStartTime(timeframe), [timeframe])
 
@@ -393,22 +437,16 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
 
     try {
       let currentMessages = allMessages
-      let oldestDate = currentMessages.length > 0
-        ? Math.min(...currentMessages.map((m) => normalizeTimestamp(m.date)))
-        : Date.now()
+      let { lowestContiguousId, oldestContiguousDate } = getContiguousHistoryRange(currentMessages)
 
-      // Dynamic loop: crawls until oldest message reaches targetStart timestamp,
+      // Dynamic loop: crawls until oldest contiguous message reaches targetStart timestamp,
       // or chat has no more history on server, or client reaches 50,000 message ceiling.
       while (
-        (targetStart === 0 || oldestDate > targetStart) &&
+        (targetStart === 0 || oldestContiguousDate > targetStart) &&
         currentMessages.length < MAX_MESSAGES_CEILING &&
         !abortSyncRef.current
       ) {
-        // Extract lowest message ID in current pool for reliable offsetId pagination
-        const oldestMsg = currentMessages.length > 0
-          ? currentMessages.reduce((min, m) => (m.id < min.id ? m : min), currentMessages[0])
-          : null
-        const offsetId = oldestMsg ? oldestMsg.id : 0
+        const offsetId = lowestContiguousId > 0 ? lowestContiguousId : 0
 
         const older = await window.guidegram.getHistoricalMessages(
           chat.accountId,
@@ -440,7 +478,9 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
 
         currentMessages = Array.from(map.values())
         setAllMessages(currentMessages)
-        oldestDate = Math.min(...currentMessages.map((m) => normalizeTimestamp(m.date)))
+        const updatedRange = getContiguousHistoryRange(currentMessages)
+        lowestContiguousId = updatedRange.lowestContiguousId
+        oldestContiguousDate = updatedRange.oldestContiguousDate
 
         // Adaptive pacing (100ms) to prevent Telegram flood-wait rate limits while streaming smooth updates
         await new Promise((r) => setTimeout(r, 100))
@@ -457,13 +497,8 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
     if (!window.guidegram?.getHistoricalMessages || !chat?.accountId || isLoadingHistory) return
     setIsLoadingHistory(true)
     try {
-      const oldestDate = allMessages.length > 0
-        ? Math.min(...allMessages.map((m) => normalizeTimestamp(m.date)))
-        : Date.now()
-      const oldestMsg = allMessages.length > 0
-        ? allMessages.reduce((min, m) => (m.id < min.id ? m : min), allMessages[0])
-        : null
-      const offsetId = oldestMsg ? oldestMsg.id : 0
+      const { lowestContiguousId } = getContiguousHistoryRange(allMessages)
+      const offsetId = lowestContiguousId > 0 ? lowestContiguousId : 0
 
       const older = await window.guidegram.getHistoricalMessages(
         chat.accountId,
@@ -498,6 +533,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
 
   const handleTimeframeChange = (tf: Timeframe) => {
     setTimeframe(tf)
+    ensureTimeframeHistory(tf)
   }
 
   // 1. Filter messages by selected timeframe from full accumulated message pool

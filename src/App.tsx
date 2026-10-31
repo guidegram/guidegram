@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { TitleBar } from './components/TitleBar'
 import { PasscodeLockOverlay } from './components/PasscodeLockOverlay'
 import { WelcomeScreen } from './components/WelcomeScreen'
