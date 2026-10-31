@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-30T21:05:00Z",
+  "lastUpdated": "2026-10-31T00:10:30Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 42,
-    "githubIssuesCommented": 34,
+    "totalActivities": 43,
+    "githubIssuesCommented": 35,
     "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_5139",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 5139,
+      "targetTitle": "Export: Messages before chat upgrade to supergroup are missing",
+      "targetUser": "john-preston",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/5139#issuecomment-6536275981",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/5139",
+      "status": "live_public",
+      "summary": "Technical breakdown of legacy basic group migration export failure: unresolved migratedFromId in export worker, MsgId namespace collision (id: 1), and deactivated entity caching fix with Two-Stage Unified Export.",
+      "timestamp": "2026-10-31T00:10:30Z"
+    },
     {
       "id": "gh_comment_grammy_395",
       "platform": "github",
