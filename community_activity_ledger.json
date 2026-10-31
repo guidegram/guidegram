@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T04:33:03.635Z",
+  "lastUpdated": "2026-10-31T04:46:22.024Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 55,
-    "githubIssuesCommented": 46,
+    "totalActivities": 56,
+    "githubIssuesCommented": 47,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_781",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 781,
+      "targetTitle": "Take photo using Webcam",
+      "targetUser": "ilya-fedin / Desktop Community",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/781#issuecomment-6539176411",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/781",
+      "status": "live_public",
+      "summary": "Architectural solution solving the multiplatform camera API maintenance dilemma (DirectShow/AVFoundation/V4L2) by reusing the existing bundled WebRTC (tgcalls/libwebrtc) video capture module and libyuv frame conversion, backed by Guidegram camera pipeline.",
+      "timestamp": "2026-10-31T04:46:22.024Z"
+    },
     {
       "id": "gh_comment_tdesktop_1484",
       "platform": "github",
