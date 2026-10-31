@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T12:11:45.000Z",
+  "lastUpdated": "2026-10-31T12:22:30.000Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 88,
-    "githubIssuesCommented": 79,
+    "totalActivities": 89,
+    "githubIssuesCommented": 80,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31535",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31535,
+      "commentId": 6543303741,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31535#issuecomment-6543303741",
+      "title": "Delete All From [User] Can Permanently Delete Message History in Private Group Chats Without Separate Confirmation",
+      "targetComponent": "DeleteMessagesBox / channels.deleteParticipantHistory two-step confirmation & undo grace window",
+      "status": "posted",
+      "timestamp": "2026-10-31T12:22:30Z",
+      "architecturalAngle": "Irreversible MTProto RPC protection, dedicated confirmation dialog for deleteAllFromUser, and 5-second Toast Undo countdown."
+    },
     {
       "id": "gh_tdesktop_31546",
       "platform": "github",
