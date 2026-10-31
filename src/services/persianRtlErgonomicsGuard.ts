@@ -107,6 +107,22 @@ export class PersianRtlErgonomicsGuard {
   }
 
   /**
+   * Normalizes Unicode decomposition (NFD -> NFC) and safely clamps Zalgo stacking
+   * without stripping valid phonetic diacritics (resolves tdesktop #6362).
+   */
+  public normalizeUnicodeDiacritics(text: string, maxCombiningMarksPerBase: number = 2): string {
+    if (!text || typeof text !== 'string') return '';
+
+    // Step 1: Normalize canonical decomposition (NFD from macOS clipboard) to Canonical Composition (NFC)
+    const nfc = text.normalize('NFC');
+
+    // Step 2: Prevent Zalgo attack text without stripping valid combining marks (IPA, harakat, accents)
+    // Matches any base character followed by excessive combining marks (\p{M}) beyond threshold
+    const regex = new RegExp(`(\\P{M})(\\p{M}{${maxCombiningMarksPerBase}})\\p{M}+`, 'gu');
+    return nfc.replace(regex, '$1$2');
+  }
+
+  /**
    * Calculates ergonomic chat bubble dimensions and typography scales (resolves #90, #2060).
    */
   public computeErgonomicBubbleStyle(fontScale: number = 1.0, maxBubbleWidthPercent: number = 70): {

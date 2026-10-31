@@ -49,4 +49,28 @@ const styleLarge = guard.computeErgonomicBubbleStyle(1.2, 85)
 assert.equal(styleLarge.fontSize, '17px', '1.2 font scale should produce 17px')
 assert.equal(styleLarge.maxWidth, '85%', 'Scaled bubble width should be 85%')
 console.log('✅ [Test 4 Passed] Ergonomic bubble and font scaling calculates cleanly.')
+
+// 5. Test Unicode Diacritics & Anti-Zalgo Clamping (tdesktop #6362)
+console.log('[Test 5] Validating Unicode Diacritics & Anti-Zalgo Clamping (#6362)...')
+// Decomposed NFD from macOS (e + combining acute accent)
+const nfdSample = 'e\u0301'
+const nfcResult = guard.normalizeUnicodeDiacritics(nfdSample)
+assert.equal(nfcResult, 'é', 'NFD decomposed character must normalize to NFC composed form')
+
+// Complex combining diacritics (IPA o with double overline: o̿)
+const ipaSample = 'o\u033F'
+const ipaResult = guard.normalizeUnicodeDiacritics(ipaSample)
+assert.equal(ipaResult, 'o\u033F', 'Legitimate IPA combining diacritic must be preserved')
+
+// Arabic harakat (tashdid + fathah on single base)
+const arabicHarakat = 'تَشْدِيدٌ'
+const harakatResult = guard.normalizeUnicodeDiacritics(arabicHarakat)
+assert.equal(harakatResult, 'تَشْدِيدٌ', 'Valid Arabic harakat must be completely preserved')
+
+// Extreme Zalgo attack text (base character + 10 stacked marks)
+const zalgoAttack = 'X' + '\u0300\u0301\u0302\u0303\u0304\u0305\u0306\u0307\u0308\u0309'
+const clampedZalgo = guard.normalizeUnicodeDiacritics(zalgoAttack, 2)
+assert.equal(clampedZalgo, 'X\u0300\u0301', 'Zalgo stacking beyond threshold (2 marks) must be clamped safely')
+console.log('✅ [Test 5 Passed] Unicode diacritics preserved and Zalgo text safely bounded without stripping legitimate marks.')
+
 console.log('--- ALL PHASE 4 RTL ERGONOMICS CHECKS PASSED (100% GREEN) ---')
