@@ -2899,9 +2899,10 @@ export class AccountManager {
           const isGroup = cId.startsWith('-') && !cId.startsWith('-100')
           const isChannel = cId.startsWith('-100')
           const isUser = !isGroup && !isChannel
+          const isSelf = cId === accountId || cId === 'self' || cId === 'me' || Boolean(holder.info?.id && cId === holder.info.id.toString())
 
-          const title = topMsg.senderName || (isUser ? `User ${cId}` : `Chat ${cId}`)
-          const initials = title
+          const title = isSelf ? 'Saved Messages' : (topMsg.senderName || (isUser ? `User ${cId}` : `Chat ${cId}`))
+          const initials = isSelf ? '🔖' : title
             .split(' ')
             .map((n) => n[0])
             .join('')
@@ -2922,13 +2923,13 @@ export class AccountManager {
             isBroadcast: isChannel,
             isBot: false,
             isPinned: false,
-            isSavedMessages: false,
+            isSavedMessages: isSelf,
             lastMessageText: topMsg.text || '',
             lastMessageDate: topMsg.date ? topMsg.date * 1000 : 0,
             avatarInitials: initials,
-            avatarUrl: topMsg.senderAvatarUrl,
-            username: topMsg.senderUsername,
-            isContact: this.isContactPeer(accountId, cId),
+            avatarUrl: isSelf ? undefined : topMsg.senderAvatarUrl,
+            username: isSelf ? undefined : topMsg.senderUsername,
+            isContact: isSelf ? false : this.isContactPeer(accountId, cId),
           })
         }
         } catch (auditDialogErr) {
@@ -2946,8 +2947,16 @@ export class AccountManager {
           }
           for (const nd of dialogs) {
             if (nd.id) {
+              const isSelf = nd.id === accountId || nd.id === 'self' || nd.id === 'me' || Boolean(holder.info?.id && nd.id === holder.info.id.toString())
               const prevItem = mergedMap.get(nd.id)
-              mergedMap.set(nd.id, prevItem ? { ...prevItem, ...nd, isContact: nd.isContact || prevItem.isContact } : nd)
+              const merged = prevItem ? { ...prevItem, ...nd, isContact: isSelf ? false : (nd.isContact || prevItem.isContact) } : nd
+              if (isSelf) {
+                merged.title = 'Saved Messages'
+                merged.isSavedMessages = true
+                merged.isContact = false
+                merged.isUser = true
+              }
+              mergedMap.set(nd.id, merged)
             }
           }
           const fullCached = Array.from(mergedMap.values())

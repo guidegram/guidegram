@@ -419,11 +419,24 @@ function createWindow() {
   })
 
   mainWindow.on('minimize', () => {
-    // Window minimized - preserve active chat and drafts
+    // Window minimized - preemptively trim VRAM and in-memory caches (Hardened for #2464, #30060)
+    try {
+      session.defaultSession.clearImageCache().catch(() => {})
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        IpcSecurityFilter.safeSend(mainWindow.webContents, 'system:memory-trim', { reason: 'window-minimized' })
+      }
+      memoryPressureManager.evaluatePressure().catch(() => {})
+    } catch {}
   })
 
   mainWindow.on('hide', () => {
-    // Window hidden - preserve active chat and drafts
+    // Window hidden - purge volatile texture caches
+    try {
+      session.defaultSession.clearImageCache().catch(() => {})
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        IpcSecurityFilter.safeSend(mainWindow.webContents, 'system:memory-trim', { reason: 'window-hidden' })
+      }
+    } catch {}
   })
 
   mainWindow.webContents.on('did-finish-load', () => {

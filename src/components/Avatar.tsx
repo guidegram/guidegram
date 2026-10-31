@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Bookmark } from 'lucide-react'
 
 interface AvatarProps {
   peerId?: string
@@ -9,6 +10,7 @@ interface AvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   isChannel?: boolean
   isForum?: boolean
+  isSavedMessages?: boolean
   shape?: 'circle' | 'squircle' | 'droplet'
   className?: string
   onClick?: (e: React.MouseEvent<HTMLDivElement | HTMLImageElement>) => void
@@ -35,10 +37,19 @@ export const Avatar: React.FC<AvatarProps> = ({
   size = 'md',
   isChannel,
   isForum,
+  isSavedMessages,
   shape,
   className = '',
   onClick,
 }) => {
+  const isSaved = Boolean(
+    isSavedMessages ||
+    title === 'Saved Messages' ||
+    title === 'پیام‌های ذخیره‌شده' ||
+    peerId === 'self' ||
+    peerId === 'me'
+  )
+
   const cacheKey = accountId && peerId ? `${accountId}_${peerId}` : null
   const cachedUrl = cacheKey ? avatarMemoryCache.get(cacheKey) || null : null
 
@@ -209,6 +220,25 @@ export const Avatar: React.FC<AvatarProps> = ({
   }
 
   const cursorClass = onClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''
+
+  if (isSaved) {
+    const iconSizeClasses = {
+      xs: 'w-3 h-3',
+      sm: 'w-4 h-4',
+      md: 'w-5 h-5',
+      lg: 'w-6 h-6',
+      xl: 'w-10 h-10',
+    }[size]
+    return (
+      <div
+        onClick={onClick}
+        title="Saved Messages"
+        className={`${dimensionClasses} ${shapeClasses} bg-gradient-to-tr from-primary-600 via-primary-500 to-accent-cyan text-white flex items-center justify-center shrink-0 select-none shadow-sm ${cursorClass} ${className}`}
+      >
+        <Bookmark className={`${iconSizeClasses} fill-current text-white`} />
+      </div>
+    )
+  }
 
   if (isValidUrl && !hasError) {
     return (

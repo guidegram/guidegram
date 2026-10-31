@@ -261,11 +261,37 @@ export class PowerLifecycleManager {
   }
 
   /**
-   * OS lock screen event.
+   * OS lock screen event (Hardened against competitor issue #25892).
+   * Purges Chromium image cache, checkpoints SQLite WAL, and broadcasts memory trim to renderer.
    */
   public handleLockScreen(): void {
     this.totalLocks++
+    Logger.info('[PowerLifecycleManager] Screen locked. Initiating preemptive VRAM and memory compaction...')
+
+    // 1. Checkpoint SQLite WAL to avoid locks during idle screen lock
+    try {
+      if (this.deps.sqliteTuner && this.deps.getDatabase) {
+        const db = this.deps.getDatabase()
+        if (db) {
+          this.deps.sqliteTuner.checkpointWal(db, 'PASSIVE')
+        }
+      }
+    } catch (sqlErr) {
+      Logger.warn('[PowerLifecycleManager] Lock-screen SQLite checkpoint warning:', sqlErr)
+    }
+
+    // 2. Clear Chromium GPU / Image texture caches
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const electron = require('electron')
+      if (electron?.session?.defaultSession?.clearImageCache) {
+        electron.session.defaultSession.clearImageCache().catch(() => {})
+      }
+    } catch {}
+
+    // 3. Notify renderer to trim media and pause heavy animations
     if (this.deps.broadcastWebContents) {
+      this.deps.broadcastWebContents('system:memory-trim', { reason: 'screen-lock' })
       this.deps.broadcastWebContents('system:power-lock-screen', {
         lockedAt: Date.now(),
       })
@@ -274,9 +300,11 @@ export class PowerLifecycleManager {
 
   /**
    * OS unlock screen event.
+   * Restores active viewport rendering and synchronizes connection health.
    */
   public handleUnlockScreen(): void {
     this.totalUnlocks++
+    Logger.info('[PowerLifecycleManager] Screen unlocked. Restoring normal rendering pipeline.')
     if (this.deps.broadcastWebContents) {
       this.deps.broadcastWebContents('system:power-unlock-screen', {
         unlockedAt: Date.now(),

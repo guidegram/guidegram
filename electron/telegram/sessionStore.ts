@@ -1315,7 +1315,19 @@ export class SessionStore {
       }
       const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
       // Save up to 1000 most recent dialogs for deep instant offline scroll
-      const dataToSave = dialogs.slice(0, 1000)
+      const dataToSave = dialogs.slice(0, 1000).map((d) => {
+        const isSelf = d.id === accountId || d.id === 'self' || d.id === 'me'
+        if (isSelf) {
+          return {
+            ...d,
+            title: 'Saved Messages',
+            isSavedMessages: true,
+            isContact: false,
+            isUser: true,
+          }
+        }
+        return d
+      })
       fs.writeFileSync(filePath, JSON.stringify(dataToSave), 'utf-8')
     } catch (err) {
       console.error(`[SessionStore] Failed to save dialogs cache for ${accountId}:`, err)
@@ -1335,6 +1347,13 @@ export class SessionStore {
         if (Array.isArray(parsed)) {
           const avatarsDir = path.join(this.dataDir, 'avatars')
           return parsed.map((d: DialogItem) => {
+            const isSelf = d.id === accountId || d.id === 'self' || d.id === 'me'
+            if (isSelf) {
+              d.title = 'Saved Messages'
+              d.isSavedMessages = true
+              d.isContact = false
+              d.isUser = true
+            }
             if (!d.avatarUrl || d.avatarUrl.length < 2000) {
               const cleanId = String(d.id).replace(/^-100/, '').replace(/^-/, '')
               const candidates = [
