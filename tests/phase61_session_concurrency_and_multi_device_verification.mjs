@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SessionConcurrencyAndMultiDeviceGovernor } from '../src/services/sessionConcurrencyAndMultiDeviceGovernor.ts';
+import { SessionConcurrencyAndMultiDeviceGovernor } from '../dist-test-session/sessionConcurrencyAndMultiDeviceGovernor.js';
 
 console.log('🧪 Starting Phase 61 Session Concurrency & Multi-Device Synchronization Verification Suite...');
 
