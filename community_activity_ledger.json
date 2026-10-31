@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T06:47:54.016359+00:00",
+  "lastUpdated": "2026-10-31T07:02:54.892808+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 65,
-    "githubIssuesCommented": 56,
+    "totalActivities": 66,
+    "githubIssuesCommented": 57,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_26632",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 26632,
+      "targetTitle": "Create Story on telegram desktop",
+      "targetUser": "Telegram Desktop Maintainers & Community",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/26632#issuecomment-6540383493",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/26632",
+      "status": "live_public",
+      "summary": "Masterclass architectural blueprint for implementing Story Creation on Telegram Desktop: handling desktop media preprocessing vs mobile CameraX assumptions, MTProto stories.sendStory invariants (documentAttributeVideo duration/dimension probe preventing STORY_VIDEO_METADATA_MISSING, 60s clamp, privacy rule vectors, and steerable expiry periods), backed by Guidegram production implementation.",
+      "timestamp": "2026-10-31T07:02:54.892808+00:00"
+    },
     {
       "id": "gh_comment_tdesktop_16300",
       "platform": "github",
