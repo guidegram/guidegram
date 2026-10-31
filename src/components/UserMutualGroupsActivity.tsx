@@ -35,15 +35,22 @@ interface UserMutualGroupsActivityProps {
   onJumpToMessage: (chatId: string, messageId: number) => void
 }
 
+function parseTimestamp(timestamp: number | Date): Date {
+  if (timestamp instanceof Date) return timestamp
+  const ts = typeof timestamp === 'number' ? (timestamp < 1e11 ? timestamp * 1000 : timestamp) : Date.now()
+  return new Date(ts)
+}
+
 function formatClockTime(timestamp: number | Date, locale: string): string {
-  const d = typeof timestamp === 'number' ? new Date(timestamp * 1000) : timestamp
+  const d = parseTimestamp(timestamp)
   return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
 }
 
 function formatDate(timestamp: number | Date, locale: string): string {
-  const d = typeof timestamp === 'number' ? new Date(timestamp * 1000) : timestamp
+  const d = parseTimestamp(timestamp)
   return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
+
 
 export const UserMutualGroupsActivity: React.FC<UserMutualGroupsActivityProps> = ({
   accountId,

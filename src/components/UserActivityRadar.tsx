@@ -65,13 +65,15 @@ function formatDurationHuman(seconds: number, isFa = false): string {
 }
 
 function formatTime(timestamp: number, isFa = false): string {
-  const d = new Date(timestamp * 1000)
+  const ts = timestamp < 1e11 ? timestamp * 1000 : timestamp
+  const d = new Date(ts)
   return d.toLocaleTimeString(isFa ? 'fa-IR' : 'en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
-function formatDate(timestamp: number): string {
-  const d = new Date(timestamp * 1000)
-  return d.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+function formatDate(timestamp: number, isFa = false): string {
+  const ts = timestamp < 1e11 ? timestamp * 1000 : timestamp
+  const d = new Date(ts)
+  return d.toLocaleDateString(isFa ? 'fa-IR' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
@@ -856,7 +858,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
                                 : change.title}
                             </span>
                           </span>
-                          <span className="text-gray-500">{formatDate(change.timestamp)}</span>
+                          <span className="text-gray-500">{formatDate(change.timestamp, isFa)}</span>
                         </div>
 
                         {/* Diff display */}
