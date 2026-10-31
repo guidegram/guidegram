@@ -1667,6 +1667,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const floatingDateTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isFloatingDateHoveredRef = useRef(false)
   const previousChatIdRef = useRef<string | null>(null)
+  const initialPositionDoneRef = useRef<string | null>(null)
+  const userHasScrolledRef = useRef(false)
+  const isInitialPositioningRef = useRef(false)
   const prevLastMessageIdRef = useRef<number | null>(null)
   const prevMessagesLengthRef = useRef<number>(0)
   const autoDownloadedIdsRef = useRef<Set<number>>(new Set())
@@ -1922,23 +1925,6 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     return target?.id || null
   }, [chat?.id, chat?.unreadCount, chat?.readInboxMaxId, messages])
 
-  // Automatically mark visible messages as read when viewing chat
-  useEffect(() => {
-    if (!chat || ghostMode || !window.guidegram?.markAsRead || messages.length === 0) return
-    const unread = chat.unreadCount || 0
-    if (unread <= 0) return
-
-    const timer = setTimeout(() => {
-      const lastMsg = messages[messages.length - 1]
-      if (lastMsg && lastMsg.id > lastMarkedReadIdRef.current) {
-        lastMarkedReadIdRef.current = lastMsg.id
-        window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
-        onUpdateUnreadCount?.(chat.id, 0)
-      }
-    }, 600)
-
-    return () => clearTimeout(timer)
-  }, [chat?.id, chat?.unreadCount, messages, ghostMode, onUpdateUnreadCount])
 
   // Throttled scroll listener detecting > 300px from bottom (Feature 19) & Infinite scroll to top
   const handleScroll = useCallback(() => {

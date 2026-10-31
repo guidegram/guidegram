@@ -1613,8 +1613,14 @@ export const App: React.FC = () => {
     try {
       const dialog = (dialogsByAccountRef.current[accountId] || []).find((d) => d.id === chatId || isPeerMatch(d.id, chatId))
       const unreadCount = dialog?.unreadCount || 0
-      const fetchLimit = Math.min(100, Math.max(60, unreadCount + 20))
-      const msgs = await window.guidegram.getMessages(accountId, chatId, fetchLimit)
+      let msgs: MessageItem[] = []
+      if (unreadCount > 50 && dialog?.readInboxMaxId && dialog.readInboxMaxId > 0) {
+        // Official Telegram pattern: when unread count is high, anchor fetch around readInboxMaxId
+        msgs = await window.guidegram.getMessages(accountId, chatId, 60, dialog.readInboxMaxId, -20)
+      } else {
+        const fetchLimit = Math.min(100, Math.max(60, unreadCount + 20))
+        msgs = await window.guidegram.getMessages(accountId, chatId, fetchLimit)
+      }
       const sortedMsgs = Array.isArray(msgs)
         ? [...msgs].sort((a, b) => (a.date - b.date) || (a.id - b.id))
         : []
