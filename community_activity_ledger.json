@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T08:03:50.818Z",
+  "lastUpdated": "2026-10-31T08:19:28.484Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 70,
-    "githubIssuesCommented": 61,
+    "totalActivities": 71,
+    "githubIssuesCommented": 62,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_go_tg_bot_api_512",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "go-telegram-bot-api/telegram-bot-api",
+      "targetIssueNumber": 512,
+      "targetTitle": "Edit functions for text and image messages",
+      "targetUser": "baxuz & Go bot developers",
+      "url": "https://github.com/go-telegram-bot-api/telegram-bot-api/issues/512#issuecomment-6541071937",
+      "issueUrl": "https://github.com/go-telegram-bot-api/telegram-bot-api/issues/512",
+      "status": "live_public",
+      "summary": "Comprehensive guide and Go code patterns for editing text messages (NewEditMessageText), editing captions (NewEditMessageCaption), and replacing images (NewEditMessageMedia with FilePath and FileID), plus Telegram invariants and MESSAGE_NOT_MODIFIED handling from Guidegram Phase 160.",
+      "timestamp": "2026-10-31T08:19:28.482Z"
+    },
     {
       "id": "gh_comment_tdesktop_5325",
       "platform": "github",
