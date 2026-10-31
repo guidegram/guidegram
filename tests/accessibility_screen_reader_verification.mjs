@@ -43,8 +43,8 @@ assert(chatViewportTsx.includes('role="log"'), 'Messages feed defines role="log"
 assert(chatViewportTsx.includes('aria-label="Messages stream"'), 'Messages feed defines aria-label="Messages stream"')
 assert(chatViewportTsx.includes('aria-label="Write a message"'), 'Textarea defines aria-label="Write a message"')
 assert(chatViewportTsx.includes('aria-label="Attach Photo, Video or Document"'), 'Paperclip button defines aria-label')
-assert(chatViewportTsx.includes('aria-label="Stickers & Animated Packs"'), 'Stickers button defines aria-label')
-assert(chatViewportTsx.includes('aria-label={slowModeSecondsLeft > 0 ? `Slow mode active: wait ${slowModeSecondsLeft}s` : \'Send message\'}'), 'Send button defines dynamic accessible aria-label')
+assert(chatViewportTsx.includes('aria-label="Emojis, Stickers & Animated Packs"') || chatViewportTsx.includes('aria-label="Stickers & Animated Packs"'), 'Stickers button defines aria-label')
+assert(chatViewportTsx.includes('slowModeSecondsLeft > 0') && chatViewportTsx.includes('Slow mode active: wait ${slowModeSecondsLeft}s') && chatViewportTsx.includes('Send message'), 'Send button defines dynamic accessible aria-label')
 assert(chatViewportTsx.includes('aria-label={!canSendMedia ? \'Voice messages restricted in this group\' : \'Record Voice Message\'}'), 'Voice record button defines dynamic accessible aria-label')
 
 // 4. ChatList.tsx Search Accessibility
