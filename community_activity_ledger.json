@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T01:31:00Z",
+  "lastUpdated": "2026-10-31T02:03:35.913Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 48,
-    "githubIssuesCommented": 39,
+    "totalActivities": 49,
+    "githubIssuesCommented": 40,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_4577",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 4577,
+      "targetTitle": "Feature Request: add HTTPS proxy",
+      "targetUser": "s3rj1k",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/4577#issuecomment-6537540669",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/4577",
+      "status": "live_public",
+      "summary": "Architectural analysis on why HTTPS proxy (HTTP CONNECT over TLS) fails in QNetworkProxy due to socket layering inversion, providing a two-stage QSslSocket wrap blueprint and production reference from Guidegram.",
+      "timestamp": "2026-10-31T02:03:35.913Z"
+    },
     {
       "id": "gh_comment_go_tg_bot_154",
       "platform": "github",
