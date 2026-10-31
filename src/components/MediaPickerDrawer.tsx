@@ -9,7 +9,7 @@ interface MediaPickerDrawerProps {
   onClose: () => void
   accountId: string
   chatId: string
-  onSelectEmoji: (emoji: string) => void
+  onSelectEmoji: (emoji: string, customEmojiDocId?: string) => void
   onSelectSticker: (sticker: StickerItem) => void
   onSelectGif?: (gif: StickerItem) => void
 }
@@ -184,7 +184,7 @@ const EMOJI_CATEGORIES: { id: string; name: string; icon: string; emojis: string
 const MediaItemThumbnail: React.FC<{
   accountId: string
   item: StickerItem
-  onClick: () => void
+  onClick?: () => void
   sizeClass?: string
 }> = ({ accountId, item, onClick, sizeClass = 'w-16 h-16 sm:w-18 sm:h-18 p-1.5' }) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -282,41 +282,38 @@ const MediaItemThumbnail: React.FC<{
 const PackCoverIcon: React.FC<{
   accountId: string
   set: StickerSetItem
+  cachedDetails?: StickerSetItem
   isSelected: boolean
   onClick: () => void
-}> = ({ accountId, set, isSelected, onClick }) => {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(set.thumbnailUrl || null)
+}> = ({ accountId, set, cachedDetails, isSelected, onClick }) => {
+  const [localDetails, setLocalDetails] = useState<StickerSetItem | null>(cachedDetails || null)
+  const [imgFailed, setImgFailed] = useState(false)
+
+  useEffect(() => {
+    if (cachedDetails) {
+      setLocalDetails(cachedDetails)
+    }
+  }, [cachedDetails])
 
   useEffect(() => {
     let active = true
-    if (thumbUrl || !window.guidegram?.getStickerSet) return
+    if (localDetails?.stickers?.length || !window.guidegram?.getStickerSet) return
 
     window.guidegram
       .getStickerSet(accountId, set.id, set.accessHash)
       .then((detailed) => {
         if (!active || !detailed) return
-        if (detailed.thumbnailUrl) {
-          setThumbUrl(detailed.thumbnailUrl)
-        } else if (detailed.stickers?.[0]) {
-          const first = detailed.stickers[0]
-          if (first.thumbnailUrl) {
-            setThumbUrl(first.thumbnailUrl)
-          } else if (window.guidegram?.getStickerData) {
-            window.guidegram
-              .getStickerData(accountId, first.id, first.accessHash, first.fileReferenceHex)
-              .then((res: any) => {
-                if (active && res?.url) setThumbUrl(res.url)
-              })
-              .catch(() => {})
-          }
-        }
+        setLocalDetails(detailed)
       })
       .catch(() => {})
 
     return () => {
       active = false
     }
-  }, [accountId, set.id, set.accessHash, thumbUrl])
+  }, [accountId, set.id, set.accessHash, localDetails?.stickers?.length])
+
+  const firstSticker = localDetails?.stickers?.[0]
+  const thumbUrl = set.thumbnailUrl || localDetails?.thumbnailUrl
 
   return (
     <button
@@ -329,21 +326,29 @@ const PackCoverIcon: React.FC<{
       }`}
       title={set.title}
     >
-      {thumbUrl ? (
+      {firstSticker ? (
+        <MediaItemThumbnail
+          accountId={accountId}
+          item={firstSticker}
+          sizeClass="w-7 h-7 p-0.5 pointer-events-none"
+        />
+      ) : thumbUrl && !imgFailed && !thumbUrl.endsWith('.webm') && !thumbUrl.endsWith('.mp4') ? (
         <img
           src={thumbUrl}
           alt={set.title}
-          className="w-7 h-7 object-contain rounded"
+          className="w-7 h-7 object-contain rounded pointer-events-none"
           loading="lazy"
+          onError={() => setImgFailed(true)}
         />
       ) : (
-        <span className="text-[10px] font-bold text-gray-300 uppercase">
-          {set.title ? set.title.trim().replace(/^@/, '').slice(0, 2) : '🗂️'}
+        <span className="text-[10px] font-bold text-gray-300 uppercase select-none">
+          {set.title ? set.title.trim().replace(/^@/, '').slice(0, 2) : '⭐'}
         </span>
       )}
     </button>
   )
 }
+
 
 // GIF Thumbnail Card with responsive playback
 const GifItemCard: React.FC<{
@@ -446,6 +451,8 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
   const [savedGifs, setSavedGifs] = useState<StickerItem[]>([])
   const [loadingGifs, setLoadingGifs] = useState(false)
 
+  const emojiScrollRef = useRef<HTMLDivElement | null>(null)
+
   // Load recent emojis from storage
   useEffect(() => {
     try {
@@ -454,8 +461,8 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
     } catch (_) {}
   }, [])
 
-  const handlePickEmoji = (emoji: string) => {
-    onSelectEmoji(emoji)
+  const handlePickEmoji = (emoji: string, customEmojiDocId?: string) => {
+    onSelectEmoji(emoji, customEmojiDocId)
     setRecentEmojis((prev) => {
       const next = [emoji, ...prev.filter((e) => e !== emoji)].slice(0, 32)
       try {
@@ -463,6 +470,32 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
       } catch (_) {}
       return next
     })
+  }
+
+  const handleSelectPack = (packId: string) => {
+    setActiveEmojiSetId(packId)
+    if (packId === 'standard') {
+      const el = emojiScrollRef.current?.querySelector('#emoji-pack-standard')
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    if (!cachedEmojiSetDetails[packId]) {
+      const target = customEmojiSets.find((s) => s.id === packId)
+      if (target && window.guidegram?.getStickerSet) {
+        window.guidegram
+          .getStickerSet(accountId, target.id, target.accessHash)
+          .then((res) => {
+            if (res) {
+              setCachedEmojiSetDetails((prev) => ({ ...prev, [packId]: res }))
+            }
+          })
+          .catch(() => {})
+      }
+    }
+
+    const el = emojiScrollRef.current?.querySelector(`#emoji-pack-${packId}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   // 1. Fetch Installed Custom Emoji Packs for the Telegram Account
@@ -681,18 +714,15 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
           </div>
 
           {/* Emoji Content Area */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
+          <div ref={emojiScrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin">
             {/* 1. Installed Custom Emoji Packs */}
             {customEmojiSets.length > 0 && !searchQuery && (
               <div className="space-y-4">
                 {customEmojiSets.map((pack) => {
                   const details = cachedEmojiSetDetails[pack.id]
                   const emojis = details?.stickers || []
-                  if (activeEmojiSetId && activeEmojiSetId !== 'standard' && activeEmojiSetId !== pack.id) {
-                    return null
-                  }
                   return (
-                    <div key={pack.id} className="space-y-1.5">
+                    <div key={pack.id} id={`emoji-pack-${pack.id}`} className="space-y-1.5 scroll-mt-2">
                       <div className="flex items-center justify-between text-xs font-bold text-amber-300/90 px-1">
                         <div className="flex items-center gap-1.5 truncate">
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
@@ -713,7 +743,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
                               item={stk}
                               sizeClass="w-9 h-9 sm:w-10 sm:h-10 p-1"
                               onClick={() => {
-                                handlePickEmoji(stk.emoticon || '⭐')
+                                handlePickEmoji(stk.emoticon || '⭐', stk.id)
                               }}
                             />
                           ))}
@@ -732,7 +762,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
 
             {/* 2. Recently Used Unicode Emojis */}
             {recentEmojis.length > 0 && !searchQuery && (
-              <div>
+              <div id="emoji-pack-recent" className="scroll-mt-2">
                 <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-primary-400" />
                   <span>Recently Used</span>
@@ -753,37 +783,35 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
             )}
 
             {/* 3. Categorized Standard Unicode Emojis */}
-            {(activeEmojiSetId === 'standard' || !activeEmojiSetId || customEmojiSets.length === 0 || searchQuery) && (
-              <div className="space-y-4">
-                {EMOJI_CATEGORIES.map((cat) => {
-                  const filtered = searchQuery
-                    ? cat.emojis.filter((e) => e.includes(searchQuery))
-                    : cat.emojis
-                  if (filtered.length === 0) return null
-                  return (
-                    <div key={cat.id}>
-                      <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <span>{cat.icon}</span>
-                        <span>{cat.name}</span>
-                        <span className="text-[10px] text-gray-500 font-normal">({filtered.length})</span>
-                      </div>
-                      <div className="grid grid-cols-8 gap-1">
-                        {filtered.map((emoji, idx) => (
-                          <button
-                            key={`${cat.id}-${idx}`}
-                            type="button"
-                            onClick={() => handlePickEmoji(emoji)}
-                            className="w-9 h-9 flex items-center justify-center text-xl rounded-xl hover:bg-white/10 active:scale-90 transition-transform cursor-pointer"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
+            <div id="emoji-pack-standard" className="space-y-4 scroll-mt-2">
+              {EMOJI_CATEGORIES.map((cat) => {
+                const filtered = searchQuery
+                  ? cat.emojis.filter((e) => e.includes(searchQuery))
+                  : cat.emojis
+                if (filtered.length === 0) return null
+                return (
+                  <div key={cat.id}>
+                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <span>{cat.icon}</span>
+                      <span>{cat.name}</span>
+                      <span className="text-[10px] text-gray-500 font-normal">({filtered.length})</span>
                     </div>
-                  )
-                })}
-              </div>
-            )}
+                    <div className="grid grid-cols-8 gap-1">
+                      {filtered.map((emoji, idx) => (
+                        <button
+                          key={`${cat.id}-${idx}`}
+                          type="button"
+                          onClick={() => handlePickEmoji(emoji)}
+                          className="w-9 h-9 flex items-center justify-center text-xl rounded-xl hover:bg-white/10 active:scale-90 transition-transform cursor-pointer"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {/* Bottom Dock for Custom Emoji Packs (Matching Telegram Desktop) */}
@@ -791,7 +819,7 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
             <div className="p-2 border-t border-white/5 bg-dark-950 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               <button
                 type="button"
-                onClick={() => setActiveEmojiSetId('standard')}
+                onClick={() => handleSelectPack('standard')}
                 className={`h-9 w-9 rounded-xl transition-all flex items-center justify-center text-base cursor-pointer shrink-0 border ${
                   activeEmojiSetId === 'standard'
                     ? 'bg-primary-600/30 border-primary-500/50 scale-105'
@@ -807,8 +835,9 @@ export const MediaPickerDrawer: React.FC<MediaPickerDrawerProps> = ({
                   key={pack.id}
                   accountId={accountId}
                   set={pack}
+                  cachedDetails={cachedEmojiSetDetails[pack.id]}
                   isSelected={activeEmojiSetId === pack.id}
-                  onClick={() => setActiveEmojiSetId(pack.id)}
+                  onClick={() => handleSelectPack(pack.id)}
                 />
               ))}
             </div>

@@ -1754,6 +1754,7 @@ export const App: React.FC = () => {
         isRead: false,
         replyToMsgId: actualReplyTo,
         isSilent: options?.silent,
+        entities: sent?.entities || options?.entities,
         replyTo: actualReplyTo
           ? {
               replyToMsgId: actualReplyTo,

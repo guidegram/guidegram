@@ -7429,12 +7429,16 @@ export class AccountManager {
         ? Math.floor(options.scheduleDate / 1000)
         : undefined
 
+    const tlEntities = formatMtprotoEntities(options?.entities)
+
     try {
       // First attempt using mtcute's high-level sendText (automatically handles entities, drafts, schedule)
-      const sentMsg: any = await holder.client.sendText(inputPeer as any, text, {
+      const sendTextPayload = tlEntities ? { text, entities: tlEntities } : text
+      const sentMsg: any = await holder.client.sendText(inputPeer as any, sendTextPayload as any, {
         replyTo: actualReplyTo,
         silent: options?.silent,
         schedule: targetSchedule ? (targetSchedule === 0x7ffffffe ? 0x7ffffffe : new Date(targetSchedule * 1000)) : undefined,
+        entities: tlEntities,
       } as any)
       if (sentMsg?.id) {
         msgId = sentMsg.id
@@ -7448,6 +7452,7 @@ export class AccountManager {
         peer: inputPeer,
         message: text,
         randomId,
+        entities: tlEntities,
         replyTo: actualReplyTo
           ? { _: 'inputReplyToMessage', replyToMsgId: actualReplyTo }
           : undefined,
@@ -7475,6 +7480,7 @@ export class AccountManager {
       date: itemDate,
       isOutgoing: true,
       replyToMsgId: actualReplyTo,
+      entities: options?.entities,
     }
     const currTop = this.topMessageIds.get(`${accountId}_${chatId}`) || 0
     if (msgId > currTop) this.topMessageIds.set(`${accountId}_${chatId}`, msgId)
@@ -12967,13 +12973,14 @@ export class AccountManager {
       })
 
       return (res.sets || []).map((s: any) => ({
-        id: s.id?.toString(),
-        accessHash: s.accessHash?.toString(),
+        id: (s.id ?? s._id)?.toString(),
+        accessHash: (s.accessHash ?? s.access_hash)?.toString(),
         title: s.title,
-        shortName: s.shortName,
+        shortName: s.shortName ?? s.short_name,
         count: s.count,
         isEmoji: true,
         thumbnailUrl: extractStrippedThumb(s),
+        thumbDocumentId: (s.thumbDocumentId ?? s.thumb_document_id)?.toString(),
         stickers: [],
       }))
     } catch (err: any) {
@@ -13142,6 +13149,7 @@ export class AccountManager {
         count: set.count,
         isEmoji: Boolean(set.emojis),
         thumbnailUrl: extractStrippedThumb(set) || stickers[0]?.thumbnailUrl,
+        thumbDocumentId: (set.thumbDocumentId ?? set.thumb_document_id)?.toString(),
         stickers,
       }
     } catch (_) {

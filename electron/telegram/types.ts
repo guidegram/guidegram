@@ -1316,7 +1316,9 @@ export interface StickerSetItem {
   stickers: StickerItem[]
   isEmoji?: boolean
   thumbnailUrl?: string
+  thumbDocumentId?: string
 }
+
 
 export type StoryMediaType = 'photo' | 'video' | 'unsupported'
 

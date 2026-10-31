@@ -174,7 +174,7 @@ interface ChatViewportProps {
   onSendMessage: (
     text: string,
     replyToMsgId?: number,
-    options?: { silent?: boolean; scheduleDate?: number }
+    options?: { silent?: boolean; scheduleDate?: number; entities?: MessageEntityItem[] }
   ) => void
   onSendMedia?: (
     filePath: string,
@@ -790,6 +790,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   onOpenProxyModal,
 }) => {
   const [inputText, setInputText] = useState('')
+  const [pendingCustomEmojis, setPendingCustomEmojis] = useState<Array<{ id: string; documentId: string; emoticon: string }>>([])
   const [copiedChatId, setCopiedChatId] = useState(false)
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(new Set())
   const isSelectionMode = selectedMessageIds.size > 0
@@ -4107,8 +4108,33 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
     // Handle standard text message (Feature 15 & 16)
     if (!inputText.trim()) return
+    const textToSend = inputText.trim()
     const targetReplyId = replyMessage?.id ?? (activeTopicId !== null ? activeTopicId : undefined)
-    onSendMessage(inputText.trim(), targetReplyId, options)
+
+    // Build custom_emoji message entities if any custom emojis are attached
+    let finalOptions: any = options
+    if (pendingCustomEmojis.length > 0) {
+      const entities: MessageEntityItem[] = []
+      let searchPos = 0
+      for (const p of pendingCustomEmojis) {
+        const idx = textToSend.indexOf(p.emoticon, searchPos)
+        if (idx !== -1) {
+          entities.push({
+            type: 'custom_emoji',
+            offset: idx,
+            length: p.emoticon.length,
+            documentId: p.documentId,
+          })
+          searchPos = idx + p.emoticon.length
+        }
+      }
+      if (entities.length > 0) {
+        finalOptions = { ...(options || {}), entities }
+      }
+    }
+
+    onSendMessage(textToSend, targetReplyId, finalOptions)
+    setPendingCustomEmojis([])
     if (options?.silent) {
       showToast('Message sent without sound')
     } else if (options?.scheduleDate) {
@@ -4119,6 +4145,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setSlowModeSecondsLeft(chatDetails.slowModeSeconds)
     }
     setInputText('')
+    setPendingCustomEmojis([])
     setReplyMessage(null)
     setDismissedComposerUrl(null)
     if (chat && window.guidegram?.saveDraft) {
