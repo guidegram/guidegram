@@ -52,6 +52,7 @@ import {
   SharedMediaFilterType,
   SharedMediaResponse,
   DraftItem,
+  MessageEntityItem,
   AdminLogResponse,
   BusinessProfile,
   BusinessChatLink,
@@ -735,9 +736,10 @@ const guidegramAPI = {
     accountId: string,
     chatId: string,
     message: string,
-    replyToMsgId?: number
+    replyToMsgId?: number,
+    entities?: MessageEntityItem[]
   ): Promise<boolean> =>
-    ipcRenderer.invoke('telegram:save-draft', { accountId, chatId, message, replyToMsgId }),
+    ipcRenderer.invoke('telegram:save-draft', { accountId, chatId, message, replyToMsgId, entities }),
   clearDraft: (accountId: string, chatId: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:clear-draft', { accountId, chatId }),
   getAllDrafts: (accountId: string): Promise<Record<string, DraftItem>> =>

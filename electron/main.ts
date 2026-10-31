@@ -2781,9 +2781,9 @@ function setupIpcHandlers() {
     return crashRecoveryManager.purgeCrashReports()
   })
 
-  ipcMain.handle('telegram:save-draft', async (_event, { accountId, chatId, message, replyToMsgId }) => {
+  ipcMain.handle('telegram:save-draft', async (_event, { accountId, chatId, message, replyToMsgId, entities }) => {
     try {
-      return await accountManager.saveDraft(accountId, chatId, message, replyToMsgId)
+      return await accountManager.saveDraft(accountId, chatId, message, replyToMsgId, entities)
     } catch (err: any) {
       Logger.error(`[IPC] saveDraft error:`, err)
       return false
