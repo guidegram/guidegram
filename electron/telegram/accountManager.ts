@@ -4232,22 +4232,33 @@ export class AccountManager {
           }).catch(() => null)
 
           if (res?.photos && Array.isArray(res.photos)) {
-            for (const p of res.photos) {
-              if (p._ === 'photo' && p.id) {
-                const photoFile = path.join(this.avatarsDir, `photo_${accountId}_${peerId}_${p.id}.jpg`)
-                if (!fs.existsSync(photoFile)) {
-                  await client.downloadToFile(photoFile, p).catch(() => {})
-                }
-                if (fs.existsSync(photoFile)) {
-                  try {
-                    const buf = await fs.promises.readFile(photoFile)
-                    if (buf.length > 500) {
-                      const dataUrl = `data:image/jpeg;base64,${buf.toString('base64')}`
-                      if (!results.includes(dataUrl)) {
-                        results.push(dataUrl)
-                      }
-                    }
-                  } catch (_) {}
+            const photoItems = res.photos.filter((p: any) => p && (p._ === 'photo' || p.sizes) && p.id)
+            const downloadTasks = photoItems.slice(0, 15).map(async (p: any) => {
+              const photoFile = path.join(this.avatarsDir, `photo_${accountId}_${peerId}_${p.id}.jpg`)
+              if (!fs.existsSync(photoFile)) {
+                try {
+                  await Promise.race([
+                    client.downloadToFile(photoFile, p),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Photo download timeout')), 3500)),
+                  ])
+                } catch (_) {}
+              }
+              if (fs.existsSync(photoFile)) {
+                try {
+                  const buf = await fs.promises.readFile(photoFile)
+                  if (buf.length > 500) {
+                    return `data:image/jpeg;base64,${buf.toString('base64')}`
+                  }
+                } catch (_) {}
+              }
+              return null
+            })
+
+            const downloaded = await Promise.allSettled(downloadTasks)
+            for (const item of downloaded) {
+              if (item.status === 'fulfilled' && item.value) {
+                if (!results.includes(item.value)) {
+                  results.push(item.value)
                 }
               }
             }

@@ -242,6 +242,14 @@ export const App: React.FC = () => {
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [appToast, setAppToast] = useState<string | null>(null)
+  const appToastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const triggerAppToast = useCallback((msg: string, duration = 2800) => {
+    if (appToastTimeoutRef.current) clearTimeout(appToastTimeoutRef.current)
+    setAppToast(msg)
+    appToastTimeoutRef.current = setTimeout(() => {
+      setAppToast(null)
+    }, duration)
+  }, [])
   const lastUpdateCheckRef = useRef<number>(0)
   const isAutoConnectingVpnRef = useRef<boolean>(false)
 
@@ -2697,7 +2705,14 @@ export const App: React.FC = () => {
 
       {/* Floating System Notification Toast */}
       {appToast && (
-        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-dark-900/95 border border-primary-500/40 text-gray-100 text-xs font-semibold rounded-2xl shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2">
+        <div
+          onClick={() => {
+            if (appToastTimeoutRef.current) clearTimeout(appToastTimeoutRef.current)
+            setAppToast(null)
+          }}
+          className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 bg-dark-900/95 border border-primary-500/40 text-gray-100 text-xs font-semibold rounded-2xl shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2 cursor-pointer hover:bg-dark-850 select-none"
+          title="Dismiss"
+        >
           <span className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse" />
           <span>{appToast}</span>
         </div>
@@ -3230,7 +3245,7 @@ export const App: React.FC = () => {
             onMentionUser={() => {
               setViewingUserProfile(null)
             }}
-            onShowToast={(msg) => setAppToast(msg)}
+            onShowToast={triggerAppToast}
           />
         )}
 

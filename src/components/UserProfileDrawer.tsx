@@ -292,21 +292,35 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
 
   // Carousel keyboard navigation (ArrowLeft / ArrowRight)
   useEffect(() => {
-    if (!lightboxUrl || photoGallery.length <= 1) return
+    if (!lightboxUrl) return
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        setActivePhotoIndex((prev) => (prev - 1 + photoGallery.length) % photoGallery.length)
-      } else if (e.key === 'ArrowRight') {
-        setActivePhotoIndex((prev) => (prev + 1) % photoGallery.length)
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (photoGallery.length <= 1) {
+          onShowToast?.(language === 'fa' ? 'تنها همین یک عکس برای این کاربر ثبت شده است' : 'No additional profile photos available')
+          return
+        }
+        if (e.key === 'ArrowLeft') {
+          setActivePhotoIndex((prev) => (prev - 1 + photoGallery.length) % photoGallery.length)
+        } else if (e.key === 'ArrowRight') {
+          setActivePhotoIndex((prev) => (prev + 1) % photoGallery.length)
+        }
       }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [lightboxUrl, photoGallery.length])
+  }, [lightboxUrl, photoGallery.length, language, onShowToast])
 
   const handleOpenPhoto = async () => {
+    // 1. Immediately open whatever photo we already have (instant zero-latency UX)
+    const currentAvatar = details?.avatarUrl || initialDetails?.avatarUrl
+    if (currentAvatar) {
+      setPhotoGallery([currentAvatar])
+      setActivePhotoIndex(0)
+      setLightboxUrl(currentAvatar)
+    }
+
     try {
-      // 1. Try fetching all profile photos (active and historical)
+      // 2. Fetch full photo gallery in the background
       if (window.guidegram?.getUserProfilePhotos) {
         onShowToast?.(t('user_profile.loading_photos'))
         const photos = await window.guidegram.getUserProfilePhotos(accountId, peerId)
@@ -318,12 +332,8 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
         }
       }
 
-      // 2. Fallback to single photo
-      if (details?.avatarUrl) {
-        setPhotoGallery([details.avatarUrl])
-        setActivePhotoIndex(0)
-        setLightboxUrl(details.avatarUrl)
-      } else if (window.guidegram?.getProfilePhoto) {
+      // 3. Fallback to full resolution single photo if needed
+      if (!currentAvatar && window.guidegram?.getProfilePhoto) {
         onShowToast?.(t('user_profile.loading_full_photo'))
         const big = await window.guidegram.getProfilePhoto(accountId, peerId, true)
         if (big) {
@@ -333,7 +343,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
         } else {
           onShowToast?.(t('user_profile.no_photo'))
         }
-      } else {
+      } else if (!currentAvatar) {
         onShowToast?.(t('user_profile.no_photo'))
       }
     } catch {
@@ -624,7 +634,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                             </p>
                           ) : (
                             <span className="text-[9px] text-gray-300 font-mono">
-                              {story.date ? new Date(story.date * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''}
+                              {story.date ? new Date(story.date < 1e11 ? story.date * 1000 : story.date).toLocaleDateString(language === 'fa' ? 'fa-IR' : 'en-US', { month: 'short', day: 'numeric' }) : ''}
                             </span>
                           )}
                         </div>
