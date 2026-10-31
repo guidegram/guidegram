@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T07:02:54.892808+00:00",
+  "lastUpdated": "2026-10-31T07:16:54.756165+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 66,
-    "githubIssuesCommented": 57,
+    "totalActivities": 67,
+    "githubIssuesCommented": 58,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_go_tg_bot_api_698",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "go-telegram-bot-api/telegram-bot-api",
+      "targetIssueNumber": 698,
+      "targetTitle": "InlineKeyboardButton web_app",
+      "targetUser": "Go Telegram Bot Community & Developers",
+      "url": "https://github.com/go-telegram-bot-api/telegram-bot-api/issues/698#issuecomment-6540511759",
+      "issueUrl": "https://github.com/go-telegram-bot-api/telegram-bot-api/issues/698",
+      "status": "live_public",
+      "summary": "Masterclass architectural guide for Telegram WebApps / Mini Apps in Go: resolving v5.5.1 vs master tag discrepancy, implementing InlineKeyboardButton vs Reply Keyboard bidirectional sendData transfer, capturing Message.WebAppData, and configuring persistent SetChatMenuButton, backed by Guidegram production implementation.",
+      "timestamp": "2026-10-31T07:16:54.756165+00:00"
+    },
     {
       "id": "gh_comment_tdesktop_26632",
       "platform": "github",
