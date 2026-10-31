@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
@@ -23,6 +23,7 @@ import {
   Clock,
   Play,
   Layers,
+  Calendar,
 } from 'lucide-react'
 import type { ChatDetails, StoryItemPayload } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -32,6 +33,7 @@ import { CustomEmojiView } from './ChatViewport'
 import { StoryViewerModal } from './StoryViewerModal'
 import { copyTextToClipboard } from '../utils/clipboard'
 import { isRTL } from '../utils/textUtils'
+import { estimateAccountAge } from '../utils/telegramAgeEstimator'
 import { useI18n } from '../i18n'
 
 export interface UserProfileDrawerProps {
@@ -66,6 +68,11 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [isBlocking, setIsBlocking] = useState(false)
   const [profileTab, setProfileTab] = useState<'activity_radar' | 'mutual_groups'>('mutual_groups')
+
+  // Estimated Account Creation Date based on ID anchor interpolation
+  const estimatedAge = useMemo(() => {
+    return estimateAccountAge(peerId, isPersian)
+  }, [peerId, isPersian])
 
   // Story & Pinned Profile Posts State
   const [pinnedStories, setPinnedStories] = useState<StoryItemPayload[]>([])
@@ -646,6 +653,39 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                 <Copy className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            {/* Account Age / Creation Date */}
+            {estimatedAge && (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-dark-850/90 border border-white/5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`p-2 rounded-xl ${estimatedAge.isOfficialPeerSettings ? 'bg-accent-emerald/15 text-accent-emerald' : 'bg-accent-violet/15 text-accent-violet'} shrink-0`}>
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                        {isPersian ? 'تاریخ ساخت اکانت' : 'Account Created'}
+                      </span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                        estimatedAge.isOfficialPeerSettings
+                          ? 'bg-accent-emerald/20 text-accent-emerald border border-accent-emerald/30'
+                          : 'bg-white/10 text-gray-300'
+                      }`}>
+                        {estimatedAge.isOfficialPeerSettings
+                          ? (isPersian ? 'رسمی تلگرام' : 'Verified')
+                          : (isPersian ? 'تخمینی' : 'Estimated')}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-100 font-semibold truncate">
+                      {estimatedAge.formattedDate}
+                    </span>
+                    <span className="text-[10px] text-gray-400 truncate">
+                      {estimatedAge.formattedRelative}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Username */}
             {displayUsername && (
