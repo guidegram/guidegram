@@ -16714,6 +16714,54 @@ export class AccountManager {
             reactions: update.reactions || update.newReactions || [],
             date: update.date || Math.floor(Date.now() / 1000),
           })
+        } else if (update._ === 'updateDraftMessage') {
+          let peerId = ''
+          const peer = update.peer?.peer || update.peer
+          if (peer) {
+            if (peer.userId !== undefined || peer.user_id !== undefined) peerId = (peer.userId ?? peer.user_id).toString()
+            else if (peer.chatId !== undefined || peer.chat_id !== undefined) peerId = `-${peer.chatId ?? peer.chat_id}`
+            else if (peer.channelId !== undefined || peer.channel_id !== undefined) {
+              const chStr = (peer.channelId ?? peer.channel_id).toString()
+              peerId = chStr.startsWith('-100') ? chStr : `-100${chStr}`
+            } else if (peer.id !== undefined) {
+              peerId = peer.id.toString()
+            }
+          }
+          if (peerId) {
+            let draftItem: DraftItem | undefined = undefined
+            const rawDraft = update.draft
+            if (rawDraft && rawDraft._ === 'draftMessage' && rawDraft.message) {
+              draftItem = {
+                text: rawDraft.message,
+                date: rawDraft.date ? rawDraft.date * 1000 : Date.now(),
+                replyToMsgId: rawDraft.replyTo?.replyToMsgId || rawDraft.replyToMsgId,
+                entities: rawDraft.entities ? parseMtprotoEntities(rawDraft.entities) : undefined,
+              }
+            }
+
+            try {
+              const cached = this.store.loadDialogsCache(accountId)
+              if (cached && cached.length > 0) {
+                let changed = false
+                const next = cached.map((d) => {
+                  if (isMatch(d.id, peerId)) {
+                    changed = true
+                    return { ...d, draft: draftItem }
+                  }
+                  return d
+                })
+                if (changed) {
+                  this.store.saveDialogsCache(accountId, next)
+                }
+              }
+            } catch (_) {}
+
+            this.onEventCallback?.('telegram:draft-updated', {
+              accountId,
+              chatId: peerId,
+              draft: draftItem,
+            })
+          }
         }
       } catch (_) {}
     })
