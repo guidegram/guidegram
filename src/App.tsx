@@ -49,6 +49,7 @@ import { NotificationHUD, ActiveNotificationItem } from './components/Notificati
 import { NotificationHistoryDrawer, NotificationHistoryItem } from './components/NotificationHistoryDrawer'
 import logoImg from './assets/logo.png'
 import { useI18n } from './i18n'
+import { splitTelegramMessage } from './utils/telegramMessageSplitter'
 
 export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
   if (!a || !b) return false
@@ -1717,6 +1718,23 @@ export const App: React.FC = () => {
     options?: SendMessageOptions
   ) => {
     if (!activeAccountId || !activeChatId || !window.guidegram) return
+
+    // If message exceeds Telegram's 4096-character limit, safely partition across natural semantic boundaries
+    const chunks = splitTelegramMessage(text, { maxChunkLength: 4096, parseMode: 'markdown' })
+    if (chunks.length > 1) {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkText = chunks[i]
+        const isFirst = i === 0
+        const chunkReplyTo = isFirst ? replyToMsgId : undefined
+        const chunkOptions = isFirst ? options : { ...options, replyToMsgId: undefined }
+        await handleSendMessage(chunkText, chunkReplyTo, chunkOptions)
+        if (i < chunks.length - 1) {
+          await new Promise((r) => setTimeout(r, 60))
+        }
+      }
+      return
+    }
+
     try {
       const sent = await window.guidegram.sendMessage(
         activeAccountId,
