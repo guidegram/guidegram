@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T02:03:35.913Z",
+  "lastUpdated": "2026-10-31T02:19:06.344Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 49,
-    "githubIssuesCommented": 40,
+    "totalActivities": 50,
+    "githubIssuesCommented": 41,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_476",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 476,
+      "targetTitle": "tdesktop should be screen-reader friendly",
+      "targetUser": "keyang556",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/476#issuecomment-6537701983",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/476",
+      "status": "live_public",
+      "summary": "Architectural analysis on screen-reader detection fragility (Orca/Wayland/Narrator) and how to map custom-painted virtualized lists to AT-SPI2/UIA accessible trees with non-focus-stealing live announcers, backed by Guidegram implementation.",
+      "timestamp": "2026-10-31T02:19:06.344Z"
+    },
     {
       "id": "gh_comment_tdesktop_4577",
       "platform": "github",
