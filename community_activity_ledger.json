@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T08:19:28.484Z",
+  "lastUpdated": "2026-10-31T08:36:59.993Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 71,
-    "githubIssuesCommented": 62,
+    "totalActivities": 72,
+    "githubIssuesCommented": 63,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_27419",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 27419,
+      "targetTitle": "Behavior of reactions made by admin in group is utterly random",
+      "targetUser": "php4fan & TDesktop team",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/27419#issuecomment-6541227342",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/27419",
+      "status": "live_public",
+      "summary": "Kinetics of optimistic UI rollback vs MTProto anonymous admin reactions: dissected why reactions appear and vanish without feedback, explained actor_chat bot webhook discrepancy, and provided reversible snapshot rollback and anonymous avatar suppression patterns from Guidegram Phase 161.",
+      "timestamp": "2026-10-31T08:36:59.992Z"
+    },
     {
       "id": "gh_comment_go_tg_bot_api_512",
       "platform": "github",
