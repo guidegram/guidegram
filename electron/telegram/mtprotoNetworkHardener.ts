@@ -1,10 +1,11 @@
 import net from 'net'
-import type { ProxyConfig } from './types.ts'
+import type { ProxyConfig } from './types'
 
 /**
  * MtprotoNetworkHardener (Phase 2: MTProto Handshake, FakeTLS & Network Censorship Hardening)
  * 
  * Directly addresses high-impact competitor issues:
+ * - tdesktop #30042: High CPU usage when VPN is disconnected and killswitch is on (instant rejection loop)
  * - tdesktop #30733 (794 reactions): Update fingerprint MTPROTO FakeTLS (Censorship bypass)
  * - tdesktop #16093 (24 reactions): Unresponsive / UI freeze after connecting to network
  * - tdesktop #17316: Proxy reconnect loop forever
@@ -24,6 +25,7 @@ export interface NetworkHardenerTelemetry {
   socketsSafelyTornDownCount: number;
   proxyRacesConductedCount: number;
   circuitBreakerTripsCount: number;
+  instantRejectionClampsCount: number;
 }
 
 export class MtprotoNetworkHardener {
@@ -44,6 +46,7 @@ export class MtprotoNetworkHardener {
   private socketsTornDown: number = 0;
   private proxyRacesConducted: number = 0;
   private circuitBreakerTrips: number = 0;
+  private instantRejectionClamps: number = 0;
 
   private constructor() {}
 
@@ -198,6 +201,52 @@ export class MtprotoNetworkHardener {
     });
   }
 
+  /**
+   * Defensive Circuit Breaker for Instant Network Rejections (VPN Killswitch / Firewall rejection spinloop guard).
+   * Directly resolves tdesktop #30042 (100% CPU on VPN disconnect with killswitch active).
+   *
+   * When an OS firewall (e.g. Linux iptables/nftables REJECT, or Windows WFP filter) immediately rejects
+   * a TCP socket in microseconds (ECONNREFUSED / WSAECONNREFUSED / EHOSTUNREACH), this method detects
+   * the sub-100ms roundtrip rejection and enforces an unconditional minimum clamp delay (e.g. 1500ms + jitter),
+   * preventing zero-delay spin loops in userspace event loops.
+   */
+  public calculateKillswitchGuardedDelay(
+    attempt: number,
+    connectionElapsedMs: number,
+    errorSnippet?: string,
+    minClampFloorMs: number = 1500,
+    randomFn: () => number = Math.random
+  ): { isInstantRejection: boolean; delayMs: number } {
+    const isInstant = connectionElapsedMs >= 0 && connectionElapsedMs < 100;
+    const isRefusalError = Boolean(
+      errorSnippet &&
+        (errorSnippet.includes('ECONNREFUSED') ||
+          errorSnippet.includes('WSAECONNREFUSED') ||
+          errorSnippet.includes('EHOSTUNREACH') ||
+          errorSnippet.includes('ENETUNREACH') ||
+          errorSnippet.includes('WSAEACCES'))
+    );
+
+    if (isInstant || isRefusalError) {
+      this.instantRejectionClamps++;
+      // Enforce minimum floor + jitter (1500ms - 2250ms) to ensure event loop breathes
+      const jitter = Math.floor(randomFn() * 750);
+      const safeAttempt = Math.min(attempt, 6);
+      const exponentialDelay = minClampFloorMs * Math.pow(1.5, safeAttempt);
+      const finalDelay = Math.min(30000, Math.round(exponentialDelay + jitter));
+
+      return {
+        isInstantRejection: true,
+        delayMs: finalDelay,
+      };
+    }
+
+    return {
+      isInstantRejection: false,
+      delayMs: 0,
+    };
+  }
+
   public getTelemetry(): NetworkHardenerTelemetry {
     return {
       fakeTlsProcessedCount: this.fakeTlsProcessed,
@@ -205,8 +254,10 @@ export class MtprotoNetworkHardener {
       socketsSafelyTornDownCount: this.socketsTornDown,
       proxyRacesConductedCount: this.proxyRacesConducted,
       circuitBreakerTripsCount: this.circuitBreakerTrips,
+      instantRejectionClampsCount: this.instantRejectionClamps,
     };
   }
 }
 
 export const mtprotoNetworkHardener = MtprotoNetworkHardener.getInstance();
+

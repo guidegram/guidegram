@@ -194,7 +194,7 @@ export const CommandAutocompleteDrawer: React.FC<CommandAutocompleteProps> = ({
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-mono font-bold text-primary-400 text-xs shrink-0">
-                  {cmdName}
+                  {cmdFormatted}
                 </span>
                 <span
                   dir={isRtl ? 'rtl' : 'ltr'}
@@ -551,7 +551,7 @@ export const BotMenuDrawer: React.FC<BotMenuDrawerProps> = ({
   }
 
   const botUsername = chat.username || chatDetails?.username
-  const isGroupChat = Boolean(chat.isGroup || chat.isSupergroup || chat.type === 'group' || chat.type === 'supergroup')
+  const isGroupChat = Boolean(chat.isGroup || (chat as any).isSupergroup || (chat as any).type === 'group' || (chat as any).type === 'supergroup')
 
   return (
     <div className={`relative shrink-0 ${className}`}>

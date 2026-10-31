@@ -4219,7 +4219,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     // Optimistic local state update using TelegramReactionEngine
     const toggleResult = TelegramReactionEngine.getInstance().toggleReaction(currentRx, emoji, {
       id: chat.accountId,
-      isAnonymousAdmin: Boolean(chatDetails?.adminRights?.anonymous),
+      isAnonymousAdmin: Boolean((chatDetails as any)?.adminRights?.anonymous),
     })
 
     setReactionOverrides((prev) => ({ ...prev, [msg.id]: toggleResult.nextReactions }))
