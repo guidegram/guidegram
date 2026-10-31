@@ -143,6 +143,7 @@ import { parseTelegramUrl } from '../utils/telegramLink'
 import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
 import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverlay'
 import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
+import { isAnimationMedia, partitionMediaIntoTelegramAlbums } from '../utils/telegramMediaGroupEngine'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
 import { MediaViewerModal } from './MediaViewerModal'
 import { ImageEditorModal } from './media/ImageEditorModal'
@@ -2533,7 +2534,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const groupedAlbums = React.useMemo(() => {
     const map = new Map<string, MessageItem[]>()
     for (const m of filteredMessages) {
-      if (m.groupedId && (m.mediaType === 'photo' || m.mediaType === 'video')) {
+      if (m.groupedId && (m.mediaType === 'photo' || m.mediaType === 'video') && !isAnimationMedia(m)) {
         const existing = map.get(m.groupedId) || []
         existing.push(m)
         map.set(m.groupedId, existing)
@@ -2975,35 +2976,44 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     })
 
     try {
-      for (let i = 0; i < mediaItems.length; i++) {
-        const item = mediaItems[i]
-        const fileCaption = i === 0 ? options.caption : undefined
-        setUploadProgress({
-          isUploading: true,
-          percent: Math.round((i / mediaItems.length) * 100),
-          fileName:
-            mediaItems.length > 1
-              ? `[${i + 1}/${mediaItems.length}] ${item.name}`
-              : item.name,
-        })
+      const chunks = partitionMediaIntoTelegramAlbums(mediaItems)
+      let overallIndex = 0
 
-        if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
-          const typingAction = options.compress ? 'upload_photo' : 'upload_document'
-          window.guidegram.sendTyping(chat.accountId, chat.id, typingAction).catch(() => {})
-        }
+      for (const chunk of chunks) {
+        for (let i = 0; i < chunk.items.length; i++) {
+          const item = chunk.items[i]
+          // Master caption invariant: only the first item in the whole sending batch receives the caption
+          const fileCaption = overallIndex === 0 ? options.caption : undefined
+          overallIndex++
 
-        const sendOptions: SendMediaOptions = {
-          caption: fileCaption,
-          replyToMsgId: replyId,
-          // When compress is true (DEFAULT): forceDocument is false -> sent as photo!
-          // When compress is false: forceDocument is true -> sent as uncompressed document!
-          forceDocument: !options.compress,
-        }
+          setUploadProgress({
+            isUploading: true,
+            percent: Math.round((overallIndex / mediaItems.length) * 100),
+            fileName:
+              mediaItems.length > 1
+                ? `[${overallIndex}/${mediaItems.length}] ${item.name}`
+                : item.name,
+          })
 
-        if (onSendMedia) {
-          await onSendMedia(item.path, sendOptions)
-        } else if (chat?.accountId && chat?.id && window.guidegram?.sendMedia) {
-          await window.guidegram.sendMedia(chat.accountId, chat.id, item.path, sendOptions)
+          if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+            const typingAction = options.compress ? 'upload_photo' : 'upload_document'
+            window.guidegram.sendTyping(chat.accountId, chat.id, typingAction).catch(() => {})
+          }
+
+          const sendOptions: SendMediaOptions = {
+            caption: fileCaption,
+            replyToMsgId: replyId,
+            // When compress is true (DEFAULT): forceDocument is false -> sent as photo!
+            // When compress is false: forceDocument is true -> sent as uncompressed document!
+            forceDocument: !options.compress,
+            groupedId: chunk.isGroup ? chunk.groupedId : undefined,
+          }
+
+          if (onSendMedia) {
+            await onSendMedia(item.path, sendOptions)
+          } else if (chat?.accountId && chat?.id && window.guidegram?.sendMedia) {
+            await window.guidegram.sendMedia(chat.accountId, chat.id, item.path, sendOptions)
+          }
         }
       }
 

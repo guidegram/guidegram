@@ -1852,6 +1852,7 @@ export const App: React.FC = () => {
         isRead: false,
         replyToMsgId: options?.replyToMsgId,
         isSilent: options?.silent,
+        groupedId: options?.groupedId || sent.groupedId,
         replyTo: options?.replyToMsgId
           ? {
               replyToMsgId: options.replyToMsgId,
