@@ -11506,17 +11506,22 @@ export class AccountManager {
     accountId: string,
     chatId: string,
     message: string,
-    replyToMsgId?: number
+    replyToMsgId?: number,
+    entities?: MessageEntityItem[]
   ): Promise<boolean> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
       const inputPeer = await this.resolveInputPeer(accountId, chatId)
+      const tlEntities = formatMtprotoEntities(entities)
       const callParams: any = {
         _: 'messages.saveDraft',
         peer: inputPeer,
         message: message || '',
+      }
+      if (tlEntities && tlEntities.length > 0) {
+        callParams.entities = tlEntities
       }
       if (replyToMsgId) {
         callParams.replyTo = {
@@ -11525,6 +11530,42 @@ export class AccountManager {
         }
       }
       await holder.client.call(callParams)
+
+      // Instantly update local dialogs cache & emit draft-updated so UI reflects it immediately
+      const draftItem: DraftItem | undefined = message?.trim()
+        ? {
+            text: message,
+            date: Date.now(),
+            replyToMsgId,
+            entities,
+          }
+        : undefined
+
+      try {
+        const cached = this.store.loadDialogsCache(accountId)
+        if (cached && cached.length > 0) {
+          const cleanC = chatId.replace(/^-100/, '').replace(/^-/, '')
+          let changed = false
+          const next = cached.map((d) => {
+            const cleanD = d.id.replace(/^-100/, '').replace(/^-/, '')
+            if (d.id === chatId || cleanD === cleanC) {
+              changed = true
+              return { ...d, draft: draftItem }
+            }
+            return d
+          })
+          if (changed) {
+            this.store.saveDialogsCache(accountId, next)
+          }
+        }
+      } catch (_) {}
+
+      this.onEventCallback?.('telegram:draft-updated', {
+        accountId,
+        chatId,
+        draft: draftItem,
+      })
+
       return true
     } catch (err: any) {
       const msg = String(err?.message || '')
