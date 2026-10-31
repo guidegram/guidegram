@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Shield, Inbox, Settings, Bot, Smartphone, Wallet, ExternalLink, Copy, Check } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { Avatar } from './Avatar'
+import { useI18n } from '../i18n'
 
 interface AccountDockProps {
   accounts: AccountInfo[]
@@ -36,6 +37,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
   onOpenAccountExport,
   onOpenTonWallet,
 }) => {
+  const { t } = useI18n()
   const [contextMenu, setContextMenu] = useState<{
     x: number
     y: number
@@ -95,8 +97,8 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         onClick={onOpenSavedMessages}
         onMouseEnter={(e) =>
           showTooltip(e.currentTarget, {
-            title: 'پیام‌های ذخیره‌شده (Saved Messages)',
-            subtitle: 'دسترسی سریع به یادداشت‌ها و فایل‌های شخصی',
+            title: t('account_dock.saved_messages_title'),
+            subtitle: t('account_dock.saved_messages_subtitle'),
           })
         }
         onMouseLeave={hideTooltip}
@@ -129,8 +131,8 @@ export const AccountDock: React.FC<AccountDockProps> = ({
         onClick={onToggleUnifiedInbox}
         onMouseEnter={(e) =>
           showTooltip(e.currentTarget, {
-            title: 'صندوق یکپارچه (Unified Inbox)',
-            subtitle: 'مشاهده پیام‌های تمام اکانت‌ها در یکجا',
+            title: t('account_dock.unified_inbox_title'),
+            subtitle: t('account_dock.unified_inbox_subtitle'),
           })
         }
         onMouseLeave={hideTooltip}
@@ -191,10 +193,10 @@ export const AccountDock: React.FC<AccountDockProps> = ({
                   showTooltip(e.currentTarget, {
                     title: `${safeFirst}${acc.lastName ? ` ${acc.lastName}` : ''}`,
                     subtitle: acc.isBot
-                      ? 'ربات تلگرام'
+                      ? t('account_dock.telegram_bot')
                       : acc.phone || (acc.username ? `@${acc.username}` : `ID: ${acc.id}`),
                     badge: acc.isBot ? 'Bot' : undefined,
-                    hotkey: 'Ctrl+کلیک: پنجره جدید',
+                    hotkey: t('account_dock.hotkey_new_window'),
                   })
                 }
                 onMouseLeave={hideTooltip}
@@ -254,8 +256,8 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           onClick={onOpenAddAccount}
           onMouseEnter={(e) =>
             showTooltip(e.currentTarget, {
-              title: 'افزودن اکانت جدید',
-              subtitle: 'اتصال نامحدود اکانت و ربات تلگرام',
+              title: t('account_dock.add_account_title'),
+              subtitle: t('account_dock.add_account_subtitle'),
             })
           }
           onMouseLeave={hideTooltip}
@@ -280,8 +282,8 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           onMouseEnter={(e) => {
             if (!isToolsHubOpen) {
               showTooltip(e.currentTarget, {
-                title: 'هاب ابزارهای پیشرفته گایدگرام',
-                subtitle: 'هوش مصنوعی، پروکسی، ولت و انتقال امن',
+                title: t('account_dock.tools_hub_title'),
+                subtitle: t('account_dock.tools_hub_subtitle'),
                 badge: 'Hub',
               })
             }
@@ -405,8 +407,8 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           onClick={onOpenSettings}
           onMouseEnter={(e) =>
             showTooltip(e.currentTarget, {
-              title: 'تنظیمات گایدگرام',
-              subtitle: 'شخصی‌سازی، تم و امنیت سیستم',
+              title: t('account_dock.settings_title'),
+              subtitle: t('account_dock.settings_subtitle'),
             })
           }
           onMouseLeave={hideTooltip}
@@ -428,7 +430,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           <div className="px-3 py-2 border-b border-white/10 mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-              <span className="text-xs font-bold text-gray-100">ابزارهای پیشرفته گایدگرام</span>
+              <span className="text-xs font-bold text-gray-100">{t('account_dock.tools_hub_header')}</span>
             </div>
             <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary-500/20 text-cyan-300 border border-primary-500/30">
               HUB
@@ -450,14 +452,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-200 group-hover:text-cyan-300 transition-colors">
-                  هاب هوش مصنوعی و MCP
+                  {t('account_dock.mcp_hub_title')}
                 </span>
                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300">
                   AI
                 </span>
               </div>
               <div className="text-[10px] text-gray-400 truncate">
-                دستیار هوشمند و پروتکل ابزارها
+                {t('account_dock.mcp_hub_desc')}
               </div>
             </div>
           </button>
@@ -477,14 +479,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-200 group-hover:text-emerald-300 transition-colors">
-                  تنظیمات پروکسی و پینگ
+                  {t('account_dock.proxy_settings_title')}
                 </span>
                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
                   MTProto
                 </span>
               </div>
               <div className="text-[10px] text-gray-400 truncate">
-                مدیریت پروکسی، پینگ و اتصال
+                {t('account_dock.proxy_settings_desc')}
               </div>
             </div>
           </button>
@@ -505,14 +507,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-200 group-hover:text-[#00c2ff] transition-colors">
-                    کیف پول بلاکچین TON
+                    {t('account_dock.ton_wallet_title')}
                   </span>
                   <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#0098ea]/20 text-[#00c2ff]">
                     Web3
                   </span>
                 </div>
                 <div className="text-[10px] text-gray-400 truncate">
-                  مدیریت دارایی‌ها، گیفت‌ها و TonConnect
+                  {t('account_dock.ton_wallet_desc')}
                 </div>
               </div>
             </button>
@@ -534,14 +536,14 @@ export const AccountDock: React.FC<AccountDockProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-200 group-hover:text-cyan-300 transition-colors">
-                    انتقال اکانت به موبایل
+                    {t('account_dock.airgap_export_title')}
                   </span>
                   <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300">
                     Air-Gap
                   </span>
                 </div>
                 <div className="text-[10px] text-gray-400 truncate">
-                  همگام‌سازی امن بدون اینترنت با QR
+                  {t('account_dock.airgap_export_desc')}
                 </div>
               </div>
             </button>
@@ -562,10 +564,10 @@ export const AccountDock: React.FC<AccountDockProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">
-                تنظیمات گایدگرام
+                {t('account_dock.settings_title')}
               </span>
               <div className="text-[10px] text-gray-500 truncate">
-                شخصی‌سازی، تم، امنیت و حریم خصوصی
+                {t('account_dock.settings_subtitle')}
               </div>
             </div>
           </button>
@@ -610,7 +612,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
               {contextMenu.account.firstName} {contextMenu.account.lastName || ''}
             </div>
             <div className="text-[10px] text-gray-400 font-mono truncate">
-              {contextMenu.account.isBot ? 'ربات تلگرام' : contextMenu.account.phone || contextMenu.account.id}
+              {contextMenu.account.isBot ? t('account_dock.telegram_bot') : contextMenu.account.phone || contextMenu.account.id}
             </div>
           </div>
 
@@ -624,7 +626,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           >
             <span className="flex items-center gap-2">
               <ExternalLink className="w-3.5 h-3.5 text-accent-cyan" />
-              <span>باز کردن در پنجره جدید</span>
+              <span>{t('account_dock.open_new_window')}</span>
             </span>
             <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
               Ctrl+Click
@@ -640,7 +642,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
             className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-left"
           >
             <Check className="w-3.5 h-3.5 text-accent-emerald" />
-            <span>سوییچ به این اکانت</span>
+            <span>{t('account_dock.switch_account')}</span>
           </button>
 
           <button
@@ -657,11 +659,11 @@ export const AccountDock: React.FC<AccountDockProps> = ({
           >
             <span className="flex items-center gap-2">
               <Copy className="w-3.5 h-3.5 text-gray-400" />
-              <span>کپی شناسه (ID)</span>
+              <span>{t('account_dock.copy_id')}</span>
             </span>
             {copiedId && (
               <span className="text-[10px] text-accent-emerald font-bold animate-in fade-in">
-                کپی شد!
+                {t('account_dock.copied')}
               </span>
             )}
           </button>
@@ -676,7 +678,7 @@ export const AccountDock: React.FC<AccountDockProps> = ({
               className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs text-gray-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-left border-t border-white/5 mt-0.5 pt-1.5"
             >
               <Shield className="w-3.5 h-3.5 text-accent-amber" />
-              <span>تنظیمات پروکسی</span>
+              <span>{t('account_dock.proxy_settings')}</span>
             </button>
           )}
         </div>

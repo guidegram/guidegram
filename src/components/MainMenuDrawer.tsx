@@ -434,7 +434,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <History className="w-4 h-4 text-accent-cyan group-hover:rotate-[-20deg] transition-transform" />
                 <div className="flex items-center justify-between flex-1">
-                  <span>{isRTL ? 'تایم‌لاین تغییرات مخاطبین' : 'Contact Changes Timeline'}</span>
+                  <span>{t('menu.contact_changes')}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/20 font-bold">NEW</span>
                 </div>
               </button>
@@ -486,7 +486,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <div className="flex items-center gap-4">
                   <Smartphone className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-                  <span>{isRTL ? 'انتقال و پشتیبان‌گیری اکانت‌ها' : 'Transfer & Backup Accounts'}</span>
+                  <span>{t('menu.transfer_backup')}</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 font-bold">QR</span>
               </button>
@@ -502,7 +502,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <div className="flex items-center gap-4">
                   <Wallet className="w-4 h-4 text-[#00c2ff] group-hover:scale-110 transition-transform" />
-                  <span>{isRTL ? 'کیف پول و بلاکچین TON' : 'TON Wallet & TonConnect'}</span>
+                  <span>{t('menu.ton_wallet')}</span>
                 </div>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#0098ea]/15 text-[#00c2ff] border border-[#0098ea]/30 font-bold">TON</span>
               </button>
@@ -518,7 +518,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <div className="flex items-center gap-4">
                   <Bot className="w-4 h-4 text-accent-cyan group-hover:scale-110 transition-transform" />
-                  <span>AI & MCP Hub (دستیار هوش مصنوعی)</span>
+                  <span>{t('menu.mcp_hub')}</span>
                 </div>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-300 border border-primary-500/30">
                   MCP
@@ -559,7 +559,7 @@ export const MainMenuDrawer: React.FC<MainMenuDrawerProps> = ({
               >
                 <div className="flex items-center gap-4">
                   <Smartphone className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                  <span>{isRTL ? 'انتقال اکانت‌ها به موبایل' : 'Transfer to Mobile'}</span>
+                  <span>{t('menu.transfer_mobile')}</span>
                 </div>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   QR Sync

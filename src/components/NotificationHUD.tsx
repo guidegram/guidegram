@@ -11,6 +11,7 @@ import {
   Loader2,
   Lock,
 } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 export interface ActiveNotificationItem {
   id: string
@@ -138,6 +139,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   onMarkAsRead,
   onMuteChat,
 }) => {
+  const { t } = useI18n()
   const [isReplying, setIsReplying] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -310,7 +312,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               className="px-2.5 py-1 rounded-xl bg-primary-600/15 hover:bg-primary-600/25 border border-primary-500/20 hover:border-primary-500/40 text-primary-300 text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer"
             >
               <CornerDownLeft className="w-3 h-3" />
-              <span>پاسخ</span>
+              <span>{t('notification.reply')}</span>
             </button>
           )}
 
@@ -325,7 +327,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
             title="Mark as read"
           >
             <CheckCheck className="w-3 h-3 text-cyan-400" />
-            <span>خوانده شد</span>
+            <span>{t('notification.mark_read')}</span>
           </button>
 
           <button
@@ -353,7 +355,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               type="text"
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
-              placeholder="نوشتن پاسخ سریع..."
+              placeholder={t('notification.quick_reply_placeholder')}
               disabled={isSending}
               className="flex-1 bg-dark-950/80 border border-white/10 focus:border-primary-500/50 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 placeholder-gray-500 outline-none transition-colors"
               onKeyDown={(e) => {

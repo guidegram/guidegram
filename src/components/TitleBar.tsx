@@ -4,6 +4,7 @@ import { Minus, Square, X, Sparkles, Menu, Bell, Lock } from 'lucide-react'
 import { AccountInfo } from '../types/telegram'
 import { useIsMobile } from '../utils/useIsMobile'
 import logoImg from '../assets/logo.png'
+import { useI18n } from '../i18n'
 
 interface TitleBarProps {
   activeAccount: AccountInfo | null
@@ -38,6 +39,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenNotificationHistory,
   unreadNotificationsCount = 0,
 }) => {
+  const { t } = useI18n()
   const [isMax, setIsMax] = useState(false)
   const isMobile = useIsMobile(768)
 
@@ -140,7 +142,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               whileTap={{ scale: 0.94 }}
               type="button"
               onClick={onOpenNotificationHistory}
-              title="تاریخچه اعلان‌ها (Notification History)"
+              title={t('title_bar.notification_history')}
               className="relative p-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white cursor-pointer"
             >
               <Bell className="w-4 h-4 text-accent-cyan" />
@@ -157,7 +159,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               whileTap={{ scale: 0.92 }}
               type="button"
               onClick={onLockApp}
-              title="قفل کردن فوری گایدگرام (Lock Now)"
+              title={t('title_bar.lock_now')}
               className="p-2 rounded-xl text-gray-300 hover:text-accent-cyan bg-white/5 cursor-pointer"
             >
               <Lock className="w-4 h-4 text-accent-cyan" />
@@ -236,8 +238,11 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               onClick={onOpenProxyModal}
               title={
                 activeAccount.proxyConfig?.enabled
-                  ? `پروکسی فعال است: ${(activeAccount.proxyConfig.type || 'SOCKS5').toUpperCase()} (${activeAccount.proxyConfig.host}) — کلیک برای تغییر`
-                  : 'اتصال مستقیم — کلیک برای باز کردن تنظیمات پروکسی'
+                  ? t('title_bar.proxy_active', {
+                      type: (activeAccount.proxyConfig.type || 'SOCKS5').toUpperCase(),
+                      host: activeAccount.proxyConfig.host,
+                    })
+                  : t('title_bar.direct_connection')
               }
               className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition-all cursor-pointer ${
                 activeAccount.proxyConfig?.enabled
@@ -279,7 +284,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             whileTap={{ scale: 0.95 }}
             type="button"
             onClick={onOpenNotificationHistory}
-            title="تاریخچه اعلان‌ها (Notification History)"
+            title={t('title_bar.notification_history')}
             className="relative p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer mr-1 titlebar-no-drag"
           >
             <Bell className="w-4 h-4 text-gray-300 hover:text-accent-cyan transition-colors" />
@@ -297,7 +302,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             whileTap={{ scale: 0.95 }}
             type="button"
             onClick={onLockApp}
-            title="قفل کردن فوری گایدگرام (Lock Guidegram Now)"
+            title={t('title_bar.lock_now')}
             className="p-1.5 rounded-xl text-gray-400 hover:text-accent-cyan hover:bg-white/10 transition-colors cursor-pointer mr-1 titlebar-no-drag"
           >
             <Lock className="w-4 h-4 text-accent-cyan" />

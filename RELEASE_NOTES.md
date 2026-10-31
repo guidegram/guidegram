@@ -4,7 +4,7 @@
 
 ---
 
-### 🌟 Release v2.5.4 Highlights (Delta from v2.5.2 to v2.5.4)
+### 🌟 Release v2.5.4 Highlights
 
 * ⚡ **Supercharged /boost Performance & Zero-Disk I/O Surgery:**
   * **Strict Transition-Only Activity Tracking:** Eliminated 610,000+ duplicate status records by enforcing strict state transition checks (`lastRec.status !== parsed.status`) capped at 50 historical entries per user.
@@ -45,38 +45,3 @@
   * **Persian NLP Normalization:** Intelligent text search supporting half-spaces (نیم‌فاصله), Arabic/Persian character unification (ی/ک), and diacritic stripping.
   * **Anti-Delete Local Cache & PV Auto-Download:** Instant auto-download of private chat photos with local caching to preserve deleted media.
   * **Granular Audit Tracking Scopes:** User-configurable limits for audit tracking across private chats, groups, and channels.
-
----
-
-# 🚀 Guidegram v2.5.2 — The Ultra-Performance & Zero-Bloat Audit Architecture Edition
-
-> **Milestone Production Release** eliminating multi-gigabyte memory and CPU bloat by overhauling the local audit engine, supporting unlimited edit revision histories with near-zero overhead, eradicating cross-chat message collisions, auto-sanitizing legacy disk bloat, preserving active chats across window minimize cycles, and introducing liquid jelly glass rendering for Telegram animated Star Gifts.
-
----
-
-### 🌟 Release v2.5.2 Highlights
-
-* ⚡ **Ultra-Low Memory & Zero-Bloat Audit Engine:**
-  * **Event-Driven Audit Recording:** Completely eliminated dumping unedited, non-deleted normal messages into the audit store. Only actual edit events (`UpdateEditMessage`) and delete events (`UpdateDeleteMessages`) are persisted.
-  * **Over 95% Disk & RAM Footprint Reduction:** Legacy multi-account audit logs exceeding 105MB shrunk to under 5MB, reclaiming over 1.5GB of JavaScript V8 heap memory.
-  * **Unlimited Edit Revision History:** Dropped artificial revision limits; users can edit messages continuously with full chronological revision timelines without memory or CPU penalties.
-  * **Ghost Tombstone Purging:** Eradicated transient ghost tombstones from disk writes, keeping the audit store lean, fast, and 100% focused on genuine content.
-
-* 🛡️ **Cross-Chat Isolation & Mailbox Security:**
-  * **Composite Key Scoping (`chatId:messageId`):** Scoped recent message caches to prevent channel message IDs from colliding with private chat messages sharing identical numeric IDs.
-  * **Private Delete Routing:** Fixed `findChatIdForMessageId` to isolate non-channel deletions, preventing channel activity from misattributing or hijacking private chat deletion events.
-
-* 🪟 **Window Lifecycle & Minimize Ergonomics:**
-  * **Eradicated Minimize Chat Drop Bug:** Removed the destructive `app:clear-active-chat` event on minimize; active chats, drafts, and scroll positions are strictly preserved across minimize/restore cycles.
-
-* 🎁 **Liquid Jelly Glass Star Gifts:**
-  * **Fluid Animated Bubbles:** Render live animated Telegram Star Gifts inside physics-based liquid jelly glass bubbles with complete visual parity with official Telegram desktop and mobile.
-
----
-
-# 🚀 Guidegram v2.5.1 — The Multi-Window & Precision Ergonomics Edition
-
-> **Milestone Production Release** introducing Native Multi-Window Account Isolation, Instant Zero-Lag Account Switching with Disk Cache Pre-Warming, Ergonomic Outer Badge Positioning, HD Contact Change Card Previews, Composite Message Timestamp Sorting, and Global Window Event Broadcasting.
-
----
-*For past release changelogs, please inspect the git commit history.*
