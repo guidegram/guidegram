@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T10:23:47.721Z",
+  "lastUpdated": "2026-10-31T10:29:19.504Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 79,
-    "githubIssuesCommented": 70,
+    "totalActivities": 80,
+    "githubIssuesCommented": 71,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_telegrambots_1595",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "rubenlagus/TelegramBots",
+      "issueNumber": 1595,
+      "commentId": 6542238379,
+      "url": "https://github.com/rubenlagus/TelegramBots/issues/1595#issuecomment-6542238379",
+      "title": "OkHttpFutureCallback may leave CompletableFuture incomplete after callback failure in onResponse",
+      "targetComponent": "OkHttpFutureCallback onResponse vs onFailure contract & thread starvation",
+      "status": "posted",
+      "timestamp": "2026-10-31T10:29:19.503Z",
+      "architecturalAngle": "OkHttp callback contract breakdown, unhandled response body SocketException hanging CompletableFuture, thread starvation avoidance, and infallible settlement barrier."
+    },
     {
       "id": "gh_telegrambots_1608",
       "platform": "github",
