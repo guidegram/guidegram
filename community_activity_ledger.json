@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T05:41:22.439540+00:00",
+  "lastUpdated": "2026-10-31T05:48:22.523501+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 60,
-    "githubIssuesCommented": 51,
+    "totalActivities": 61,
+    "githubIssuesCommented": 52,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_24700",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 24700,
+      "targetTitle": "Download speed is still limited to 10MBps for premium accounts",
+      "targetUser": "Telegram Desktop Maintainers & Community",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/24700#issuecomment-6539734152",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/24700",
+      "status": "live_public",
+      "summary": "Masterclass architectural breakdown on single TCP stream Bandwidth-Delay Product (BDP) starvation vs mobile 8-connection download session pools, 1MB upload.getFile chunk pipelining, and direct-to-disk pwrite sparse file allocation, backed by Guidegram production implementation sustaining 100+ MB/s.",
+      "timestamp": "2026-10-31T05:48:22.523501+00:00"
+    },
     {
       "id": "gh_comment_teloxide_482",
       "platform": "github",
