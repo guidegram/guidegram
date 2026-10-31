@@ -145,6 +145,7 @@ import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverl
 import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
 import { isAnimationMedia, partitionMediaIntoTelegramAlbums } from '../utils/telegramMediaGroupEngine'
 import { triggerReactionBurst } from '../utils/triggerReactionBurst'
+import { TelegramReactionEngine } from '../services/telegramReactionEngine'
 import { MediaViewerModal } from './MediaViewerModal'
 import { ImageEditorModal } from './media/ImageEditorModal'
 import { SendMediaPreviewModal } from './media/SendMediaPreviewModal'
@@ -4207,7 +4208,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }, 10)
   }
 
-  // Message Reactions Toggle (MTProto messages.sendReaction)
+  // Message Reactions Toggle (MTProto messages.sendReaction with reversible rollback)
   const handleToggleReaction = async (msg: MessageItem, emoji: string) => {
     if (!chat?.accountId || !chat?.id) return
     const currentRx = reactionOverrides[msg.id] ?? msg.reactions ?? []
@@ -4215,41 +4216,26 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     const isAlreadyChosen = !!existingReaction?.chosen
     const emojiToSend = isAlreadyChosen ? '' : emoji
 
-    // Optimistic local state update
-    const nextRx = [...currentRx]
-    const foundIdx = nextRx.findIndex((r) => r.emoji === emoji)
-    if (isAlreadyChosen) {
-      if (foundIdx >= 0) {
-        if (nextRx[foundIdx].count <= 1) {
-          nextRx.splice(foundIdx, 1)
-        } else {
-          nextRx[foundIdx] = {
-            ...nextRx[foundIdx],
-            count: nextRx[foundIdx].count - 1,
-            chosen: false,
-          }
-        }
-      }
-    } else {
-      if (foundIdx >= 0) {
-        nextRx[foundIdx] = {
-          ...nextRx[foundIdx],
-          count: nextRx[foundIdx].count + 1,
-          chosen: true,
-        }
-      } else {
-        nextRx.push({ emoji, count: 1, chosen: true })
-      }
-    }
-    setReactionOverrides((prev) => ({ ...prev, [msg.id]: nextRx }))
+    // Optimistic local state update using TelegramReactionEngine
+    const toggleResult = TelegramReactionEngine.getInstance().toggleReaction(currentRx, emoji, {
+      id: chat.accountId,
+      isAnonymousAdmin: Boolean(chatDetails?.adminRights?.anonymous),
+    })
+
+    setReactionOverrides((prev) => ({ ...prev, [msg.id]: toggleResult.nextReactions }))
 
     try {
       if (window.guidegram?.sendReaction) {
-        await window.guidegram.sendReaction(chat.accountId, chat.id, msg.id, emojiToSend)
+        const success = await window.guidegram.sendReaction(chat.accountId, chat.id, msg.id, emojiToSend)
+        if (success === false) {
+          throw new Error('Server rejected reaction')
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Failed to send reaction:', err)
-      showToast('Failed to send reaction')
+      // Rollback optimistic state to prevent phantom disappearing reactions (tdesktop #27419)
+      setReactionOverrides((prev) => ({ ...prev, [msg.id]: toggleResult.previousReactions }))
+      showToast(err?.message ? `Failed to react: ${err.message}` : 'Failed to send reaction')
     }
   }
 
