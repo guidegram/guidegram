@@ -799,6 +799,24 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const hasMovedPastThresholdRef = useRef(false)
   const { t, language, formatNumber: formatLocalizedNumber } = useI18n()
   const isFa = language === 'fa'
+
+  const isPeerSelf = (peerId?: string, accountId?: string) => {
+    if (!peerId || !accountId) return false
+    if (peerId === accountId) return true
+    const cleanP = peerId.replace(/^-100/, '').replace(/^-/, '')
+    const cleanA = accountId.replace(/^-100/, '').replace(/^-/, '')
+    return cleanP === cleanA
+  }
+
+  const isSavedChat = Boolean(
+    chat?.isSavedMessages ||
+    chat?.id === 'saved_messages' ||
+    chat?.id === 'self' ||
+    chat?.id === 'me' ||
+    (chat?.accountId && (chat.id === chat.accountId || isPeerSelf(chat.id, chat.accountId))) ||
+    chat?.title?.toLowerCase() === 'saved messages' ||
+    chat?.title === 'پیام‌های ذخیره‌شده'
+  )
   const [toast, setToast] = useState<string | null>(null)
   const [viewingEditHistoryMsg, setViewingEditHistoryMsg] = useState<MessageItem | null>(null)
   const [thanosTarget, setThanosTarget] = useState<{ id: number; rect: DOMRect } | null>(null)
@@ -1102,6 +1120,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     chat?.isAdmin
   )
   const canSendMessages = Boolean(
+    isSavedChat ||
     chat?.isSavedMessages ||
     isUserAdminOrCreator ||
     (chatDetails?.permissionsMatrix?.sendMessages !== false &&
@@ -5968,10 +5987,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             <Avatar
               accountId={chat.accountId}
               peerId={chat.id}
-              title={chat.title}
-              initials={chat.avatarInitials}
-              avatarUrl={chat.avatarUrl}
+              title={isSavedChat ? (t('app.saved_messages') || 'Saved Messages') : chat.title}
+              initials={isSavedChat ? '🔖' : chat.avatarInitials}
+              avatarUrl={isSavedChat ? undefined : chat.avatarUrl}
               size="md"
+              isSavedMessages={isSavedChat}
               isChannel={chat.isChannel}
               isForum={Boolean(chatDetails?.isForum ?? chat?.isForum)}
               className="ring-2 ring-transparent group-hover:ring-primary-500/50 transition-all"
@@ -5989,10 +6009,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             >
               <div className="flex items-center gap-1.5">
                 <span
-                  dir={isRTL(chat.title) ? 'rtl' : 'ltr'}
+                  dir={isRTL(isSavedChat ? (t('app.saved_messages') || 'Saved Messages') : chat.title) ? 'rtl' : 'ltr'}
                   className="text-xs font-bold text-gray-100 group-hover:text-primary-300 transition-colors truncate"
                 >
-                  {chat.title}
+                  {isSavedChat ? (t('app.saved_messages') || 'Saved Messages') : chat.title}
                 </span>
                 {(chat.isSecretChat || chatDetails?.isSecretChat) && (
                   <span
@@ -6017,7 +6037,11 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               </div>
 
               <div className="text-[11px] text-gray-400 truncate">
-                {typingUsers.length > 0 ? (
+                {isSavedChat ? (
+                  <span className="text-gray-400 font-normal">
+                    {isFa ? 'فضای ابری اختصاصی و یادداشت‌ها' : 'Cloud storage & notes'}
+                  </span>
+                ) : typingUsers.length > 0 ? (
                   <span className="text-accent-cyan flex items-center gap-1.5">
                     <span className="flex items-end gap-0.5 shrink-0">
                       <span className="w-1 h-1 rounded-full bg-accent-cyan typing-pulse-dot" />
@@ -6182,7 +6206,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           )}
 
           {/* 1-on-1 Direct Voice Call Trigger */}
-          {!chat.isGroup && !chat.isChannel && !chat.isBot && !chat.isSavedMessages && (
+          {!chat.isGroup && !chat.isChannel && !chat.isBot && !chat.isSavedMessages && !isSavedChat && (
             <button
               type="button"
               onClick={() => {
@@ -6634,7 +6658,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         )}
 
       {/* Saved Messages 2.0 Dual-Pane Filter & Tags Bar */}
-      {chat?.isSavedMessages && (
+      {(chat?.isSavedMessages || isSavedChat) && (
         <SavedMessagesBar
           accountId={chat.accountId}
           messages={messages}

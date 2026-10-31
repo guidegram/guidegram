@@ -1515,12 +1515,23 @@ interface DialogListItemProps {
 
 export const DialogListItem = React.memo<DialogListItemProps>(
   ({ dialog, isSelected, showChatId, formatTime, formatNumber, t, onSelect, story, onOpenStory, onContextMenu }) => {
+    const isSavedChat = Boolean(
+      dialog.isSavedMessages ||
+      dialog.id === 'saved_messages' ||
+      dialog.id === 'self' ||
+      dialog.id === 'me' ||
+      (dialog.accountId && (dialog.id === dialog.accountId || dialog.id.replace(/^-100/, '').replace(/^-/, '') === dialog.accountId.replace(/^-100/, '').replace(/^-/, ''))) ||
+      dialog.title?.toLowerCase() === 'saved messages' ||
+      dialog.title === 'پیام‌های ذخیره‌شده'
+    )
+    const displayTitle = isSavedChat ? (t('app.saved_messages') || 'Saved Messages') : dialog.title
+
     return (
       <div
         role="option"
         tabIndex={0}
         aria-selected={isSelected}
-        aria-label={`${dialog.title}${dialog.unreadCount ? `, ${dialog.unreadCount} unread` : ''}`}
+        aria-label={`${displayTitle}${dialog.unreadCount ? `, ${dialog.unreadCount} unread` : ''}`}
         onClick={() => onSelect(dialog.id)}
         onContextMenu={(e) => onContextMenu?.(e, dialog)}
         onKeyDown={(e) => {
@@ -1561,9 +1572,10 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                   <Avatar
                     accountId={dialog.accountId}
                     peerId={dialog.id}
-                    title={dialog.title}
-                    initials={dialog.avatarInitials}
-                    avatarUrl={dialog.avatarUrl}
+                    title={displayTitle}
+                    initials={isSavedChat ? '🔖' : dialog.avatarInitials}
+                    avatarUrl={isSavedChat ? undefined : dialog.avatarUrl}
+                    isSavedMessages={isSavedChat}
                     size="md"
                     isChannel={dialog.isChannel}
                     isForum={dialog.isForum}
@@ -1574,9 +1586,10 @@ export const DialogListItem = React.memo<DialogListItemProps>(
               <Avatar
                 accountId={dialog.accountId}
                 peerId={dialog.id}
-                title={dialog.title}
-                initials={dialog.avatarInitials}
-                avatarUrl={dialog.avatarUrl}
+                title={displayTitle}
+                initials={isSavedChat ? '🔖' : dialog.avatarInitials}
+                avatarUrl={isSavedChat ? undefined : dialog.avatarUrl}
+                isSavedMessages={isSavedChat}
                 size="md"
                 isChannel={dialog.isChannel}
                 isForum={dialog.isForum}
@@ -1591,7 +1604,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                   <Lock className="w-3 h-3 text-accent-emerald shrink-0" />
                 )}
                 <span className={`text-xs font-bold truncate ${dialog.isSecretChat ? 'text-accent-emerald' : 'text-gray-100'}`}>
-                  {dialog.title}
+                  {displayTitle}
                 </span>
                 {dialog.customEmojiStatusId ? (
                   <CustomEmojiView

@@ -4,10 +4,11 @@ import { ProxyConfig, AutoHarvestStatus, WarpStatus, ProxyHealthReport } from '.
 import { ProxyHarvester } from './proxyHarvester'
 import { WarpManager } from './warpManager'
 import { DohResolver } from './dohResolver'
+import { mtprotoNetworkHardener } from './mtprotoNetworkHardener'
 
 export class ProxyManager {
   /**
-   * Measure latency of a proxy in milliseconds
+   * Measure latency of a proxy in milliseconds with safe socket teardown
    */
   public static async testProxyPing(proxy: ProxyConfig): Promise<number> {
     if (!proxy || !proxy.host || !proxy.port) return -1
@@ -23,7 +24,7 @@ export class ProxyManager {
       const cleanup = (latency: number) => {
         if (settled) return
         settled = true
-        socket.destroy()
+        mtprotoNetworkHardener.safeTeardownSocket(socket)
         resolve(latency)
       }
 
