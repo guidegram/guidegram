@@ -177,6 +177,7 @@ export interface DraftItem {
   text: string
   date?: number
   replyToMsgId?: number
+  entities?: MessageEntityItem[]
 }
 
 export interface InlineButton {

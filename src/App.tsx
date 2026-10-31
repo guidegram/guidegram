@@ -43,6 +43,7 @@ import {
   SendMessageOptions,
   SendMediaOptions,
   CloudFolderItem,
+  DraftItem,
 } from './types/telegram'
 import { playNotificationSound } from './utils/soundEffects'
 import { NotificationHUD, ActiveNotificationItem } from './components/NotificationHUD'
@@ -456,6 +457,7 @@ export const App: React.FC = () => {
     let unsubscribeAvatarUpdated: (() => void) | undefined
     let unsubscribeDialogsUpdated: (() => void) | undefined
     let unsubscribeMediaDownloaded: (() => void) | undefined
+    let unsubscribeDraftUpdated: (() => void) | undefined
 
     if (window.guidegram?.on) {
       unsubscribeMsg = window.guidegram.on('telegram:new-message', (payload: any) => {
@@ -1177,6 +1179,29 @@ export const App: React.FC = () => {
         }
       )
 
+      // Real-time Cloud Drafts Synchronizer (Telegram MTProto Layer 180+)
+      unsubscribeDraftUpdated = window.guidegram.on(
+        'telegram:draft-updated',
+        (payload: { accountId: string; chatId: string; draft?: DraftItem }) => {
+          if (!payload) return
+          const { accountId, chatId, draft } = payload
+
+          setDialogsByAccount((prev) => {
+            const list = prev[accountId]
+            if (!list) return prev
+            let changed = false
+            const next = list.map((d) => {
+              if (d.id === chatId || isPeerMatch(d.id, chatId)) {
+                changed = true
+                return { ...d, draft }
+              }
+              return d
+            })
+            return changed ? { ...prev, [accountId]: next } : prev
+          })
+        }
+      )
+
       return () => {
         unsubscribeMsg?.()
         unsubscribeMsgDeleted?.()
@@ -1191,6 +1216,7 @@ export const App: React.FC = () => {
         unsubscribeReadOutbox?.()
         unsubscribeAvatarUpdated?.()
         unsubscribeDialogsUpdated?.()
+        unsubscribeDraftUpdated?.()
         unsubscribeDeepLink?.()
       }
     }
