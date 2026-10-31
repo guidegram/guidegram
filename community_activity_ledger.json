@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T10:07:38.654Z",
+  "lastUpdated": "2026-10-31T10:23:47.721Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 78,
-    "githubIssuesCommented": 69,
+    "totalActivities": 79,
+    "githubIssuesCommented": 70,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_telegrambots_1608",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "rubenlagus/TelegramBots",
+      "issueNumber": 1608,
+      "commentId": 6542185701,
+      "url": "https://github.com/rubenlagus/TelegramBots/issues/1608#issuecomment-6542185701",
+      "title": "AddStickerToSet sends sticker as an array: \"InputSticker must be an Object\"",
+      "targetComponent": "TelegramMultipartBuilder addInputSticker vs addInputStickers schema asymmetry",
+      "status": "posted",
+      "timestamp": "2026-10-31T10:23:47.719Z",
+      "architecturalAngle": "Bot API InputSticker singular object vs array schema asymmetry, Jackson serialization breakdown, and multi-version architectural fix."
+    },
     {
       "id": "gh_telegraf_2101",
       "platform": "github",
