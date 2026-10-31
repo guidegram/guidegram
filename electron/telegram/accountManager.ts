@@ -12837,7 +12837,8 @@ export class AccountManager {
             if (!list || !Array.isArray(list)) return []
             return list
               .map((p: any) => {
-                const id = p.userId ?? p.user_id ?? p.channelId ?? p.channel_id ?? p.chatId ?? p.chat_id ?? ''
+                if (typeof p === 'string' || typeof p === 'number') return String(p)
+                const id = p?.userId ?? p?.user_id ?? p?.channelId ?? p?.channel_id ?? p?.chatId ?? p?.chat_id ?? ''
                 return id ? id.toString() : ''
               })
               .filter(Boolean)
@@ -12914,10 +12915,14 @@ export class AccountManager {
         return inputPeers
       }
 
+      const rawInclude = filterData.includePeerIds || (filterData as any).includePeers
+      const rawExclude = filterData.excludePeerIds || (filterData as any).excludePeers
+      const rawPinned = filterData.pinnedPeerIds || (filterData as any).pinnedPeers
+
       const [includePeers, excludePeers, pinnedPeers] = await Promise.all([
-        resolvePeers(filterData.includePeerIds),
-        resolvePeers(filterData.excludePeerIds),
-        resolvePeers(filterData.pinnedPeerIds),
+        resolvePeers(rawInclude),
+        resolvePeers(rawExclude),
+        resolvePeers(rawPinned),
       ])
 
       const tlFilter: any = {
