@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T02:19:06.344Z",
+  "lastUpdated": "2026-10-31T02:32:08.875Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 50,
-    "githubIssuesCommented": 41,
+    "totalActivities": 51,
+    "githubIssuesCommented": 42,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_31448",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 31448,
+      "targetTitle": "Crash (SIGSEGV) in HistoryItem::isService() from Data::SavedSublist::shouldBeInChatList() on incoming message",
+      "targetUser": "Arch Linux Hyprland reporter",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31448#issuecomment-6537831443",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/31448",
+      "status": "live_public",
+      "summary": "Provided first response to critical SIGSEGV crash: pinpointed Use-After-Free in SavedSublist holding dangling _lastItem pointer after message destruction, with assembly breakdown and C++ fix blueprint using destruction observables and pool lookup.",
+      "timestamp": "2026-10-31T02:32:08.875Z"
+    },
     {
       "id": "gh_comment_tdesktop_476",
       "platform": "github",
