@@ -144,6 +144,71 @@ export class KeyboardShortcutManager {
   }
 
   /**
+   * Registers Vim navigation chords for rapid chat scrolling (resolves tdesktop #16300).
+   * Maps Alt+k / Alt+j (line scroll), Alt+u / Alt+d (half-page scroll), and Alt+g / Alt+G (top/bottom jump).
+   * Marked allowInInputs: true so power users can scroll viewport while keeping composer focus.
+   */
+  public registerVimNavigation(callbacks: {
+    scrollDelta: (pixels: number) => void;
+    jumpToTop?: () => void;
+    jumpToBottom?: () => void;
+  }): void {
+    this.registerShortcut({
+      id: 'vim_scroll_up',
+      key: 'k',
+      alt: true,
+      allowInInputs: true,
+      description: 'Vim navigation: scroll chat up (slow)',
+      action: () => callbacks.scrollDelta(-120),
+    });
+    this.registerShortcut({
+      id: 'vim_scroll_down',
+      key: 'j',
+      alt: true,
+      allowInInputs: true,
+      description: 'Vim navigation: scroll chat down (slow)',
+      action: () => callbacks.scrollDelta(120),
+    });
+    this.registerShortcut({
+      id: 'vim_half_page_up',
+      key: 'u',
+      alt: true,
+      allowInInputs: true,
+      description: 'Vim navigation: scroll half-screen up (fast)',
+      action: () => callbacks.scrollDelta(-400),
+    });
+    this.registerShortcut({
+      id: 'vim_half_page_down',
+      key: 'd',
+      alt: true,
+      allowInInputs: true,
+      description: 'Vim navigation: scroll half-screen down (fast)',
+      action: () => callbacks.scrollDelta(400),
+    });
+    if (callbacks.jumpToTop) {
+      this.registerShortcut({
+        id: 'vim_jump_top',
+        key: 'g',
+        alt: true,
+        allowInInputs: true,
+        description: 'Vim navigation: jump to first message in chat history',
+        action: () => callbacks.jumpToTop!(),
+      });
+    }
+    if (callbacks.jumpToBottom) {
+      this.registerShortcut({
+        id: 'vim_jump_bottom',
+        key: 'g',
+        alt: true,
+        shift: true,
+        allowInInputs: true,
+        description: 'Vim navigation: jump to latest message in chat history',
+        action: () => callbacks.jumpToBottom!(),
+      });
+    }
+  }
+
+  /**
    * Cleans all shortcuts and active traps.
    */
   public clear(): void {

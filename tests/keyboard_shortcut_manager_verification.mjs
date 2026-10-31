@@ -69,6 +69,18 @@ assert(
   'src/index.css defines .keyboard-shortcut-kbd and accessible focus-visible outline tokens'
 );
 
+// 7. Check Vim navigation integration (tdesktop #16300)
+assert(
+  sourceContent.includes('registerVimNavigation(') &&
+  sourceContent.includes('vim_scroll_up') &&
+  sourceContent.includes('vim_scroll_down') &&
+  sourceContent.includes('vim_half_page_up') &&
+  sourceContent.includes('vim_half_page_down') &&
+  sourceContent.includes('vim_jump_top') &&
+  sourceContent.includes('vim_jump_bottom'),
+  'KeyboardShortcutManager implements Vim navigation chords (Alt+j/k/u/d/g) for rapid chat scrolling'
+);
+
 console.log(`\n📊 Verification Result: ${passedTests}/${totalTests} checks passed.`);
 
 if (passedTests === totalTests) {
