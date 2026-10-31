@@ -421,7 +421,12 @@ function createWindow() {
   mainWindow.on('minimize', () => {
     // Window minimized - preemptively trim VRAM and in-memory caches (Hardened for #2464, #30060)
     try {
-      session.defaultSession.clearImageCache().catch(() => {})
+      const sess: any = session.defaultSession
+      if (typeof sess.clearImageCache === 'function') {
+        sess.clearImageCache().catch(() => {})
+      } else {
+        sess.clearCache().catch(() => {})
+      }
       if (mainWindow && !mainWindow.isDestroyed()) {
         IpcSecurityFilter.safeSend(mainWindow.webContents, 'system:memory-trim', { reason: 'window-minimized' })
       }
@@ -432,7 +437,12 @@ function createWindow() {
   mainWindow.on('hide', () => {
     // Window hidden - purge volatile texture caches
     try {
-      session.defaultSession.clearImageCache().catch(() => {})
+      const sess: any = session.defaultSession
+      if (typeof sess.clearImageCache === 'function') {
+        sess.clearImageCache().catch(() => {})
+      } else {
+        sess.clearCache().catch(() => {})
+      }
       if (mainWindow && !mainWindow.isDestroyed()) {
         IpcSecurityFilter.safeSend(mainWindow.webContents, 'system:memory-trim', { reason: 'window-hidden' })
       }

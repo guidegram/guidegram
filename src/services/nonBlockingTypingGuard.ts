@@ -162,7 +162,8 @@ export class NonBlockingTypingGuard {
     if (typeof rawText !== 'string') return '';
     try {
       // Normalizes unicode and strips lone surrogates that cause native Qt/Chromium menu crash
-      return rawText.toWellFormed ? rawText.toWellFormed() : rawText.replace(/[\uD800-\uDFFF]/g, '');
+      const anyText = rawText as any
+      return anyText.toWellFormed ? anyText.toWellFormed() : rawText.replace(/[\uD800-\uDFFF]/g, '');
     } catch {
       return '';
     }
