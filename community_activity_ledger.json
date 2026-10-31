@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T06:34:48.164970+00:00",
+  "lastUpdated": "2026-10-31T06:47:54.016359+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 64,
-    "githubIssuesCommented": 55,
+    "totalActivities": 65,
+    "githubIssuesCommented": 56,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_16300",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 16300,
+      "targetTitle": "Vim navigation (scrolling in chat)",
+      "targetUser": "Telegram Desktop Maintainers & Power Users",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/16300#issuecomment-6540252247",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/16300",
+      "status": "live_public",
+      "summary": "Masterclass architectural breakdown on keyboard-first Vim navigation in chat clients: decoupling composer focus traps via Alt-chords (Alt+j/k/u/d/g) for home-row scrolling without losing typing context, modal Normal Mode with Escape/Insert focus swapping, un-hardcoding PgUp/PgDn in HistoryWidget event filters, and kinetic easing, backed by Guidegram production implementation.",
+      "timestamp": "2026-10-31T06:47:54.016359+00:00"
+    },
     {
       "id": "gh_comment_tdesktop_16487",
       "platform": "github",
