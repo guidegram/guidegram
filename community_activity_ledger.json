@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T09:23:21.780Z",
+  "lastUpdated": "2026-10-31T09:36:17.412Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 75,
-    "githubIssuesCommented": 66,
+    "totalActivities": 76,
+    "githubIssuesCommented": 67,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31547",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31547,
+      "commentId": 6541767539,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31547#issuecomment-6541767539",
+      "title": "Passkey login always picks the first credential when multiple resident keys exist on FIDO2 security key",
+      "targetComponent": "Platform::WebAuthn / libfido2 multi-assertion disambiguation",
+      "status": "posted",
+      "timestamp": "2026-10-31T09:36:17.413Z",
+      "architecturalAngle": "libfido2 hardcoded index 0 flaw in webauthn_common.cpp, CTAP2 multi-resident key extraction, and allowList matching vs account picker."
+    },
     {
       "id": "gh_grammy_979",
       "platform": "github",
