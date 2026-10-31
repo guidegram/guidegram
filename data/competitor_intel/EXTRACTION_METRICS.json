@@ -1,0 +1,104 @@
+{
+  "timestamp": "2026-10-31T00:38:44Z",
+  "methodology": {
+    "api_endpoints": [
+      "https://api.github.com/repos/{owner}/{repo}/issues?sort=comments&direction=desc&per_page=100",
+      "https://api.github.com/repos/{owner}/{repo}/issues?sort=created&direction=desc&per_page=100&state=open"
+    ],
+    "rate_limit_strategy": "Exponential backoff, bearer token auth if available with unauthenticated fallback, courteous delay 1.3s",
+    "layers": {
+      "layer_1": "Top Discussed (sort=comments, direction=desc, per_page=100)",
+      "layer_2": "Recent & Active Bugs (sort=created, direction=desc, per_page=100, state=open)"
+    },
+    "deduplication_key": "{repo}#{issue_number}"
+  },
+  "total_extracted": 1362,
+  "high_discussion_count": 552,
+  "layer_counts": {
+    "layer_1_high_discussion": 874,
+    "layer_2_recent_active": 488,
+    "dual_layer_overlap": 71
+  },
+  "repo_statistics": {
+    "telegramdesktop/tdesktop": {
+      "name": "Telegram Desktop (Official)",
+      "platform": "Desktop (C++/Qt)",
+      "hot_count": 194,
+      "recent_count": 62,
+      "total": 256
+    },
+    "kotatogram/kotatogram-desktop": {
+      "name": "Kotatogram Desktop",
+      "platform": "Desktop (C++/Qt Fork)",
+      "hot_count": 92,
+      "recent_count": 60,
+      "total": 152
+    },
+    "TDesktop-x64/tdesktop": {
+      "name": "64Gram Desktop",
+      "platform": "Desktop (Enhanced Fork)",
+      "hot_count": 82,
+      "recent_count": 0,
+      "total": 82
+    },
+    "morethanwords/tweb": {
+      "name": "Telegram Web K",
+      "platform": "Web (TypeScript/React)",
+      "hot_count": 76,
+      "recent_count": 55,
+      "total": 131
+    },
+    "Ajaxy/telegram-tt": {
+      "name": "Telegram Web A",
+      "platform": "Web (TypeScript/Wasm)",
+      "hot_count": 69,
+      "recent_count": 63,
+      "total": 132
+    },
+    "tdlib/td": {
+      "name": "TDLib (Telegram Database Library)",
+      "platform": "Core Engine (C++)",
+      "hot_count": 98,
+      "recent_count": 64,
+      "total": 162
+    },
+    "TelegramMessenger/Telegram-iOS": {
+      "name": "Telegram iOS (Official)",
+      "platform": "Mobile (Swift/ObjC)",
+      "hot_count": 92,
+      "recent_count": 55,
+      "total": 147
+    },
+    "UnigramDev/Unigram": {
+      "name": "Unigram (Windows UWP)",
+      "platform": "Desktop (C#/UWP)",
+      "hot_count": 97,
+      "recent_count": 75,
+      "total": 172
+    },
+    "AyuGram/AyuGramDesktop": {
+      "name": "AyuGram Desktop",
+      "platform": "Desktop (Privacy/History Fork)",
+      "hot_count": 74,
+      "recent_count": 54,
+      "total": 128
+    }
+  },
+  "category_distribution": {
+    "MTProto & Network / Proxy / Censorship Resistance": 154,
+    "Media Streaming / Cache / Voice & Video Engine": 261,
+    "UI Ergonomics / Smooth Scrolling / Layout & RTL": 494,
+    "Memory Leaks / CPU Spikes / Background Workers": 298,
+    "Multi-Account / Session Security / Local Database": 155
+  },
+  "priority_distribution": {
+    "P0": 262,
+    "P1": 802,
+    "P2": 298
+  },
+  "output_files": {
+    "jsonl": "D:\\Ershad Zolfi\\programming\\coding with Gemini\\Guidegram\\data\\competitor_intel\\competitor_issues.jsonl",
+    "markdown": "D:\\Ershad Zolfi\\programming\\coding with Gemini\\Guidegram\\data\\competitor_intel\\ACTIONABLE_BACKLOG.md"
+  },
+  "validation_status": "PASSED"
+}
