@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T06:02:21.319963+00:00",
+  "lastUpdated": "2026-10-31T06:18:19.286933+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 62,
-    "githubIssuesCommented": 53,
+    "totalActivities": 63,
+    "githubIssuesCommented": 54,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_6362",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 6362,
+      "targetTitle": "Combining diacritics get stripped",
+      "targetUser": "Telegram Desktop Maintainers (John Preston & Ilya Fedin)",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/6362#issuecomment-6539995390",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/6362",
+      "status": "live_public",
+      "summary": "Masterclass architectural breakdown on anti-Zalgo sanitization vs legitimate Unicode diacritics, macOS NFD canonical decomposition traps, NFC pre-normalization, and bounded grapheme mark clamping (max 2-3 marks per base) preserving IPA and Arabic/Persian vowels, backed by Guidegram production implementation.",
+      "timestamp": "2026-10-31T06:18:19.286933+00:00"
+    },
     {
       "id": "gh_comment_tdesktop_27772",
       "platform": "github",
