@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T05:48:22.523501+00:00",
+  "lastUpdated": "2026-10-31T06:02:21.319963+00:00",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 61,
-    "githubIssuesCommented": 52,
+    "totalActivities": 62,
+    "githubIssuesCommented": 53,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_tdesktop_27772",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegramdesktop/tdesktop",
+      "targetIssueNumber": 27772,
+      "targetTitle": "Support Quotes using Telegram's Markdown Syntax",
+      "targetUser": "Telegram Desktop Maintainers & Community",
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/27772#issuecomment-6539851250",
+      "issueUrl": "https://github.com/telegramdesktop/tdesktop/issues/27772",
+      "status": "live_public",
+      "summary": "Masterclass C++ architectural blueprint for markdown quote parsing (> and >> / **>) in InputField, live space autocorrect in QTextCursor, and PrepareForSending entity offset recalculation for multiline prefix stripping with nested entity preservation, backed by Guidegram production implementation.",
+      "timestamp": "2026-10-31T06:02:21.319963+00:00"
+    },
     {
       "id": "gh_comment_tdesktop_24700",
       "platform": "github",
