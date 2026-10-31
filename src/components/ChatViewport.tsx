@@ -4218,16 +4218,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
 
-  const handleInsertEmoji = (emoji: string) => {
+  const handleInsertEmoji = (emoji: string, customEmojiDocId?: string) => {
     const el = textareaRef.current
     if (!el) {
       setInputText((prev) => prev + emoji)
+      if (customEmojiDocId) {
+        setPendingCustomEmojis((prev) => [
+          ...prev,
+          { id: `${Date.now()}_${Math.random()}`, documentId: customEmojiDocId, emoticon: emoji },
+        ])
+      }
       return
     }
     const start = el.selectionStart ?? inputText.length
     const end = el.selectionEnd ?? inputText.length
     const nextText = inputText.slice(0, start) + emoji + inputText.slice(end)
     setInputText(nextText)
+    if (customEmojiDocId) {
+      setPendingCustomEmojis((prev) => [
+        ...prev,
+        { id: `${Date.now()}_${Math.random()}`, documentId: customEmojiDocId, emoticon: emoji },
+      ])
+    }
     setTimeout(() => {
       el.focus()
       const newPos = start + emoji.length
@@ -9182,6 +9194,42 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     />
                   )}
 
+                  {/* Telegram Premium Custom Emojis Active Strip in Composer */}
+                  {pendingCustomEmojis.length > 0 && chat && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-dark-800/95 border-b border-amber-500/30 text-xs rounded-t-xl select-none animate-in fade-in">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-amber-300 shrink-0">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>Premium:</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                        {pendingCustomEmojis.map((p, idx) => (
+                          <span
+                            key={p.id || idx}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs shadow-sm shrink-0"
+                          >
+                            <CustomEmojiView
+                              accountId={chat.accountId}
+                              documentId={p.documentId}
+                              fallback={p.emoticon}
+                              className="w-4 h-4 object-contain inline-block pointer-events-none"
+                            />
+                            <span className="text-[10px] text-gray-300 font-mono">{p.emoticon}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingCustomEmojis((prev) => prev.filter((_, i) => i !== idx))
+                              }}
+                              className="text-gray-400 hover:text-white cursor-pointer ml-0.5 p-0.5 rounded hover:bg-white/10"
+                              title="Remove emoji"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <textarea
                     ref={textareaRef}
                     aria-label="Write a message"
@@ -9200,6 +9248,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     onChange={(e) => {
                       const val = e.target.value
                       setInputText(val)
+                      if (!val) {
+                        setPendingCustomEmojis([])
+                      }
                       if (val.trim() && chat && Date.now() - lastTypingSentRef.current > 3000) {
                         lastTypingSentRef.current = Date.now()
                         window.guidegram.sendTyping(chat.accountId, chat.id, 'typing').catch(() => {})
