@@ -198,10 +198,11 @@ export class ProxyManager {
           password: proxy.password,
         })
       } else if (proxy.type === 'mtproto' && proxy.secret) {
+        const fakeTls = mtprotoNetworkHardener.parseAndHardenFakeTls(proxy.secret)
         return new MtProxyTcpTransport({
           host: proxy.host,
           port: proxy.port,
-          secret: proxy.secret,
+          secret: fakeTls.sanitizedSecret,
         })
       }
     } catch (e) {

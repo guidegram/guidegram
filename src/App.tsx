@@ -1650,7 +1650,19 @@ export const App: React.FC = () => {
       setDialogsByAccount((prev) => {
         const list = prev[accId] || []
         const exists = list.some((d) => d.id === chatId)
-        if (exists) return prev
+        if (exists) {
+          if (provisionalPeer.isSavedMessages) {
+            return {
+              ...prev,
+              [accId]: list.map((d) =>
+                d.id === chatId
+                  ? { ...d, title: 'Saved Messages', isSavedMessages: true, isContact: false }
+                  : d
+              ),
+            }
+          }
+          return prev
+        }
         const newPeer: DialogItem = {
           id: chatId,
           accountId: accId,
@@ -2163,12 +2175,16 @@ export const App: React.FC = () => {
         (currentAcc?.phone && d.id === currentAcc.phone)
     )
     if (savedChat) {
-      handleSelectChat(savedChat.id)
+      savedChat.title = 'Saved Messages'
+      savedChat.isSavedMessages = true
+      savedChat.isContact = false
+      handleSelectChat(savedChat.id, undefined, savedChat)
     } else if (currentAcc?.id) {
       const provisional: Partial<DialogItem> = {
         title: 'Saved Messages',
         isSavedMessages: true,
         isUser: true,
+        isContact: false,
       }
       handleSelectChat(currentAcc.id, undefined, provisional)
     } else if (currentAcc?.username) {
@@ -2178,6 +2194,7 @@ export const App: React.FC = () => {
         title: 'Saved Messages',
         isSavedMessages: true,
         isUser: true,
+        isContact: false,
       }
       handleSelectChat('me', undefined, provisional)
     }
