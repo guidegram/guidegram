@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T10:29:19.504Z",
+  "lastUpdated": "2026-10-31T10:38:30.731Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 80,
-    "githubIssuesCommented": 71,
+    "totalActivities": 81,
+    "githubIssuesCommented": 72,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31543",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31543,
+      "commentId": 6542320784,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31543#issuecomment-6542320784",
+      "title": "Crash: std::vector<Ui::Text::LineLayoutInfo> out-of-bounds in text-appear animation tick (SIGABRT, assertion '__n < this->size()')",
+      "targetComponent": "HistoryView::Message paintCustom text-appear animation & line invalidation",
+      "status": "posted",
+      "timestamp": "2026-10-31T10:38:30.730Z",
+      "architecturalAngle": "_GLIBCXX_ASSERTIONS vector out-of-bounds assertion during dynamic draft shrinkage, animation frame race condition, and std::clamp bounds patch."
+    },
     {
       "id": "gh_telegrambots_1595",
       "platform": "github",
