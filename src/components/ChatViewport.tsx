@@ -2088,25 +2088,28 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // 1. Reset tracking state when switching chats
   useEffect(() => {
-    initialPositionDoneRef.current = null
-    userHasScrolledRef.current = false
-    isInitialPositioningRef.current = false
-    hasMoreOlderRef.current = true
-    isLoadingOlderRef.current = false
-    setIsLoadingOlder(false)
-    setShowScrollBottom(false)
-    setUnreadScrollCount(0)
-    setReplyMessage(null)
-    setStagedAttachments([])
-    setDismissedComposerUrl(null)
-    autoDownloadedIdsRef.current.clear()
+    if (chat?.id !== previousChatIdRef.current) {
+      previousChatIdRef.current = chat?.id || null
+      initialPositionDoneRef.current = null
+      userHasScrolledRef.current = false
+      isInitialPositioningRef.current = false
+      hasMoreOlderRef.current = true
+      isLoadingOlderRef.current = false
+      setIsLoadingOlder(false)
+      setShowScrollBottom(false)
+      setUnreadScrollCount(0)
+      setReplyMessage(null)
+      setStagedAttachments([])
+      setDismissedComposerUrl(null)
+      autoDownloadedIdsRef.current.clear()
 
-    // Immediately reset container to avoid flash of random middle position from previous chat
-    if (messagesContainerRef.current) {
-      if (chat?.unreadCount && chat.unreadCount > 0) {
-        messagesContainerRef.current.scrollTop = 0
-      } else {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+      // Immediately reset container to avoid flash of random middle position from previous chat
+      if (messagesContainerRef.current) {
+        if (chat?.unreadCount && chat.unreadCount > 0) {
+          messagesContainerRef.current.scrollTop = 0
+        } else {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+        }
       }
     }
   }, [chat?.id])
