@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T08:54:37.029Z",
+  "lastUpdated": "2026-10-31T09:09:56.683Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 73,
-    "githubIssuesCommented": 64,
+    "totalActivities": 74,
+    "githubIssuesCommented": 65,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_30042_followup",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 30042,
+      "commentId": 6541525905,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/30042#issuecomment-6541525905",
+      "title": "High CPU usage when VPN is disconnected and killswitch is on (on Linux)",
+      "targetComponent": "MTP::SessionPrivate / QNetworkAccessManager instant rejection spinloop",
+      "status": "posted",
+      "timestamp": "2026-10-31T09:09:56.685Z",
+      "architecturalAngle": "Detailed kernel Netlink vs iptables RST distinction, flamegraph breakdown (>55% in QNAM), and MTProto reconnect ramp bypass analysis."
+    },
     {
       "id": "gh_comment_teloxide_978",
       "platform": "github",
