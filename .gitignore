@@ -48,3 +48,6 @@ ORIGINAL_REQUEST.md
 .tmp_story_build/
 scratch/
 scratch_*
+
+__pycache__/
+*.pyc
