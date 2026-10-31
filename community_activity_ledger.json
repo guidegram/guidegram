@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T09:09:56.683Z",
+  "lastUpdated": "2026-10-31T09:23:21.780Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 74,
-    "githubIssuesCommented": 65,
+    "totalActivities": 75,
+    "githubIssuesCommented": 66,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_grammy_979",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "grammyjs/grammY",
+      "issueNumber": 979,
+      "commentId": 6541648956,
+      "url": "https://github.com/grammyjs/grammY/issues/979#issuecomment-6541648956",
+      "title": "InputFile: Request support",
+      "targetComponent": "InputFile / URLLike structural typing discrimination",
+      "status": "posted",
+      "timestamp": "2026-10-31T09:23:21.780Z",
+      "architecturalAngle": "TypeScript structural subtyping pitfall analysis, Request header preservation in fetchFile, and discrimination ordering."
+    },
     {
       "id": "gh_tdesktop_30042_followup",
       "platform": "github",
