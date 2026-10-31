@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T11:20:21.567Z",
+  "lastUpdated": "2026-10-31T11:35:25.781Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 84,
-    "githubIssuesCommented": 75,
+    "totalActivities": 85,
+    "githubIssuesCommented": 76,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_teloxide_1485",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "teloxide/teloxide",
+      "issueNumber": 1485,
+      "commentId": 6542842097,
+      "url": "https://github.com/teloxide/teloxide/issues/1485#issuecomment-6542842097",
+      "title": "BotCommands emits unreachable_code for String arguments on Rust 1.100 beta",
+      "targetComponent": "BotCommands derive macro / String infallible FromStr alias to never type",
+      "status": "posted",
+      "timestamp": "2026-10-31T11:35:25.780Z",
+      "architecturalAngle": "Rust 1.100 Infallible-to-never type aliasing, MIR dead-code analysis causing unreachable_code in derive macros, and String specialization."
+    },
     {
       "id": "gh_tdesktop_30649",
       "platform": "github",
