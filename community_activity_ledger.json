@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T00:10:30Z",
+  "lastUpdated": "2026-10-31T00:13:45Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,16 +8,31 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 43,
+    "totalActivities": 44,
     "githubIssuesCommented": 35,
     "githubPullRequests": 3,
-    "githubPRComments": 1,
+    "githubPRComments": 2,
     "hackernewsPosts": 1,
     "hackernewsComments": 1,
     "redditPosts": 1,
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_aiogram_pr_1787",
+      "platform": "github",
+      "type": "pull_request_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "aiogram/aiogram",
+      "targetIssueNumber": 1787,
+      "targetTitle": "feat(opentelemetry): add hooks for tracing performance",
+      "targetUser": "Vitaly312",
+      "url": "https://github.com/aiogram/aiogram/pull/1787#issuecomment-6536316223",
+      "issueUrl": "https://github.com/aiogram/aiogram/pull/1787",
+      "status": "live_public",
+      "summary": "Architectural review resolving maintainer overhead concerns on OTel: analyzed onion middleware duration distortion in Jaeger/APM, memory allocation pressure, and proposed TraceLevel granularity with zero-allocation fast-path.",
+      "timestamp": "2026-10-31T00:13:45Z"
+    },
     {
       "id": "gh_comment_tdesktop_5139",
       "platform": "github",
