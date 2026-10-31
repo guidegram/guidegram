@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T12:22:30.000Z",
+  "lastUpdated": "2026-10-31T12:42:43.000Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 89,
-    "githubIssuesCommented": 80,
+    "totalActivities": 90,
+    "githubIssuesCommented": 81,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31533",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31533,
+      "commentId": 6543500798,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31533#issuecomment-6543500798",
+      "title": "Desktop crashes when a bot deletes the private chat topic that is currently open",
+      "targetComponent": "Data::Forum::deleteTopic / HistoryWidget active topic UAF crash (dd635a60-17e6-46c7-aa22-4ad685b35442)",
+      "status": "posted",
+      "timestamp": "2026-10-31T12:42:43Z",
+      "architecturalAngle": "Pre-deallocation viewport eviction back to chat root, topic lifetime observation, and dangling pointer nullification."
+    },
     {
       "id": "gh_tdesktop_31535",
       "platform": "github",
