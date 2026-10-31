@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 40,
-    "githubIssuesCommented": 32,
+    "totalActivities": 41,
+    "githubIssuesCommented": 33,
     "githubPullRequests": 3,
     "githubPRComments": 1,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_telegraf_2096",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "telegraf/telegraf",
+      "targetIssueNumber": 2096,
+      "targetTitle": "ctx.telegram is a different Telegram instance than bot.telegram, so instrumentation applied at startup silently never runs",
+      "targetUser": "hiyouwhatsapp",
+      "url": "https://github.com/telegraf/telegraf/issues/2096#issuecomment-6536155533",
+      "issueUrl": "https://github.com/telegraf/telegraf/issues/2096",
+      "status": "live_public",
+      "summary": "Resolved the startup instrumentation loss vs webhookReply state leakage dilemma using JavaScript Object.create(this.telegram) prototypical delegation from Guidegram.",
+      "timestamp": "2026-10-31T00:02:00Z"
+    },
     {
       "id": "gh_comment_ptb_5315",
       "platform": "github",
