@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T11:51:43.434Z",
+  "lastUpdated": "2026-10-31T12:06:40.000Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 86,
-    "githubIssuesCommented": 77,
+    "totalActivities": 87,
+    "githubIssuesCommented": 78,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,20 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_tdesktop_31545",
+      "platform": "github",
+      "type": "issue_comment",
+      "repo": "telegramdesktop/tdesktop",
+      "issueNumber": 31545,
+      "commentId": 6543148533,
+      "url": "https://github.com/telegramdesktop/tdesktop/issues/31545#issuecomment-6543148533",
+      "title": "Triggering the emoji/sticker panel on external chat windows resizes the main window",
+      "targetComponent": "Window::SeparateWindow / SessionController geometry request misrouting & resizeForThirdSection cross-window bleed",
+      "status": "posted",
+      "timestamp": "2026-10-31T12:06:40Z",
+      "architecturalAngle": "Multi-window geometry isolation, SessionController widget resolution decoupling, virtual window-scoped resizeForThirdSection, and display workArea clamping."
+    },
     {
       "id": "gh_tdesktop_31540",
       "platform": "github",
