@@ -2023,13 +2023,15 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           }, 350)
         }
 
-        // Infinite Scroll: Fetch older messages when near top (< 120px)
+        // Infinite Scroll: Fetch older messages when near top (< 120px) ONLY after initial positioning has settled AND user has scrolled up
         if (
+          chat &&
+          initialPositionDoneRef.current === chat.id &&
+          userHasScrolledRef.current &&
           el.scrollTop < 120 &&
           !isLoadingOlderRef.current &&
           hasMoreOlderRef.current &&
           messages.length > 0 &&
-          chat &&
           window.guidegram?.getMessages
         ) {
           const oldestMsg = messages[0]
@@ -2084,64 +2086,133 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
 
-  // Handle new incoming/outgoing messages and chat switching (Feature 19)
+  // 1. Reset tracking state when switching chats
   useEffect(() => {
-    // 1. Detect Chat Switch
-    if (chat?.id !== previousChatIdRef.current) {
-      previousChatIdRef.current = chat?.id || null
-      prevLastMessageIdRef.current = messages.length > 0 ? messages[messages.length - 1].id : null
+    initialPositionDoneRef.current = null
+    userHasScrolledRef.current = false
+    isInitialPositioningRef.current = false
+    hasMoreOlderRef.current = true
+    isLoadingOlderRef.current = false
+    setIsLoadingOlder(false)
+    setShowScrollBottom(false)
+    setUnreadScrollCount(0)
+    setReplyMessage(null)
+    setStagedAttachments([])
+    setDismissedComposerUrl(null)
+    autoDownloadedIdsRef.current.clear()
+
+    // Immediately reset container to avoid flash of random middle position from previous chat
+    if (messagesContainerRef.current) {
+      if (chat?.unreadCount && chat.unreadCount > 0) {
+        messagesContainerRef.current.scrollTop = 0
+      } else {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+      }
+    }
+  }, [chat?.id])
+
+  // 2. Initial positioning & Real-time message streaming (Telegram Desktop parity)
+  useEffect(() => {
+    if (!chat || messages.length === 0) return
+
+    // INITIAL POSITIONING FOR THIS CHAT
+    if (initialPositionDoneRef.current !== chat.id) {
+      isInitialPositioningRef.current = true
+      prevLastMessageIdRef.current = messages[messages.length - 1].id
       prevMessagesLengthRef.current = messages.length
-      hasMoreOlderRef.current = true
-      isLoadingOlderRef.current = false
-      setIsLoadingOlder(false)
-      setShowScrollBottom(false)
-      setUnreadScrollCount(0)
-      setReplyMessage(null)
-      setStagedAttachments([])
-      setDismissedComposerUrl(null)
-      autoDownloadedIdsRef.current.clear()
 
-      setTimeout(() => {
-        // If chat has unread messages, find the first unread message and scroll directly to it!
-        const unreadCount = chat?.unreadCount || 0
-        if (unreadCount > 0 && messages.length > 0) {
-          const incoming = messages.filter((m) => !m.isOutgoing)
-          const firstUnread = chat?.readInboxMaxId
-            ? messages.find((m) => m.id > chat.readInboxMaxId! && !m.isOutgoing)
-            : incoming[Math.max(0, incoming.length - unreadCount)]
+      // Case A: Targeted message jump (reply, search result, notification link)
+      if (initialScrollMsgId) {
+        const timer = setTimeout(() => {
+          handleScrollToReply(initialScrollMsgId)
+          onClearInitialScroll?.()
+          initialPositionDoneRef.current = chat.id
+          isInitialPositioningRef.current = false
+        }, 100)
+        return () => clearTimeout(timer)
+      }
 
-          if (firstUnread) {
-            const el = document.getElementById(`msg-${firstUnread.id}`)
-            if (el) {
-              el.scrollIntoView({ behavior: 'auto', block: 'start' })
-              setShowScrollBottom(true)
-              return
-            }
+      // Case B: Chat has UNREAD messages -> Scroll directly to first unread message / separator
+      const unreadCount = chat.unreadCount || 0
+      if (unreadCount > 0) {
+        const incoming = messages.filter((m) => !m.isOutgoing)
+        const firstUnread = (chat.readInboxMaxId && chat.readInboxMaxId > 0)
+          ? messages.find((m) => m.id > chat.readInboxMaxId! && !m.isOutgoing)
+          : (incoming.length > 0 ? incoming[Math.max(0, incoming.length - unreadCount)] : null)
+
+        const timer = setTimeout(() => {
+          const container = messagesContainerRef.current
+          if (!container) return
+
+          const unreadSeparator = document.getElementById('unread-separator')
+          const firstUnreadEl = firstUnread ? document.getElementById(`msg-${firstUnread.id}`) : null
+          const targetEl = unreadSeparator || firstUnreadEl
+
+          if (targetEl) {
+            const containerRect = container.getBoundingClientRect()
+            const targetRect = targetEl.getBoundingClientRect()
+            // Position unread separator / first unread message cleanly near top (50px header clearance)
+            container.scrollTop += (targetRect.top - containerRect.top - 50)
+            setShowScrollBottom(true)
+            setUnreadScrollCount(unreadCount)
+            initialPositionDoneRef.current = chat.id
+            isInitialPositioningRef.current = false
+          } else {
+            // First unread message is older than loaded chunk -> start at top of loaded history
+            container.scrollTop = 0
+            setShowScrollBottom(true)
+            setUnreadScrollCount(unreadCount)
+            initialPositionDoneRef.current = chat.id
+            isInitialPositioningRef.current = false
           }
-        }
+        }, 60)
+        return () => clearTimeout(timer)
+      }
 
+      // Case C: No unread messages (read chat, private chat, outgoing messages only)
+      // Official Telegram Desktop: ALWAYS scroll directly to the VERY BOTTOM (latest message)
+      const scrollToBottomImmediate = () => {
+        const container = messagesContainerRef.current
+        if (container) {
+          container.scrollTop = container.scrollHeight
+        }
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
-        if (!ghostMode && chat && window.guidegram?.markAsRead && messages.length > 0) {
-          const lastMsg = messages[messages.length - 1]
-          if (lastMsg && lastMsg.id > lastMarkedReadIdRef.current) {
-            lastMarkedReadIdRef.current = lastMsg.id
-            window.guidegram.markAsRead(chat.accountId, chat.id, lastMsg.id)
-            onUpdateUnreadCount?.(chat.id, 0)
+        setShowScrollBottom(false)
+        setUnreadScrollCount(0)
+      }
+
+      scrollToBottomImmediate()
+      initialPositionDoneRef.current = chat.id
+
+      // Layout stabilization: In Electron/DOM, media/images/stickers finish sizing in the next 100-300ms.
+      // If user hasn't scrolled manually, maintain bottom pin so viewport never slips into the middle!
+      const stabilizeTimers = [
+        setTimeout(() => {
+          if (!userHasScrolledRef.current && initialPositionDoneRef.current === chat.id) {
+            scrollToBottomImmediate()
           }
-        }
-      }, 60)
-      return
+        }, 80),
+        setTimeout(() => {
+          if (!userHasScrolledRef.current && initialPositionDoneRef.current === chat.id) {
+            scrollToBottomImmediate()
+            isInitialPositioningRef.current = false
+          }
+        }, 220),
+      ]
+
+      return () => {
+        stabilizeTimers.forEach(clearTimeout)
+      }
     }
 
-    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null
+    // SUBSEQUENT MESSAGE UPDATES (Incoming/Outgoing while chat is active)
+    const lastMsg = messages[messages.length - 1]
     const prevLastId = prevLastMessageIdRef.current
     const prevLen = prevMessagesLengthRef.current
 
-    // Update refs for tracking
     prevLastMessageIdRef.current = lastMsg ? lastMsg.id : null
     prevMessagesLengthRef.current = messages.length
 
-    // Critical fix: Only auto-scroll down if a genuinely NEW message was appended to the bottom
     const isNewAppendedMessage = Boolean(
       lastMsg &&
       prevLastId !== null &&
@@ -2149,12 +2220,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       messages.length > prevLen
     )
 
-    if (!isNewAppendedMessage) {
-      // Historical messages loaded from top or message updated in place -> DO NOT force scroll to bottom!
-      return
-    }
+    if (!isNewAppendedMessage) return
 
-    // 2. Outgoing Message by Current User (new outgoing message just sent)
+    // Outgoing Message sent by user: smooth scroll to bottom
     if (lastMsg?.isOutgoing) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       setShowScrollBottom(false)
@@ -2162,7 +2230,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       return
     }
 
-    // 3. Incoming Message: Check scroll position
+    // Incoming Message received from peer
     const el = messagesContainerRef.current
     if (!el) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -2178,7 +2246,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       setUnreadScrollCount((prev) => prev + 1)
       setShowScrollBottom(true)
     }
-  }, [chat?.id, messages])
+  }, [chat?.id, messages, initialScrollMsgId, onClearInitialScroll])
 
   // Listen for real-time Telegram upload progress events
   useEffect(() => {
@@ -3123,16 +3191,16 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     showToast(`Original message #${replyId} not in loaded history`)
   }
 
-  // Auto-scroll to targeted message if requested via external link or selection
+  // Auto-scroll to targeted message if requested via external link or selection (runs if already positioned)
   useEffect(() => {
-    if (initialScrollMsgId && messages.length > 0) {
+    if (initialScrollMsgId && messages.length > 0 && initialPositionDoneRef.current === chat?.id) {
       const timer = setTimeout(() => {
         handleScrollToReply(initialScrollMsgId)
         onClearInitialScroll?.()
-      }, 200)
+      }, 150)
       return () => clearTimeout(timer)
     }
-  }, [initialScrollMsgId, messages.length])
+  }, [initialScrollMsgId, messages.length, chat?.id])
 
   // Safe link opener respecting internal Telegram routing & suppressLinkWarning (64Gram)
   const handleSafeOpenUrl = (url: string) => {
@@ -6833,6 +6901,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           aria-live="polite"
           onScroll={handleScroll}
           onMouseDown={handleMessagesMouseDown}
+          onWheel={() => { userHasScrolledRef.current = true }}
+          onTouchMove={() => { userHasScrolledRef.current = true }}
+          onKeyDown={() => { userHasScrolledRef.current = true }}
           className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 relative z-10 overscroll-contain select-none"
           style={{ willChange: 'scroll-position' }}
           onClick={(e) => {
@@ -6939,7 +7010,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   </div>
                 )}
                 {isFirstUnread && (
-                  <div className="flex items-center justify-center my-3 select-none sticky top-2 z-20">
+                  <div id="unread-separator" className="flex items-center justify-center my-3 select-none sticky top-2 z-20">
                     <button
                       type="button"
                       onClick={() => {
