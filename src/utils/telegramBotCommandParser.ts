@@ -115,3 +115,107 @@ export function formatCommandForChat(
 
   return `/${cleanCmd}`;
 }
+
+export type CommandArgType = 'string' | 'number' | 'boolean' | 'rest';
+
+export interface CommandArgDef {
+  name: string;
+  type: CommandArgType;
+  required?: boolean;
+  default?: unknown;
+}
+
+export interface ParsedArgsResult {
+  success: boolean;
+  args: Record<string, unknown>;
+  error?: string;
+}
+
+/**
+ * Tokenizes argument string into words while preserving quoted segments.
+ */
+export function tokenizeCommandArgs(rawArgs: string): string[] {
+  if (!rawArgs || typeof rawArgs !== 'string') return [];
+  const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+  const tokens: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(rawArgs)) !== null) {
+    if (match[1] !== undefined) {
+      tokens.push(match[1]); // Double-quoted
+    } else if (match[2] !== undefined) {
+      tokens.push(match[2]); // Single-quoted
+    } else {
+      tokens.push(match[0]); // Unquoted
+    }
+  }
+
+  return tokens;
+}
+
+/**
+ * Parses raw argument string into typed schema values.
+ * Resolves teloxide/teloxide #1485 (handling infallible String arguments without dead-code traps).
+ */
+export function parseTypedCommandArgs(
+  rawArgs: string,
+  schema: CommandArgDef[]
+): ParsedArgsResult {
+  const tokens = tokenizeCommandArgs(rawArgs);
+  const result: Record<string, unknown> = {};
+
+  for (let i = 0; i < schema.length; i++) {
+    const def = schema[i];
+
+    // Special case: 'rest' type collects all remaining raw text
+    if (def.type === 'rest') {
+      const restValue = tokens.slice(i).join(' ');
+      if (!restValue && def.required) {
+        return { success: false, args: {}, error: `Missing required argument: ${def.name}` };
+      }
+      result[def.name] = restValue || def.default || '';
+      break;
+    }
+
+    const token = tokens[i];
+
+    if (token === undefined) {
+      if (def.required) {
+        return { success: false, args: {}, error: `Missing required argument: ${def.name}` };
+      }
+      result[def.name] = def.default !== undefined ? def.default : undefined;
+      continue;
+    }
+
+    switch (def.type) {
+      case 'string':
+        // Infallible: String parsing never fails
+        result[def.name] = token;
+        break;
+
+      case 'number': {
+        const num = Number(token);
+        if (Number.isNaN(num)) {
+          return { success: false, args: {}, error: `Invalid number format for argument: ${def.name} ('${token}')` };
+        }
+        result[def.name] = num;
+        break;
+      }
+
+      case 'boolean': {
+        const lower = token.toLowerCase();
+        if (['true', '1', 'yes', 'on'].includes(lower)) {
+          result[def.name] = true;
+        } else if (['false', '0', 'no', 'off'].includes(lower)) {
+          result[def.name] = false;
+        } else {
+          return { success: false, args: {}, error: `Invalid boolean format for argument: ${def.name} ('${token}')` };
+        }
+        break;
+      }
+    }
+  }
+
+  return { success: true, args: result };
+}
+
