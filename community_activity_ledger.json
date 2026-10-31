@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T00:16:20Z",
+  "lastUpdated": "2026-10-31T01:17:00Z",
   "project": {
     "name": "Guidegram",
     "repository": "https://github.com/guidegram/guidegram",
@@ -8,8 +8,8 @@
     "officialGroup": "https://t.me/GuidegramGroup"
   },
   "summary": {
-    "totalActivities": 46,
-    "githubIssuesCommented": 37,
+    "totalActivities": 47,
+    "githubIssuesCommented": 38,
     "githubPullRequests": 3,
     "githubPRComments": 2,
     "hackernewsPosts": 1,
@@ -18,6 +18,21 @@
     "redditAppeals": 1
   },
   "activities": [
+    {
+      "id": "gh_comment_go_tg_bot_134",
+      "platform": "github",
+      "type": "issue_comment",
+      "account": "DoctorGuidance",
+      "targetRepo": "go-telegram/bot",
+      "targetIssueNumber": 134,
+      "targetTitle": "Not possible to use bot to create a topic in a private group with topic mode turned on.",
+      "targetUser": "babp0",
+      "url": "https://github.com/go-telegram/bot/issues/134#issuecomment-6537048320",
+      "issueUrl": "https://github.com/go-telegram/bot/issues/134",
+      "status": "live_public",
+      "summary": "Technical explanation of Telegram Bot API peer ID prefix convention: why positive integer ChatID is routed to PeerUser causing chat not found on forum topics, and how to format with -100 supergroup prefix.",
+      "timestamp": "2026-10-31T01:17:00Z"
+    },
     {
       "id": "gh_comment_tdesktop_31544",
       "platform": "github",
