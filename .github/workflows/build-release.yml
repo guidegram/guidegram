@@ -37,8 +37,8 @@ jobs:
           name: ${{ github.event.inputs.release_title || format('Guidegram {0}', github.ref_name) }}
           body_path: RELEASE_NOTES.md
           draft: false
-          prerelease: false
-          make_latest: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.event.inputs.tag_name, '-rc') }}
+          make_latest: ${{ !(contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.event.inputs.tag_name, '-rc')) }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

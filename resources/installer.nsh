@@ -6,34 +6,39 @@
 !macro customInit
   ; Terminate any existing Guidegram instances to prevent file locking & installer hang
   nsExec::Exec 'taskkill /F /IM Guidegram.exe /T'
+  Pop $0
   Sleep 300
 
   ; Runs at the very start of installer (.onInit)
   ; If an existing installation directory has data, snapshot it immediately before any uninstaller can run
-  ${If} ${FileExists} "$INSTDIR\data\config.json"
-    DetailPrint "Guidegram Data Shield: Existing data detected in $INSTDIR\data. Backing up..."
-    CreateDirectory "$TEMP\Guidegram_Data_Upgrade_Backup\data"
-    CreateDirectory "$TEMP\Guidegram_Data_Upgrade_Backup\data\sessions"
-    CopyFiles /SILENT "$INSTDIR\data\*.*" "$TEMP\Guidegram_Data_Upgrade_Backup\data\"
-    CopyFiles /SILENT "$INSTDIR\data\sessions\*.*" "$TEMP\Guidegram_Data_Upgrade_Backup\data\sessions\"
+  ${If} $INSTDIR != ""
+    ${If} ${FileExists} "$INSTDIR\data\config.json"
+      DetailPrint "Guidegram Data Shield: Existing data detected in $INSTDIR\data. Backing up..."
+      CreateDirectory "$TEMP\Guidegram_Data_Upgrade_Backup\data"
+      CreateDirectory "$TEMP\Guidegram_Data_Upgrade_Backup\data\sessions"
+      CopyFiles /SILENT "$INSTDIR\data\*.*" "$TEMP\Guidegram_Data_Upgrade_Backup\data\"
+      CopyFiles /SILENT "$INSTDIR\data\sessions\*.*" "$TEMP\Guidegram_Data_Upgrade_Backup\data\sessions\"
 
-    ; Mirror to persistent APPDATA safe backup as well
-    CreateDirectory "$APPDATA\Guidegram\safe_backup"
-    CreateDirectory "$APPDATA\Guidegram\safe_backup\sessions"
-    CopyFiles /SILENT "$INSTDIR\data\*.*" "$APPDATA\Guidegram\safe_backup\"
-    CopyFiles /SILENT "$INSTDIR\data\sessions\*.*" "$APPDATA\Guidegram\safe_backup\sessions\"
+      ; Mirror to persistent APPDATA safe backup as well
+      CreateDirectory "$APPDATA\Guidegram\safe_backup"
+      CreateDirectory "$APPDATA\Guidegram\safe_backup\sessions"
+      CopyFiles /SILENT "$INSTDIR\data\*.*" "$APPDATA\Guidegram\safe_backup\"
+      CopyFiles /SILENT "$INSTDIR\data\sessions\*.*" "$APPDATA\Guidegram\safe_backup\sessions\"
+    ${EndIf}
   ${EndIf}
 !macroend
 
 !macro customUnInit
   ; Ensure process is closed before uninstallation starts
   nsExec::Exec 'taskkill /F /IM Guidegram.exe /T'
+  Pop $0
   Sleep 300
 !macroend
 
 !macro customInstall
   ; Ensure any lingering process is closed before file replacement
   nsExec::Exec 'taskkill /F /IM Guidegram.exe /T'
+  Pop $0
   Sleep 300
 
   ; Runs during install after new files are extracted
