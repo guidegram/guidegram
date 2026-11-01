@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Folder, Plus, Trash2, ArrowUp, ArrowDown, Check, Users, User, Radio, Bot, BellOff, CheckCheck, Archive, Sparkles, Palette, Edit2, ShieldAlert } from 'lucide-react'
+import { X, Folder, Plus, Trash2, ArrowUp, ArrowDown, Check, Users, User, Radio, Bot, BellOff, CheckCheck, Archive, Sparkles, Palette, Edit2, ShieldAlert, Pin } from 'lucide-react'
 import { CloudFolderItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 import { TELEGRAM_FOLDER_TAG_COLORS } from './ChatTabs'
@@ -531,6 +531,17 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                               {f.groups && <span>{t('folders.types_groups')}</span>}
                               {f.broadcasts && <span>{t('folders.types_channels')}</span>}
                               {f.bots && <span>{t('folders.types_bots')}</span>}
+                              {f.pinnedPeerIds && f.pinnedPeerIds.length > 0 && (
+                                <span className="text-primary-400 font-medium flex items-center gap-0.5">
+                                  <Pin className="w-2.5 h-2.5 fill-current" />
+                                  {formatNumber(f.pinnedPeerIds.length)}
+                                </span>
+                              )}
+                              {f.includePeerIds && f.includePeerIds.length > 0 && (
+                                <span className="text-accent-cyan font-medium">
+                                  +{formatNumber(f.includePeerIds.length)}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
