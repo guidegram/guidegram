@@ -5554,18 +5554,27 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       )
     }
 
-    // 2. Video Card
+    // 2. Video Card (Modern Telegram Parity & Premium UI)
     if (msg.mediaType === 'video') {
       const fullVideoUrl =
         downloadedMedia[`${msg.id}`] ||
         (msg.mediaFilePath ? `guidegram-media://local/${encodeURIComponent(msg.mediaFilePath)}` : null)
-      const thumbUrl = downloadedMedia[`${msg.id}_thumb`] || msg.mediaUrl || msg.strippedThumb
+      const highResThumb = downloadedMedia[`${msg.id}_thumb`]
+      const thumbUrl = highResThumb || msg.mediaUrl || msg.strippedThumb
       const isThisVideoPlaying = activeVideoId === msg.id
+
+      // Automatically trigger background download of high-resolution video thumbnail
+      if (!highResThumb && !autoDownloadedIdsRef.current.has(`${msg.id}_thumb`)) {
+        autoDownloadedIdsRef.current.add(`${msg.id}_thumb`)
+        setTimeout(() => {
+          requestMediaDownload(msg, true)
+        }, 50)
+      }
 
       // If active video is playing and we have the video URL
       if (isThisVideoPlaying && fullVideoUrl) {
         return (
-          <div className="mb-2 w-full max-w-md">
+          <div className="mb-2 w-full max-w-[420px]">
             <VideoPlayer
               src={fullVideoUrl}
               poster={thumbUrl}
@@ -5583,142 +5592,139 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       const currentDl = downloadProgress[msg.id]
       const isDownloading = currentDl && currentDl.progress >= 0 && currentDl.progress < 100
 
+      // Compute natural Telegram aspect ratio constraints
+      const aspect = msg.mediaWidth && msg.mediaHeight ? msg.mediaWidth / msg.mediaHeight : null
+      const clampedAspect = aspect ? Math.max(0.65, Math.min(2.0, aspect)) : null
+
       return (
-        <div className="mb-2 rounded-2xl overflow-hidden max-w-sm border border-white/10 bg-dark-850/90 shadow-md group/video">
-          {/* Poster or Thumbnail with Circular Play Button or Download Progress */}
-          <div
-            onClick={async () => {
-              if (isDownloading) return
-              if (fullVideoUrl) {
+        <div
+          onClick={async () => {
+            if (isDownloading) return
+            if (fullVideoUrl) {
+              setActiveVideoId(msg.id)
+            } else {
+              showToast(t('chat.buffering_video'))
+              const videoDataUrl = await requestMediaDownload(msg, false)
+              if (videoDataUrl) {
                 setActiveVideoId(msg.id)
               } else {
-                showToast(t('chat.buffering_video'))
-                const videoDataUrl = await requestMediaDownload(msg, false)
-                if (videoDataUrl) {
-                  setActiveVideoId(msg.id)
-                } else {
-                  showToast(t('chat.video_stream_error'))
-                }
+                showToast(t('chat.video_stream_error'))
               }
-            }}
-            className="relative w-full h-48 bg-dark-900 cursor-pointer overflow-hidden flex items-center justify-center"
-          >
-            {thumbUrl ? (
-              <img
-                src={thumbUrl}
-                alt=""
-                onError={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.display = 'none'
-                }}
-                className={`w-full h-full object-cover transition-transform duration-300 group-hover/video:scale-105 ${
-                  thumbUrl === msg.strippedThumb ? 'filter blur-[8px] scale-110' : ''
-                }`}
-              />
-            ) : (
-              <div className="absolute inset-0 bg-linear-to-br from-primary-900/40 via-dark-850 to-dark-900 flex items-center justify-center">
-                <Play className="w-12 h-12 text-white/20" />
-              </div>
-            )}
+            }
+          }}
+          style={clampedAspect ? { aspectRatio: `${clampedAspect}` } : undefined}
+          className={`relative mb-2 w-full max-w-[420px] ${
+            !clampedAspect ? 'aspect-video min-h-[190px] max-h-[360px]' : 'max-h-[380px]'
+          } rounded-2xl overflow-hidden bg-dark-950/80 border border-white/10 shadow-lg group/video cursor-pointer select-none transition-all duration-200 hover:border-white/20`}
+        >
+          {/* Video Poster Thumbnail */}
+          {thumbUrl ? (
+            <img
+              src={thumbUrl}
+              alt={msg.mediaFileName || 'Video'}
+              onError={(e) => {
+                ;(e.currentTarget as HTMLElement).style.display = 'none'
+              }}
+              className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover/video:scale-105 ${
+                !highResThumb && thumbUrl === msg.strippedThumb ? 'filter blur-[4px] scale-105' : ''
+              }`}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-dark-900 via-dark-850 to-dark-900 flex items-center justify-center">
+              <Play className="w-12 h-12 text-white/15" />
+            </div>
+          )}
 
-            {/* Dark Overlay with Blur on Hover */}
-            <div className="absolute inset-0 bg-black/35 group-hover/video:bg-black/20 transition-colors" />
+          {/* Cinematic Vignette Overlay for Top Badge and Bottom Contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/45 pointer-events-none transition-opacity duration-200 group-hover/video:from-black/75 group-hover/video:to-black/55" />
 
-            {/* Play Button or Download Progress Overlay */}
+          {/* Telegram-Parity Top-Left Frosted Pill Badge (Duration & File Size) */}
+          <div className="absolute top-2.5 start-2.5 z-20 flex items-center gap-2 px-2.5 py-1 rounded-xl bg-black/60 hover:bg-black/75 backdrop-blur-md border border-white/15 text-white shadow-md pointer-events-none transition-all">
+            <div className="shrink-0 text-white/90">
+              {fullVideoUrl ? (
+                <Play className="w-3.5 h-3.5 fill-white text-white" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-white/90" />
+              )}
+            </div>
+            <div className="flex flex-col text-left leading-none gap-0.5">
+              <span className="text-[11px] font-mono font-bold text-white tracking-tight">
+                {msg.mediaDuration ? formatDuration(msg.mediaDuration) : '00:00'}
+              </span>
+              {msg.mediaFileSize && (
+                <span className="text-[9px] font-mono text-white/75">
+                  {formatFileSize(msg.mediaFileSize)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Floating Quick Action: Save to Disk (Top-End on Hover) */}
+          <div className="absolute top-2.5 end-2.5 z-20 flex items-center gap-1.5 opacity-0 group-hover/video:opacity-100 transition-opacity duration-200">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSaveMedia(msg)
+              }}
+              title={t('chat.download_video')}
+              className="p-2 rounded-xl bg-black/60 hover:bg-black/85 text-white/90 hover:text-white backdrop-blur-md border border-white/15 transition-all shadow-md cursor-pointer hover:scale-105 active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Center Play Button or Download Progress Ring (Telegram Style) */}
+          <div className="absolute inset-0 flex items-center justify-center z-15 pointer-events-none">
             {isDownloading ? (
               <div
-                className="relative z-10 flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-black/80 backdrop-blur-md border border-white/15 text-white shadow-xl"
+                className="relative pointer-events-auto flex flex-col items-center gap-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                  <span className="text-xs font-mono font-bold text-primary-300">
-                    {Math.round(currentDl.progress)}%
-                  </span>
+                <div className="relative w-14 h-14 rounded-full bg-black/70 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-2xl group/dl">
+                  <svg className="absolute inset-0 w-full h-full -rotate-90">
+                    <circle
+                      cx="28"
+                      cy="28"
+                      r="22"
+                      className="stroke-white/20"
+                      strokeWidth="3"
+                      fill="none"
+                    />
+                    <circle
+                      cx="28"
+                      cy="28"
+                      r="22"
+                      className="stroke-primary-400 transition-all duration-150"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeDasharray={2 * Math.PI * 22}
+                      strokeDashoffset={2 * Math.PI * 22 * (1 - currentDl.progress / 100)}
+                      strokeLinecap="round"
+                    />
+                  </svg>
                   <button
                     type="button"
                     onClick={() => handleCancelDownload(msg)}
                     title={t('chat.stop_download')}
-                    className="p-1 rounded-lg bg-red-500/30 hover:bg-red-500/50 text-red-200 transition-colors cursor-pointer"
+                    className="z-10 p-1 text-white hover:text-red-400 transition-colors cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="w-28 bg-white/20 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-primary-500 h-full transition-all duration-150"
-                    style={{ width: `${currentDl.progress}%` }}
-                  />
+                <div className="px-2.5 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-[10px] font-mono text-white/90 border border-white/15 shadow-md whitespace-nowrap">
+                  {Math.round(currentDl.progress)}% • {formatFileSize(currentDl.bytesReceived)} / {formatFileSize(currentDl.totalBytes || msg.mediaFileSize || 0)}
                 </div>
-                <span className="text-[10px] text-gray-300 font-mono">
-                  {formatFileSize(currentDl.bytesReceived)} / {formatFileSize(currentDl.totalBytes || msg.mediaFileSize || 0)}
-                </span>
               </div>
             ) : (
-              <div className="relative z-10 w-14 h-14 rounded-full bg-primary-600/90 hover:bg-primary-500 text-white flex items-center justify-center shadow-glow group-hover/video:scale-110 active:scale-95 transition-all">
+              <div className="w-14 h-14 rounded-full bg-black/50 hover:bg-black/70 active:scale-95 text-white flex items-center justify-center backdrop-blur-md border border-white/25 shadow-2xl transition-all duration-200 group-hover/video:scale-110">
                 {isLoadingVideo ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Play className="w-6 h-6 fill-current ml-0.5" />
+                  <Play className="w-6 h-6 fill-white text-white ml-0.5" />
                 )}
               </div>
             )}
-
-            {/* Duration Badge Bottom Right */}
-            {msg.mediaDuration && (
-              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-mono font-medium text-white flex items-center gap-1">
-                <span>{formatDuration(msg.mediaDuration)}</span>
-              </div>
-            )}
-
-            {/* File Size Badge Bottom Left */}
-            {msg.mediaFileSize && (
-              <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-md text-[10px] font-mono font-medium text-gray-300">
-                {formatFileSize(msg.mediaFileSize)}
-              </div>
-            )}
-          </div>
-
-          {/* Video Footer info & Download Button */}
-          <div className="p-2.5 flex items-center justify-between gap-2 border-t border-white/5">
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-gray-200 truncate">
-                {msg.mediaFileName || 'Video'}
-              </div>
-              <div className="text-[10px] text-gray-400">
-                {isDownloading
-                  ? t('chat.downloading_progress', { progress: Math.round(currentDl.progress) })
-                  : t('chat.online_playback')}
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {isDownloading ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleCancelDownload(msg)
-                  }}
-                  title={t('chat.stop_download')}
-                  className="px-2 py-1 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors cursor-pointer flex items-center gap-1 text-xs"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t('chat.stop_download')}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleSaveMedia(msg)
-                  }}
-                  title={t('chat.download_video')}
-                  className="px-2 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs"
-                >
-                  <Download className="w-3.5 h-3.5 text-primary-400" />
-                  <span className="hidden sm:inline">{t('chat.download_video')}</span>
-                </button>
-              )}
-            </div>
           </div>
         </div>
       )

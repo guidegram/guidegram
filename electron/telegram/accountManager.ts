@@ -3631,6 +3631,8 @@ export class AccountManager {
         let mediaFileName: string | undefined = undefined
         let mediaFileSize: number | undefined = undefined
         let mediaDuration: number | undefined = undefined
+        let mediaWidth: number | undefined = undefined
+        let mediaHeight: number | undefined = undefined
         let mediaTitle: string | undefined = undefined
         let mediaPerformer: string | undefined = undefined
         let strippedThumb: string | undefined = undefined
@@ -3646,6 +3648,14 @@ export class AccountManager {
           if (m.media._ === 'messageMediaPhoto') {
             mediaType = 'photo'
             strippedThumb = extractStrippedThumb(m.media.photo)
+            if (m.media.photo && Array.isArray((m.media.photo as any).sizes)) {
+              const sizes = (m.media.photo as any).sizes
+              const lastSize = sizes[sizes.length - 1]
+              if (lastSize?.w && lastSize?.h) {
+                mediaWidth = lastSize.w
+                mediaHeight = lastSize.h
+              }
+            }
           } else if (m.media._ === 'messageMediaDocument') {
             const doc = m.media.document
             if (doc && doc._ === 'document') {
@@ -3671,6 +3681,10 @@ export class AccountManager {
                   }
                   if (attr._ === 'documentAttributeVideo') {
                     mediaDuration = attr.duration
+                    if (attr.w && attr.h) {
+                      mediaWidth = attr.w
+                      mediaHeight = attr.h
+                    }
                     if (attr.roundMessage) isRoundVideo = true
                     mediaType = 'video'
                   }
@@ -3870,6 +3884,8 @@ export class AccountManager {
           mediaFileName,
           mediaFileSize,
           mediaDuration,
+          mediaWidth,
+          mediaHeight,
           mediaTitle,
           mediaPerformer,
           strippedThumb,
