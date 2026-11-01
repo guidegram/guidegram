@@ -199,7 +199,7 @@ export class TonWalletBroadcastGovernor {
             endpointUsed: endpoint.url,
             attempts
           };
-        } else if (response.status === 503 || response.error?.includes('unavailable')) {
+        } else if (response.status === 503 || ('error' in response && typeof (response as any).error === 'string' && (response as any).error.includes('unavailable'))) {
           // Node is unavailable, penalize and failover to next endpoint immediately
           endpoint.isHealthy = false;
           endpoint.failureCount++;
