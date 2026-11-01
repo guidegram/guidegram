@@ -525,7 +525,11 @@ export const ChatList = React.memo<ChatListProps>(({
     }
 
     pinnedList.sort((a, b) => a.idx - b.idx)
-    unpinnedList.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+    unpinnedList.sort((a, b) => {
+      const tsA = (a.lastMessageDate || 0) < 1e11 ? (a.lastMessageDate || 0) * 1000 : (a.lastMessageDate || 0)
+      const tsB = (b.lastMessageDate || 0) < 1e11 ? (b.lastMessageDate || 0) * 1000 : (b.lastMessageDate || 0)
+      return tsB - tsA
+    })
     return [...pinnedList.map((p) => p.d), ...unpinnedList]
   }, [filteredDialogs, currentFolder])
 

@@ -275,7 +275,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               {privacyMode !== 'full' && <Lock className="w-2.5 h-2.5 text-gray-500" />}
             </h4>
             <span className="text-[10px] text-gray-400 shrink-0">
-              {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(item.date < 1e11 ? item.date * 1000 : item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
           <p className="text-xs text-gray-300/90 line-clamp-2 mt-0.5 leading-relaxed break-words font-sans">

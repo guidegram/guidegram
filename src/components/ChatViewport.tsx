@@ -2039,7 +2039,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           messages.length > 0 &&
           window.guidegram?.getMessages
         ) {
-          const oldestMsg = messages[0]
+          const liveMessages = messages.filter((m) => !m.isDeletedLocally)
+          const oldestMsg = liveMessages.length > 0 ? liveMessages[0] : messages[0]
           if (oldestMsg && oldestMsg.id > 1) {
             isLoadingOlderRef.current = true
             setIsLoadingOlder(true)
@@ -2866,7 +2867,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   // Telegram Desktop: Sticky Floating Date Formatting
   const formatFloatingDate = useCallback((timestamp: number) => {
-    const d = new Date(timestamp)
+    const ms = timestamp < 1e11 ? timestamp * 1000 : timestamp
+    const d = new Date(ms)
     const now = new Date()
     const isToday = isSameDay(d.getTime(), now.getTime())
     if (isToday) return t('date.today') || 'Today'
@@ -4659,8 +4661,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
   const isSameDay = (ts1?: number, ts2?: number) => {
     if (!ts1 || !ts2) return false
-    const d1 = new Date(ts1)
-    const d2 = new Date(ts2)
+    const ms1 = ts1 < 1e11 ? ts1 * 1000 : ts1
+    const ms2 = ts2 < 1e11 ? ts2 * 1000 : ts2
+    const d1 = new Date(ms1)
+    const d2 = new Date(ms2)
     return (
       d1.getFullYear() === d2.getFullYear() &&
       d1.getMonth() === d2.getMonth() &&
@@ -4669,7 +4673,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }
 
   const formatDayDivider = (timestamp: number) => {
-    const date = new Date(timestamp)
+    const ms = timestamp < 1e11 ? timestamp * 1000 : timestamp
+    const date = new Date(ms)
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
@@ -4692,7 +4697,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   }
 
   const formatMessageTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], {
+    const ms = timestamp < 1e11 ? timestamp * 1000 : timestamp
+    return new Date(ms).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       second: showSeconds ? '2-digit' : undefined,
@@ -7604,7 +7610,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         </span>
                         {msg.forwardInfo?.date && (
                           <span className="text-[10px] text-gray-500 font-mono">
-                            • {new Date(msg.forwardInfo.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                            • {new Date(msg.forwardInfo.date < 1e11 ? msg.forwardInfo.date * 1000 : msg.forwardInfo.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         )}
                         {msg.postAuthor && (
@@ -7901,7 +7907,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       )}
 
                       <span
-                        title={new Date(msg.date).toLocaleString([], {
+                        title={new Date(msg.date < 1e11 ? msg.date * 1000 : msg.date).toLocaleString([], {
                           dateStyle: 'full',
                           timeStyle: 'medium',
                         })}
@@ -7909,7 +7915,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       >
                         {(savedSearchQuery || searchQuery) && !isSameDay(msg.date, Date.now()) && (
                           <span className="opacity-75 font-mono text-[9px] mr-1">
-                            {new Date(msg.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
+                            {new Date(msg.date < 1e11 ? msg.date * 1000 : msg.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
                           </span>
                         )}
                         {formatMessageTime(msg.date)}
@@ -11667,7 +11673,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-accent-cyan">
-                        {pm.senderName ? `${pm.senderName} • ` : ''}#{pm.id} {pm.date ? `• ${new Date(pm.date).toLocaleDateString()}` : ''}
+                        {pm.senderName ? `${pm.senderName} • ` : ''}#{pm.id} {pm.date ? `• ${new Date(pm.date < 1e11 ? pm.date * 1000 : pm.date).toLocaleDateString()}` : ''}
                       </span>
                       <div className="flex items-center gap-1.5">
                         {canPinMessage() && (

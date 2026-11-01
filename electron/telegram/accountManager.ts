@@ -1174,6 +1174,8 @@ export class AccountManager {
   private auditQueueFloodWaitUntil = new Map<string, number>()
   private manualDirectAccounts = new Set<string>()
   private contactPeerIds = new Map<string, Set<string>>()
+  private contactItemsMap = new Map<string, Map<string, ContactItem>>()
+  private contactNames = new Map<string, string>()
   public readonly contactsService: ContactsService
   public readonly channelsService: ChannelsService
   public readonly botsService: BotsService
@@ -1255,6 +1257,7 @@ export class AccountManager {
         },
       })
       this.hydrateNotifySettingsFromCache(savedAcc.id)
+      this.hydrateContactsFromCache(savedAcc.id)
     }
 
     // Start periodic background contact changes auditor - staggered round-robin across accounts (one account every 90 seconds)
@@ -1302,6 +1305,44 @@ export class AccountManager {
     }
     set.add(peerId)
     set.add(cleanId)
+  }
+
+  public getContactName(accountId: string, peerId: string): string | undefined {
+    if (!accountId || !peerId) return undefined
+    const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+    return this.contactNames.get(`${accountId}_${cleanId}`) || this.contactNames.get(`${accountId}_${peerId}`)
+  }
+
+  public setContactInfo(accountId: string, contact: ContactItem): void {
+    if (!accountId || !contact?.id) return
+    const id = contact.id.toString()
+    const cleanId = id.replace(/^-100/, '').replace(/^-/, '')
+    this.addContactPeer(accountId, id)
+
+    let accMap = this.contactItemsMap.get(accountId)
+    if (!accMap) {
+      accMap = new Map<string, ContactItem>()
+      this.contactItemsMap.set(accountId, accMap)
+    }
+    accMap.set(id, contact)
+    accMap.set(cleanId, contact)
+
+    const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || contact.username
+    if (fullName) {
+      this.contactNames.set(`${accountId}_${id}`, fullName)
+      this.contactNames.set(`${accountId}_${cleanId}`, fullName)
+    }
+  }
+
+  public hydrateContactsFromCache(accountId: string): void {
+    try {
+      const cached = this.store.loadContactsCache(accountId)
+      if (Array.isArray(cached)) {
+        for (const c of cached) {
+          this.setContactInfo(accountId, c)
+        }
+      }
+    } catch (_) {}
   }
 
   public hydrateNotifySettingsFromCache(accountId: string): void {
@@ -2695,7 +2736,11 @@ export class AccountManager {
             ? (isCreator || Boolean(peerAdminRights?.postMessages || (peerAdminRights as any)?.post_messages))
             : (isCreator || Boolean(peerAdminRights) || !(peer as any).defaultBannedRights?.sendMessages)
 
-        const title = formatEntityName(peer, 'Unknown Chat')
+        const contactName = this.getContactName(accountId, peerId)
+        let title = formatEntityName(peer, 'Unknown Chat')
+        if (contactName && (!title || title === 'Unknown Chat' || title.startsWith('User ') || title.startsWith('کاربر '))) {
+          title = contactName
+        }
         const readInboxMaxId = (d as any).lastReadIngoing ?? (d as any).readInboxMaxId ?? (d.raw as any)?.readInboxMaxId ?? (d.raw as any)?.read_inbox_max_id ?? 0
         const readOutboxMaxId = (d as any).lastReadOutgoing ?? (d as any).readOutboxMaxId ?? (d.raw as any)?.readOutboxMaxId ?? (d.raw as any)?.read_outbox_max_id ?? 0
         if (readOutboxMaxId > 0) {
@@ -2956,9 +3001,12 @@ export class AccountManager {
             const cleanCId = cId.replace(/^-100/, '').replace(/^-/, '')
             const existingCached = cachedDialogs.find((d) => d.id === cId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanCId)
 
+            const contactName = this.getContactName(accountId, cId)
             let title = ''
             if (isSelf) {
               title = 'Saved Messages'
+            } else if (contactName) {
+              title = contactName
             } else if (existingCached?.title && !existingCached.title.startsWith('کاربر ') && !existingCached.title.startsWith('User ') && !existingCached.title.toLowerCase().startsWith('ershad')) {
               title = existingCached.title
             } else if (incomingMsg?.senderName) {
@@ -3001,6 +3049,7 @@ export class AccountManager {
             }
 
             const isMuted = existingCached?.isMuted ?? (isChannel || isGroup)
+            const fallbackDateMs = topMsg.date ? (topMsg.date < 1e11 ? topMsg.date * 1000 : topMsg.date) : 0
 
             dialogs.push({
               id: cId,
@@ -3018,11 +3067,13 @@ export class AccountManager {
               isPinned: false,
               isSavedMessages: isSelf,
               lastMessageText: topMsg.text || '',
-              lastMessageDate: topMsg.date ? topMsg.date * 1000 : 0,
+              lastMessageDate: fallbackDateMs,
+              lastMessageId: topMsg.id,
+              lastMessageIsOutgoing: Boolean(topMsg.isOutgoing),
               avatarInitials: initials,
               avatarUrl,
               username,
-              isContact: isSelf ? false : this.isContactPeer(accountId, cId),
+              isContact: isSelf ? false : Boolean(contactName || this.isContactPeer(accountId, cId)),
             })
           }
         } catch (auditDialogErr) {
@@ -3042,7 +3093,30 @@ export class AccountManager {
             if (nd.id) {
               const isSelf = nd.id === accountId || nd.id === 'self' || nd.id === 'me' || Boolean(holder.info?.id && nd.id === holder.info.id.toString())
               const prevItem = mergedMap.get(nd.id)
-              const merged = prevItem ? { ...prevItem, ...nd, isContact: isSelf ? false : (nd.isContact || prevItem.isContact) } : nd
+              let merged: DialogItem
+              if (!prevItem) {
+                merged = { ...nd }
+              } else {
+                const prevDate = (prevItem.lastMessageDate || 0) < 1e11 ? (prevItem.lastMessageDate || 0) * 1000 : (prevItem.lastMessageDate || 0)
+                const newDate = (nd.lastMessageDate || 0) < 1e11 ? (nd.lastMessageDate || 0) * 1000 : (nd.lastMessageDate || 0)
+                const isPrevNewer = prevDate > newDate || ((prevItem.lastMessageId || 0) > (nd.lastMessageId || 0))
+
+                const contactName = this.getContactName(accountId, nd.id)
+                const resolvedTitle = contactName || ((nd.title && !nd.title.startsWith('User ') && !nd.title.startsWith('کاربر ')) ? nd.title : (prevItem.title || nd.title))
+
+                merged = {
+                  ...prevItem,
+                  ...nd,
+                  title: resolvedTitle,
+                  isContact: isSelf ? false : Boolean(contactName || nd.isContact || prevItem.isContact),
+                  lastMessageDate: Math.max(prevDate, newDate),
+                  lastMessageText: isPrevNewer ? (prevItem.lastMessageText || nd.lastMessageText) : (nd.lastMessageText || prevItem.lastMessageText),
+                  lastMessageId: isPrevNewer ? (prevItem.lastMessageId || nd.lastMessageId) : (nd.lastMessageId || prevItem.lastMessageId),
+                  lastMessageIsOutgoing: isPrevNewer ? prevItem.lastMessageIsOutgoing : nd.lastMessageIsOutgoing,
+                  lastMessageRead: isPrevNewer ? prevItem.lastMessageRead : nd.lastMessageRead,
+                  lastMessageMediaType: isPrevNewer ? (prevItem.lastMessageMediaType || nd.lastMessageMediaType) : (nd.lastMessageMediaType || prevItem.lastMessageMediaType),
+                }
+              }
               if (isSelf) {
                 merged.title = 'Saved Messages'
                 merged.isSavedMessages = true
@@ -3133,7 +3207,7 @@ export class AccountManager {
 
     try {
       const contacts = await holder.client.getContacts()
-      return contacts.map((c: any) => {
+      const contactItems: ContactItem[] = contacts.map((c: any) => {
         const id = c.id.toString()
         this.addContactPeer(accountId, id)
         if (c.accessHash) {
@@ -3173,7 +3247,7 @@ export class AccountManager {
           }
         } catch (_) {}
 
-        return {
+        const item: ContactItem = {
           id,
           firstName: c.firstName || '',
           lastName: c.lastName || undefined,
@@ -3181,7 +3255,12 @@ export class AccountManager {
           username: c.username || undefined,
           avatarUrl,
         }
+        this.setContactInfo(accountId, item)
+        return item
       })
+
+      this.store.saveContactsCache(accountId, contactItems)
+      return contactItems
     } catch (err: any) {
       const errMsg = String(err?.message || err)
       if (errMsg.includes('FLOOD_WAIT')) {
@@ -3203,17 +3282,24 @@ export class AccountManager {
       const beforeCount = this.activityTrackerService.getContactChanges(accountId).length
       const contacts = await this.getContacts(accountId)
       for (const c of contacts) {
-        this.addContactPeer(accountId, c.id)
+        this.setContactInfo(accountId, c)
       }
 
-      // Re-hydrate isContact flag on existing cached dialogs
+      // Re-hydrate isContact flag and contact names on existing cached dialogs
       try {
         const cached = this.store.loadDialogsCache(accountId)
         let cacheUpdated = false
         for (const d of cached) {
-          if (this.isContactPeer(accountId, d.id) && !d.isContact) {
-            d.isContact = true
-            cacheUpdated = true
+          const contactName = this.getContactName(accountId, d.id)
+          if (this.isContactPeer(accountId, d.id)) {
+            if (!d.isContact) {
+              d.isContact = true
+              cacheUpdated = true
+            }
+            if (contactName && (!d.title || d.title.startsWith('User ') || d.title.startsWith('Chat ') || d.title.startsWith('کاربر '))) {
+              d.title = contactName
+              cacheUpdated = true
+            }
           }
         }
         if (cacheUpdated) {
@@ -3473,6 +3559,27 @@ export class AccountManager {
           minId: 0,
           hash: Long.ZERO,
         })
+
+        // Resilience Guard: if offsetId or addOffset resulted in empty messages (e.g. negative addOffset shifted past end of channel),
+        // fallback to standard recent history fetch so conversation never opens blank
+        if ((!res?.messages || res.messages.length === 0) && (offsetId > 0 || addOffset !== 0)) {
+          try {
+            const fallbackRes: any = await holder.client.call({
+              _: 'messages.getHistory',
+              peer: inputPeer,
+              offsetId: 0,
+              offsetDate: 0,
+              addOffset: 0,
+              limit,
+              maxId: 0,
+              minId: 0,
+              hash: Long.ZERO,
+            })
+            if (fallbackRes?.messages && fallbackRes.messages.length > 0) {
+              res = fallbackRes
+            }
+          } catch (_) {}
+        }
       }
 
       const rawMessages = res?.messages || []
@@ -3483,7 +3590,15 @@ export class AccountManager {
         res.users.forEach((u: any) => {
           const uid = u.id?.toString()
           users.set(u.id, u)
-          if (uid) users.set(uid, u)
+          if (uid) {
+            users.set(uid, u)
+            const cName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username
+            if (cName) {
+              this.contactNames.set(`${accountId}_${uid}`, cName)
+              const cleanUid = uid.replace(/^-100/, '').replace(/^-/, '')
+              this.contactNames.set(`${accountId}_${cleanUid}`, cName)
+            }
+          }
           if (u.accessHash) this.setPeerAccessHash(accountId, u.id.toString(), u.accessHash)
           const thumb = extractStrippedThumb(u.photo)
           if (thumb) this.thumbCache.set(`${accountId}_${u.id}`, thumb)
@@ -3528,6 +3643,38 @@ export class AccountManager {
       if (this.rawMessagesCache.size > 3000) {
         const keys = Array.from(this.rawMessagesCache.keys()).slice(0, 500)
         for (const k of keys) this.rawMessagesCache.delete(k)
+      }
+
+      if ((!offsetId || offsetId === 0) && rawMessages.length > 0) {
+        try {
+          const topRaw = rawMessages[0]
+          if (topRaw && topRaw.id) {
+            const cached = this.store.loadDialogsCache(accountId) || []
+            const isPeerMatch = (a: string, b: string) => {
+              if (a === b) return true
+              const ca = a.replace(/^-100/, '').replace(/^-/, '')
+              const cb = b.replace(/^-100/, '').replace(/^-/, '')
+              return ca === cb
+            }
+            const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+            if (idx >= 0) {
+              const topDateMs = topRaw.date ? (typeof topRaw.date.getTime === 'function' ? topRaw.date.getTime() : (topRaw.date < 1e11 ? topRaw.date * 1000 : topRaw.date)) : Date.now()
+              const curDateMs = (cached[idx].lastMessageDate || 0) < 1e11 ? (cached[idx].lastMessageDate || 0) * 1000 : (cached[idx].lastMessageDate || 0)
+              if (topDateMs >= curDateMs || (topRaw.id && (!cached[idx].lastMessageId || topRaw.id >= cached[idx].lastMessageId))) {
+                const contactName = this.getContactName(accountId, chatId)
+                cached[idx] = {
+                  ...cached[idx],
+                  title: contactName && (cached[idx].title.startsWith('User ') || cached[idx].title.startsWith('کاربر ')) ? contactName : cached[idx].title,
+                  lastMessageText: topRaw.text || (topRaw.message || cached[idx].lastMessageText),
+                  lastMessageDate: topDateMs,
+                  lastMessageId: topRaw.id,
+                  lastMessageIsOutgoing: Boolean(topRaw.isOutgoing || topRaw.out),
+                }
+                this.store.saveDialogsCache(accountId, cached)
+              }
+            }
+          }
+        } catch (_) {}
       }
 
       // Pre-fetch any missing replied messages so snippets and sender names can be resolved accurately
@@ -7565,28 +7712,30 @@ export class AccountManager {
     const isBotAccount = Boolean(holder.info?.isBot)
     if (isBotAccount) {
       this.store.recordBotMessage(accountId, chatId, item)
-      try {
-        const cached = this.store.loadDialogsCache(accountId) || []
-        const isPeerMatch = (a: string, b: string) => {
-          if (a === b) return true
-          const ca = a.replace(/^-100/, '').replace(/^-/, '')
-          const cb = b.replace(/^-100/, '').replace(/^-/, '')
-          return ca === cb
-        }
-        const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
-        if (idx >= 0) {
-          cached[idx] = {
-            ...cached[idx],
-            lastMessageText: text,
-            lastMessageDate: itemDate,
-            lastMessageId: msgId,
-            lastMessageIsOutgoing: true,
-            lastMessageRead: true,
-          }
-          this.store.saveDialogsCache(accountId, cached)
-        }
-      } catch (_) {}
     }
+
+    try {
+      const cached = this.store.loadDialogsCache(accountId) || []
+      const isPeerMatch = (a: string, b: string) => {
+        if (a === b) return true
+        const ca = a.replace(/^-100/, '').replace(/^-/, '')
+        const cb = b.replace(/^-100/, '').replace(/^-/, '')
+        return ca === cb
+      }
+      const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+      const nowMs = Date.now()
+      if (idx >= 0) {
+        cached[idx] = {
+          ...cached[idx],
+          lastMessageText: text,
+          lastMessageDate: nowMs,
+          lastMessageId: msgId,
+          lastMessageIsOutgoing: true,
+          lastMessageRead: true,
+        }
+        this.store.saveDialogsCache(accountId, cached)
+      }
+    } catch (_) {}
 
     return item
   }
@@ -16420,56 +16569,60 @@ export class AccountManager {
         this.store.recordMessage(accountId, chatId, item)
         if (isBotAccount) {
           this.store.recordBotMessage(accountId, chatId, item)
-          try {
-            const cached = this.store.loadDialogsCache(accountId) || []
-            const isPeerMatch = (a: string, b: string) => {
-              if (a === b) return true
-              const ca = a.replace(/^-100/, '').replace(/^-/, '')
-              const cb = b.replace(/^-100/, '').replace(/^-/, '')
-              return ca === cb
-            }
-            const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
-            const fallbackTitle = chat
-              ? formatEntityName(chat, 'Chat')
-              : (!item.isOutgoing && item.senderName ? item.senderName : (chatId.startsWith('-') ? `گروه ${chatId}` : `کاربر ${chatId}`))
-            const cleanAvatar = !item.isOutgoing && item.senderAvatarUrl && item.senderAvatarUrl.length > 2000
-              ? item.senderAvatarUrl
-              : undefined
-            if (idx >= 0) {
-              cached[idx] = {
-                ...cached[idx],
-                title: cached[idx].title && !cached[idx].title.startsWith('کاربر ') ? cached[idx].title : fallbackTitle,
-                avatarUrl: cleanAvatar || cached[idx].avatarUrl,
-                lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
-                lastMessageDate: item.date || Math.floor(Date.now() / 1000),
-                lastMessageId: item.id,
-                lastMessageIsOutgoing: item.isOutgoing,
-                lastMessageRead: item.isOutgoing,
-                unreadCount: (cached[idx].unreadCount || 0) + (item.isOutgoing ? 0 : 1),
-              }
-            } else {
-              cached.unshift({
-                id: chatId,
-                accountId,
-                title: fallbackTitle,
-                avatarUrl: cleanAvatar,
-                unreadCount: item.isOutgoing ? 0 : 1,
-                lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
-                lastMessageDate: item.date || Math.floor(Date.now() / 1000),
-                lastMessageId: item.id,
-                lastMessageIsOutgoing: item.isOutgoing,
-                lastMessageRead: item.isOutgoing,
-                isUser: !chatId.startsWith('-'),
-                isGroup: chatId.startsWith('-') && !chatId.startsWith('-100'),
-                isChannel: chatId.startsWith('-100'),
-                isBot: false,
-                isPinned: false,
-                isMuted: isChatMuted,
-              })
-            }
-            this.store.saveDialogsCache(accountId, cached)
-          } catch (_) {}
         }
+        try {
+          const cached = this.store.loadDialogsCache(accountId) || []
+          const isPeerMatch = (a: string, b: string) => {
+            if (a === b) return true
+            const ca = a.replace(/^-100/, '').replace(/^-/, '')
+            const cb = b.replace(/^-100/, '').replace(/^-/, '')
+            return ca === cb
+          }
+          const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+          const contactName = this.getContactName(accountId, chatId)
+          const fallbackTitle = contactName || (chat
+            ? formatEntityName(chat, 'Chat')
+            : (!item.isOutgoing && item.senderName ? item.senderName : (chatId.startsWith('-') ? `گروه ${chatId}` : `کاربر ${chatId}`)))
+          const cleanAvatar = !item.isOutgoing && item.senderAvatarUrl && item.senderAvatarUrl.length > 2000
+            ? item.senderAvatarUrl
+            : undefined
+          const msgDateMs = item.date ? (item.date < 1e11 ? item.date * 1000 : item.date) : Date.now()
+          if (idx >= 0) {
+            const currentTitle = cached[idx].title
+            const resolvedTitle = contactName || ((currentTitle && !currentTitle.startsWith('کاربر ') && !currentTitle.startsWith('User ')) ? currentTitle : fallbackTitle)
+            cached[idx] = {
+              ...cached[idx],
+              title: resolvedTitle,
+              avatarUrl: cleanAvatar || cached[idx].avatarUrl,
+              lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
+              lastMessageDate: msgDateMs,
+              lastMessageId: item.id,
+              lastMessageIsOutgoing: item.isOutgoing,
+              lastMessageRead: item.isOutgoing,
+              unreadCount: (cached[idx].unreadCount || 0) + (item.isOutgoing ? 0 : 1),
+            }
+          } else {
+            cached.unshift({
+              id: chatId,
+              accountId,
+              title: fallbackTitle,
+              avatarUrl: cleanAvatar,
+              unreadCount: item.isOutgoing ? 0 : 1,
+              lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
+              lastMessageDate: msgDateMs,
+              lastMessageId: item.id,
+              lastMessageIsOutgoing: item.isOutgoing,
+              lastMessageRead: item.isOutgoing,
+              isUser: !chatId.startsWith('-'),
+              isGroup: chatId.startsWith('-') && !chatId.startsWith('-100'),
+              isChannel: chatId.startsWith('-100'),
+              isBot: false,
+              isPinned: false,
+              isMuted: isChatMuted,
+            })
+          }
+          this.store.saveDialogsCache(accountId, cached)
+        } catch (_) {}
 
         // Ultra-fast auto-download for incoming photos in private chats so they are preserved locally even if deleted
         const isPrivateChat = chat
