@@ -1975,6 +1975,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:send-media-group', async (_event, { accountId, chatId, items, options }) => {
+    try {
+      return await accountManager.sendMediaGroup(accountId, chatId, items, options)
+    } catch (err: any) {
+      Logger.error(`[IPC] sendMediaGroup failed for ${accountId} in ${chatId}:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('dialog:open-file', async (_event, options?: { type?: 'media' | 'document' | 'audio'; allowMultiple?: boolean; title?: string; filters?: Array<{ name: string; extensions: string[] }>; properties?: Array<'openFile' | 'multiSelections'> }) => {
     const win = BrowserWindow.getFocusedWindow() || mainWindow
     if (!win) return { canceled: true, filePaths: [] }

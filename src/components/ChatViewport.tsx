@@ -188,6 +188,10 @@ interface ChatViewportProps {
       scheduleDate?: number
     }
   ) => Promise<void> | void
+  onSendMediaGroup?: (
+    items: Array<{ filePath: string; caption?: string; forceDocument?: boolean; isSpoiler?: boolean }>,
+    options?: SendMediaOptions
+  ) => Promise<MessageItem[] | undefined | void>
   onOpenDirectForward: (message: MessageItem) => void
   onOpenBatchDirectForward?: (messages: MessageItem[]) => void
   onQuickForwardToSaved?: (message: MessageItem) => Promise<boolean> | void
@@ -774,6 +778,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   bubblePadding = 10,
   onSendMessage,
   onSendMedia,
+  onSendMediaGroup,
   onOpenDirectForward,
   onOpenBatchDirectForward,
   onQuickForwardToSaved,
@@ -2974,7 +2979,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             const ext = file.type.split('/')[1] || 'png'
             filePath = await window.guidegram.saveTempFile({
               buffer,
-              filename: file.name || `Pasted_Image_${Date.now()}.${ext}`,
+              filename: file.name || `Pasted_Image_${Date.now()}_${i + 1}.${ext}`,
             })
           } catch (err) {
             console.warn('[Paste] Failed to save temp file:', err)
@@ -2987,7 +2992,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         if (filePath) {
           newAttachments.push({
             path: filePath,
-            name: file.name || `Pasted_Image_${Date.now()}.png`,
+            name: file.name || `Pasted_Image_${Date.now()}_${i + 1}.png`,
             size: file.size,
             type,
           })
@@ -3006,7 +3011,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 const ext = file.type.split('/')[1] || 'png'
                 filePath = await window.guidegram.saveTempFile({
                   buffer,
-                  filename: `Pasted_Image_${Date.now()}.${ext}`,
+                  filename: `Pasted_Image_${Date.now()}_${i + 1}.${ext}`,
                 })
               } catch (err) {
                 console.warn('[Paste] Failed to save in-memory clipboard image:', err)
@@ -3018,7 +3023,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             if (filePath) {
               newAttachments.push({
                 path: filePath,
-                name: `Pasted_Image_${Date.now()}.png`,
+                name: `Pasted_Image_${Date.now()}_${i + 1}.png`,
                 size: file.size,
                 type: 'media',
               })
@@ -3032,9 +3037,19 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       e.preventDefault()
       const hasMedia = newAttachments.some((a) => a.type === 'media')
       if (hasMedia) {
-        setSendMediaModalState({
-          items: newAttachments,
-          initialCaption: inputText.trim(),
+        setSendMediaModalState((prev) => {
+          if (!prev) {
+            return {
+              items: newAttachments.slice(0, 10),
+              initialCaption: inputText.trim(),
+            }
+          }
+          const existing = new Set(prev.items.map((it) => it.path))
+          const fresh = newAttachments.filter((it) => !existing.has(it.path))
+          return {
+            ...prev,
+            items: [...prev.items, ...fresh].slice(0, 10),
+          }
         })
       } else {
         setStagedAttachments((prev) => [...prev, ...newAttachments])
@@ -3084,6 +3099,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       caption: string
       compress: boolean
       isSpoiler?: boolean
+      groupInAlbum?: boolean
     }
   ) => {
     setSendMediaModalState(null)
@@ -3108,39 +3124,74 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       let overallIndex = 0
 
       for (const chunk of chunks) {
-        for (let i = 0; i < chunk.items.length; i++) {
-          const item = chunk.items[i]
-          // Master caption invariant: only the first item in the whole sending batch receives the caption
-          const fileCaption = overallIndex === 0 ? options.caption : undefined
-          overallIndex++
-
-          setUploadProgress({
-            isUploading: true,
-            percent: Math.round((overallIndex / mediaItems.length) * 100),
-            fileName:
-              mediaItems.length > 1
-                ? `[${overallIndex}/${mediaItems.length}] ${item.name}`
-                : item.name,
-          })
-
+        const canGroup = options.groupInAlbum !== false && chunk.isGroup && chunk.items.length >= 2
+        if (canGroup && (onSendMediaGroup || window.guidegram?.sendMediaGroup)) {
           if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
             const typingAction = options.compress ? 'upload_photo' : 'upload_document'
             window.guidegram.sendTyping(chat.accountId, chat.id, typingAction).catch(() => {})
           }
 
-          const sendOptions: SendMediaOptions = {
-            caption: fileCaption,
-            replyToMsgId: replyId,
-            // When compress is true (DEFAULT): forceDocument is false -> sent as photo!
-            // When compress is false: forceDocument is true -> sent as uncompressed document!
+          setUploadProgress({
+            isUploading: true,
+            percent: Math.round(((overallIndex + chunk.items.length) / mediaItems.length) * 100),
+            fileName: `Album (${chunk.items.length} items)`,
+          })
+
+          const albumItems = chunk.items.map((item, idx) => ({
+            filePath: item.path,
+            caption: overallIndex === 0 && idx === 0 ? options.caption : undefined,
             forceDocument: !options.compress,
-            groupedId: chunk.isGroup ? chunk.groupedId : undefined,
+            isSpoiler: options.isSpoiler,
+          }))
+          overallIndex += chunk.items.length
+
+          const groupOptions: SendMediaOptions = {
+            replyToMsgId: replyId,
+            forceDocument: !options.compress,
+            isSpoiler: options.isSpoiler,
           }
 
-          if (onSendMedia) {
-            await onSendMedia(item.path, sendOptions)
-          } else if (chat?.accountId && chat?.id && window.guidegram?.sendMedia) {
-            await window.guidegram.sendMedia(chat.accountId, chat.id, item.path, sendOptions)
+          if (onSendMediaGroup) {
+            await onSendMediaGroup(albumItems, groupOptions)
+          } else if (chat?.accountId && chat?.id && window.guidegram?.sendMediaGroup) {
+            await window.guidegram.sendMediaGroup(chat.accountId, chat.id, albumItems, groupOptions)
+          }
+        } else {
+          for (let i = 0; i < chunk.items.length; i++) {
+            const item = chunk.items[i]
+            // Master caption invariant: only the first item in the whole sending batch receives the caption
+            const fileCaption = overallIndex === 0 ? options.caption : undefined
+            overallIndex++
+
+            setUploadProgress({
+              isUploading: true,
+              percent: Math.round((overallIndex / mediaItems.length) * 100),
+              fileName:
+                mediaItems.length > 1
+                  ? `[${overallIndex}/${mediaItems.length}] ${item.name}`
+                  : item.name,
+            })
+
+            if (chat?.accountId && chat?.id && window.guidegram?.sendTyping) {
+              const typingAction = options.compress ? 'upload_photo' : 'upload_document'
+              window.guidegram.sendTyping(chat.accountId, chat.id, typingAction).catch(() => {})
+            }
+
+            const sendOptions: SendMediaOptions = {
+              caption: fileCaption,
+              replyToMsgId: replyId,
+              // When compress is true (DEFAULT): forceDocument is false -> sent as photo!
+              // When compress is false: forceDocument is true -> sent as uncompressed document!
+              forceDocument: !options.compress,
+              isSpoiler: options.isSpoiler,
+              groupedId: chunk.isGroup ? chunk.groupedId : undefined,
+            }
+
+            if (onSendMedia) {
+              await onSendMedia(item.path, sendOptions)
+            } else if (chat?.accountId && chat?.id && window.guidegram?.sendMedia) {
+              await window.guidegram.sendMedia(chat.accountId, chat.id, item.path, sendOptions)
+            }
           }
         }
       }

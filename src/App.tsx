@@ -2016,6 +2016,81 @@ export const App: React.FC = () => {
     }
   }
 
+  const handleSendMediaGroup = async (
+    items: Array<{ filePath: string; caption?: string; forceDocument?: boolean; isSpoiler?: boolean }>,
+    options?: SendMediaOptions
+  ): Promise<MessageItem[] | undefined> => {
+    if (!activeAccountId || !activeChatId || !window.guidegram?.sendMediaGroup) return
+    try {
+      const sentList = await window.guidegram.sendMediaGroup(activeAccountId, activeChatId, items, options)
+      if (!sentList || sentList.length === 0) return sentList
+
+      const repliedMsg = options?.replyToMsgId
+        ? (messagesByChat[activeChatId] || []).find((m) => m.id === options.replyToMsgId)
+        : undefined
+
+      const enrichedList: MessageItem[] = sentList.map((sent, idx) => ({
+        ...sent,
+        isOutgoing: true,
+        isRead: false,
+        replyToMsgId: options?.replyToMsgId,
+        isSilent: options?.silent,
+        groupedId: sent.groupedId || options?.groupedId,
+        replyTo: idx === 0 && options?.replyToMsgId
+          ? {
+              replyToMsgId: options.replyToMsgId,
+              senderName: repliedMsg?.senderName || (repliedMsg?.isOutgoing ? 'You' : 'User'),
+              text: repliedMsg?.text || (repliedMsg?.mediaType ? `[${repliedMsg.mediaType}]` : undefined),
+            }
+          : undefined,
+      }))
+
+      setMessagesByChat((prev) => {
+        const list = prev[activeChatId] || []
+        const listMap = new Map<number, MessageItem>(list.map((m) => [m.id, m]))
+        for (const item of enrichedList) {
+          listMap.set(item.id, item)
+        }
+        const nextList = Array.from(listMap.values())
+        nextList.sort((a, b) => (a.date - b.date) || (a.id - b.id))
+        return {
+          ...prev,
+          [activeChatId]: nextList,
+        }
+      })
+
+      const lastSent = enrichedList[enrichedList.length - 1]
+      const mediaLabel = options?.caption || `[Album: ${enrichedList.length} items]`
+      const validMediaType: DialogItem['lastMessageMediaType'] = lastSent.mediaType as any
+
+      setDialogsByAccount((prev) => {
+        const list = prev[activeAccountId] || []
+        return {
+          ...prev,
+          [activeAccountId]: list.map((d: DialogItem): DialogItem =>
+            d.id === activeChatId
+              ? {
+                  ...d,
+                  lastMessageText: mediaLabel,
+                  lastMessageDate: Date.now(),
+                  lastMessageId: lastSent.id,
+                  lastMessageIsOutgoing: true,
+                  lastMessageRead: false,
+                  lastMessageMediaType: validMediaType,
+                  unreadCount: 0,
+                }
+              : d
+          ),
+        }
+      })
+
+      return enrichedList
+    } catch (err) {
+      console.error('Failed to send media group:', err)
+      throw err
+    }
+  }
+
   const handleDirectForward = async (
     targetChatIdsOrPayload: string[] | DirectForwardPayload,
     withoutQuoteArg?: boolean,
@@ -2884,6 +2959,7 @@ export const App: React.FC = () => {
                   bubblePadding={config?.bubblePadding ?? 10}
                   onSendMessage={handleSendMessage}
                   onSendMedia={handleSendMedia}
+                  onSendMediaGroup={handleSendMediaGroup}
                   onOpenDirectForward={(msg) => {
                     setForwardMessage(msg)
                     setForwardMessagesList(null)
@@ -3013,6 +3089,7 @@ export const App: React.FC = () => {
                   bubblePadding={config?.bubblePadding ?? 10}
                   onSendMessage={handleSendMessage}
                   onSendMedia={handleSendMedia}
+                  onSendMediaGroup={handleSendMediaGroup}
                   onOpenDirectForward={(msg) => {
                     setForwardMessage(msg)
                     setForwardMessagesList(null)

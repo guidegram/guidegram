@@ -12,6 +12,7 @@ import {
   Trash2,
   Check,
   Layers,
+  Plus,
 } from 'lucide-react'
 import { ImageEditorModal } from './ImageEditorModal'
 import { useI18n } from '../../i18n'
@@ -34,6 +35,7 @@ export interface SendMediaPreviewModalProps {
       caption: string
       compress: boolean
       isSpoiler?: boolean
+      groupInAlbum?: boolean
     }
   ) => void
 }
@@ -70,6 +72,8 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   // Default to compressed photo sending like Telegram Desktop parity
   const [compress, setCompress] = useState<boolean>(true)
+  // Default to album grouping like Telegram Desktop parity
+  const [groupInAlbum, setGroupInAlbum] = useState<boolean>(true)
   const [caption, setCaption] = useState<string>(initialCaption)
   const [isSpoiler, setIsSpoiler] = useState<boolean>(false)
   const [isEditing, setIsEditing] = useState<boolean>(false)
@@ -83,6 +87,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
     setCurrentIndex(0)
     setCaption(initialCaption)
     setCompress(true)
+    setGroupInAlbum(true)
     setIsSpoiler(false)
     setIsEditing(false)
   }, [initialItems, initialCaption, isOpen])
@@ -109,6 +114,174 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, isEditing, onClose])
+
+  // Append new media items with duplicate and limit guards (Telegram maximum 10 items)
+  const appendMediaItems = useCallback((newMedia: SendMediaItem[]) => {
+    if (newMedia.length === 0) return
+    setItems((prev) => {
+      const existingPaths = new Set(prev.map((it) => it.path))
+      const deduplicated = newMedia.filter((it) => !existingPaths.has(it.path))
+      if (deduplicated.length === 0) return prev
+      const combined = [...prev, ...deduplicated].slice(0, 10)
+      return combined
+    })
+    setCurrentIndex((prev) => {
+      return Math.min(items.length + newMedia.length - 1, 9)
+    })
+  }, [items.length])
+
+  // Pick more files from disk via openFileDialog (+)
+  const handlePickMoreFiles = useCallback(async () => {
+    if (!window.guidegram?.openFileDialog) return
+    try {
+      const res = await window.guidegram.openFileDialog({
+        type: 'media',
+        allowMultiple: true,
+        title: 'Add photos or videos to album',
+      })
+      if (!res.canceled && res.filePaths.length > 0) {
+        const newItems: SendMediaItem[] = res.filePaths.map((fp) => ({
+          path: fp,
+          name: fp.split(/[\\/]/).pop() || 'media',
+          type: 'media',
+        }))
+        appendMediaItems(newItems)
+      }
+    } catch (err) {
+      console.warn('Failed to pick more files:', err)
+    }
+  }, [appendMediaItems])
+
+  // Handle Pasting new images directly into the modal (single or multiple)
+  const handleModalPaste = useCallback(async (e: React.ClipboardEvent | ClipboardEvent) => {
+    const clipboardData = (e as any).clipboardData
+    if (!clipboardData) return
+
+    const files = clipboardData.files
+    const clipItems = clipboardData.items
+    const extracted: SendMediaItem[] = []
+
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const isImg = file.type?.startsWith('image/') || /\.(jpg|jpeg|png|webp|bmp|gif|heic)$/i.test(file.name)
+        const isVid = file.type?.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm)$/i.test(file.name)
+        if (!isImg && !isVid) continue
+
+        let filePath = ''
+        if (window.guidegram?.getPathForFile) {
+          try {
+            filePath = window.guidegram.getPathForFile(file)
+          } catch {}
+        }
+        if (!filePath) {
+          filePath = (file as any).path || ''
+        }
+        if (!filePath && window.guidegram?.saveTempFile) {
+          try {
+            const buffer = await file.arrayBuffer()
+            const ext = file.type?.split('/')[1] || 'png'
+            filePath = await window.guidegram.saveTempFile({
+              buffer,
+              filename: file.name || `Pasted_Image_${Date.now()}_${i + 1}.${ext}`,
+            })
+          } catch (err) {
+            console.warn('[ModalPaste] Failed to save temp file:', err)
+          }
+        }
+        if (!filePath) {
+          filePath = URL.createObjectURL(file)
+        }
+
+        if (filePath) {
+          extracted.push({
+            path: filePath,
+            name: file.name || `Pasted_Image_${Date.now()}_${i + 1}.png`,
+            size: file.size,
+            type: 'media',
+          })
+        }
+      }
+    } else if (clipItems && clipItems.length > 0) {
+      for (let i = 0; i < clipItems.length; i++) {
+        const item = clipItems[i]
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            let filePath = ''
+            if (window.guidegram?.saveTempFile) {
+              try {
+                const buffer = await file.arrayBuffer()
+                const ext = file.type.split('/')[1] || 'png'
+                filePath = await window.guidegram.saveTempFile({
+                  buffer,
+                  filename: `Pasted_Image_${Date.now()}_${i + 1}.${ext}`,
+                })
+              } catch (err) {
+                console.warn('[ModalPaste] Failed to save in-memory clipboard image:', err)
+              }
+            }
+            if (!filePath) {
+              filePath = URL.createObjectURL(file)
+            }
+            if (filePath) {
+              extracted.push({
+                path: filePath,
+                name: `Pasted_Image_${Date.now()}_${i + 1}.png`,
+                size: file.size,
+                type: 'media',
+              })
+            }
+          }
+        }
+      }
+    }
+
+    if (extracted.length > 0) {
+      e.preventDefault()
+      e.stopPropagation?.()
+      appendMediaItems(extracted)
+    }
+  }, [appendMediaItems])
+
+  // Attach global paste handler when modal is active
+  useEffect(() => {
+    if (!isOpen || isEditing) return
+    const onWindowPaste = (e: ClipboardEvent) => {
+      handleModalPaste(e)
+    }
+    window.addEventListener('paste', onWindowPaste)
+    return () => window.removeEventListener('paste', onWindowPaste)
+  }, [isOpen, isEditing, handleModalPaste])
+
+  // Drag and drop handler
+  const handleDropMedia = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      const newItems: SendMediaItem[] = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        let filePath = ''
+        if (window.guidegram?.getPathForFile) {
+          try { filePath = window.guidegram.getPathForFile(file) } catch {}
+        }
+        if (!filePath) filePath = (file as any).path || ''
+        if (filePath) {
+          newItems.push({
+            path: filePath,
+            name: file.name,
+            size: file.size,
+            type: 'media',
+          })
+        }
+      }
+      if (newItems.length > 0) {
+        appendMediaItems(newItems)
+      }
+    }
+  }, [appendMediaItems])
 
   const currentItem = items[currentIndex] || items[0]
 
@@ -193,6 +366,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
       caption: caption.trim(),
       compress,
       isSpoiler,
+      groupInAlbum,
     })
   }
 
@@ -213,6 +387,9 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
         aria-modal="true"
         aria-label="Send Media Preview"
         className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 select-none animate-in fade-in duration-200"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDropMedia}
+        onPaste={handleModalPaste}
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose()
         }}
@@ -334,43 +511,100 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
               )}
             </div>
 
-            {/* Thumbnail Strip for Multi-Images */}
-            {items.length > 1 && (
-              <div className="w-full mt-3 flex items-center gap-2 overflow-x-auto pb-1 px-1">
-                {items.map((it, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 cursor-pointer border-2 transition-all ${
-                      idx === currentIndex
-                        ? 'border-primary-500 scale-105 shadow-md'
-                        : 'border-white/10 opacity-70 hover:opacity-100 hover:border-white/30'
-                    }`}
+            {/* Thumbnail Strip for Multi-Images & Add Photo (+) */}
+            <div className="w-full mt-3 flex items-center gap-2 overflow-x-auto pb-1 px-1">
+              {items.map((it, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`relative w-14 h-14 rounded-lg overflow-hidden shrink-0 cursor-pointer border-2 transition-all ${
+                    idx === currentIndex
+                      ? 'border-primary-500 scale-105 shadow-md'
+                      : 'border-white/10 opacity-70 hover:opacity-100 hover:border-white/30'
+                  }`}
+                >
+                  <img
+                    src={toMediaUrl(it.path)}
+                    alt={it.name}
+                    className="w-full h-full object-cover select-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveItem(idx)
+                    }}
+                    className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 hover:bg-red-500 text-white transition-colors cursor-pointer"
+                    title="Remove image"
                   >
-                    <img
-                      src={toMediaUrl(it.path)}
-                      alt={it.name}
-                      className="w-full h-full object-cover select-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleRemoveItem(idx)
-                      }}
-                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 hover:bg-red-500 text-white transition-colors cursor-pointer"
-                      title="Remove image"
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add Photo Button (Telegram Desktop Parity - up to 10 album limit) */}
+              {items.length < 10 && (
+                <button
+                  type="button"
+                  onClick={handlePickMoreFiles}
+                  className="w-14 h-14 rounded-lg border-2 border-dashed border-white/20 hover:border-primary-400 bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center text-gray-400 hover:text-white transition-all shrink-0 cursor-pointer group"
+                  title="Add photo to album (or paste with Ctrl+V)"
+                >
+                  <Plus className="w-4 h-4 group-hover:scale-110 transition-transform text-primary-400" />
+                  <span className="text-[9px] font-semibold mt-0.5 text-gray-400 group-hover:text-gray-200">Add</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Telegram Parity Settings: Compression Toggle & Caption */}
+          {/* Telegram Parity Settings: Compression Toggle, Album Grouping & Caption */}
           <div className="px-5 py-3 bg-dark-900/60 border-t border-white/5 space-y-3">
+            {/* Telegram Parity: "Group in an album" Toggle (Visible when 2+ items) */}
+            {items.length >= 2 && (
+              <div
+                onClick={() => setGroupInAlbum((prev) => !prev)}
+                className="flex items-center justify-between p-3 rounded-xl bg-dark-800/70 border border-white/5 hover:border-white/15 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                      groupInAlbum
+                        ? 'bg-primary-600 text-white shadow-sm'
+                        : 'border border-white/30 bg-white/5 text-transparent'
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-gray-200 group-hover:text-white transition-colors flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-primary-400" />
+                      <span>Group in an album</span>
+                      <span className="text-[10px] text-primary-400 font-normal">
+                        ({items.length} items)
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                      {groupInAlbum
+                        ? 'Sends together as a native Telegram gallery with combined grid layout'
+                        : 'Sends each photo as a separate individual message'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      groupInAlbum
+                        ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
+                        : 'bg-white/10 text-gray-300 border border-white/20'
+                    }`}
+                  >
+                    {groupInAlbum ? 'Album (Gallery)' : 'Separate'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Telegram Parity: "Compress Image" Toggle (Default Checked) */}
             <div
               onClick={() => setCompress((prev) => !prev)}
@@ -421,8 +655,9 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 onKeyDown={handleCaptionKeyDown}
+                onPaste={handleModalPaste}
                 rows={2}
-                placeholder="Add a caption... (Enter to send, Shift+Enter for newline)"
+                placeholder="Add a caption... (Enter to send, Shift+Enter for newline, Ctrl+V to paste more)"
                 className="w-full bg-dark-800/90 text-sm text-gray-100 placeholder-gray-500 px-3.5 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-primary-500/60 focus:ring-1 focus:ring-primary-500/40 resize-none transition-all"
               />
             </div>

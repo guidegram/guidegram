@@ -357,6 +357,13 @@ const guidegramAPI = {
     options?: SendMediaOptions
   ): Promise<MessageItem> =>
     ipcRenderer.invoke('telegram:send-media', { accountId, chatId, filePath, options }),
+  sendMediaGroup: (
+    accountId: string,
+    chatId: string,
+    items: Array<{ filePath: string; caption?: string; forceDocument?: boolean; isSpoiler?: boolean }>,
+    options?: SendMediaOptions
+  ): Promise<MessageItem[]> =>
+    ipcRenderer.invoke('telegram:send-media-group', { accountId, chatId, items, options }),
   openFileDialog: (options?: OpenFileDialogOptions): Promise<OpenFileDialogResult> =>
     ipcRenderer.invoke('dialog:open-file', options),
   saveTempFile: (params: { buffer: ArrayBuffer | Uint8Array; filename: string }): Promise<string> =>

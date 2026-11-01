@@ -1103,6 +1103,7 @@ export interface SendMediaOptions {
   scheduleDate?: number // unix timestamp in milliseconds
   scheduleWhenOnline?: boolean
   groupedId?: string
+  isSpoiler?: boolean
 }
 
 export interface UploadProgressPayload {

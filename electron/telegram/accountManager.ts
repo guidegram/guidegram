@@ -8204,11 +8204,28 @@ export class AccountManager {
       }
     }
 
+    const ext = path.extname(filePath).toLowerCase().replace('.', '')
+    const isImage = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'heic', 'heif'].includes(ext)
+    const isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)
+    const isAudio = ['mp3', 'm4a', 'ogg', 'opus', 'flac', 'wav', 'aac'].includes(ext)
+
     // mtcute treats every plain string as a Telegram file ID. Local paths must
     // be prefixed with `file:` so they are uploaded from disk instead.
     const mediaFile = /^(file:|https?:\/\/)/.test(filePath) ? filePath : `file:${filePath}`
+    const mediaType = options?.isVoice
+      ? 'voice'
+      : options?.forceDocument
+        ? 'document'
+        : isImage
+          ? 'photo'
+          : isVideo
+            ? 'video'
+            : isAudio
+              ? 'audio'
+              : 'document'
+
     const media: any = {
-      type: options?.isVoice ? 'voice' : options?.forceDocument ? 'document' : 'auto',
+      type: mediaType,
       file: mediaFile,
     }
     if (options?.isVoice) {
@@ -8217,6 +8234,9 @@ export class AccountManager {
       // Telegram keeps the upload classified as a voice note (DocumentAttributeAudio voice flag parity).
       media.fileMime = 'audio/ogg'
       media.fileName = path.basename(filePath)
+    }
+    if (options?.isSpoiler) {
+      media.spoiler = true
     }
 
     const uploaded = await holder.client.sendMedia(targetPeer as any, media, {
@@ -8241,7 +8261,7 @@ export class AccountManager {
       text: options?.caption || '',
       date: Math.floor(Date.now() / 1000),
       isOutgoing: true,
-      mediaType: options?.isVoice ? 'voice' : options?.forceDocument ? 'document' : 'photo',
+      mediaType: mediaType === 'voice' ? 'voice' : options?.forceDocument ? 'document' : (isImage ? 'photo' : isVideo ? 'video' : isAudio ? 'audio' : 'document'),
       isVoice: options?.isVoice,
       mediaFileName: path.basename(filePath),
       mediaFileSize,
@@ -8262,7 +8282,7 @@ export class AccountManager {
         if (idx >= 0) {
           cached[idx] = {
             ...cached[idx],
-            lastMessageText: options?.caption || (options?.isVoice ? '[Voice message]' : '[Photo]'),
+            lastMessageText: options?.caption || (options?.isVoice ? '[Voice message]' : isImage ? '[Photo]' : isVideo ? '[Video]' : '[File]'),
             lastMessageDate: item.date,
             lastMessageId: uploaded.id,
             lastMessageIsOutgoing: true,
@@ -8274,6 +8294,120 @@ export class AccountManager {
     }
 
     return item
+  }
+
+  public async sendMediaGroup(
+    accountId: string,
+    chatId: string,
+    items: Array<{
+      filePath: string
+      caption?: string
+      forceDocument?: boolean
+      isSpoiler?: boolean
+    }>,
+    options?: SendMediaOptions
+  ): Promise<MessageItem[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    const targetPeer = await this.resolveInputPeer(accountId, chatId)
+
+    const medias: any[] = items.map((it) => {
+      const ext = path.extname(it.filePath).toLowerCase().replace('.', '')
+      const isImage = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'heic', 'heif'].includes(ext)
+      const isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)
+      const isAudio = ['mp3', 'm4a', 'ogg', 'opus', 'flac', 'wav', 'aac'].includes(ext)
+
+      const mediaFile = /^(file:|https?:\/\/)/.test(it.filePath) ? it.filePath : `file:${it.filePath}`
+      const isDoc = it.forceDocument ?? options?.forceDocument
+
+      const type = isDoc
+        ? 'document'
+        : isImage
+          ? 'photo'
+          : isVideo
+            ? 'video'
+            : isAudio
+              ? 'audio'
+              : 'document'
+
+      return {
+        type,
+        file: mediaFile,
+        caption: it.caption,
+        spoiler: Boolean(it.isSpoiler ?? options?.isSpoiler),
+      }
+    })
+
+    const uploaded = await holder.client.sendMediaGroup(targetPeer as any, medias, {
+      replyTo: options?.replyToMsgId,
+      silent: options?.silent,
+      schedule: options?.scheduleDate ? Math.floor(options.scheduleDate / 1000) : undefined,
+    } as any)
+
+    const results: MessageItem[] = []
+    const msgs = Array.isArray(uploaded) ? uploaded : [uploaded]
+
+    for (let i = 0; i < msgs.length; i++) {
+      const msg = msgs[i]
+      const source = items[i] || items[0]
+      let mediaFileSize: number | undefined
+      try {
+        if (source?.filePath) {
+          mediaFileSize = (await fs.promises.stat(source.filePath)).size
+        }
+      } catch {
+        mediaFileSize = undefined
+      }
+
+      const ext = source?.filePath ? path.extname(source.filePath).toLowerCase().replace('.', '') : ''
+      const isImage = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'heic', 'heif'].includes(ext)
+      const isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)
+      const isDoc = source?.forceDocument ?? options?.forceDocument
+
+      const resultItem: MessageItem = {
+        id: msg.id,
+        chatId,
+        accountId,
+        text: source?.caption || (i === 0 ? options?.caption || '' : ''),
+        date: Math.floor(Date.now() / 1000),
+        isOutgoing: true,
+        mediaType: isDoc ? 'document' : (isImage ? 'photo' : isVideo ? 'video' : 'document'),
+        mediaFileName: source?.filePath ? path.basename(source.filePath) : '',
+        mediaFileSize,
+        groupedId: msg.groupedId ? String(msg.groupedId) : undefined,
+      }
+      results.push(resultItem)
+    }
+
+    if (holder.info?.isBot && results.length > 0) {
+      for (const item of results) {
+        this.store.recordBotMessage(accountId, chatId, item)
+      }
+      try {
+        const cached = this.store.loadDialogsCache(accountId) || []
+        const isPeerMatch = (a: string, b: string) => {
+          if (a === b) return true
+          const ca = a.replace(/^-100/, '').replace(/^-/, '')
+          const cb = b.replace(/^-100/, '').replace(/^-/, '')
+          return ca === cb
+        }
+        const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
+        if (idx >= 0) {
+          cached[idx] = {
+            ...cached[idx],
+            lastMessageText: options?.caption || '[Media Album]',
+            lastMessageDate: results[results.length - 1].date,
+            lastMessageId: results[results.length - 1].id,
+            lastMessageIsOutgoing: true,
+            lastMessageRead: true,
+          }
+          this.store.saveDialogsCache(accountId, cached)
+        }
+      } catch (_) {}
+    }
+
+    return results
   }
 
   public async forwardMessages(
