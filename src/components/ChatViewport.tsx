@@ -1677,7 +1677,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   const isInitialPositioningRef = useRef(false)
   const prevLastMessageIdRef = useRef<number | null>(null)
   const prevMessagesLengthRef = useRef<number>(0)
-  const autoDownloadedIdsRef = useRef<Set<number>>(new Set())
+  const autoDownloadedIdsRef = useRef<Set<string | number>>(new Set())
 
   // Multi-line input ref
   const textareaRef = useRef<HTMLTextAreaElement>(null)

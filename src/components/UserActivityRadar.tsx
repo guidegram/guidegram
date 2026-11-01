@@ -454,7 +454,7 @@ export const UserActivityRadar: React.FC<UserActivityRadarProps> = ({
               className="text-[11px] text-accent-amber hover:text-accent-amber/80 flex items-center gap-1 cursor-pointer transition-colors"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>{t('radar.privacy_help_title')}</span>
+              <span>{t('radar.privacy_question')}</span>
             </button>
           )}
         </div>
