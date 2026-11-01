@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision, DialogItem } from './types'
+import { AppConfig, AccountInfo, ProxyConfig, CacheStats, MessageItem, MessageEntityItem, MessageEditRevision, DialogItem, ContactItem } from './types'
 import { SecureStorage } from './secureStorage'
 import { MediaCacheManager, QuotaEnforcementResult } from '../mediaCacheManager'
 
@@ -1380,6 +1380,40 @@ export class SessionStore {
       }
     } catch (err) {
       console.error(`[SessionStore] Failed to load dialogs cache for ${accountId}:`, err)
+    }
+    return []
+  }
+
+  /**
+   * Save contacts to disk cache for instant offline lookups and contact name preservation
+   */
+  public saveContactsCache(accountId: string, contacts: ContactItem[]): void {
+    if (!accountId || !Array.isArray(contacts)) return
+    try {
+      if (!fs.existsSync(this.cacheDir)) {
+        fs.mkdirSync(this.cacheDir, { recursive: true })
+      }
+      const filePath = path.join(this.cacheDir, `contacts_${accountId}.json`)
+      fs.writeFileSync(filePath, JSON.stringify(contacts), 'utf-8')
+    } catch (err) {
+      console.error(`[SessionStore] Failed to save contacts cache for ${accountId}:`, err)
+    }
+  }
+
+  /**
+   * Load cached contacts from disk for instant contact name resolution
+   */
+  public loadContactsCache(accountId: string): ContactItem[] {
+    if (!accountId) return []
+    try {
+      const filePath = path.join(this.cacheDir, `contacts_${accountId}.json`)
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) return parsed
+      }
+    } catch (err) {
+      console.error(`[SessionStore] Failed to load contacts cache for ${accountId}:`, err)
     }
     return []
   }

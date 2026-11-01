@@ -514,12 +514,19 @@ export const App: React.FC = () => {
         // 2. Channels are muted by default (!targetDialog && isChannel).
         // 3. Bot accounts (logged in via bot token) are strictly DEFAULT MUTED for all incoming chats/messages
         //    unless explicitly unmuted by the user (targetDialog?.isMuted === false).
-        const isChatMuted = Boolean(
-          targetDialog?.isMuted ||
-          (typeof (payload as any)?.chatInfo?.isMuted === 'boolean' && (payload as any).chatInfo.isMuted) ||
-          (!targetDialog && isChannel) ||
-          (isBotAccount && targetDialog?.isMuted !== false)
-        )
+        const payloadMuted = (payload as any)?.chatInfo?.isMuted
+        let isChatMuted = false
+        if (typeof targetDialog?.isMuted === 'boolean') {
+          isChatMuted = targetDialog.isMuted
+        } else if (typeof payloadMuted === 'boolean') {
+          isChatMuted = payloadMuted
+        } else if (isChannel) {
+          isChatMuted = true
+        }
+
+        if (isBotAccount && targetDialog?.isMuted !== false) {
+          isChatMuted = true
+        }
 
         const currentCfg = configRef.current
         const notifsAllowed = currentCfg?.notificationsEnabled !== false
@@ -732,10 +739,31 @@ export const App: React.FC = () => {
               wasContact
             )
 
+            let dialogTitle = isSaved
+              ? 'Saved Messages'
+              : (chatInfo?.title && !chatInfo.title.startsWith('کاربر ') && !chatInfo.title.startsWith('User '))
+                ? chatInfo.title
+                : cachedDialog?.title
+
+            if (!dialogTitle || dialogTitle === 'Chat' || dialogTitle.startsWith('کاربر ') || dialogTitle.startsWith('User ')) {
+              if (message && !message.isOutgoing && (chatInfo?.isUser || !chatId.startsWith('-'))) {
+                dialogTitle = message.senderName || `کاربر ${chatId}`
+              } else if (cachedDialog?.title) {
+                dialogTitle = cachedDialog.title
+              } else {
+                dialogTitle = chatId.startsWith('-') ? `گروه ${chatId}` : `کاربر ${chatId}`
+              }
+            }
+
+            let dialogAvatar = chatInfo?.avatarUrl || cachedDialog?.avatarUrl
+            if (!dialogAvatar && message && !message.isOutgoing && (chatInfo?.isUser || !chatId.startsWith('-'))) {
+              dialogAvatar = message.senderAvatarUrl
+            }
+
             const newDialog: DialogItem = {
               id: chatId,
               accountId,
-              title: isSaved ? 'Saved Messages' : (chatInfo?.title || message?.senderName || cachedDialog?.title || 'Chat'),
+              title: dialogTitle,
               unreadCount: isSaved ? 0 : (chatId !== activeChatId && !message?.isOutgoing ? 1 : 0),
               unreadMentionsCount: 0,
               isMuted: isChatMuted,
@@ -747,7 +775,7 @@ export const App: React.FC = () => {
               isContact: isContactCalculated,
               isPinned: cachedDialog?.isPinned || false,
               isSavedMessages: isSaved,
-              avatarUrl: chatInfo?.avatarUrl || cachedDialog?.avatarUrl || (payload as any)?.message?.senderAvatarUrl,
+              avatarUrl: dialogAvatar,
               lastMessageText: msgText,
               lastMessageDate: msgDate,
               lastMessageId: message?.id,
@@ -761,7 +789,7 @@ export const App: React.FC = () => {
                 fileReferenceHex: (message as any).stickerFileReferenceHex || '',
                 alt: message.text || '',
               } : undefined,
-              avatarInitials: (chatInfo?.title || message?.senderName || 'C').slice(0, 2).toUpperCase(),
+              avatarInitials: (dialogTitle || 'C').slice(0, 2).toUpperCase(),
             }
             updatedList = [newDialog, ...list]
           } else {
@@ -778,7 +806,7 @@ export const App: React.FC = () => {
                   ...d,
                   isSavedMessages: d.isSavedMessages || isSaved,
                   isContact: Boolean(d.isContact || (payload as any)?.chatInfo?.isContact || (payload as any)?.message?.sender?.isContact),
-                  avatarUrl: d.avatarUrl || (payload as any)?.chatInfo?.avatarUrl || (payload as any)?.message?.senderAvatarUrl,
+                  avatarUrl: d.avatarUrl || (payload as any)?.chatInfo?.avatarUrl || (!message?.isOutgoing ? (payload as any)?.message?.senderAvatarUrl : undefined) || d.avatarUrl,
                   unreadCount: isSaved
                     ? 0
                     : shouldIncrement

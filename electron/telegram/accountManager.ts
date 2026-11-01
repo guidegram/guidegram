@@ -1313,6 +1313,8 @@ export class AccountManager {
             const cleanId = d.id.replace(/^-100/, '').replace(/^-/, '')
             this.peerNotifySettings.set(`${accountId}_${d.id}`, { isMuted: d.isMuted })
             this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted: d.isMuted })
+            this.peerNotifySettings.set(`${accountId}_-100${cleanId}`, { isMuted: d.isMuted })
+            this.peerNotifySettings.set(`${accountId}_-${cleanId}`, { isMuted: d.isMuted })
           }
         }
       }
@@ -2709,24 +2711,26 @@ export class AccountManager {
         const nowSec = Math.floor(Date.now() / 1000)
 
         let isMuted = false
-        if (silent || (typeof muteUntil === 'number' && (muteUntil > nowSec || muteUntil === 2147483647))) {
+        if (d.isMuted === true) {
+          isMuted = true
+        } else if (d.isMuted === false) {
+          isMuted = false
+        } else if (silent || (muteUntil !== undefined && Number(muteUntil) > nowSec) || Number(muteUntil) === 2147483647) {
           // Explicitly muted by user or timestamp in the future
           isMuted = true
-        } else if (typeof muteUntil === 'number' && muteUntil === 0) {
+        } else if (muteUntil !== undefined && Number(muteUntil) === 0) {
           // Explicitly unmuted by user (Telegram MTProto sends mute_until: 0 on unmute)
           isMuted = false
         } else if (isBroadcast) {
           // Broadcast channels in Telegram are strictly muted by default unless explicitly unmuted (muteUntil === 0)
           isMuted = true
-        } else if (d.isMuted === true) {
-          isMuted = true
-        } else if (d.isMuted === false) {
-          isMuted = false
         }
 
         const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
         this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
         this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted })
+        this.peerNotifySettings.set(`${accountId}_-100${cleanPeerId}`, { isMuted })
+        this.peerNotifySettings.set(`${accountId}_-${cleanPeerId}`, { isMuted })
 
         let lastMessageText = ''
         let lastMessageDate = 0
@@ -2933,49 +2937,94 @@ export class AccountManager {
       if ((!offsetDate || offsetDate === 0) && (!offsetId || offsetId === 0)) {
         try {
           const audit = this.store.loadAccountAudit(accountId)
-        for (const [cId, msgs] of Object.entries(audit)) {
-          if (seenIds.has(cId)) continue
-          seenIds.add(cId)
-          const msgList = Object.values(msgs).sort((a, b) => (b.date - a.date) || (b.id - a.id))
-          const topMsg = msgList[0]
-          if (!topMsg) continue
+          const cachedDialogs = this.store.loadDialogsCache(accountId) || []
+          for (const [cId, msgs] of Object.entries(audit)) {
+            if (seenIds.has(cId)) continue
+            seenIds.add(cId)
+            const msgList = Object.values(msgs).sort((a, b) => (b.date - a.date) || (b.id - a.id))
+            const topMsg = msgList[0]
+            if (!topMsg) continue
 
-          const isGroup = cId.startsWith('-') && !cId.startsWith('-100')
-          const isChannel = cId.startsWith('-100')
-          const isUser = !isGroup && !isChannel
-          const isSelf = cId === accountId || cId === 'self' || cId === 'me' || Boolean(holder.info?.id && cId === holder.info.id.toString())
+            const isGroup = cId.startsWith('-') && !cId.startsWith('-100')
+            const isChannel = cId.startsWith('-100')
+            const isUser = !isGroup && !isChannel
+            const isSelf = cId === accountId || cId === 'self' || cId === 'me' || Boolean(holder.info?.id && cId === holder.info.id.toString())
 
-          const title = isSelf ? 'Saved Messages' : (topMsg.senderName || (isUser ? `User ${cId}` : `Chat ${cId}`))
-          const initials = isSelf ? '🔖' : title
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2)
+            // NEVER use topMsg.senderName, topMsg.senderAvatarUrl, or topMsg.senderUsername if topMsg is outgoing!
+            // When outgoing, topMsg.sender is the current logged-in user.
+            const incomingMsg = msgList.find((m) => !m.isOutgoing && m.senderName && !m.senderName.startsWith('کاربر ') && !m.senderName.startsWith('User '))
+            const cleanCId = cId.replace(/^-100/, '').replace(/^-/, '')
+            const existingCached = cachedDialogs.find((d) => d.id === cId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanCId)
 
-          dialogs.push({
-            id: cId,
-            accountId,
-            title,
-            unreadCount: 0,
-            readInboxMaxId: topMsg.id,
-            unreadMentionsCount: 0,
-            isMuted: false,
-            isUser,
-            isGroup,
-            isChannel,
-            isBroadcast: isChannel,
-            isBot: false,
-            isPinned: false,
-            isSavedMessages: isSelf,
-            lastMessageText: topMsg.text || '',
-            lastMessageDate: topMsg.date ? topMsg.date * 1000 : 0,
-            avatarInitials: initials,
-            avatarUrl: isSelf ? undefined : topMsg.senderAvatarUrl,
-            username: isSelf ? undefined : topMsg.senderUsername,
-            isContact: isSelf ? false : this.isContactPeer(accountId, cId),
-          })
-        }
+            let title = ''
+            if (isSelf) {
+              title = 'Saved Messages'
+            } else if (existingCached?.title && !existingCached.title.startsWith('کاربر ') && !existingCached.title.startsWith('User ') && !existingCached.title.toLowerCase().startsWith('ershad')) {
+              title = existingCached.title
+            } else if (incomingMsg?.senderName) {
+              title = incomingMsg.senderName
+            } else if (topMsg && !topMsg.isOutgoing && topMsg.senderName) {
+              title = topMsg.senderName
+            } else {
+              title = isUser ? `کاربر ${cId}` : (isGroup ? `گروه ${cId}` : `کانال ${cId}`)
+            }
+
+            const initials = isSelf ? '🔖' : title
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)
+
+            let avatarUrl: string | undefined = undefined
+            if (!isSelf) {
+              const diskCand = path.join(this.avatarsDir, `avatar_${accountId}_${cId}.jpg`)
+              if (fs.existsSync(diskCand)) {
+                try {
+                  avatarUrl = `data:image/jpeg;base64,${fs.readFileSync(diskCand).toString('base64')}`
+                } catch (_) {}
+              }
+              if (!avatarUrl) {
+                avatarUrl = this.avatarCache.get(`${accountId}_${cId}`) || this.avatarCache.get(`${accountId}_${cleanCId}`)
+              }
+              if (!avatarUrl && existingCached?.avatarUrl) {
+                avatarUrl = existingCached.avatarUrl
+              }
+              if (!avatarUrl && incomingMsg?.senderAvatarUrl) {
+                avatarUrl = incomingMsg.senderAvatarUrl
+              }
+            }
+
+            let username: string | undefined = undefined
+            if (!isSelf) {
+              username = existingCached?.username || incomingMsg?.senderUsername || (topMsg && !topMsg.isOutgoing ? topMsg.senderUsername : undefined)
+            }
+
+            const isMuted = existingCached?.isMuted ?? (isChannel || isGroup)
+
+            dialogs.push({
+              id: cId,
+              accountId,
+              title,
+              unreadCount: 0,
+              readInboxMaxId: topMsg.id,
+              unreadMentionsCount: 0,
+              isMuted,
+              isUser,
+              isGroup,
+              isChannel,
+              isBroadcast: isChannel,
+              isBot: false,
+              isPinned: false,
+              isSavedMessages: isSelf,
+              lastMessageText: topMsg.text || '',
+              lastMessageDate: topMsg.date ? topMsg.date * 1000 : 0,
+              avatarInitials: initials,
+              avatarUrl,
+              username,
+              isContact: isSelf ? false : this.isContactPeer(accountId, cId),
+            })
+          }
         } catch (auditDialogErr) {
           Logger.warn('[AccountManager] Failed to merge audit dialogs:', auditDialogErr)
         }
@@ -16264,17 +16313,25 @@ export class AccountManager {
         const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
         let cachedNotify =
           this.peerNotifySettings.get(`${accountId}_${chatId}`) ||
-          this.peerNotifySettings.get(`${accountId}_${cleanChatId}`)
+          this.peerNotifySettings.get(`${accountId}_${cleanChatId}`) ||
+          this.peerNotifySettings.get(`${accountId}_-100${cleanChatId}`) ||
+          this.peerNotifySettings.get(`${accountId}_-${cleanChatId}`)
 
         // If not in RAM map, search persistent dialogs cache
         if (!cachedNotify) {
           try {
             const cachedDialogs = this.store.loadDialogsCache(accountId)
-            const match = cachedDialogs?.find((d) => d.id === chatId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanChatId)
+            const match = cachedDialogs?.find((d) => {
+              if (d.id === chatId) return true
+              const dClean = d.id.replace(/^-100/, '').replace(/^-/, '')
+              return dClean === cleanChatId
+            })
             if (match && typeof match.isMuted === 'boolean') {
               cachedNotify = { isMuted: match.isMuted }
               this.peerNotifySettings.set(`${accountId}_${chatId}`, cachedNotify)
               this.peerNotifySettings.set(`${accountId}_${cleanChatId}`, cachedNotify)
+              this.peerNotifySettings.set(`${accountId}_-100${cleanChatId}`, cachedNotify)
+              this.peerNotifySettings.set(`${accountId}_-${cleanChatId}`, cachedNotify)
             }
           } catch (_) {}
         }
@@ -16282,11 +16339,11 @@ export class AccountManager {
         const isBotAccount = Boolean(this.clients.get(accountId)?.info?.isBot)
         let isChatMuted = cachedNotify ? cachedNotify.isMuted : (chat?.chatType === 'channel' || isBotAccount)
 
-        if (!cachedNotify && (msg.raw as any)?.notifySettings) {
+        if ((msg.raw as any)?.notifySettings) {
           const rawNotify = (msg.raw as any).notifySettings
           const muteUntil = rawNotify.muteUntil ?? rawNotify.mute_until
           const silent = Boolean(rawNotify.silent)
-          if (silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000)) {
+          if (silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000) || muteUntil === 2147483647) {
             isChatMuted = true
           }
         }
@@ -16372,8 +16429,12 @@ export class AccountManager {
               return ca === cb
             }
             const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
-            const fallbackTitle = chat ? formatEntityName(chat, 'Chat') : (item.senderName || `کاربر ${chatId}`)
-            const cleanAvatar = item.senderAvatarUrl && item.senderAvatarUrl.length > 2000 ? item.senderAvatarUrl : undefined
+            const fallbackTitle = chat
+              ? formatEntityName(chat, 'Chat')
+              : (!item.isOutgoing && item.senderName ? item.senderName : (chatId.startsWith('-') ? `گروه ${chatId}` : `کاربر ${chatId}`))
+            const cleanAvatar = !item.isOutgoing && item.senderAvatarUrl && item.senderAvatarUrl.length > 2000
+              ? item.senderAvatarUrl
+              : undefined
             if (idx >= 0) {
               cached[idx] = {
                 ...cached[idx],
@@ -16661,10 +16722,12 @@ export class AccountManager {
           if (peerId && rawNotify) {
             const muteUntil = rawNotify.muteUntil ?? rawNotify.mute_until
             const silent = Boolean(rawNotify.silent)
-            const isMuted = silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000)
+            const isMuted = silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000) || muteUntil === 2147483647
             const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
             this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
             this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted })
+            this.peerNotifySettings.set(`${accountId}_-100${cleanId}`, { isMuted })
+            this.peerNotifySettings.set(`${accountId}_-${cleanId}`, { isMuted })
 
             try {
               const cached = this.store.loadDialogsCache(accountId)
