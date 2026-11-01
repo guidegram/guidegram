@@ -575,7 +575,8 @@ export class ActivityTrackerService {
     accountId: string,
     userId: string,
     rawStatus: any,
-    meta?: { title?: string; avatarUrl?: string; username?: string }
+    meta?: { title?: string; avatarUrl?: string; username?: string },
+    silent = false
   ): void {
     if (userId === accountId) return // Universal self-exclusion: never track self
     const cfg = this.getConfig()
@@ -647,15 +648,17 @@ export class ActivityTrackerService {
 
     this.scheduleSaveStatus(accountId)
 
-    // Notify renderer
-    this.onEventCallback?.('telegram:user-status-changed', {
-      accountId,
-      userId,
-      status: parsed.status,
-      wasOnline: parsed.wasOnline,
-      timestamp: now,
-      meta,
-    })
+    // Notify renderer only for genuine live events, suppressing bulk audit storms
+    if (!silent) {
+      this.onEventCallback?.('telegram:user-status-changed', {
+        accountId,
+        userId,
+        status: parsed.status,
+        wasOnline: parsed.wasOnline,
+        timestamp: now,
+        meta,
+      })
+    }
   }
 
   // =========================================================================

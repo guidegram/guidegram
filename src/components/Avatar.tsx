@@ -60,106 +60,29 @@ export const Avatar: React.FC<AvatarProps> = ({
       !avatarUrl.endsWith('base64,')
   )
 
-  const resolvedInitialUrl = isHdPhoto(cachedUrl)
-    ? cachedUrl
-    : isHdPhoto(avatarUrl)
-      ? avatarUrl!
-      : (avatarUrl || cachedUrl)
+  // Derived effective avatar URL with negative caching support
+  const effectiveUrl = React.useMemo(() => {
+    if (cachedUrl && cachedUrl !== 'NO_PHOTO') return cachedUrl
+    if (isPropValid) return avatarUrl!
+    if (cachedUrl === 'NO_PHOTO') return null
+    return null
+  }, [cachedUrl, isPropValid, avatarUrl])
 
-  const [currentUrl, setCurrentUrl] = useState<string | null>(resolvedInitialUrl)
+  const [currentUrl, setCurrentUrl] = useState<string | null>(effectiveUrl)
   const [hasError, setHasError] = useState(false)
 
-  // React-recommended pattern: synchronize state during render if identity or avatarUrl prop changes
-  const [prevIdentity, setPrevIdentity] = useState<string | null>(cacheKey)
-  const [prevAvatarUrlProp, setPrevAvatarUrlProp] = useState<string | undefined>(avatarUrl)
-  if (cacheKey !== prevIdentity || avatarUrl !== prevAvatarUrlProp) {
-    setPrevIdentity(cacheKey)
-    setPrevAvatarUrlProp(avatarUrl)
-    if (isHdPhoto(avatarUrl)) {
-      setCurrentUrl(avatarUrl!)
-      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl!)
-    } else if (cachedUrl && isHdPhoto(cachedUrl)) {
-      setCurrentUrl(cachedUrl)
-    } else if (isPropValid) {
-      setCurrentUrl(avatarUrl!) // Progressive thumbnail preview
-    } else if (avatarUrl === undefined || avatarUrl === null || avatarUrl === '') {
-      if (cacheKey && prevAvatarUrlProp) {
-        avatarMemoryCache.delete(cacheKey)
-      }
-      setCurrentUrl(null)
-    } else {
-      setCurrentUrl(cachedUrl)
-    }
+  // Synchronize state when effective URL changes (without setState during render)
+  useEffect(() => {
+    setCurrentUrl(effectiveUrl)
     setHasError(false)
-  }
+  }, [effectiveUrl])
 
-  const isValidUrl =
-    Boolean(currentUrl) &&
-    typeof currentUrl === 'string' &&
-    currentUrl.trim().length > 30 &&
-    !currentUrl.endsWith('base64,')
-
-  // Real-time avatar update listener from Telegram MTProto
+  // Lazy fetch full photo only when missing or when requested for large avatar views (lg, xl)
   useEffect(() => {
-    if (!cacheKey || !accountId || !peerId || !window.guidegram?.on) return
-
-    const unsubAvatarUpdated = window.guidegram.on(
-      'telegram:user-avatar-updated',
-      (payload: { accountId: string; userId?: string; peerId?: string; avatarUrl?: string }) => {
-        const targetId = payload?.peerId || payload?.userId
-        const cleanTarget = typeof targetId === 'string' ? targetId.replace(/^-100/, '').replace(/^-/, '') : ''
-        const cleanPeer = typeof peerId === 'string' ? peerId.replace(/^-100/, '').replace(/^-/, '') : ''
-        const isMatch = targetId === peerId || (cleanTarget && cleanPeer && cleanTarget === cleanPeer)
-
-        if (payload?.accountId === accountId && isMatch) {
-          if (payload.avatarUrl && isHdPhoto(payload.avatarUrl)) {
-            avatarMemoryCache.set(cacheKey, payload.avatarUrl)
-            setCurrentUrl(payload.avatarUrl)
-            setHasError(false)
-          } else if (payload.avatarUrl === '' || payload.avatarUrl === null) {
-            avatarMemoryCache.delete(cacheKey)
-            setCurrentUrl(null)
-          }
-        }
-      }
-    )
-
-    return () => {
-      unsubAvatarUpdated?.()
-    }
-  }, [cacheKey, accountId, peerId])
-
-  useEffect(() => {
-    // 1. If avatarUrl prop is already a crystal-clear HD photo, use and cache it
-    if (isHdPhoto(avatarUrl)) {
-      setCurrentUrl(avatarUrl!)
-      if (cacheKey) avatarMemoryCache.set(cacheKey, avatarUrl!)
-      setHasError(false)
-      return
-    }
-
-    // 2. If we already have the full HD avatar in memory cache, use it immediately
-    if (cacheKey && avatarMemoryCache.has(cacheKey)) {
-      const cached = avatarMemoryCache.get(cacheKey)!
-      if (isHdPhoto(cached)) {
-        setCurrentUrl(cached)
-        setHasError(false)
-        return
-      }
-    }
-
-    // If we have a progressive thumbnail, display it immediately as placeholder
-    if (isPropValid && avatarUrl) {
-      setCurrentUrl(avatarUrl)
-      setHasError(false)
-    } else if (!cachedUrl) {
-      setCurrentUrl(null)
-    }
-
-    // 3. Attempt to fetch profile photo from client if accountId and peerId are available
-    if (!accountId || !peerId || !window.guidegram?.getProfilePhoto) {
-      return
-    }
+    if (!accountId || !peerId || !cacheKey || !window.guidegram?.getProfilePhoto) return
+    // If already cached (including negative result) or valid prop provided for regular sizes, skip IPC fetch
+    if (avatarMemoryCache.has(cacheKey)) return
+    if (isPropValid && size !== 'lg' && size !== 'xl') return
 
     let isMounted = true
     const reqKey = `${accountId}_${peerId}`
@@ -176,19 +99,23 @@ export const Avatar: React.FC<AvatarProps> = ({
 
     fetchPromise.then((photoDataUrl) => {
       if (!isMounted) return
-      if (photoDataUrl && isHdPhoto(photoDataUrl)) {
-        if (cacheKey) avatarMemoryCache.set(cacheKey, photoDataUrl)
+      if (photoDataUrl && photoDataUrl.length > 30) {
+        avatarMemoryCache.set(cacheKey, photoDataUrl)
         setCurrentUrl(photoDataUrl)
         setHasError(false)
-      } else if (!isPropValid && (!photoDataUrl || photoDataUrl.length < 50)) {
-        setCurrentUrl(null)
+      } else {
+        // Negative caching: remember that this peer has no photo to prevent infinite fetch storm
+        avatarMemoryCache.set(cacheKey, 'NO_PHOTO')
+        if (!isPropValid) {
+          setCurrentUrl(null)
+        }
       }
     })
 
     return () => {
       isMounted = false
     }
-  }, [accountId, peerId, avatarUrl, cacheKey, isPropValid, cachedUrl])
+  }, [accountId, peerId, cacheKey, isPropValid, size])
 
   const safeInitials =
     initials ||
@@ -239,6 +166,12 @@ export const Avatar: React.FC<AvatarProps> = ({
       </div>
     )
   }
+
+  const isValidUrl =
+    Boolean(currentUrl) &&
+    typeof currentUrl === 'string' &&
+    currentUrl.trim().length > 30 &&
+    !currentUrl.endsWith('base64,')
 
   if (isValidUrl && !hasError) {
     return (

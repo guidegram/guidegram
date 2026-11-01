@@ -940,9 +940,11 @@ export const App: React.FC = () => {
           const { accountId, userId, avatarUrl } = payload
 
           if (userId === accountId) {
-            setAccounts((prev) =>
-              prev.map((acc) => (acc.id === accountId ? { ...acc, avatarUrl } : acc))
-            )
+            setAccounts((prev) => {
+              const current = prev.find((a) => a.id === accountId)
+              if (current && current.avatarUrl === avatarUrl) return prev
+              return prev.map((acc) => (acc.id === accountId ? { ...acc, avatarUrl } : acc))
+            })
           }
 
           setDialogsByAccount((prev) => {
@@ -951,6 +953,7 @@ export const App: React.FC = () => {
             let changed = false
             const next = list.map((d) => {
               if (d.id === userId || isPeerMatch(d.id, userId) || (userId === accountId && d.isSavedMessages)) {
+                if (d.avatarUrl === avatarUrl) return d
                 changed = true
                 return { ...d, avatarUrl }
               }
@@ -2706,50 +2709,54 @@ export const App: React.FC = () => {
     return map
   }, [accounts, dialogsByAccount])
 
-  // Compute unread counts for tabs
-  const unreadCounts: Record<TabCategory, number> = {
-    all: currentDialogs.filter((d) => d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
-    users: currentDialogs.filter((d) => d.isUser && !d.isBot && d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
-    groups: currentDialogs
-      .filter((d) => (d.isGroup || (d.isChannel && !(d.isBroadcast ?? !d.isGroup))) && d.folderId !== 1 && !(d as any).archived)
-      .reduce((acc, d) => acc + d.unreadCount, 0),
-    channels: currentDialogs
-      .filter((d) => (d.isBroadcast ?? (d.isChannel && !d.isGroup)) && d.folderId !== 1 && !(d as any).archived)
-      .reduce((acc, d) => acc + d.unreadCount, 0),
-    bots: currentDialogs.filter((d) => d.isBot && d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
-    unread: currentDialogs.filter((d) => d.unreadCount > 0 && d.folderId !== 1 && !(d as any).archived).length,
-    archived: archivedUnreadCount,
-  }
-
-  // Cloud folders unread counts
-  if (cloudFolders.length > 0) {
-    const peerMatches = (list?: string[], targetId?: string): boolean => {
-      if (!list || list.length === 0 || !targetId) return false
-      if (list.includes(targetId)) return true
-      const cleanTarget = targetId.replace(/^-100/, '').replace(/^-/, '')
-      return list.some((id) => id.replace(/^-100/, '').replace(/^-/, '') === cleanTarget)
+  // Compute unread counts for tabs (Memoized to prevent CPU churning during renders)
+  const unreadCounts = useMemo<Record<TabCategory, number>>(() => {
+    const counts: Record<TabCategory, number> = {
+      all: currentDialogs.filter((d) => d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
+      users: currentDialogs.filter((d) => d.isUser && !d.isBot && d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
+      groups: currentDialogs
+        .filter((d) => (d.isGroup || (d.isChannel && !(d.isBroadcast ?? !d.isGroup))) && d.folderId !== 1 && !(d as any).archived)
+        .reduce((acc, d) => acc + d.unreadCount, 0),
+      channels: currentDialogs
+        .filter((d) => (d.isBroadcast ?? (d.isChannel && !d.isGroup)) && d.folderId !== 1 && !(d as any).archived)
+        .reduce((acc, d) => acc + d.unreadCount, 0),
+      bots: currentDialogs.filter((d) => d.isBot && d.folderId !== 1 && !(d as any).archived).reduce((acc, d) => acc + d.unreadCount, 0),
+      unread: currentDialogs.filter((d) => d.unreadCount > 0 && d.folderId !== 1 && !(d as any).archived).length,
+      archived: archivedUnreadCount,
     }
 
-    for (const f of cloudFolders) {
-      unreadCounts[`folder:${f.id}`] = currentDialogs
-        .filter((d) => {
-          if (peerMatches(f.excludePeerIds, d.id)) return false
-          if (f.excludeMuted && d.isMuted) return false
-          if (f.excludeRead && d.unreadCount === 0) return false
-          if (f.excludeArchived && (d.folderId === 1 || (d as any).archived)) return false
-          const isIncluded = peerMatches(f.includePeerIds, d.id) || peerMatches(f.pinnedPeerIds, d.id)
-          const isBroadcast = d.isBroadcast ?? (d.isChannel && !d.isGroup)
-          const isGroup = d.isGroup || (d.isChannel && !isBroadcast)
-          if (isIncluded) return true
-          if (f.broadcasts && isBroadcast) return true
-          if (f.groups && isGroup) return true
-          if (f.bots && d.isBot) return true
-          if ((f.contacts || f.nonContacts) && d.isUser && !d.isBot) return true
-          return false
-        })
-        .reduce((acc, d) => acc + d.unreadCount, 0)
+    // Cloud folders unread counts
+    if (cloudFolders.length > 0) {
+      const peerMatches = (list?: string[], targetId?: string): boolean => {
+        if (!list || list.length === 0 || !targetId) return false
+        if (list.includes(targetId)) return true
+        const cleanTarget = targetId.replace(/^-100/, '').replace(/^-/, '')
+        return list.some((id) => id.replace(/^-100/, '').replace(/^-/, '') === cleanTarget)
+      }
+
+      for (const f of cloudFolders) {
+        counts[`folder:${f.id}`] = currentDialogs
+          .filter((d) => {
+            if (peerMatches(f.excludePeerIds, d.id)) return false
+            if (f.excludeMuted && d.isMuted) return false
+            if (f.excludeRead && d.unreadCount === 0) return false
+            if (f.excludeArchived && (d.folderId === 1 || (d as any).archived)) return false
+            const isIncluded = peerMatches(f.includePeerIds, d.id) || peerMatches(f.pinnedPeerIds, d.id)
+            const isBroadcast = d.isBroadcast ?? (d.isChannel && !d.isGroup)
+            const isGroup = d.isGroup || (d.isChannel && !isBroadcast)
+            if (isIncluded) return true
+            if (f.broadcasts && isBroadcast) return true
+            if (f.groups && isGroup) return true
+            if (f.bots && d.isBot) return true
+            if ((f.contacts || f.nonContacts) && d.isUser && !d.isBot) return true
+            return false
+          })
+          .reduce((acc, d) => acc + d.unreadCount, 0)
+      }
     }
-  }
+
+    return counts
+  }, [currentDialogs, archivedUnreadCount, cloudFolders])
 
   // Global keyboard shortcut handler (Escape key)
   useEffect(() => {

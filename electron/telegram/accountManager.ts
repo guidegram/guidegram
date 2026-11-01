@@ -3207,7 +3207,13 @@ export class AccountManager {
   public async getContacts(accountId: string): Promise<ContactItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
-    if (holder.info?.isBot) return []
+    const isBot = Boolean(
+      holder.info?.isBot ||
+      holder.info?.botToken ||
+      holder.info?.phone?.startsWith('@') ||
+      (holder.client as any)?.isBot
+    )
+    if (isBot) return []
 
     const floodCooldown = this.contactsFloodWaitUntil.get(accountId) || 0
     if (Date.now() < floodCooldown) {
@@ -3243,11 +3249,17 @@ export class AccountManager {
             const isMutual = Boolean(c.isMutualContact || c.raw?.mutualContact || c.mutualContact)
             const isContact = Boolean(c.isContact || c.raw?.contact || (c.contact ?? true))
             if (c.status) {
-              this.activityTrackerService.recordUserStatus(accountId, id, c.status, {
-                title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.username,
-                avatarUrl,
-                username: c.username,
-              })
+              this.activityTrackerService.recordUserStatus(
+                accountId,
+                id,
+                c.status,
+                {
+                  title: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.username,
+                  avatarUrl,
+                  username: c.username,
+                },
+                true // silent = true during bulk contact audit
+              )
             }
             this.activityTrackerService.inspectUserSnapshot(accountId, c, undefined, {
               isMutual,
@@ -3289,7 +3301,13 @@ export class AccountManager {
   ): Promise<{ totalContacts: number; newEventsCount: number }> {
     try {
       const holder = this.clients.get(accountId)
-      if (!holder?.client || holder.info?.isBot) return { totalContacts: 0, newEventsCount: 0 }
+      const isBot = Boolean(
+        holder?.info?.isBot ||
+        holder?.info?.botToken ||
+        holder?.info?.phone?.startsWith('@') ||
+        (holder?.client as any)?.isBot
+      )
+      if (!holder?.client || isBot) return { totalContacts: 0, newEventsCount: 0 }
 
       const floodCooldown = this.contactsFloodWaitUntil.get(accountId) || 0
       if (Date.now() < floodCooldown) {
