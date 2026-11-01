@@ -5,9 +5,9 @@ def getPackageVersion() {
     def packageJsonFile = file('../../package.json')
     if (packageJsonFile.exists()) {
         def packageJson = new JsonSlurper().parseText(packageJsonFile.text)
-        return packageJson.version ?: "2.5.4"
+        return packageJson.version ?: "2.6.0-rc.1"
     }
-    return "2.5.4"
+    return "2.6.0-rc.1"
 }
 
 def getPackageVersionCode() {
