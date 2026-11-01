@@ -1371,6 +1371,63 @@ export const App: React.FC = () => {
     }
   }
 
+  const hydratedFolderPeersRef = useRef<Set<string>>(new Set())
+
+  // Automatically hydrate missing pinned and included peers for the selected folder or bots tab
+  useEffect(() => {
+    if (!activeAccountId || !window.guidegram?.getFolderPeerDialogs) return
+
+    let targetFolder: CloudFolderItem | undefined = undefined
+    if (activeTab.startsWith('folder:')) {
+      const folderId = Number(activeTab.replace('folder:', ''))
+      targetFolder = cloudFolders.find((f) => f.id === folderId)
+    } else if (activeTab === 'bots') {
+      targetFolder = cloudFolders.find((f) => f.bots)
+    }
+
+    if (!targetFolder) return
+
+    const peerIdsToEnsure = [
+      ...(targetFolder.pinnedPeerIds || []),
+      ...(targetFolder.includePeerIds || []),
+    ]
+
+    if (peerIdsToEnsure.length === 0) return
+
+    const currentList = dialogsByAccount[activeAccountId] || []
+    const existingIds = new Set(
+      currentList.flatMap((d) => [d.id, d.id.replace(/^-100/, '').replace(/^-/, '')])
+    )
+
+    const missingIds = peerIdsToEnsure.filter((pid) => {
+      const clean = pid.replace(/^-100/, '').replace(/^-/, '')
+      const accountKey = `${activeAccountId}_${pid}`
+      return !existingIds.has(pid) && !existingIds.has(clean) && !hydratedFolderPeersRef.current.has(accountKey)
+    })
+
+    if (missingIds.length === 0) return
+
+    for (const pid of missingIds) {
+      hydratedFolderPeersRef.current.add(`${activeAccountId}_${pid}`)
+    }
+
+    window.guidegram
+      .getFolderPeerDialogs(activeAccountId, missingIds)
+      .then((fetched) => {
+        if (!fetched || fetched.length === 0) return
+        setDialogsByAccount((prev) => {
+          const list = prev[activeAccountId] || []
+          const map = new Map<string, DialogItem>()
+          for (const d of fetched) map.set(d.id, d)
+          for (const d of list) map.set(d.id, d)
+          return { ...prev, [activeAccountId]: Array.from(map.values()) }
+        })
+      })
+      .catch((err) => {
+        console.warn('Failed to hydrate missing folder peer dialogs:', err)
+      })
+  }, [activeTab, cloudFolders, activeAccountId, dialogsByAccount])
+
   const loadDialogsForAccount = async (accountId: string) => {
     if (!window.guidegram?.getDialogs) return
     try {
@@ -2800,6 +2857,7 @@ export const App: React.FC = () => {
                   isLoadingMoreDialogs={isLoadingMoreDialogs}
                   onLoadMoreDialogs={handleLoadMoreDialogs}
                   onOpenProxyModal={() => setIsProxyModalOpen(true)}
+                  onFoldersUpdated={(updated) => setCloudFolders(updated)}
                 />
               </div>
             ) : (
@@ -2916,6 +2974,7 @@ export const App: React.FC = () => {
                   isLoadingMoreDialogs={isLoadingMoreDialogs}
                   onLoadMoreDialogs={handleLoadMoreDialogs}
                   onOpenProxyModal={() => setIsProxyModalOpen(true)}
+                  onFoldersUpdated={(updated) => setCloudFolders(updated)}
                 />
               </aside>
 
