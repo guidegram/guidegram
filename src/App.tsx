@@ -60,6 +60,44 @@ export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
   return cleanA === cleanB
 }
 
+export function mergeDialogPair(oldItem: DialogItem, newItem: DialogItem): DialogItem {
+  const oldDate = (oldItem.lastMessageDate || 0) < 1e11 ? (oldItem.lastMessageDate || 0) * 1000 : (oldItem.lastMessageDate || 0)
+  const newDate = (newItem.lastMessageDate || 0) < 1e11 ? (newItem.lastMessageDate || 0) * 1000 : (newItem.lastMessageDate || 0)
+  const isOldNewer = oldDate > newDate || ((oldItem.lastMessageId || 0) > (newItem.lastMessageId || 0))
+
+  const isOldTitlePlaceholder = !oldItem.title || oldItem.title.startsWith('User ') || oldItem.title.startsWith('کاربر ') || oldItem.title.startsWith('Chat ')
+  const isNewTitlePlaceholder = !newItem.title || newItem.title.startsWith('User ') || newItem.title.startsWith('کاربر ') || newItem.title.startsWith('Chat ')
+  const resolvedTitle = (!isNewTitlePlaceholder && newItem.title) ? newItem.title : ((!isOldTitlePlaceholder && oldItem.title) ? oldItem.title : (newItem.title || oldItem.title))
+
+  return {
+    ...oldItem,
+    ...newItem,
+    title: resolvedTitle,
+    isContact: Boolean(newItem.isContact || oldItem.isContact),
+    unreadCount: typeof newItem.unreadCount === 'number' ? newItem.unreadCount : oldItem.unreadCount,
+    lastMessageDate: Math.max(oldDate, newDate),
+    lastMessageText: isOldNewer ? (oldItem.lastMessageText || newItem.lastMessageText) : (newItem.lastMessageText || oldItem.lastMessageText),
+    lastMessageId: isOldNewer ? (oldItem.lastMessageId || newItem.lastMessageId) : (newItem.lastMessageId || oldItem.lastMessageId),
+    lastMessageIsOutgoing: isOldNewer ? oldItem.lastMessageIsOutgoing : newItem.lastMessageIsOutgoing,
+    lastMessageRead: isOldNewer ? oldItem.lastMessageRead : newItem.lastMessageRead,
+    lastMessageMediaType: isOldNewer ? (oldItem.lastMessageMediaType || newItem.lastMessageMediaType) : (newItem.lastMessageMediaType || oldItem.lastMessageMediaType),
+    lastMessageThumb: isOldNewer ? (oldItem.lastMessageThumb || newItem.lastMessageThumb) : (newItem.lastMessageThumb || oldItem.lastMessageThumb),
+    lastMessageSticker: isOldNewer ? (oldItem.lastMessageSticker || newItem.lastMessageSticker) : (newItem.lastMessageSticker || oldItem.lastMessageSticker),
+    avatarUrl: newItem.avatarUrl || oldItem.avatarUrl,
+  }
+}
+
+export function sortDialogList(list: DialogItem[]): DialogItem[] {
+  const pinned = list.filter((d) => d.isPinned)
+  const unpinned = list.filter((d) => !d.isPinned)
+  unpinned.sort((a, b) => {
+    const tsA = (a.lastMessageDate || 0) < 1e11 ? (a.lastMessageDate || 0) * 1000 : (a.lastMessageDate || 0)
+    const tsB = (b.lastMessageDate || 0) < 1e11 ? (b.lastMessageDate || 0) * 1000 : (b.lastMessageDate || 0)
+    return tsB - tsA
+  })
+  return [...pinned, ...unpinned]
+}
+
 export const App: React.FC = () => {
   const { isRTL } = useI18n()
   const isMobile = useIsMobile(768)
@@ -684,9 +722,9 @@ export const App: React.FC = () => {
                   for (const d of cached) mergedMap.set(d.id, d)
                   for (const d of currentList) {
                     const existing = mergedMap.get(d.id)
-                    mergedMap.set(d.id, existing ? { ...existing, ...d } : d)
+                    mergedMap.set(d.id, existing ? mergeDialogPair(existing, d) : d)
                   }
-                  return { ...latest, [accountId]: Array.from(mergedMap.values()) }
+                  return { ...latest, [accountId]: sortDialogList(Array.from(mergedMap.values())) }
                 })
               }
             }).catch(() => {})
@@ -831,14 +869,9 @@ export const App: React.FC = () => {
             })
           }
 
-          // Sort: pinned first, then unpinned by lastMessageDate descending
-          const pinned = updatedList.filter((d) => d.isPinned)
-          const unpinned = updatedList.filter((d) => !d.isPinned)
-          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
-
           const seen = new Set<string>()
           const sortedDeduplicated: DialogItem[] = []
-          for (const d of [...pinned, ...unpinned]) {
+          for (const d of updatedList) {
             if (!seen.has(d.id)) {
               seen.add(d.id)
               sortedDeduplicated.push(d)
@@ -847,7 +880,7 @@ export const App: React.FC = () => {
 
           return {
             ...prev,
-            [accountId]: sortedDeduplicated,
+            [accountId]: sortDialogList(sortedDeduplicated),
           }
         })
       })
@@ -967,23 +1000,9 @@ export const App: React.FC = () => {
           for (const d of existing) map.set(d.id, d)
           for (const d of payload.dialogs) {
             const old = map.get(d.id)
-            if (old) {
-              map.set(d.id, {
-                ...old,
-                ...d,
-                isContact: Boolean(d.isContact || old.isContact),
-                lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
-                unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
-              })
-            } else {
-              map.set(d.id, d)
-            }
+            map.set(d.id, old ? mergeDialogPair(old, d) : d)
           }
-          const fullList = Array.from(map.values())
-          const pinned = fullList.filter((d) => d.isPinned)
-          const unpinned = fullList.filter((d) => !d.isPinned)
-          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
-          return { ...prev, [payload.accountId]: [...pinned, ...unpinned] }
+          return { ...prev, [payload.accountId]: sortDialogList(Array.from(map.values())) }
         })
       })
 
@@ -1461,6 +1480,9 @@ export const App: React.FC = () => {
     try {
       hasMoreDialogsRef.current = true
       loadCloudFoldersForAccount(accountId)
+      if (window.guidegram.getContacts) {
+        window.guidegram.getContacts(accountId).catch(() => {})
+      }
 
       let hasCached = false
       // Instant cache load (<10ms) from local disk
@@ -1475,9 +1497,9 @@ export const App: React.FC = () => {
               for (const d of cached) mergedMap.set(d.id, d)
               for (const d of currentList) {
                 const existing = mergedMap.get(d.id)
-                mergedMap.set(d.id, existing ? { ...existing, ...d } : d)
+                mergedMap.set(d.id, existing ? mergeDialogPair(existing, d) : d)
               }
-              return { ...prev, [accountId]: Array.from(mergedMap.values()) }
+              return { ...prev, [accountId]: sortDialogList(Array.from(mergedMap.values())) }
             })
           }
         } catch (cacheErr) {
@@ -1502,23 +1524,9 @@ export const App: React.FC = () => {
         }
         for (const d of dialogs) {
           const old = mergedMap.get(d.id)
-          if (!old) {
-            mergedMap.set(d.id, d)
-          } else {
-            mergedMap.set(d.id, {
-              ...old,
-              ...d,
-              isContact: Boolean(d.isContact || old.isContact),
-              lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
-              unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
-            })
-          }
+          mergedMap.set(d.id, old ? mergeDialogPair(old, d) : d)
         }
-        const fullList = Array.from(mergedMap.values())
-        const pinned = fullList.filter((d) => d.isPinned)
-        const unpinned = fullList.filter((d) => !d.isPinned)
-        unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
-        return { ...prev, [accountId]: [...pinned, ...unpinned] }
+        return { ...prev, [accountId]: sortDialogList(Array.from(mergedMap.values())) }
       })
 
       // Progressive Background Dialog Hydration (Official Telegram UX parity: silently feeds chats in the background)
@@ -1582,23 +1590,9 @@ export const App: React.FC = () => {
           }
           for (const d of nextBatch) {
             const old = existingMap.get(d.id)
-            if (!old) {
-              existingMap.set(d.id, d)
-            } else {
-              existingMap.set(d.id, {
-                ...old,
-                ...d,
-                isContact: Boolean(d.isContact || old.isContact),
-                lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
-                unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
-              })
-            }
+            existingMap.set(d.id, old ? mergeDialogPair(old, d) : d)
           }
-          const fullList = Array.from(existingMap.values())
-          const pinned = fullList.filter((d) => d.isPinned)
-          const unpinned = fullList.filter((d) => !d.isPinned)
-          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
-          return { ...prev, [accountId]: [...pinned, ...unpinned] }
+          return { ...prev, [accountId]: sortDialogList(Array.from(existingMap.values())) }
         })
 
         // Continue background sync as long as Telegram returned a full or sizable batch (>= 20)
@@ -1650,23 +1644,9 @@ export const App: React.FC = () => {
           }
           for (const d of nextBatch) {
             const old = existingMap.get(d.id)
-            if (!old) {
-              existingMap.set(d.id, d)
-            } else {
-              existingMap.set(d.id, {
-                ...old,
-                ...d,
-                isContact: Boolean(d.isContact || old.isContact),
-                lastMessageDate: Math.max(d.lastMessageDate || 0, old.lastMessageDate || 0),
-                unreadCount: typeof d.unreadCount === 'number' ? d.unreadCount : old.unreadCount,
-              })
-            }
+            existingMap.set(d.id, old ? mergeDialogPair(old, d) : d)
           }
-          const fullList = Array.from(existingMap.values())
-          const pinned = fullList.filter((d) => d.isPinned)
-          const unpinned = fullList.filter((d) => !d.isPinned)
-          unpinned.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
-          return { ...prev, [activeAccountId]: [...pinned, ...unpinned] }
+          return { ...prev, [activeAccountId]: sortDialogList(Array.from(existingMap.values())) }
         })
         if (nextBatch.length < 20) {
           hasMoreDialogsRef.current = false
@@ -1740,6 +1720,34 @@ export const App: React.FC = () => {
       if (unreadCount === 0 && msgs.length > 0) {
         const lastMsgId = Math.max(...msgs.map((m) => m.id))
         window.guidegram.markAsRead(accountId, chatId, lastMsgId)
+      }
+
+      if (sortedMsgs.length > 0) {
+        const topMsg = sortedMsgs[sortedMsgs.length - 1]
+        const topDateMs = topMsg.date < 1e11 ? topMsg.date * 1000 : topMsg.date
+        setDialogsByAccount((prev) => {
+          const list = prev[accountId] || []
+          let updated = false
+          const next = list.map((d) => {
+            if (d.id === chatId || isPeerMatch(d.id, chatId)) {
+              const currentMsgDate = (d.lastMessageDate || 0) < 1e11 ? (d.lastMessageDate || 0) * 1000 : (d.lastMessageDate || 0)
+              if (topDateMs >= currentMsgDate || (topMsg.id && (!d.lastMessageId || topMsg.id >= d.lastMessageId))) {
+                updated = true
+                return {
+                  ...d,
+                  lastMessageText: topMsg.text || (topMsg.mediaType ? `[${topMsg.mediaType}]` : d.lastMessageText),
+                  lastMessageDate: topDateMs,
+                  lastMessageId: topMsg.id,
+                  lastMessageIsOutgoing: Boolean(topMsg.isOutgoing),
+                  lastMessageMediaType: (topMsg.mediaType && ['photo', 'video', 'document', 'voice', 'sticker', 'round_video', 'audio'].includes(topMsg.mediaType) ? (topMsg.mediaType as any) : undefined) || d.lastMessageMediaType,
+                }
+              }
+            }
+            return d
+          })
+          if (!updated) return prev
+          return { ...prev, [accountId]: sortDialogList(next) }
+        })
       }
     } catch (err) {
       console.error('Failed to load messages:', err)
@@ -1917,21 +1925,22 @@ export const App: React.FC = () => {
 
       setDialogsByAccount((prev) => {
         const list = prev[activeAccountId] || []
+        const next = list.map((d) =>
+          d.id === activeChatId || isPeerMatch(d.id, activeChatId)
+            ? {
+                ...d,
+                lastMessageText: text,
+                lastMessageDate: Date.now(),
+                lastMessageId: sent.id,
+                lastMessageIsOutgoing: true,
+                lastMessageRead: false,
+                unreadCount: 0,
+              }
+            : d
+        )
         return {
           ...prev,
-          [activeAccountId]: list.map((d) =>
-            d.id === activeChatId
-              ? {
-                  ...d,
-                  lastMessageText: text,
-                  lastMessageDate: Date.now(),
-                  lastMessageId: sent.id,
-                  lastMessageIsOutgoing: true,
-                  lastMessageRead: false,
-                  unreadCount: 0,
-                }
-              : d
-          ),
+          [activeAccountId]: sortDialogList(next),
         }
       })
     } catch (err) {

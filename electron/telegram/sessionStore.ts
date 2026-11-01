@@ -26,6 +26,8 @@ export class SessionStore {
   private botChatsCache: Map<string, string[]> = new Map()
   private saveBotMessagesTimers: Map<string, NodeJS.Timeout> = new Map()
   private saveBotChatsTimers: Map<string, NodeJS.Timeout> = new Map()
+  private saveDialogsTimers: Map<string, NodeJS.Timeout> = new Map()
+  private pendingDialogsToSave: Map<string, DialogItem[]> = new Map()
 
   constructor(baseDataDir: string) {
     this.dataDir = baseDataDir
@@ -1306,32 +1308,84 @@ export class SessionStore {
 
   /**
    * Save dialog list cache to disk for instant zero-latency startup (< 10ms read)
+   * Debounced with atomic async writes and heavy base64 avatar stripping to prevent event-loop freeze
    */
   public saveDialogsCache(accountId: string, dialogs: DialogItem[]): void {
     if (!accountId || !Array.isArray(dialogs) || dialogs.length === 0) return
-    try {
-      if (!fs.existsSync(this.cacheDir)) {
-        fs.mkdirSync(this.cacheDir, { recursive: true })
-      }
-      const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
-      // Save up to 1000 most recent dialogs for deep instant offline scroll
-      const dataToSave = dialogs.slice(0, 1000).map((d) => {
-        const isSelf = d.id === accountId || d.id === 'self' || d.id === 'me'
-        if (isSelf) {
+    this.pendingDialogsToSave.set(accountId, dialogs)
+
+    if (this.saveDialogsTimers.has(accountId)) return
+
+    const timer = setTimeout(async () => {
+      this.saveDialogsTimers.delete(accountId)
+      const toSave = this.pendingDialogsToSave.get(accountId)
+      if (!toSave) return
+      this.pendingDialogsToSave.delete(accountId)
+
+      try {
+        if (!fs.existsSync(this.cacheDir)) {
+          fs.mkdirSync(this.cacheDir, { recursive: true })
+        }
+        const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
+        // Save up to 500 most recent dialogs and strip massive data URIs to keep cache lightweight (~100KB)
+        const dataToSave = toSave.slice(0, 500).map((d) => {
+          const isSelf = d.id === accountId || d.id === 'self' || d.id === 'me'
+          const strippedAvatar =
+            d.avatarUrl && d.avatarUrl.length > 1000 && d.avatarUrl.startsWith('data:image/')
+              ? undefined
+              : d.avatarUrl
+
+          if (isSelf) {
+            return {
+              ...d,
+              avatarUrl: strippedAvatar,
+              title: 'Saved Messages',
+              isSavedMessages: true,
+              isContact: false,
+              isUser: true,
+            }
+          }
           return {
             ...d,
-            title: 'Saved Messages',
-            isSavedMessages: true,
-            isContact: false,
-            isUser: true,
+            avatarUrl: strippedAvatar,
           }
-        }
-        return d
-      })
-      fs.writeFileSync(filePath, JSON.stringify(dataToSave), 'utf-8')
-    } catch (err) {
-      console.error(`[SessionStore] Failed to save dialogs cache for ${accountId}:`, err)
+        })
+
+        const tempPath = `${filePath}.tmp.${Date.now()}`
+        await fs.promises.writeFile(tempPath, JSON.stringify(dataToSave), 'utf-8')
+        await fs.promises.rename(tempPath, filePath).catch(async () => {
+          await fs.promises.writeFile(filePath, JSON.stringify(dataToSave), 'utf-8')
+        })
+      } catch (err) {
+        console.error(`[SessionStore] Failed to save dialogs cache for ${accountId}:`, err)
+      }
+    }, 1500)
+
+    if (timer.unref) timer.unref()
+    this.saveDialogsTimers.set(accountId, timer)
+  }
+
+  /**
+   * Flush any debounced pending dialog caches synchronously on app shutdown
+   */
+  public flushPendingDialogsSync(): void {
+    for (const [accountId, toSave] of this.pendingDialogsToSave.entries()) {
+      try {
+        const filePath = path.join(this.cacheDir, `dialogs_${accountId}.json`)
+        const dataToSave = toSave.slice(0, 500).map((d) => {
+          const isSelf = d.id === accountId || d.id === 'self' || d.id === 'me'
+          const strippedAvatar =
+            d.avatarUrl && d.avatarUrl.length > 1000 && d.avatarUrl.startsWith('data:image/')
+              ? undefined
+              : d.avatarUrl
+          return isSelf
+            ? { ...d, avatarUrl: strippedAvatar, title: 'Saved Messages', isSavedMessages: true, isContact: false, isUser: true }
+            : { ...d, avatarUrl: strippedAvatar }
+        })
+        fs.writeFileSync(filePath, JSON.stringify(dataToSave), 'utf-8')
+      } catch (_) {}
     }
+    this.pendingDialogsToSave.clear()
   }
 
   /**
@@ -1346,7 +1400,7 @@ export class SessionStore {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
           const avatarsDir = path.join(this.dataDir, 'avatars')
-          return parsed.map((d: DialogItem) => {
+          return parsed.map((d: DialogItem, idx: number) => {
             const isSelf = d.id === accountId || d.id === 'self' || d.id === 'me'
             if (isSelf) {
               d.title = 'Saved Messages'
@@ -1354,7 +1408,8 @@ export class SessionStore {
               d.isContact = false
               d.isUser = true
             }
-            if (!d.avatarUrl || d.avatarUrl.length < 2000) {
+            // Only probe and load disk avatar base64 synchronously for the top 30 visible dialogs to avoid event loop stalls
+            if (idx < 30 && (!d.avatarUrl || d.avatarUrl.length < 2000)) {
               const cleanId = String(d.id).replace(/^-100/, '').replace(/^-/, '')
               const candidates = [
                 path.join(avatarsDir, `avatar_${accountId}_${d.id}.jpg`),

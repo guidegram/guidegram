@@ -1172,6 +1172,7 @@ export class AccountManager {
   private lastAuditedTime = new Map<string, number>()
   private auditQueueInterval?: NodeJS.Timeout
   private auditQueueFloodWaitUntil = new Map<string, number>()
+  private contactsFloodWaitUntil = new Map<string, number>()
   private manualDirectAccounts = new Set<string>()
   private contactPeerIds = new Map<string, Set<string>>()
   private contactItemsMap = new Map<string, Map<string, ContactItem>>()
@@ -3204,6 +3205,12 @@ export class AccountManager {
   public async getContacts(accountId: string): Promise<ContactItem[]> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+    if (holder.info?.isBot) return []
+
+    const floodCooldown = this.contactsFloodWaitUntil.get(accountId) || 0
+    if (Date.now() < floodCooldown) {
+      return []
+    }
 
     try {
       const contacts = await holder.client.getContacts()
@@ -3263,8 +3270,11 @@ export class AccountManager {
       return contactItems
     } catch (err: any) {
       const errMsg = String(err?.message || err)
-      if (errMsg.includes('FLOOD_WAIT')) {
-        Logger.warn(`[AccountManager] getContacts rate limited for ${accountId}: ${errMsg}`)
+      const floodMatch = errMsg.match(/FLOOD_WAIT_(\d+)/i)
+      if (floodMatch) {
+        const waitSec = parseInt(floodMatch[1], 10) || 60
+        this.contactsFloodWaitUntil.set(accountId, Date.now() + (waitSec + 5) * 1000)
+        Logger.warn(`[AccountManager] getContacts rate limited for ${accountId}: pausing for ${waitSec}s`)
       } else {
         Logger.error(`[AccountManager] getContacts error for ${accountId}:`, err)
       }
@@ -3277,7 +3287,12 @@ export class AccountManager {
   ): Promise<{ totalContacts: number; newEventsCount: number }> {
     try {
       const holder = this.clients.get(accountId)
-      if (!holder?.client) return { totalContacts: 0, newEventsCount: 0 }
+      if (!holder?.client || holder.info?.isBot) return { totalContacts: 0, newEventsCount: 0 }
+
+      const floodCooldown = this.contactsFloodWaitUntil.get(accountId) || 0
+      if (Date.now() < floodCooldown) {
+        return { totalContacts: 0, newEventsCount: 0 }
+      }
 
       const beforeCount = this.activityTrackerService.getContactChanges(accountId).length
       const contacts = await this.getContacts(accountId)
@@ -16277,7 +16292,7 @@ export class AccountManager {
 
   public async syncAllActiveAccountsProfile(forceAvatarRefresh = false): Promise<void> {
     for (const [accId, holder] of this.clients.entries()) {
-      if (holder?.info?.status === 'connected') {
+      if (holder?.info?.status === 'connected' && !holder?.info?.isBot) {
         await this.syncAccountProfile(accId, forceAvatarRefresh).catch(() => {})
       }
     }
