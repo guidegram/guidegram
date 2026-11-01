@@ -28,6 +28,14 @@ interface ChatListProps {
   onSelectPeer?: (target: string) => void
   onLoadMoreDialogs?: () => void
   onOpenProxyModal?: () => void
+  onFoldersUpdated?: (folders: CloudFolderItem[]) => void
+}
+
+export const peerMatches = (list?: string[], targetId?: string): boolean => {
+  if (!list || list.length === 0 || !targetId) return false
+  if (list.includes(targetId)) return true
+  const cleanTarget = targetId.replace(/^-100/, '').replace(/^-/, '')
+  return list.some((id) => id.replace(/^-100/, '').replace(/^-/, '') === cleanTarget)
 }
 
 type SearchFilterCategory =
@@ -117,6 +125,7 @@ export const ChatList = React.memo<ChatListProps>(({
   onSelectPeer,
   onLoadMoreDialogs,
   onOpenProxyModal,
+  onFoldersUpdated,
 }) => {
   const { t, language, isRTL: isAppRtl, formatNumber } = useI18n()
   const isFa = language === 'fa'
@@ -135,6 +144,21 @@ export const ChatList = React.memo<ChatListProps>(({
   const [activeStoryPeers, setActiveStoryPeers] = useState<ActiveStoryPeer[]>([])
   const [storyRefreshKey, setStoryRefreshKey] = useState(0)
   const [pvFilter, setPvFilter] = useState<'all' | 'contacts' | 'non_contacts'>('all')
+
+  const isFolderTab = activeTab.startsWith('folder:')
+  const currentFolderId = isFolderTab ? Number(activeTab.replace('folder:', '')) : null
+  const currentFolder = isFolderTab
+    ? cloudFolders?.find((f) => f.id === currentFolderId)
+    : activeTab === 'bots'
+    ? cloudFolders?.find((f) => f.bots)
+    : null
+
+  const isPinnedInActiveView = useCallback((d: DialogItem): boolean => {
+    if (currentFolder && currentFolder.pinnedPeerIds && currentFolder.pinnedPeerIds.length > 0) {
+      return peerMatches(currentFolder.pinnedPeerIds, d.id)
+    }
+    return Boolean(d.isPinned)
+  }, [currentFolder])
 
   const [contextMenu, setContextMenu] = useState<{
     x: number
@@ -179,12 +203,47 @@ export const ChatList = React.memo<ChatListProps>(({
 
   const handleTogglePin = useCallback(async (dialog: DialogItem) => {
     setContextMenu(null)
-    const nextPinned = !dialog.isPinned
-    dialog.isPinned = nextPinned
-    if (window.guidegram?.toggleDialogPin) {
-      await window.guidegram.toggleDialogPin(dialog.accountId, dialog.id, nextPinned)
+    if (currentFolder && currentFolder.id) {
+      const isCurrentlyPinned = peerMatches(currentFolder.pinnedPeerIds, dialog.id)
+      const nextPinned = !isCurrentlyPinned
+
+      if (window.guidegram?.toggleFolderPin) {
+        await window.guidegram.toggleFolderPin(dialog.accountId, currentFolder.id, dialog.id, nextPinned)
+      }
+
+      // Optimistically update cloudFolders
+      if (cloudFolders && onFoldersUpdated) {
+        const cleanId = dialog.id.replace(/^-100/, '').replace(/^-/, '')
+        const updated = cloudFolders.map((f) => {
+          if (f.id !== currentFolder.id) return f
+          let nextPinnedList = (f.pinnedPeerIds || []).filter((p) => p !== dialog.id && p.replace(/^-100/, '').replace(/^-/, '') !== cleanId)
+          let nextIncludeList = (f.includePeerIds || []).filter((p) => p !== dialog.id && p.replace(/^-100/, '').replace(/^-/, '') !== cleanId)
+
+          if (nextPinned) {
+            nextPinnedList.unshift(dialog.id)
+          } else {
+            const hasBroadFlags = f.contacts || f.nonContacts || f.groups || f.broadcasts || f.bots
+            if (!hasBroadFlags) {
+              nextIncludeList.unshift(dialog.id)
+            }
+          }
+
+          return {
+            ...f,
+            pinnedPeerIds: nextPinnedList,
+            includePeerIds: nextIncludeList,
+          }
+        })
+        onFoldersUpdated(updated)
+      }
+    } else {
+      const nextPinned = !dialog.isPinned
+      dialog.isPinned = nextPinned
+      if (window.guidegram?.toggleDialogPin) {
+        await window.guidegram.toggleDialogPin(dialog.accountId, dialog.id, nextPinned)
+      }
     }
-  }, [])
+  }, [currentFolder, cloudFolders, onFoldersUpdated])
 
   const handleToggleRead = useCallback(async (dialog: DialogItem) => {
     setContextMenu(null)
@@ -393,13 +452,6 @@ export const ChatList = React.memo<ChatListProps>(({
       const folderId = Number(activeTab.replace('folder:', ''))
       const folder = cloudFolders?.find((f) => f.id === folderId)
       if (folder) {
-        const peerMatches = (list?: string[], targetId?: string): boolean => {
-          if (!list || list.length === 0 || !targetId) return false
-          if (list.includes(targetId)) return true
-          const cleanTarget = targetId.replace(/^-100/, '').replace(/^-/, '')
-          return list.some((id) => id.replace(/^-100/, '').replace(/^-/, '') === cleanTarget)
-        }
-
         if (peerMatches(folder.excludePeerIds, dialog.id)) return false
         if (folder.excludeMuted && dialog.isMuted) return false
         if (folder.excludeRead && dialog.unreadCount === 0) return false
@@ -443,6 +495,40 @@ export const ChatList = React.memo<ChatListProps>(({
     return true
   })
 
+  // Order folder dialogs: pinnedPeerIds in their exact specified order, followed by other dialogs
+  const sortedFilteredDialogs = React.useMemo(() => {
+    if (!currentFolder || !currentFolder.pinnedPeerIds || currentFolder.pinnedPeerIds.length === 0) {
+      return filteredDialogs
+    }
+
+    const pinnedMap = new Map<string, number>()
+    currentFolder.pinnedPeerIds.forEach((pid, idx) => {
+      pinnedMap.set(pid, idx)
+      pinnedMap.set(pid.replace(/^-100/, '').replace(/^-/, ''), idx)
+    })
+
+    const getPinIndex = (d: DialogItem): number => {
+      const clean = d.id.replace(/^-100/, '').replace(/^-/, '')
+      return pinnedMap.has(d.id) ? pinnedMap.get(d.id)! : (pinnedMap.has(clean) ? pinnedMap.get(clean)! : -1)
+    }
+
+    const pinnedList: { d: DialogItem; idx: number }[] = []
+    const unpinnedList: DialogItem[] = []
+
+    for (const d of filteredDialogs) {
+      const idx = getPinIndex(d)
+      if (idx !== -1) {
+        pinnedList.push({ d, idx })
+      } else {
+        unpinnedList.push(d)
+      }
+    }
+
+    pinnedList.sort((a, b) => a.idx - b.idx)
+    unpinnedList.sort((a, b) => (b.lastMessageDate || 0) - (a.lastMessageDate || 0))
+    return [...pinnedList.map((p) => p.d), ...unpinnedList]
+  }, [filteredDialogs, currentFolder])
+
   // Incremental rendering to prevent allocating hundreds of DOM elements & React nodes
   const [displayLimit, setDisplayLimit] = useState(40)
   useEffect(() => {
@@ -450,13 +536,13 @@ export const ChatList = React.memo<ChatListProps>(({
   }, [activeTab, searchQuery, pvFilter, dialogs.length, account?.id])
 
   const visibleDialogs = React.useMemo(() => {
-    return filteredDialogs.slice(0, displayLimit)
-  }, [filteredDialogs, displayLimit])
+    return sortedFilteredDialogs.slice(0, displayLimit)
+  }, [sortedFilteredDialogs, displayLimit])
 
   // Seamlessly merge local matching dialogs with server myPeers with Smart Relevance Ranking
   const chatsAndContacts = React.useMemo(() => {
     const map = new Map<string, DialogItem>()
-    for (const d of filteredDialogs) {
+    for (const d of sortedFilteredDialogs) {
       map.set(d.id, d)
     }
     for (const p of serverMyPeers) {
