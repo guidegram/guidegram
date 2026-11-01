@@ -1544,9 +1544,11 @@ export class AccountManager {
         this.onEventCallback?.('telegram:account-updated', { account: updatedInfo })
 
         // Proactively audit contacts in background 4 seconds after connection
-        setTimeout(() => {
-          this.syncAndAuditContacts(updatedInfo.id).catch(() => {})
-        }, 4000)
+        if (!isBot) {
+          setTimeout(() => {
+            this.syncAndAuditContacts(updatedInfo.id).catch(() => {})
+          }, 4000)
+        }
 
         return updatedInfo
       } else {

@@ -411,10 +411,15 @@ function createWindow() {
     }
   })
 
+  let lastFocusProfileSync = 0
   mainWindow.on('focus', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents?.focus()
-      accountManager?.syncAllActiveAccountsProfile?.().catch(() => {})
+      const now = Date.now()
+      if (now - lastFocusProfileSync > 120_000) {
+        lastFocusProfileSync = now
+        accountManager?.syncAllActiveAccountsProfile?.().catch(() => {})
+      }
     }
   })
 
