@@ -1497,6 +1497,18 @@ const guidegramAPI = {
     accountId: string
   ): Promise<any[]> =>
     ipcRenderer.invoke('telegram:get-suggested-dialog-filters', { accountId }),
+  toggleFolderPin: (
+    accountId: string,
+    folderId: number,
+    chatId: string,
+    pinned: boolean
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:toggle-folder-pin', { accountId, folderId, chatId, pinned }),
+  getFolderPeerDialogs: (
+    accountId: string,
+    peerIds: string[]
+  ): Promise<DialogItem[]> =>
+    ipcRenderer.invoke('telegram:get-folder-peer-dialogs', { accountId, peerIds }),
   decodeWaveform: (waveform: number[] | Uint8Array): Promise<number[] | undefined> =>
     ipcRenderer.invoke('telegram:decode-waveform', { waveform }),
   encodeWaveform: (samples: number[]): Promise<number[]> =>

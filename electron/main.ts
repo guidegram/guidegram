@@ -4368,6 +4368,24 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:toggle-folder-pin', async (_event, { accountId, folderId, chatId, pinned }) => {
+    try {
+      return await accountManager.toggleFolderPin(accountId, folderId, chatId, pinned)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleFolderPin error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-folder-peer-dialogs', async (_event, { accountId, peerIds }) => {
+    try {
+      return await accountManager.getFolderPeerDialogs(accountId, peerIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getFolderPeerDialogs error:`, err)
+      return []
+    }
+  })
+
   // Stickers IPC
   ipcMain.handle('telegram:get-installed-stickers', async (_event, { accountId }) => {
     try {

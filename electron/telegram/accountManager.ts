@@ -12993,6 +12993,213 @@ export class AccountManager {
     }
   }
 
+  public async toggleFolderPin(
+    accountId: string,
+    folderId: number,
+    chatId: string,
+    pinned: boolean
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const folders = await this.getCloudFolders(accountId)
+      const folder = folders.find((f) => f.id === Number(folderId))
+      if (!folder) return false
+
+      const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
+      const isMatch = (id: string) => id === chatId || id.replace(/^-100/, '').replace(/^-/, '') === cleanChatId
+
+      let pinnedPeerIds = (folder.pinnedPeerIds || []).filter((id) => !isMatch(id))
+      let includePeerIds = (folder.includePeerIds || []).filter((id) => !isMatch(id))
+      let excludePeerIds = (folder.excludePeerIds || []).filter((id) => !isMatch(id))
+
+      if (pinned) {
+        pinnedPeerIds.unshift(chatId)
+      } else {
+        const hasBroadFlags = folder.contacts || folder.nonContacts || folder.groups || folder.broadcasts || folder.bots
+        if (!hasBroadFlags) {
+          includePeerIds.unshift(chatId)
+        }
+      }
+
+      const updateResult = await this.updateDialogFilter(accountId, folderId, {
+        title: folder.title,
+        emoticon: folder.emoticon,
+        contacts: folder.contacts,
+        nonContacts: folder.nonContacts,
+        groups: folder.groups,
+        broadcasts: folder.broadcasts,
+        bots: folder.bots,
+        excludeMuted: folder.excludeMuted,
+        excludeRead: folder.excludeRead,
+        excludeArchived: folder.excludeArchived,
+        pinnedPeerIds,
+        includePeerIds,
+        excludePeerIds,
+      })
+
+      return updateResult
+    } catch (err: any) {
+      Logger.warn(`[AccountManager] toggleFolderPin error for folder ${folderId}:`, err?.message || err)
+      return false
+    }
+  }
+
+  public async getFolderPeerDialogs(accountId: string, peerIds: string[]): Promise<DialogItem[]> {
+    if (!peerIds || peerIds.length === 0) return []
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    const cleanList = Array.from(new Set(peerIds.map((p) => String(p).trim()).filter(Boolean)))
+    const result: DialogItem[] = []
+    const missing: string[] = []
+
+    const cachedDialogs = this.store.loadDialogsCache(accountId) || []
+    const cachedMap = new Map<string, DialogItem>()
+    for (const cd of cachedDialogs) {
+      if (cd.id) {
+        cachedMap.set(cd.id, cd)
+        const clean = cd.id.replace(/^-100/, '').replace(/^-/, '')
+        cachedMap.set(clean, cd)
+      }
+    }
+
+    for (const pid of cleanList) {
+      const clean = pid.replace(/^-100/, '').replace(/^-/, '')
+      const found = cachedMap.get(pid) || cachedMap.get(clean)
+      if (found) {
+        result.push(found)
+      } else {
+        missing.push(pid)
+      }
+    }
+
+    if (missing.length === 0) {
+      return result
+    }
+
+    const inputDialogPeers: any[] = []
+    for (const pid of missing) {
+      try {
+        const ip = await this.resolveInputPeer(accountId, pid)
+        if (ip) {
+          inputDialogPeers.push({ _: 'inputDialogPeer', peer: ip })
+        }
+      } catch (_) {}
+    }
+
+    if (inputDialogPeers.length > 0) {
+      try {
+        const res: any = await holder.client.call({
+          _: 'messages.getPeerDialogs',
+          peers: inputDialogPeers,
+        })
+
+        const rawUsers = res?.users || []
+        const rawChats = res?.chats || []
+        const rawMessages = res?.messages || []
+
+        const msgMap = new Map<string, any>()
+        for (const m of rawMessages) {
+          const mPeerId = m.peerId?.userId ?? m.peerId?.channelId ?? m.peerId?.chatId ?? m.fromId?.userId ?? ''
+          if (mPeerId) {
+            const sId = mPeerId.toString()
+            if (!msgMap.has(sId) || m.id > msgMap.get(sId).id) {
+              msgMap.set(sId, m)
+            }
+          }
+        }
+
+        // Parse users
+        for (const u of rawUsers) {
+          if (!u || u._ === 'userEmpty') continue
+          const uId = u.id.toString()
+          const isBot = Boolean(u.bot)
+          const fullName = formatEntityName(u, isBot ? 'Bot' : 'User')
+          const lastMsg = msgMap.get(uId)
+          
+          let avatarUrl: string | undefined = undefined
+          if (u.photo && u.photo._ !== 'userProfilePhotoEmpty') {
+            const stripped = (u.photo as any).strippedThumb || (u.photo as any)?.raw?.strippedThumb
+            if (stripped) {
+              avatarUrl = strippedThumbToDataUrl(stripped) || undefined
+            }
+          }
+
+          const dialogItem: DialogItem = {
+            id: uId,
+            accountId,
+            title: fullName,
+            unreadCount: 0,
+            isUser: true,
+            isGroup: false,
+            isChannel: false,
+            isBroadcast: false,
+            isBot,
+            isPinned: false,
+            lastMessageText: lastMsg?.message || '',
+            lastMessageDate: lastMsg?.date ? lastMsg.date * 1000 : 0,
+            lastMessageId: lastMsg?.id,
+            avatarInitials: fullName.slice(0, 2).toUpperCase(),
+            avatarUrl,
+            username: u.username,
+            isPremium: Boolean(u.premium),
+            isContact: Boolean(u.contact || this.isContactPeer(accountId, uId)),
+          }
+          result.push(dialogItem)
+          cachedDialogs.push(dialogItem)
+        }
+
+        // Parse chats & channels
+        for (const c of rawChats) {
+          if (!c || c._ === 'chatEmpty' || c._ === 'channelEmpty') continue
+          const isChannel = c._ === 'channel'
+          const isBroadcast = isChannel && Boolean(c.broadcast)
+          const isGroup = !isBroadcast
+          const peerId = isChannel ? `-100${c.id}` : `-${c.id}`
+          const title = formatEntityName(c, 'Chat')
+          const lastMsg = msgMap.get(c.id.toString()) || msgMap.get(peerId)
+
+          let avatarUrl: string | undefined = undefined
+          if (c.photo && c.photo._ !== 'chatPhotoEmpty') {
+            const stripped = (c.photo as any).strippedThumb || (c.photo as any)?.raw?.strippedThumb
+            if (stripped) {
+              avatarUrl = strippedThumbToDataUrl(stripped) || undefined
+            }
+          }
+
+          const dialogItem: DialogItem = {
+            id: peerId,
+            accountId,
+            title,
+            unreadCount: 0,
+            isUser: false,
+            isGroup,
+            isChannel,
+            isBroadcast,
+            isBot: false,
+            isPinned: false,
+            lastMessageText: lastMsg?.message || '',
+            lastMessageDate: lastMsg?.date ? lastMsg.date * 1000 : 0,
+            lastMessageId: lastMsg?.id,
+            avatarInitials: title.slice(0, 2).toUpperCase(),
+            avatarUrl,
+            username: c.username,
+          }
+          result.push(dialogItem)
+          cachedDialogs.push(dialogItem)
+        }
+
+        this.store.saveDialogsCache(accountId, cachedDialogs)
+      } catch (err) {
+        Logger.warn('[AccountManager] getFolderPeerDialogs MTProto fetch error:', err)
+      }
+    }
+
+    return result
+  }
+
 
   public async getInstalledStickerSets(accountId: string): Promise<StickerSetItem[]> {
     const holder = this.clients.get(accountId)
