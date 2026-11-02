@@ -16273,6 +16273,43 @@ export class AccountManager {
     return this.securityService.resetWallPapers(holder as any)
   }
 
+  public async resetWebAuthorization(accountId: string, hash: string | bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.resetWebAuthorization(holder as any, toLong(hash) as any)
+  }
+
+  public async resetWebAuthorizations(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.resetWebAuthorizations(holder as any)
+  }
+
+  public async resolveBusinessChatLink(accountId: string, slug?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.resolveBusinessChatLink(holder as any, slug)
+  }
+
+  public async saveAutoSaveSettings(
+    accountId: string,
+    users?: boolean,
+    chats?: boolean,
+    broadcasts?: boolean,
+    peerId?: string,
+    settings?: any
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.saveAutoSaveSettings(holder as any, accountId, users, chats, broadcasts, peerId, settings)
+  }
+
+  public async saveMusic(accountId: string, unsave?: boolean, id?: any, afterId?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.saveMusic(holder as any, unsave, id, afterId)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

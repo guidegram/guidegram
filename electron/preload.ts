@@ -1948,6 +1948,23 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:reset-password', { accountId }),
   resetWallPapers: (accountId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:reset-wallpapers', { accountId }),
+  resetWebAuthorization: (accountId: string, hash: string | bigint | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:reset-web-authorization', { accountId, hash }),
+  resetWebAuthorizations: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:reset-web-authorizations', { accountId }),
+  resolveBusinessChatLink: (accountId: string, slug?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:resolve-business-chat-link', { accountId, slug }),
+  saveAutoSaveSettings: (
+    accountId: string,
+    users?: boolean,
+    chats?: boolean,
+    broadcasts?: boolean,
+    peerId?: string,
+    settings?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-auto-save-settings', { accountId, users, chats, broadcasts, peerId, settings }),
+  saveMusic: (accountId: string, unsave?: boolean, id?: any, afterId?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-music', { accountId, unsave, id, afterId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

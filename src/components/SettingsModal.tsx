@@ -266,6 +266,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isLoadingWebAuths, setIsLoadingWebAuths] = useState<boolean>(false)
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState<boolean>(false)
   const [isResettingNotifySettings, setIsResettingNotifySettings] = useState<boolean>(false)
+  const [isResettingWebAuths, setIsResettingWebAuths] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -567,6 +568,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       showToast(isPersian ? 'خطا در بازنشانی تنظیمات اعلان‌ها' : 'Failed to reset notification settings.')
     } finally {
       setIsResettingNotifySettings(false)
+    }
+  }
+
+  const handleResetWebAuthorization = async (hash: string | number) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.resetWebAuthorization) return
+    try {
+      await window.guidegram.resetWebAuthorization(targetId, hash)
+      setWebAuthorizationsList((prev) => prev.filter((a) => a.hash !== hash))
+      showToast(isPersian ? 'نشست وب‌سایت خاتمه یافت.' : 'Website session terminated.')
+    } catch {
+      showToast(isPersian ? 'خطا در قطع ارتباط وب‌سایت' : 'Failed to terminate website session.')
+    }
+  }
+
+  const handleResetAllWebAuthorizations = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.resetWebAuthorizations) return
+    setIsResettingWebAuths(true)
+    try {
+      await window.guidegram.resetWebAuthorizations(targetId)
+      setWebAuthorizationsList([])
+      showToast(isPersian ? 'تمام نشست‌های وب‌سایت‌ها خاتمه یافتند.' : 'All website sessions terminated.')
+    } catch {
+      showToast(isPersian ? 'خطا در قطع ارتباط تمام وب‌سایت‌ها' : 'Failed to terminate all website sessions.')
+    } finally {
+      setIsResettingWebAuths(false)
     }
   }
 
@@ -5396,9 +5424,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           {auth.browser || 'Browser'} • {auth.platform || 'Web'} • {auth.ip || ''}
                         </div>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono">
-                        {auth.dateCreated ? new Date(auth.dateCreated * 1000).toLocaleDateString() : 'Active'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-500 font-mono">
+                          {auth.dateCreated ? new Date(auth.dateCreated * 1000).toLocaleDateString() : 'Active'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleResetWebAuthorization(auth.hash)}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all cursor-pointer"
+                        >
+                          {isPersian ? 'قطع' : 'Disconnect'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -5473,14 +5510,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setPrivacyData((prev) => (prev ? { ...prev, connectedWebsitesCount: 0 } : null))
-                    showToast('Disconnected all website sessions')
-                    setActiveSubModal(null)
-                  }}
-                  className="text-xs text-rose-400 hover:underline font-semibold cursor-pointer"
+                  onClick={handleResetAllWebAuthorizations}
+                  disabled={isResettingWebAuths}
+                  className="text-xs text-rose-400 hover:underline font-semibold cursor-pointer disabled:opacity-50"
                 >
-                  Disconnect All Websites
+                  {isResettingWebAuths ? (isPersian ? 'در حال قطع ارتباط...' : 'Disconnecting...') : (isPersian ? 'قطع ارتباط تمام وب‌سایت‌ها' : 'Disconnect All Websites')}
                 </button>
                 <button
                   type="button"

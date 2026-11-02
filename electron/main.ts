@@ -5427,6 +5427,51 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:reset-web-authorization', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.resetWebAuthorization(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetWebAuthorization error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:reset-web-authorizations', async (_event, { accountId }) => {
+    try {
+      return await accountManager.resetWebAuthorizations(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetWebAuthorizations error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:resolve-business-chat-link', async (_event, { accountId, slug }) => {
+    try {
+      return await accountManager.resolveBusinessChatLink(accountId, slug)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resolveBusinessChatLink error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:save-auto-save-settings', async (_event, { accountId, users, chats, broadcasts, peerId, settings }) => {
+    try {
+      return await accountManager.saveAutoSaveSettings(accountId, users, chats, broadcasts, peerId, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] saveAutoSaveSettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:save-music', async (_event, { accountId, unsave, id, afterId }) => {
+    try {
+      return await accountManager.saveMusic(accountId, unsave, id, afterId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] saveMusic error:`, err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
