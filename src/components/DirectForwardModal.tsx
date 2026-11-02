@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
-  Forward,
-  Check,
-  EyeOff,
-  VolumeX,
+  Send,
   Bookmark,
-  ArrowUp,
-  ArrowDown,
-  RotateCcw,
-  Edit3,
-  Scissors,
   Search,
   Megaphone,
   Users,
   Bot,
+  User,
+  Quote,
+  EyeOff,
+  VolumeX,
+  Volume2,
+  Check,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ContactItem } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -46,7 +47,6 @@ export interface DirectForwardModalProps {
 
 /**
  * Normalizes Persian and Arabic text for consistent, high-recall search matching.
- * Handles Yeh/Kaf variants, Alef diacritics/hamza, Tatweel, and ZWNJ.
  */
 export const normalizeSearchText = (text?: string): string => {
   if (!text) return ''
@@ -64,8 +64,7 @@ export const normalizeSearchText = (text?: string): string => {
 }
 
 /**
- * Builds a flexible regex that matches Persian/Arabic character variations
- * and optional half-spaces (ZWNJ) between characters.
+ * Flexible search regex matching Persian/Arabic variations.
  */
 export const buildFlexibleSearchRegex = (q: string): RegExp | null => {
   const trimmed = q.trim()
@@ -97,6 +96,8 @@ export const buildFlexibleSearchRegex = (q: string): RegExp | null => {
   }
 }
 
+type ForwardTabCategory = 'all' | 'users' | 'groups' | 'channels'
+
 export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   isOpen,
   message,
@@ -106,19 +107,50 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   onClose,
   onForward,
 }) => {
-  const { t, isRTL: isRTLContext } = useI18n()
+  const { t, isRTL: isRTLContext, formatNumber } = useI18n()
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([])
-  const [withoutQuote, setWithoutQuote] = useState(true) // Default true (Telegraph direct style)
+  // Telegram Official Standard: Forward WITH quote is default (withoutQuote = false)
+  const [withoutQuote, setWithoutQuote] = useState(false)
   const [dropMediaCaptions, setDropMediaCaptions] = useState(false)
   const [newCaption, setNewCaption] = useState('')
   const [silent, setSilent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState<ForwardTabCategory>('all')
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
   const [contacts, setContacts] = useState<DialogItem[]>([])
   const [serverPeers, setServerPeers] = useState<DialogItem[]>([])
   const [isSearchingServer, setIsSearchingServer] = useState(false)
 
   const effectiveAccountId = accountId || dialogs[0]?.accountId
+
+  // Auto-focus search input when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 80)
+    }
+  }, [isOpen])
+
+  // Reset state when opened with a new message
+  useEffect(() => {
+    if (isOpen && message) {
+      setSelectedChatIds([])
+      setSearch('')
+      setActiveTab('all')
+      setServerPeers([])
+      setLoading(false)
+      // Telegram Standard: Default WITH quote (preserve author, custom emojis, channel badges)
+      setWithoutQuote(false)
+      setDropMediaCaptions(false)
+      setSilent(false)
+      setShowAdvancedOptions(false)
+      setNewCaption('')
+    }
+  }, [isOpen, message])
 
   // Load account contacts to enrich the forward list if they are not in recent dialogs
   useEffect(() => {
@@ -179,30 +211,21 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     }
   }, [search, effectiveAccountId])
 
-  useEffect(() => {
-    if (isOpen && message) {
-      setSelectedChatIds([])
-      setSearch('')
-      setServerPeers([])
-      setLoading(false)
-      setWithoutQuote(true)
-      setDropMediaCaptions(false)
-      setSilent(false)
-      setNewCaption(message.text || '')
-    }
-  }, [isOpen, message])
-
-  // Combine dialogs with contacts & live server results so all reachable peers can be searched & forwarded to
+  // Primary destinations: Keep recent dialogs in their natural Telegram order!
+  // Dialogs already sorted by pinned first, then last interaction date descending.
   const allDestinations = useMemo(() => {
     const mergedMap = new Map<string, DialogItem>()
+    // 1. Prioritize user's active dialogs in their exact recent order
     for (const d of dialogs) {
       if (d.id) mergedMap.set(d.id, d)
     }
+    // 2. Add contacts not present in recent dialogs
     for (const c of contacts) {
       if (c.id && !mergedMap.has(c.id)) {
         mergedMap.set(c.id, c)
       }
     }
+    // 3. Add live server search peers
     for (const s of serverPeers) {
       if (s.id && !mergedMap.has(s.id)) {
         mergedMap.set(s.id, s)
@@ -211,12 +234,11 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     return Array.from(mergedMap.values())
   }, [dialogs, contacts, serverPeers])
 
-  // Filter according to strict business logic:
-  // 1. Saved Messages handled separately
+  // Filter according to Telegram rules:
+  // 1. Saved Messages handled separately as the dedicated top row
   // 2. Channels: ONLY channels where user is admin, owner (creator) or has send permissions
-  // 3. Groups: included
-  // 4. PVs: included
-  // 5. Bots: included (sorted to the bottom)
+  // 3. Groups & PVs included
+  // 4. Exclude ads/promoted channels
   const validDestinations = useMemo(() => {
     return allDestinations.filter((d) => {
       if (d.isSponsored || d.isSponsorChannel) return false
@@ -232,22 +254,6 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
       return true
     })
   }, [allDestinations])
-
-  // Sort: non-bots first (PVs, Groups, Admin Channels), then Bots at the very bottom
-  const sortedDestinations = useMemo(() => {
-    const nonBots: DialogItem[] = []
-    const bots: DialogItem[] = []
-
-    for (const d of validDestinations) {
-      if (d.isBot) {
-        bots.push(d)
-      } else {
-        nonBots.push(d)
-      }
-    }
-
-    return [...nonBots, ...bots]
-  }, [validDestinations])
 
   // High-recall Persian / Arabic / English matching
   const matchesSearch = (d: DialogItem, query: string): boolean => {
@@ -298,12 +304,27 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     })
   }
 
+  // Filter based on active tab category and search query
   const filtered = useMemo(() => {
-    if (!search.trim()) return sortedDestinations
-    return sortedDestinations.filter((d) => matchesSearch(d, search))
-  }, [sortedDestinations, search])
+    return validDestinations.filter((d) => {
+      // Tab Category Filtering
+      const isBroadcast = Boolean(d.isBroadcast ?? (d.isChannel && !d.isGroup))
+      const isGroup = Boolean(d.isGroup || (d.isChannel && !isBroadcast))
+      const isUser = Boolean(d.isUser && !d.isBot)
 
-  const showSavedMessages = isSavedMessagesMatch(search)
+      if (activeTab === 'users' && !isUser) return false
+      if (activeTab === 'groups' && !isGroup) return false
+      if (activeTab === 'channels' && !isBroadcast) return false
+
+      // Search Query Filtering
+      if (search.trim()) {
+        return matchesSearch(d, search)
+      }
+      return true
+    })
+  }, [validDestinations, activeTab, search])
+
+  const showSavedMessages = isSavedMessagesMatch(search) && (activeTab === 'all' || activeTab === 'users')
 
   if (!isOpen || !message) return null
 
@@ -317,24 +338,12 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
     })
   }
 
-  const handleMoveRecipient = (index: number, direction: 'up' | 'down') => {
-    setSelectedChatIds((prev) => {
-      const next = [...prev]
-      const targetIndex = direction === 'up' ? index - 1 : index + 1
-      if (targetIndex < 0 || targetIndex >= next.length) return prev
-      const temp = next[index]
-      next[index] = next[targetIndex]
-      next[targetIndex] = temp
-      return next
-    })
-  }
-
   const handleRemoveRecipient = (chatId: string) => {
     setSelectedChatIds((prev) => prev.filter((id) => id !== chatId))
   }
 
   const handleForward = async () => {
-    if (selectedChatIds.length === 0) return
+    if (selectedChatIds.length === 0 || loading) return
     setLoading(true)
     try {
       const trimmedCaption = newCaption.trim()
@@ -363,412 +372,465 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   }
 
   const getChatTitle = (chatId: string): string => {
-    if (chatId === 'me') return 'Saved Messages'
+    if (chatId === 'me') return t('forward.saved_messages') || 'Saved Messages'
     const found = allDestinations.find((d) => d.id === chatId)
     return found?.title || `Chat ${chatId}`
   }
 
-  const isCaptionModified = newCaption !== (message.text || '')
+  // Derive source author/chat name for preview
+  const originalSenderName =
+    message.forwardFromName ||
+    message.senderName ||
+    message.chatTitle ||
+    (message.isOutgoing ? (t('chat.you') || 'You') : (t('common.sender') || 'Original Author'))
+
+  const messageCount = messages && messages.length > 1 ? messages.length : 1
+  const hasMultipleMessages = messageCount > 1
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 select-none">
       <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 16 }}
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 16 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-        className="glass-modal w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-white/10"
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 340 }}
+        className="glass-modal w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[82vh] max-h-[680px] border border-white/10 bg-dark-900/95"
       >
-        {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-dark-900/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary-600/20 text-primary-400 flex items-center justify-center border border-primary-500/20 shadow-sm">
-              <Forward className="w-4 h-4" />
+        {/* Header - Clean Telegram Style */}
+        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-dark-850/80">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center shrink-0 border border-primary-500/30">
+              <Send className="w-4 h-4 rtl:-scale-x-100" />
             </div>
-            <div>
-              <div className="text-sm font-bold text-gray-100">
-                {messages && messages.length > 1
-                  ? `Forward ${messages.length} Messages`
-                  : 'Advanced No-Quote Forwarding'}
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-gray-100 truncate">
+                {hasMultipleMessages
+                  ? t('forward.messages_count', { count: formatNumber(messageCount) }) || `Forward ${messageCount} Messages`
+                  : t('forward.title') || 'Forward'}
               </div>
-              <div className="text-[10px] text-gray-400">
-                {messages && messages.length > 1
-                  ? `${messages.length} messages queued for direct forward`
-                  : 'Direct dispatch, caption editor & recipient sequencing'}
+              <div className="text-[11px] text-gray-400 truncate">
+                {hasMultipleMessages
+                  ? `${messageCount} messages selected`
+                  : t('forward.from', { name: originalSenderName }) || `From: ${originalSenderName}`}
               </div>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Scrollable Content Container */}
-        <div className="flex-1 overflow-y-auto space-y-3 p-5">
-          {/* Caption & Text Editor */}
-          <div className="bg-dark-850/70 border border-white/5 rounded-2xl p-3.5 space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-gray-300">
-              <div className="flex items-center gap-1.5 text-primary-400">
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit Caption / Text Before Dispatch</span>
-              </div>
-              {isCaptionModified && (
+        {/* Search & Fast Category Chips */}
+        <div className="px-4 pt-3 pb-2 space-y-2 border-b border-white/5 bg-dark-850/40">
+          {/* Search Input */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 pl-3 rtl:pl-0 rtl:pr-3 flex items-center pointer-events-none text-gray-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={t('forward.search_placeholder') || 'Search chats and contacts...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-dark-800/90 border border-white/10 rounded-xl pl-9 rtl:pl-8 rtl:pr-9 pr-8 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-primary-500/60 focus:ring-1 focus:ring-primary-500/30 transition-all font-sans"
+            />
+            <div className="absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 pr-2.5 rtl:pr-0 rtl:pl-2.5 flex items-center gap-1.5">
+              {isSearchingServer && (
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+              )}
+              {search && (
                 <button
                   type="button"
-                  onClick={() => setNewCaption(message.text || '')}
-                  className="flex items-center gap-1 text-[11px] text-accent-cyan hover:underline cursor-pointer"
-                  title="Revert to original text"
+                  onClick={() => setSearch('')}
+                  className="text-gray-400 hover:text-white cursor-pointer p-0.5"
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Reset</span>
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
-
-            <textarea
-              rows={3}
-              value={newCaption}
-              dir={newCaption && newCaption.trim() ? (isRTL(newCaption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr')}
-              style={{
-                direction: newCaption && newCaption.trim() ? (isRTL(newCaption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr'),
-                textAlign: (newCaption && newCaption.trim() ? isRTL(newCaption) : isRTLContext) ? 'right' : 'left',
-              }}
-              onChange={(e) => setNewCaption(e.target.value)}
-              placeholder="Edit caption or accompanying message text..."
-              className="w-full bg-dark-900/90 border border-white/10 rounded-xl p-2.5 text-xs text-gray-200 placeholder-gray-500 outline-none focus:outline-none focus:border-white/20 resize-none font-sans"
-            />
-            <div className="flex items-center justify-between text-[10px] text-gray-500">
-              <span>{message.mediaType ? `Original Media: ${message.mediaType}` : 'Text Message'}</span>
-              <span>{newCaption.length} characters</span>
-            </div>
           </div>
 
-          {/* Forwarding Options (Strip Quotes, Strip Captions, Silent) */}
-          <div className="bg-dark-900/50 border border-white/5 rounded-2xl p-3 space-y-2">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">
-              Dispatch & Privacy Options
-            </div>
-
-            {/* Strip Quotes / Without Quote */}
-            <label className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-primary-500/15 text-primary-400 flex items-center justify-center shrink-0">
-                  <EyeOff className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-200">
-                    Strip Quotes (No-Quote Forward)
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    Removes original author badge, channel link, and attribution header
-                  </div>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={withoutQuote}
-                onChange={(e) => setWithoutQuote(e.target.checked)}
-                className="w-4 h-4 accent-primary-600 rounded cursor-pointer shrink-0 ml-2"
-              />
-            </label>
-
-            {/* Strip Media Captions */}
-            <label className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-accent-amber/15 text-accent-amber flex items-center justify-center shrink-0">
-                  <Scissors className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-200">
-                    Strip Media Captions
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    Removes embedded caption text from forwarded media files
-                  </div>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={dropMediaCaptions}
-                onChange={(e) => setDropMediaCaptions(e.target.checked)}
-                className="w-4 h-4 accent-primary-600 rounded cursor-pointer shrink-0 ml-2"
-              />
-            </label>
-
-            {/* Send Silently */}
-            <label className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0">
-                  <VolumeX className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-200">Send Silently</div>
-                  <div className="text-[10px] text-gray-400">
-                    Recipients receive notification banner without audible sound
-                  </div>
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={silent}
-                onChange={(e) => setSilent(e.target.checked)}
-                className="w-4 h-4 accent-primary-600 rounded cursor-pointer shrink-0 ml-2"
-              />
-            </label>
+          {/* Quick Filter Category Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[11px] font-medium">
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                activeTab === 'all'
+                  ? 'bg-primary-600 text-white font-semibold shadow-sm'
+                  : 'bg-dark-800 text-gray-400 hover:text-gray-200 hover:bg-dark-750'
+              }`}
+            >
+              {t('forward.all') || 'All'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                activeTab === 'users'
+                  ? 'bg-primary-600 text-white font-semibold shadow-sm'
+                  : 'bg-dark-800 text-gray-400 hover:text-gray-200 hover:bg-dark-750'
+              }`}
+            >
+              {t('forward.chats') || 'Chats'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('groups')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                activeTab === 'groups'
+                  ? 'bg-primary-600 text-white font-semibold shadow-sm'
+                  : 'bg-dark-800 text-gray-400 hover:text-gray-200 hover:bg-dark-750'
+              }`}
+            >
+              {t('forward.groups') || 'Groups'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('channels')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                activeTab === 'channels'
+                  ? 'bg-primary-600 text-white font-semibold shadow-sm'
+                  : 'bg-dark-800 text-gray-400 hover:text-gray-200 hover:bg-dark-750'
+              }`}
+            >
+              {t('forward.channels') || 'Channels'}
+            </button>
           </div>
 
-          {/* Selected Recipients Sequencing List */}
-          {selectedChatIds.length > 0 && (
-            <div className="bg-dark-850/60 border border-primary-500/20 rounded-2xl p-3 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-gray-300 px-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-                  Dispatch Order ({selectedChatIds.length} recipients)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChatIds([])}
-                  className="text-[11px] text-accent-cyan hover:underline cursor-pointer"
-                >
-                  Clear All
-                </button>
-              </div>
-
-              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                {selectedChatIds.map((chatId, idx) => (
-                  <div
-                    key={chatId}
-                    className="flex items-center justify-between p-2 rounded-xl bg-dark-900/80 border border-white/5 text-xs text-gray-200"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-5 h-5 rounded-md bg-primary-600/30 text-primary-300 font-bold text-[10px] flex items-center justify-center shrink-0">
-                        #{idx + 1}
-                      </span>
-                      <span className="truncate font-medium">{getChatTitle(chatId)}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0 ml-2">
-                      <button
-                        type="button"
-                        onClick={() => handleMoveRecipient(idx, 'up')}
-                        disabled={idx === 0}
-                        title="Move Up in Dispatch Order"
-                        className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMoveRecipient(idx, 'down')}
-                        disabled={idx === selectedChatIds.length - 1}
-                        title="Move Down in Dispatch Order"
-                        className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
+          {/* Selected Recipients Pills Strip */}
+          <AnimatePresence>
+            {selectedChatIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden pt-1"
+              >
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                  {selectedChatIds.map((chatId) => (
+                    <span
+                      key={chatId}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-primary-600/25 border border-primary-500/40 text-primary-200 shrink-0 font-medium"
+                    >
+                      <span className="truncate max-w-[110px]">{getChatTitle(chatId)}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveRecipient(chatId)}
-                        title="Remove Recipient"
-                        className="p-1 rounded-lg hover:bg-accent-rose/20 text-gray-400 hover:text-accent-rose cursor-pointer"
+                        className="hover:text-white rounded-full p-0.5 cursor-pointer"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3 h-3" />
                       </button>
+                    </span>
+                  ))}
+                  {selectedChatIds.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedChatIds([])}
+                      className="text-[10px] text-gray-400 hover:text-accent-rose transition-colors cursor-pointer shrink-0 px-1"
+                    >
+                      {t('common.clear') || 'Clear'}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Main Body: Full-Height Scrollable Destination List */}
+        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 divide-y divide-white/[0.04]">
+          {/* Section: Saved Messages (Telegram Top Item) */}
+          {showSavedMessages && (
+            <div className="pb-1">
+              <div
+                onClick={() => handleToggleChat('me')}
+                className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs border ${
+                  selectedChatIds.includes('me')
+                    ? 'bg-primary-600/20 border-primary-500/50 text-white shadow-sm'
+                    : 'bg-dark-850/40 hover:bg-dark-800/80 border-transparent text-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0 border border-accent-cyan/25 shadow-sm">
+                    <Bookmark className="w-4 h-4 fill-accent-cyan/20" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold text-gray-100 text-xs">
+                      {t('forward.saved_messages') || 'Saved Messages'}
+                    </div>
+                    <div className="text-[10px] text-gray-400 truncate">
+                      {t('saved_messages.title') || 'Personal cloud storage'}
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div
+                  className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0 ${
+                    selectedChatIds.includes('me')
+                      ? 'bg-primary-600 border-primary-500 text-white shadow-sm'
+                      : 'border-white/20 bg-dark-900/60'
+                  }`}
+                >
+                  {selectedChatIds.includes('me') && (
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Destination Chat Search & List */}
-          <div className="space-y-2">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Search className="w-3.5 h-3.5" />
-              </div>
-              <input
-                type="text"
-                placeholder={t('forward.search_placeholder') || "Search chats, contacts and bots..."}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-dark-800 border border-white/5 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
-              />
-              <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1.5">
-                {isSearchingServer && (
-                  <div className="w-3 h-3 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
-                )}
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="text-gray-400 hover:text-white cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
+          {/* Section: Recent Dialogs & Contacts */}
+          <div className="pt-1 space-y-0.5">
+            {filtered.map((d) => {
+              const isSelected = selectedChatIds.includes(d.id)
+              const orderIndex = selectedChatIds.indexOf(d.id)
+              const isBroadcast = Boolean(d.isBroadcast ?? (d.isChannel && !d.isGroup))
+              const isGroup = Boolean(d.isGroup || (d.isChannel && !isBroadcast))
+              const isBot = Boolean(d.isBot)
+              const isOwner = Boolean(d.isCreator)
 
-            <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
-              {showSavedMessages && (
+              return (
                 <div
-                  onClick={() => handleToggleChat('me')}
-                  className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs border ${
-                    selectedChatIds.includes('me')
-                      ? 'bg-primary-600/20 border-primary-500/40 text-white'
-                      : 'bg-dark-850/50 hover:bg-dark-800 border-white/5 text-gray-300'
+                  key={d.id}
+                  onClick={() => handleToggleChat(d.id)}
+                  className={`p-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs border ${
+                    isSelected
+                      ? 'bg-primary-600/20 border-primary-500/40 text-white shadow-sm'
+                      : 'bg-transparent hover:bg-dark-800/70 border-transparent text-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0 border border-accent-cyan/20">
-                      <Bookmark className="w-4 h-4" />
+                    {/* Avatar */}
+                    <div className="w-9 h-9 rounded-xl bg-dark-800 text-gray-300 flex items-center justify-center font-bold text-xs shrink-0 border border-white/5 overflow-hidden">
+                      {d.avatarUrl ? (
+                        <img src={d.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-gray-300">
+                          {d.avatarInitials || d.title.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <div className="truncate font-semibold text-gray-100">Saved Messages</div>
-                      <div className="text-[10px] text-gray-400">{t('common.saved_messages') || "Saved Messages"}</div>
+
+                    {/* Chat Info */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate font-medium text-gray-100 text-xs">
+                          {d.title}
+                        </span>
+
+                        {isBroadcast && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30 flex items-center gap-0.5 shrink-0">
+                            <Megaphone className="w-2.5 h-2.5" />
+                            <span>{isOwner ? (t('chat.owner') || 'Owner') : (t('chat.admin') || 'Admin')}</span>
+                          </span>
+                        )}
+                        {isGroup && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary-500/15 text-primary-300 border border-primary-500/30 flex items-center gap-0.5 shrink-0">
+                            <Users className="w-2.5 h-2.5" />
+                            <span>{t('chat.group') || 'Group'}</span>
+                          </span>
+                        )}
+                        {isBot && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-accent-amber/15 text-accent-amber border border-accent-amber/30 flex items-center gap-0.5 shrink-0">
+                            <Bot className="w-2.5 h-2.5" />
+                            <span>{t('chat.bot') || 'Bot'}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                        {d.username ? `@${d.username}` : (d.lastMessageText || (isGroup ? t('chat.group') : t('forward.chats')))}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Multi-select indicator */}
                   <div
-                    className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors ${
-                      selectedChatIds.includes('me')
-                        ? 'bg-primary-600 border-primary-500 text-white'
+                    className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all shrink-0 ml-2 rtl:ml-0 rtl:mr-2 ${
+                      isSelected
+                        ? 'bg-primary-600 border-primary-500 text-white shadow-sm'
                         : 'border-white/20 bg-dark-900/60'
                     }`}
                   >
-                    {selectedChatIds.includes('me') && (
-                      <span className="text-[10px] font-bold">
-                        {selectedChatIds.indexOf('me') + 1}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {filtered.map((d) => {
-                const isSelected = selectedChatIds.includes(d.id)
-                const orderIndex = selectedChatIds.indexOf(d.id)
-                const isBroadcast = Boolean(d.isBroadcast ?? (d.isChannel && !d.isGroup))
-                const isGroup = Boolean(d.isGroup || (d.isChannel && !isBroadcast))
-                const isBot = Boolean(d.isBot)
-                const isOwner = Boolean(d.isCreator)
-
-                return (
-                  <div
-                    key={d.id}
-                    onClick={() => handleToggleChat(d.id)}
-                    className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors text-xs border ${
-                      isSelected
-                        ? 'bg-primary-600/20 border-primary-500/40 text-white'
-                        : 'bg-dark-850/50 hover:bg-dark-800 border-white/5 text-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-dark-800 text-gray-300 flex items-center justify-center font-bold text-xs shrink-0 border border-white/5 overflow-hidden">
-                        {d.avatarUrl ? (
-                          <img src={d.avatarUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{d.avatarInitials || d.title.charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate font-medium">{d.title}</span>
-                          {isBroadcast && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30 flex items-center gap-0.5 shrink-0">
-                              <Megaphone className="w-2.5 h-2.5" />
-                              <span>{isOwner ? (t('chat.owner') || 'Owner') : (t('chat.admin') || 'Admin')}</span>
-                            </span>
-                          )}
-                          {isGroup && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-primary-500/15 text-primary-300 border border-primary-500/30 flex items-center gap-0.5 shrink-0">
-                              <Users className="w-2.5 h-2.5" />
-                              <span>{t('chat.group') || 'Group'}</span>
-                            </span>
-                          )}
-                          {isBot && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-accent-amber/15 text-accent-amber border border-accent-amber/30 flex items-center gap-0.5 shrink-0">
-                              <Bot className="w-2.5 h-2.5" />
-                              <span>{t('chat.bot') || 'Bot'}</span>
-                            </span>
-                          )}
-                        </div>
-                        {d.username && (
-                          <div className="text-[10px] text-gray-500 truncate">@{d.username}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div
-                      className={`w-4 h-4 rounded-md flex items-center justify-center border transition-colors shrink-0 ml-2 ${
-                        isSelected
-                          ? 'bg-primary-600 border-primary-500 text-white'
-                          : 'border-white/20 bg-dark-900/60'
-                      }`}
-                    >
-                      {isSelected ? (
+                    {isSelected ? (
+                      selectedChatIds.length > 1 ? (
                         <span className="text-[10px] font-bold">{orderIndex + 1}</span>
-                      ) : null}
-                    </div>
+                      ) : (
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      )
+                    ) : null}
                   </div>
-                )
-              })}
-
-              {filtered.length === 0 && !showSavedMessages && (
-                <div className="py-8 text-center text-xs text-gray-500">
-                  {t('forward.no_chats_found') || 'No chats found matching search'}
                 </div>
-              )}
-            </div>
+              )
+            })}
+
+            {filtered.length === 0 && !showSavedMessages && (
+              <div className="py-12 text-center text-xs text-gray-500">
+                {t('forward.no_chats_found') || 'No chats found matching search'}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-white/10 flex items-center justify-between gap-2 bg-dark-900/80">
-          <div className="text-xs text-gray-400">
-            {selectedChatIds.length > 0 ? (
-              <span>
-                Ordered dispatch to <strong className="text-white">{selectedChatIds.length}</strong>{' '}
-                {selectedChatIds.length === 1 ? 'chat' : 'chats'}
-              </span>
-            ) : (
-              <span>Select destination chats</span>
-            )}
+        {/* Telegram Minimalist Forward Preview & Options Bar (Compact Bottom Bar) */}
+        <div className="border-t border-white/10 bg-dark-850/90 p-3 space-y-2">
+          {/* Forward Quote Preview & Quick Toggles */}
+          <div className="flex items-center justify-between text-xs bg-dark-900/80 border border-white/5 rounded-xl px-2.5 py-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`p-1.5 rounded-lg shrink-0 ${withoutQuote ? 'bg-white/5 text-gray-400' : 'bg-primary-500/15 text-primary-400'}`}>
+                {withoutQuote ? <EyeOff className="w-3.5 h-3.5" /> : <Quote className="w-3.5 h-3.5" />}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-gray-200 truncate text-[11px]">
+                  {withoutQuote
+                    ? (t('forward.hide_sender') || 'Without Quote (Sender Hidden)')
+                    : (t('forward.show_sender') || `Quote: ${originalSenderName}`)}
+                </div>
+                <div className="text-[10px] text-gray-400 truncate">
+                  {message.mediaType ? `[${message.mediaType}] ` : ''}
+                  {message.text ? message.text.slice(0, 45) : (messages && messages.length > 1 ? `${messages.length} messages` : '')}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Toggles */}
+            <div className="flex items-center gap-1 shrink-0 ml-2 rtl:ml-0 rtl:mr-2">
+              {/* Toggle Sender Name / Quote (Default ON) */}
+              <button
+                type="button"
+                onClick={() => setWithoutQuote((prev) => !prev)}
+                title={withoutQuote ? "Click to include author quote" : "Click to hide author quote"}
+                className={`px-2 py-1 rounded-lg text-[10px] font-medium border transition-colors cursor-pointer flex items-center gap-1 ${
+                  !withoutQuote
+                    ? 'bg-primary-600/20 border-primary-500/40 text-primary-300'
+                    : 'bg-dark-800 border-white/10 text-gray-400 hover:text-white'
+                }`}
+              >
+                {!withoutQuote ? <Check className="w-3 h-3" /> : null}
+                <span>{withoutQuote ? (t('forward.hide_sender') || 'No Quote') : (t('forward.show_sender') || 'Quote')}</span>
+              </button>
+
+              {/* Silent Toggle */}
+              <button
+                type="button"
+                onClick={() => setSilent((prev) => !prev)}
+                title={silent ? "Notification sound off" : "Normal notification"}
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  silent
+                    ? 'bg-accent-cyan/20 border-accent-cyan/40 text-accent-cyan'
+                    : 'bg-dark-800 border-white/10 text-gray-400 hover:text-white'
+                }`}
+              >
+                {silent ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+              </button>
+
+              {/* Expand Caption / Advanced Options */}
+              <button
+                type="button"
+                onClick={() => setShowAdvancedOptions((prev) => !prev)}
+                title="Add caption or options"
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  showAdvancedOptions || newCaption
+                    ? 'bg-primary-600/20 border-primary-500/40 text-primary-300'
+                    : 'bg-dark-800 border-white/10 text-gray-400 hover:text-white'
+                }`}
+              >
+                {showAdvancedOptions ? <ChevronUp className="w-3.5 h-3.5" /> : <SlidersHorizontal className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
+          {/* Optional Caption Editor (Collapsible) */}
+          <AnimatePresence>
+            {showAdvancedOptions && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden space-y-2 pt-1"
+              >
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newCaption}
+                    dir={newCaption && newCaption.trim() ? (isRTL(newCaption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr')}
+                    onChange={(e) => setNewCaption(e.target.value)}
+                    placeholder={t('forward.add_comment') || 'Add a comment or caption...'}
+                    className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                  />
+                  {newCaption && (
+                    <button
+                      type="button"
+                      onClick={() => setNewCaption('')}
+                      className="absolute right-2 rtl:right-auto rtl:left-2 top-2 text-gray-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-            <button
-              type="button"
-              onClick={handleForward}
-              disabled={selectedChatIds.length === 0 || loading}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white shadow-glow transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <Forward className="w-3.5 h-3.5" />
-              <span>
-                {loading
-                  ? 'Forwarding...'
-                  : selectedChatIds.length > 1
-                  ? `Forward to ${selectedChatIds.length} Chats`
-                  : selectedChatIds.length === 1
-                  ? 'Forward Now'
-                  : 'Select Chats'}
-              </span>
-            </button>
+                {message.mediaType && (
+                  <label className="flex items-center gap-2 text-[11px] text-gray-400 hover:text-gray-200 cursor-pointer px-1">
+                    <input
+                      type="checkbox"
+                      checked={dropMediaCaptions}
+                      onChange={(e) => setDropMediaCaptions(e.target.checked)}
+                      className="accent-primary-600 rounded cursor-pointer w-3.5 h-3.5"
+                    />
+                    <span>{t('forward.hide_caption') || 'Strip original media caption'}</span>
+                  </label>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Actions: Cancel & Send */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="text-xs text-gray-400 truncate">
+              {selectedChatIds.length > 0 ? (
+                <span>
+                  {t('forward.send_to_count', { count: formatNumber(selectedChatIds.length) }) ||
+                    `Selected: ${selectedChatIds.length} chats`}
+                </span>
+              ) : (
+                <span className="text-gray-500">{t('forward.search_placeholder') ? 'Select destination chats' : 'Select chats'}</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                {t('common.cancel') || 'Cancel'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleForward}
+                disabled={selectedChatIds.length === 0 || loading}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white shadow-glow transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Send className="w-3.5 h-3.5 rtl:-scale-x-100" />
+                <span>
+                  {loading
+                    ? (t('common.sending') || 'Sending...')
+                    : selectedChatIds.length > 1
+                    ? (t('forward.send_to_count', { count: formatNumber(selectedChatIds.length) }) || `Send to ${selectedChatIds.length}`)
+                    : (t('forward.send') || 'Send')}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
     </div>
   )
 }
-

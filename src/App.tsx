@@ -2157,7 +2157,7 @@ export const App: React.FC = () => {
       : (targetChatIdsOrPayload as string[])
     const withoutQuote = isPayload
       ? (targetChatIdsOrPayload as DirectForwardPayload).withoutQuote
-      : (withoutQuoteArg ?? true)
+      : (withoutQuoteArg ?? false)
     const silent = isPayload
       ? (targetChatIdsOrPayload as DirectForwardPayload).silent
       : (silentArg ?? false)
