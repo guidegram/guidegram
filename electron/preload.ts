@@ -1934,6 +1934,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:register-passkey', { accountId, credential }),
   reorderUsernames: (accountId: string, order: string[]): Promise<any> =>
     ipcRenderer.invoke('telegram:reorder-usernames', { accountId, order }),
+  reportPeer: (accountId: string, peerId?: string, reason?: any, message?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:report-peer', { accountId, peerId, reason, message }),
+  reportProfilePhoto: (accountId: string, peerId?: string, photoId?: any, reason?: any, message?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:report-profile-photo', { accountId, peerId, photoId, reason, message }),
+  resendPasswordEmail: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:resend-password-email', { accountId }),
+  resetAuthorization: (accountId: string, hash: string | bigint | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:reset-authorization', { accountId, hash }),
+  resetNotifySettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:reset-notify-settings', { accountId }),
+  resetPassword: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:reset-password', { accountId }),
+  resetWallPapers: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:reset-wallpapers', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

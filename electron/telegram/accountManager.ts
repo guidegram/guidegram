@@ -16231,6 +16231,48 @@ export class AccountManager {
     return this.securityService.reorderUsernames(holder as any, order as any)
   }
 
+  public async reportPeer(accountId: string, peerId?: string, reason?: any, message?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.reportPeer(holder as any, accountId, peerId, reason, message)
+  }
+
+  public async reportProfilePhoto(accountId: string, peerId?: string, photoId?: any, reason?: any, message?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.reportProfilePhoto(holder as any, accountId, peerId, photoId, reason, message)
+  }
+
+  public async resendPasswordEmail(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.resendPasswordEmail(holder as any)
+  }
+
+  public async resetAuthorization(accountId: string, hash: string | bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.resetAuthorization(holder as any, toLong(hash) as any)
+  }
+
+  public async resetNotifySettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.resetNotifySettings(holder as any)
+  }
+
+  public async resetPassword(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.resetPassword(holder as any)
+  }
+
+  public async resetWallPapers(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.resetWallPapers(holder as any)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

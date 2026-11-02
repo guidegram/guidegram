@@ -265,6 +265,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [webAuthorizationsList, setWebAuthorizationsList] = useState<any[]>([])
   const [isLoadingWebAuths, setIsLoadingWebAuths] = useState<boolean>(false)
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState<boolean>(false)
+  const [isResettingNotifySettings, setIsResettingNotifySettings] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -505,28 +506,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!targetAccountId) return
     setIsResettingTwoFactor(true)
     try {
-      if ((window.guidegram as any).accountResetPassword) {
-        const res = await (window.guidegram as any).accountResetPassword(targetAccountId)
-        if (res.status === 'ok') {
-          showToast('2FA Cloud Password has been reset.')
+      const resetFn = window.guidegram?.resetPassword || (window.guidegram as any)?.accountResetPassword
+      if (resetFn) {
+        const res = await resetFn(targetAccountId)
+        if (res?.status === 'ok' || res?._ === 'account.resetPasswordOk') {
+          showToast(isPersian ? 'رمز عبور ابری بازنشانی شد.' : '2FA Cloud Password has been reset.')
           setTwoFactorResetStatus(null)
           setActiveSubModal(null)
-        } else if (res.status === 'wait') {
-          const dateStr = res.untilDate ? new Date(res.untilDate * 1000).toLocaleDateString() : '7 days'
+        } else if (res?.status === 'wait' || res?._ === 'account.resetPasswordRequestedWait') {
+          const untilDate = res.untilDate || res.until_date
+          const dateStr = untilDate ? new Date(untilDate * 1000).toLocaleDateString() : '7 days'
           setTwoFactorResetStatus({
             status: 'wait',
-            untilDate: res.untilDate,
+            untilDate,
             message: `Reset requested. Telegram security hold active until ${dateStr}.`,
           })
           showToast(`Password reset initiated. Security hold active.`)
         } else {
-          showToast(res.error || 'Password reset failed')
+          showToast(res?.error || 'Password reset failed')
         }
       }
     } catch (err: any) {
       showToast(err?.message || 'Error resetting password')
     } finally {
       setIsResettingTwoFactor(false)
+    }
+  }
+
+  const handleResendPasswordEmail = async () => {
+    if (!targetAccountId || !window.guidegram?.resendPasswordEmail) return
+    try {
+      const ok = await window.guidegram.resendPasswordEmail(targetAccountId)
+      if (ok) {
+        showToast(isPersian ? 'ایمیل بازیابی رمز مجدداً ارسال شد.' : 'Password recovery email resent.')
+      } else {
+        showToast(isPersian ? 'ارسال مجدد ایمیل انجام نشد.' : 'Failed to resend recovery email.')
+      }
+    } catch {
+      showToast(isPersian ? 'خطا در ارسال مجدد ایمیل' : 'Error resending recovery email.')
+    }
+  }
+
+  const handleResetNotifySettings = async () => {
+    if (!targetAccountId || !window.guidegram?.resetNotifySettings) return
+    setIsResettingNotifySettings(true)
+    try {
+      await window.guidegram.resetNotifySettings(targetAccountId)
+      if (window.guidegram.getNotifyExceptions) {
+        const exc = await window.guidegram.getNotifyExceptions(targetAccountId)
+        if (Array.isArray(exc?.updates)) {
+          setNotifyExceptionsCount(exc.updates.length)
+        } else if (Array.isArray(exc?.chats)) {
+          setNotifyExceptionsCount(exc.chats.length)
+        } else {
+          setNotifyExceptionsCount(0)
+        }
+      }
+      showToast(isPersian ? 'تنظیمات اعلان‌ها بازنشانی شد.' : 'Notification settings reset to defaults.')
+    } catch {
+      showToast(isPersian ? 'خطا در بازنشانی تنظیمات اعلان‌ها' : 'Failed to reset notification settings.')
+    } finally {
+      setIsResettingNotifySettings(false)
     }
   }
 
@@ -589,6 +629,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (wallpaperValue === 'default' || !wallpaperValue) {
       localStorage.removeItem('guidegram_chat_wallpaper')
       document.documentElement.style.removeProperty('--chat-wallpaper')
+      if (targetAccountId && window.guidegram?.resetWallPapers) {
+        window.guidegram.resetWallPapers(targetAccountId).catch(() => {})
+      }
     } else {
       localStorage.setItem('guidegram_chat_wallpaper', wallpaperValue)
       document.documentElement.style.setProperty('--chat-wallpaper', wallpaperValue)
@@ -2954,13 +2997,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <Bell className="w-3.5 h-3.5 text-amber-400" />
                       {isPersian ? 'استثنائات اعلان‌ها (Notification Exceptions)' : 'Notification Exceptions'}
                     </div>
-                    <div className="text-xs font-semibold px-2 py-0.5 rounded-full bg-dark-900 border border-white/5 text-gray-300">
-                      {isLoadingNotifyExceptions ? (
-                        <RefreshCw className="w-2.5 h-2.5 text-gray-400 animate-spin inline" />
-                      ) : notifyExceptionsCount !== null ? (
-                        `${notifyExceptionsCount} ${isPersian ? 'چت' : 'chats'}`
-                      ) : (
-                        '—'
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-semibold px-2 py-0.5 rounded-full bg-dark-900 border border-white/5 text-gray-300">
+                        {isLoadingNotifyExceptions ? (
+                          <RefreshCw className="w-2.5 h-2.5 text-gray-400 animate-spin inline" />
+                        ) : notifyExceptionsCount !== null ? (
+                          `${notifyExceptionsCount} ${isPersian ? 'چت' : 'chats'}`
+                        ) : (
+                          '—'
+                        )}
+                      </div>
+                      {notifyExceptionsCount !== null && notifyExceptionsCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleResetNotifySettings}
+                          disabled={isResettingNotifySettings}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        >
+                          {isResettingNotifySettings ? (
+                            <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                          ) : (
+                            isPersian ? 'بازنشانی' : 'Reset'
+                          )}
+                        </button>
                       )}
                     </div>
                   </div>

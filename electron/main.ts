@@ -5364,6 +5364,69 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:report-peer', async (_event, { accountId, peerId, reason, message }) => {
+    try {
+      return await accountManager.reportPeer(accountId, peerId, reason, message)
+    } catch (err: any) {
+      Logger.warn(`[IPC] reportPeer error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:report-profile-photo', async (_event, { accountId, peerId, photoId, reason, message }) => {
+    try {
+      return await accountManager.reportProfilePhoto(accountId, peerId, photoId, reason, message)
+    } catch (err: any) {
+      Logger.warn(`[IPC] reportProfilePhoto error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:resend-password-email', async (_event, { accountId }) => {
+    try {
+      return await accountManager.resendPasswordEmail(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resendPasswordEmail error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:reset-authorization', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.resetAuthorization(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetAuthorization error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:reset-notify-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.resetNotifySettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetNotifySettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:reset-password', async (_event, { accountId }) => {
+    try {
+      return await accountManager.resetPassword(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetPassword error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:reset-wallpapers', async (_event, { accountId }) => {
+    try {
+      return await accountManager.resetWallPapers(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetWallPapers error:`, err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
