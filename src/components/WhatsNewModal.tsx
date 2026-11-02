@@ -37,6 +37,30 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({
   const getVersionFeatures = (ver: string) => {
     const cleanVer = ver.replace(/^v/, '').trim()
 
+    // v2.6.0: Round Video Messages, Multi-Image Pasting, Event-Loop Optimization & Mute Integrity
+    if (gte(cleanVer, '2.6.0')) {
+      return [
+        {
+          icon: Sparkles,
+          bgColor: 'bg-primary-500/10 text-primary-400 border-primary-500/20',
+          title: t('whatsnew.v2_6_feat_1_title'),
+          desc: t('whatsnew.v2_6_feat_1_desc'),
+        },
+        {
+          icon: Zap,
+          bgColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          title: t('whatsnew.v2_6_feat_2_title'),
+          desc: t('whatsnew.v2_6_feat_2_desc'),
+        },
+        {
+          icon: ShieldCheck,
+          bgColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+          title: t('whatsnew.v2_6_feat_3_title'),
+          desc: t('whatsnew.v2_6_feat_3_desc'),
+        },
+      ]
+    }
+
     // v2.5.4: Supercharged Performance & Zero-I/O Surgery, Official Bot Parity & Master Passcode
     if (gte(cleanVer, '2.5.4')) {
       return [
