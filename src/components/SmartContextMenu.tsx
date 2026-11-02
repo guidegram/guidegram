@@ -86,6 +86,7 @@ export const SmartContextMenu: React.FC<SmartContextMenuProps> = ({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.94, y: -2 }}
       transition={{ type: 'spring', stiffness: 450, damping: 28, mass: 0.7 }}
+      dir={typeof document !== 'undefined' ? (document.documentElement.getAttribute('dir') || undefined) : undefined}
       style={{
         top: coords.top,
         left: coords.left,

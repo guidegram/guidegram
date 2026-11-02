@@ -1456,7 +1456,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleOpenInNewWindow(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-start"
           >
             <ExternalLink className="w-4 h-4 text-gray-400 shrink-0" />
             <span>{t('chat.open_new_window') || 'Open in new window'}</span>
@@ -1465,7 +1465,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleTogglePin(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-start"
           >
             <Pin className={`w-4 h-4 shrink-0 ${isPinnedInActiveView(contextMenu.dialog) ? 'text-primary-400 fill-current' : 'text-gray-400'}`} />
             <span>{isPinnedInActiveView(contextMenu.dialog) ? (t('chat.unpin') || 'Unpin') : (t('chat.pin') || 'Pin')}</span>
@@ -1474,7 +1474,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleToggleMute(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-start"
           >
             {isDialogMuted(contextMenu.dialog) ? (
               <>
@@ -1492,7 +1492,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleToggleRead(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-start"
           >
             {contextMenu.dialog.unreadCount > 0 ? (
               <>
@@ -1512,7 +1512,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleCopyLinkOrId(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-start"
           >
             <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
             <span>{contextMenu.dialog.username ? (t('chat.copy_link') || 'Copy Link') : (t('chat.copy_id') || 'Copy Chat ID')}</span>
@@ -1521,7 +1521,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleClearHistory(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-start"
           >
             <Trash2 className="w-4 h-4 text-gray-400 shrink-0" />
             <span>{t('chat.clear_history') || 'Clear history'}</span>
@@ -1532,7 +1532,7 @@ export const ChatList = React.memo<ChatListProps>(({
           <button
             type="button"
             onClick={() => handleDeleteOrLeave(contextMenu.dialog)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-colors text-start"
           >
             <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
             <span>

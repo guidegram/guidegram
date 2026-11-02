@@ -4,7 +4,7 @@ import { Language, translations } from './translations'
 interface I18nContextType {
   language: Language
   setLanguage: (lang: Language) => void
-  t: (key: string, params?: Record<string, string | number>) => string
+  t: (key: string, params?: Record<string, string | number>, fallback?: string) => string
   isRTL: boolean
   formatNumber: (n: number | string) => string
   formatSendersCount: (count: number) => string
@@ -42,9 +42,13 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [language, isRTL])
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
+  const t = (key: string, params?: Record<string, string | number>, fallback?: string): string => {
     const dict = translations[language] || translations.en
-    let str = dict[key] || translations.en[key] || key
+    let str = dict[key] || translations.en[key]
+
+    if (!str) {
+      return fallback !== undefined ? fallback : ''
+    }
 
     if (params) {
       for (const [k, v] of Object.entries(params)) {
