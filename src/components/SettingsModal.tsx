@@ -240,6 +240,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
   const [isResettingAutoSaveExceptions, setIsResettingAutoSaveExceptions] = useState(false)
+  const [accountTTL, setAccountTTL] = useState<number>(180)
+  const [isLoadingTTL, setIsLoadingTTL] = useState<boolean>(false)
+  const [isUpdatingTTL, setIsUpdatingTTL] = useState<boolean>(false)
+  const [ttlToast, setTtlToast] = useState<string | null>(null)
+  const [autoSaveData, setAutoSaveData] = useState<any>(null)
+
+  const handleUpdateAccountTTL = async (days: number) => {
+    if (!targetAccountId || !window.guidegram?.setAccountTTL) return
+    setIsUpdatingTTL(true)
+    setTtlToast(null)
+    try {
+      const ok = await window.guidegram.setAccountTTL(targetAccountId, days)
+      if (ok) {
+        setAccountTTL(days)
+        setTtlToast(isPersian ? 'دوره حذف خودکار حساب ذخیره شد' : 'Account self-destruct period saved')
+        setTimeout(() => setTtlToast(null), 3000)
+      } else {
+        setTtlToast(isPersian ? 'خطا در ثبت دوره حذف خودکار' : 'Failed to update period')
+        setTimeout(() => setTtlToast(null), 3000)
+      }
+    } catch (err: any) {
+      setTtlToast(err?.message || 'Error updating TTL')
+      setTimeout(() => setTtlToast(null), 3000)
+    } finally {
+      setIsUpdatingTTL(false)
+    }
+  }
 
   // Guidegram Activity Tracker & Contact Changes
   const [activityTrackerEnabled, setActivityTrackerEnabled] = useState(true)
@@ -842,6 +869,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (typeof res.localPasscode === 'boolean') {
           setLocalPasscodeEnabled(res.localPasscode)
         }
+      }
+      if (window.guidegram?.getAccountTTL) {
+        setIsLoadingTTL(true)
+        try {
+          const days = await window.guidegram.getAccountTTL(targetAccountId)
+          if (typeof days === 'number') setAccountTTL(days)
+        } catch {}
+        finally {
+          setIsLoadingTTL(false)
+        }
+      }
+      if (window.guidegram?.getAutoSaveSettings) {
+        try {
+          const autoSave = await window.guidegram.getAutoSaveSettings(targetAccountId)
+          if (autoSave) setAutoSaveData(autoSave)
+        } catch {}
       }
     } catch (err) {
       console.warn('[SettingsModal] Failed to load privacy settings:', err)
@@ -2539,6 +2582,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         privacyData?.invitesPrivacy || 'Everybody'
                       )}
                     </span>
+                  </div>
+                </div>
+
+                {/* Section: Delete My Account If Away For (MTProto Layer 232 Account TTL) */}
+                <div className="space-y-2 pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="text-xs font-bold text-accent-cyan">
+                      {isPersian ? 'حذف خودکار حساب در صورت عدم فعالیت' : 'Delete my account if away for'}
+                    </div>
+                    {isUpdatingTTL && (
+                      <span className="text-[11px] text-primary-400 flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>{isPersian ? 'در حال ذخیره...' : 'Saving...'}</span>
+                      </span>
+                    )}
+                  </div>
+                  {ttlToast && (
+                    <div className="p-2 rounded-xl bg-primary-500/10 border border-primary-500/20 text-[11px] text-primary-300 animate-in fade-in">
+                      {ttlToast}
+                    </div>
+                  )}
+                  <div className="p-3 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-300">
+                        {isPersian ? 'مدت زمان عدم حضور:' : 'If you do not log in within:'}
+                      </span>
+                      {isLoadingTTL ? (
+                        <span className="w-16 h-4 bg-white/10 rounded animate-pulse" />
+                      ) : (
+                        <span className="font-semibold text-primary-400 font-mono">
+                          {accountTTL <= 30
+                            ? isPersian ? '۱ ماه' : '1 month'
+                            : accountTTL <= 90
+                              ? isPersian ? '۳ ماه' : '3 months'
+                              : accountTTL <= 180
+                                ? isPersian ? '۶ ماه' : '6 months'
+                                : accountTTL <= 365
+                                  ? isPersian ? '۱ سال' : '1 year'
+                                  : isPersian ? `${accountTTL} روز` : `${accountTTL} days`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 pt-1">
+                      {[
+                        { label: isPersian ? '۱ ماه' : '1 mo', days: 30 },
+                        { label: isPersian ? '۳ ماه' : '3 mos', days: 90 },
+                        { label: isPersian ? '۶ ماه' : '6 mos', days: 180 },
+                        { label: isPersian ? '۱ سال' : '1 yr', days: 365 },
+                      ].map((item) => {
+                        const isSelected = Math.abs(accountTTL - item.days) <= 5
+                        return (
+                          <button
+                            key={item.days}
+                            type="button"
+                            disabled={isUpdatingTTL || isLoadingTTL}
+                            onClick={() => handleUpdateAccountTTL(item.days)}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-medium transition-all text-center cursor-pointer disabled:opacity-50 ${
+                              isSelected
+                                ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/20'
+                                : 'bg-dark-900 text-gray-400 hover:text-white hover:bg-dark-750 border border-white/5'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="text-[11px] text-gray-500 leading-relaxed">
+                      {isPersian
+                        ? 'اگر در این مدت حداقل یک بار آنلاین نشوید، حساب کاربری و تمامی پیام‌ها و رسانه‌های ابری به صورت خودکار نابود می‌شوند.'
+                        : 'If you do not log in at least once within this period, your account will be deleted along with all messages and cloud media.'}
+                    </div>
                   </div>
                 </div>
 

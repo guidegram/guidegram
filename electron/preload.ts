@@ -1830,6 +1830,23 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:disable-peer-connected-bot', { accountId, peerId }),
   finishTakeoutSession: (accountId: string, success: boolean = true): Promise<boolean> =>
     ipcRenderer.invoke('telegram:finish-takeout-session', { accountId, success }),
+  getAccountTTL: (accountId: string): Promise<number> =>
+    ipcRenderer.invoke('telegram:get-account-ttl', { accountId }),
+  setAccountTTL: (accountId: string, days: number): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-account-ttl', { accountId, days }),
+  getAutoSaveSettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-autosave-settings', { accountId }),
+  getAuthorizations: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-authorizations', { accountId }),
+  getAuthorizationForm: (
+    accountId: string,
+    botId: string | number,
+    scope: string,
+    publicKey: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-authorization-form', { accountId, botId, scope, publicKey }),
+  getBotBusinessConnection: (accountId: string, connectionId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-bot-business-connection', { accountId, connectionId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

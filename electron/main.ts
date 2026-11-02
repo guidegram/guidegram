@@ -4988,6 +4988,63 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-account-ttl', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAccountTTL(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAccountTTL error:`, err)
+      return 180
+    }
+  })
+
+  ipcMain.handle('telegram:set-account-ttl', async (_event, { accountId, days }) => {
+    try {
+      return await accountManager.setAccountTTL(accountId, days)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setAccountTTL error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-autosave-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAutoSaveSettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAutoSaveSettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-authorizations', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAuthorizations(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getAuthorizations error:`, err)
+      return { authorizations: [] }
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:get-authorization-form',
+    async (_event, { accountId, botId, scope, publicKey }) => {
+      try {
+        return await accountManager.getAuthorizationForm(accountId, botId, scope, publicKey)
+      } catch (err: any) {
+        Logger.warn(`[IPC] getAuthorizationForm error:`, err)
+        return null
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:get-bot-business-connection', async (_event, { accountId, connectionId }) => {
+    try {
+      return await accountManager.getBotBusinessConnection(accountId, connectionId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getBotBusinessConnection error:`, err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

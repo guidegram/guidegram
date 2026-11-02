@@ -15706,6 +15706,94 @@ export class AccountManager {
     }
   }
 
+  public async getAccountTTL(accountId: string): Promise<number> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return 180
+
+    try {
+      const res: any = await holder.client.call({ _: 'account.getAccountTTL' })
+      return res?.days || 180
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getAccountTTL error:', err)
+      return 180
+    }
+  }
+
+  public async setAccountTTL(accountId: string, days: number): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({
+        _: 'account.setAccountTTL',
+        ttl: {
+          _: 'accountDaysTTL',
+          days,
+        },
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.setAccountTTL error:', err)
+      return false
+    }
+  }
+
+  public async getAutoSaveSettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({ _: 'account.getAutoSaveSettings' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getAutoSaveSettings error:', err)
+      return null
+    }
+  }
+
+  public async getAuthorizations(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { authorizations: [] }
+
+    try {
+      return await holder.client.call({ _: 'account.getAuthorizations' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getAuthorizations error:', err)
+      return { authorizations: [] }
+    }
+  }
+
+  public async getAuthorizationForm(accountId: string, botId: string | number, scope: string, publicKey: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({
+        _: 'account.getAuthorizationForm',
+        botId: BigInt(botId),
+        scope,
+        publicKey,
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getAuthorizationForm error:', err)
+      return null
+    }
+  }
+
+  public async getBotBusinessConnection(accountId: string, connectionId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({
+        _: 'account.getBotBusinessConnection',
+        connectionId,
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getBotBusinessConnection error:', err)
+      return null
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {
