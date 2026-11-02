@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { DialogItem, MessageItem, ContactItem } from '../types/telegram'
 import { useI18n } from '../i18n'
+import { isRTL } from '../utils/textUtils'
 
 export interface DirectForwardPayload {
   toChatIds: string[]
@@ -105,7 +106,7 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
   onClose,
   onForward,
 }) => {
-  const { t } = useI18n()
+  const { t, isRTL: isRTLContext } = useI18n()
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([])
   const [withoutQuote, setWithoutQuote] = useState(true) // Default true (Telegraph direct style)
   const [dropMediaCaptions, setDropMediaCaptions] = useState(false)
@@ -431,9 +432,14 @@ export const DirectForwardModal: React.FC<DirectForwardModalProps> = ({
             <textarea
               rows={3}
               value={newCaption}
+              dir={newCaption && newCaption.trim() ? (isRTL(newCaption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr')}
+              style={{
+                direction: newCaption && newCaption.trim() ? (isRTL(newCaption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr'),
+                textAlign: (newCaption && newCaption.trim() ? isRTL(newCaption) : isRTLContext) ? 'right' : 'left',
+              }}
               onChange={(e) => setNewCaption(e.target.value)}
               placeholder="Edit caption or accompanying message text..."
-              className="w-full bg-dark-900/90 border border-white/10 rounded-xl p-2.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50 resize-none font-sans"
+              className="w-full bg-dark-900/90 border border-white/10 rounded-xl p-2.5 text-xs text-gray-200 placeholder-gray-500 outline-none focus:outline-none focus:border-white/20 resize-none font-sans"
             />
             <div className="flex items-center justify-between text-[10px] text-gray-500">
               <span>{message.mediaType ? `Original Media: ${message.mediaType}` : 'Text Message'}</span>

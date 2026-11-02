@@ -9175,7 +9175,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
 
 
                 {/* Multi-line Auto-expanding Textarea with Telegram Desktop Shortcuts */}
-                <div className="flex-1 bg-dark-800 border border-white/5 focus-within:border-primary-500/50 rounded-2xl px-3.5 py-2 transition-colors flex items-center relative">
+                <div className="flex-1 bg-dark-800 border border-white/5 rounded-2xl px-3.5 py-2 transition-colors flex items-center relative">
                   {/* Floating Contextual Formatting Toolbar (Telegram Desktop v7.0+) */}
                   {formatBar.visible && (
                     <div
@@ -9431,7 +9431,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   <textarea
                     ref={textareaRef}
                     aria-label="Write a message"
-                    dir={isRTL(inputText) ? 'rtl' : 'ltr'}
+                    dir={inputText && inputText.trim() ? (isRTL(inputText) ? 'rtl' : 'ltr') : (isFa ? 'rtl' : 'ltr')}
                     placeholder={
                       editingMessage
                         ? (editingMessage.mediaType || editingMessage.mediaUrl
@@ -9441,7 +9441,14 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     }
                     value={inputText}
                     rows={1}
-                    style={{ maxHeight: '160px' }}
+                    style={{
+                      maxHeight: '160px',
+                      direction: inputText && inputText.trim() ? (isRTL(inputText) ? 'rtl' : 'ltr') : (isFa ? 'rtl' : 'ltr'),
+                      textAlign: (inputText && inputText.trim() ? isRTL(inputText) : isFa) ? 'right' : 'left',
+                      outline: 'none',
+                      boxShadow: 'none',
+                      border: 'none',
+                    }}
                     onPaste={handlePaste}
                     onChange={(e) => {
                       const val = e.target.value
@@ -9528,7 +9535,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         handleSend()
                       }
                     }}
-                    className="w-full bg-transparent text-xs text-gray-100 placeholder-gray-500 resize-none focus:outline-none leading-relaxed"
+                    className="w-full bg-transparent text-xs text-gray-100 placeholder-gray-500 resize-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-none shadow-none leading-relaxed"
                   />
 
                   {/* Official Telegram 4-Dots Reply Keyboard Toggle Button */}

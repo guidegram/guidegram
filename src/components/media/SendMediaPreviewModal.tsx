@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { ImageEditorModal } from './ImageEditorModal'
 import { useI18n } from '../../i18n'
+import { isRTL } from '../../utils/textUtils'
 
 export interface SendMediaItem {
   path: string
@@ -67,7 +68,7 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
   onClose,
   onSend,
 }) => {
-  const { t } = useI18n()
+  const { t, isRTL: isRTLContext } = useI18n()
   const [items, setItems] = useState<SendMediaItem[]>(initialItems)
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   // Default to compressed photo sending like Telegram Desktop parity
@@ -653,12 +654,17 @@ export const SendMediaPreviewModal: React.FC<SendMediaPreviewModalProps> = ({
               <textarea
                 ref={textareaRef}
                 value={caption}
+                dir={caption && caption.trim() ? (isRTL(caption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr')}
+                style={{
+                  direction: caption && caption.trim() ? (isRTL(caption) ? 'rtl' : 'ltr') : (isRTLContext ? 'rtl' : 'ltr'),
+                  textAlign: (caption && caption.trim() ? isRTL(caption) : isRTLContext) ? 'right' : 'left',
+                }}
                 onChange={(e) => setCaption(e.target.value)}
                 onKeyDown={handleCaptionKeyDown}
                 onPaste={handleModalPaste}
                 rows={2}
                 placeholder="Add a caption... (Enter to send, Shift+Enter for newline, Ctrl+V to paste more)"
-                className="w-full bg-dark-800/90 text-sm text-gray-100 placeholder-gray-500 px-3.5 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-primary-500/60 focus:ring-1 focus:ring-primary-500/40 resize-none transition-all"
+                className="w-full bg-dark-800/90 text-sm text-gray-100 placeholder-gray-500 px-3.5 py-2.5 rounded-xl border border-white/10 outline-none focus:outline-none focus:border-white/20 resize-none transition-all"
               />
             </div>
           </div>

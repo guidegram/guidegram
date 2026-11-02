@@ -74,23 +74,56 @@
   }
 
   [dir="rtl"],
-  .font-persian,
-  [dir="rtl"] input,
-  [dir="rtl"] textarea {
+  .font-persian {
     font-family: 'Vazirmatn', 'Vazir', 'Open Sans', -apple-system, BlinkMacSystemFont, Tahoma, 'Segoe UI', sans-serif;
     direction: rtl;
     text-align: right;
-    unicode-bidi: isolate;
   }
 
   [dir="ltr"],
-  .font-latin,
-  [dir="ltr"] input,
-  [dir="ltr"] textarea {
+  .font-latin {
     font-family: 'Open Sans', 'Vazirmatn', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     direction: ltr;
     text-align: left;
+  }
+
+  /* Specific input & textarea direction - ensure child dir attribute takes priority over ancestors */
+  input[dir="rtl"],
+  textarea[dir="rtl"] {
+    direction: rtl !important;
+    text-align: right !important;
     unicode-bidi: isolate;
+  }
+
+  input[dir="ltr"],
+  textarea[dir="ltr"] {
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: isolate;
+  }
+
+  input[dir="auto"],
+  textarea[dir="auto"] {
+    unicode-bidi: plaintext;
+    text-align: start;
+  }
+
+  /* Universal zero-outline reset: eliminate browser default blue focus ring and rectangular highlight */
+  input,
+  textarea,
+  select,
+  button {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 }
 
