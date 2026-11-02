@@ -4916,6 +4916,33 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:clear-recent-emoji-statuses', async (_event, { accountId }) => {
+    try {
+      return await accountManager.clearRecentEmojiStatuses(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] clearRecentEmojiStatuses error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:delete-autosave-exceptions', async (_event, { accountId }) => {
+    try {
+      return await accountManager.deleteAutoSaveExceptions(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteAutoSaveExceptions error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:create-theme', async (_event, { accountId, slug, title, settings }) => {
+    try {
+      return await accountManager.createTheme(accountId, { slug, title, settings })
+    } catch (err: any) {
+      Logger.warn(`[IPC] createTheme error:`, err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

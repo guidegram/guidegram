@@ -1810,6 +1810,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-privacy-settings', { accountId }),
   getEmojiStatuses: (accountId: string): Promise<EmojiStatusesResult> =>
     ipcRenderer.invoke('telegram:get-emoji-statuses', { accountId }),
+  clearRecentEmojiStatuses: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:clear-recent-emoji-statuses', { accountId }),
+  deleteAutoSaveExceptions: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-autosave-exceptions', { accountId }),
+  createTheme: (accountId: string, params: { slug: string; title: string; settings?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:create-theme', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

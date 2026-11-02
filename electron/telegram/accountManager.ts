@@ -15559,6 +15559,50 @@ export class AccountManager {
     }
   }
 
+  public async clearRecentEmojiStatuses(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({ _: 'account.clearRecentEmojiStatuses' })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.clearRecentEmojiStatuses error:', err)
+      return false
+    }
+  }
+
+  public async deleteAutoSaveExceptions(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({ _: 'account.deleteAutoSaveExceptions' })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.deleteAutoSaveExceptions error:', err)
+      return false
+    }
+  }
+
+  public async createTheme(accountId: string, params: { slug: string; title: string; settings?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error('Telegram client is not connected.')
+
+    try {
+      const res = await holder.client.call({
+        _: 'account.createTheme',
+        slug: params.slug,
+        title: params.title,
+        settings: params.settings,
+      })
+      return res
+    } catch (err) {
+      Logger.warn('[AccountManager] account.createTheme error:', err)
+      throw err
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

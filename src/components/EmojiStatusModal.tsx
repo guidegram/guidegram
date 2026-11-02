@@ -139,6 +139,24 @@ export const EmojiStatusModal: React.FC<EmojiStatusModalProps> = ({
     }
   }
 
+  const handleClearRecent = async () => {
+    if (savingKey || !data.recent.length) return
+    setSavingKey('clear_recent')
+    setError(null)
+    setNotice(null)
+    try {
+      if (window.guidegram?.clearRecentEmojiStatuses) {
+        await window.guidegram.clearRecentEmojiStatuses(accountId)
+      }
+      setNotice(isRTL ? 'تاریخچه وضعیت‌های اموجی پاک شد' : 'Recent emoji statuses cleared')
+      setData((prev) => ({ ...prev, recent: [] }))
+    } catch (err: any) {
+      setError(formatError(err))
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
   if (!isOpen) return null
 
   const tabs: Array<{ id: EmojiStatusSource; label: string; count: number }> = [
@@ -252,24 +270,43 @@ export const EmojiStatusModal: React.FC<EmojiStatusModalProps> = ({
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[#0e1621] border border-white/10">
-              {tabs.map((tab) => (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-[#0e1621] border border-white/10">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                      activeTab === tab.id
+                        ? 'bg-accent-cyan/20 text-accent-cyan'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <span className="ms-1 opacity-60">({tab.count})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === 'recent' && data.recent.length > 0 && (
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'bg-accent-cyan/20 text-accent-cyan'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  disabled={!!savingKey}
+                  onClick={handleClearRecent}
+                  className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-accent-rose bg-accent-rose/10 hover:bg-accent-rose/20 border border-accent-rose/20 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                  title={isRTL ? 'پاک کردن کل تاریخچه اموجی‌ها' : 'Clear all recent statuses'}
                 >
-                  {tab.label}
-                  {tab.count > 0 && (
-                    <span className="ms-1 opacity-60">({tab.count})</span>
+                  {savingKey === 'clear_recent' ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3 h-3" />
                   )}
+                  {isRTL ? 'پاک کردن اخیرها' : 'Clear Recents'}
                 </button>
-              ))}
+              )}
             </div>
 
             <select

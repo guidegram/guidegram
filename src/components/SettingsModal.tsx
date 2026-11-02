@@ -238,6 +238,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ghostMode, setGhostMode] = useState(false)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [isResettingAutoSaveExceptions, setIsResettingAutoSaveExceptions] = useState(false)
 
   // Guidegram Activity Tracker & Contact Changes
   const [activityTrackerEnabled, setActivityTrackerEnabled] = useState(true)
@@ -3305,7 +3306,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <span className="text-xs font-bold text-gray-100">Telegram MTProto Protocol Engine</span>
                       </div>
                       <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                        Layer 229+ • Full Parity
+                        Layer 232 • Full Parity
                       </span>
                     </div>
 
@@ -3619,6 +3620,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     )
                   })()}
+
+                  {/* Reset Auto-Save Exceptions (account.deleteAutoSaveExceptions) */}
+                  <div className="pt-2 px-1 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-gray-200">Auto-Save Exceptions</div>
+                      <div className="text-[10px] text-gray-500">Reset custom per-chat auto-download exceptions</div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isResettingAutoSaveExceptions}
+                      onClick={async () => {
+                        const targetId = activeAccountId || accounts[0]?.id
+                        if (!targetId || !window.guidegram?.deleteAutoSaveExceptions) return
+                        try {
+                          setIsResettingAutoSaveExceptions(true)
+                          const res = await window.guidegram.deleteAutoSaveExceptions(targetId)
+                          if (res) {
+                            showToast(isPersian ? 'تمام استثنائات ذخیره‌سازی خودکار با موفقیت پاک شدند' : 'All auto-save exceptions cleared successfully')
+                          } else {
+                            showToast('Failed to clear auto-save exceptions')
+                          }
+                        } catch (err: any) {
+                          showToast(err?.message || 'Error deleting exceptions')
+                        } finally {
+                          setIsResettingAutoSaveExceptions(false)
+                        }
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isResettingAutoSaveExceptions ? 'animate-spin' : ''}`} />
+                      <span>{isResettingAutoSaveExceptions ? 'Resetting...' : 'Reset Exceptions'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Section: Window title bar */}

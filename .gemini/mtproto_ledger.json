@@ -1,0 +1,4157 @@
+{
+  "protocol_version": "Layer 232 / Latest Desktop TL-Schema",
+  "generated_at": "2026-11-02T22:50:00+03:30",
+  "total_microphases": 137,
+  "total_methods": 859,
+  "total_namespaces": 28,
+  "overall_coverage_pct": 6.4,
+  "microphases": [
+    {
+      "id": "microphase_001_core",
+      "phase_index": 1,
+      "namespace": "core",
+      "title": "Core Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "initConnection",
+        "invokeAfterMsg",
+        "invokeAfterMsgs",
+        "invokeWithApnsSecret",
+        "invokeWithBusinessConnection",
+        "invokeWithGooglePlayIntegrity",
+        "invokeWithLayer"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_002_core",
+      "phase_index": 2,
+      "namespace": "core",
+      "title": "Core Domain Suite Part 2 (4 RPCs)",
+      "methods": [
+        "invokeWithMessagesRange",
+        "invokeWithReCaptcha",
+        "invokeWithTakeout",
+        "invokeWithoutUpdates"
+      ],
+      "method_count": 4,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_003_auth",
+      "phase_index": 3,
+      "namespace": "auth",
+      "title": "Auth Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "acceptLoginToken",
+        "bindTempAuthKey",
+        "cancelCode",
+        "cancelWebTokenAuthorization",
+        "checkPaidAuth",
+        "checkPassword",
+        "checkRecoveryPassword"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/AddAccountModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_004_auth",
+      "phase_index": 4,
+      "namespace": "auth",
+      "title": "Auth Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "dropTempAuthKeys",
+        "exportAuthorization",
+        "exportLoginToken",
+        "finishFirebasePnvLogin",
+        "finishPasskeyLogin",
+        "firebasePnvSignUp",
+        "importAuthorization"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/AddAccountModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_005_auth",
+      "phase_index": 5,
+      "namespace": "auth",
+      "title": "Auth Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "importBotAuthorization",
+        "importLoginToken",
+        "importWebTokenAuthorization",
+        "initFirebasePnvLogin",
+        "initPasskeyLogin",
+        "logOut",
+        "recoverPassword"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/AddAccountModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_006_auth",
+      "phase_index": 6,
+      "namespace": "auth",
+      "title": "Auth Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "reportMissingCode",
+        "requestFirebaseSms",
+        "requestPasswordRecovery",
+        "resendCode",
+        "resetAuthorizations",
+        "resetLoginEmail",
+        "sendCode"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/AddAccountModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_007_auth",
+      "phase_index": 7,
+      "namespace": "auth",
+      "title": "Auth Domain Suite Part 5 (2 RPCs)",
+      "methods": [
+        "signIn",
+        "signUp"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/AddAccountModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_008_account",
+      "phase_index": 8,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "acceptAuthorization",
+        "cancelPasswordEmail",
+        "changeAuthorizationSettings",
+        "changePhone",
+        "checkUsername",
+        "clearRecentEmojiStatuses",
+        "confirmBotConnection"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_009_account",
+      "phase_index": 9,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "confirmPasswordEmail",
+        "confirmPhone",
+        "createBusinessChatLink",
+        "createTheme",
+        "declinePasswordReset",
+        "deleteAccount",
+        "deleteAutoSaveExceptions"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "DONE",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_010_account",
+      "phase_index": 10,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "deleteBusinessChatLink",
+        "deletePasskey",
+        "deleteSecureValue",
+        "deleteWebBrowserSettingsExceptions",
+        "disablePeerConnectedBot",
+        "editBusinessChatLink",
+        "finishTakeoutSession"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "IN_PROGRESS",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_011_account",
+      "phase_index": 11,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "getAccountTTL",
+        "getAllSecureValues",
+        "getAuthorizationForm",
+        "getAuthorizations",
+        "getAutoDownloadSettings",
+        "getAutoSaveSettings",
+        "getBotBusinessConnection"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_012_account",
+      "phase_index": 12,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 5 (7 RPCs)",
+      "methods": [
+        "getBusinessChatLinks",
+        "getChannelDefaultEmojiStatuses",
+        "getChannelRestrictedStatusEmojis",
+        "getChatThemes",
+        "getCollectibleEmojiStatuses",
+        "getConnectedBots",
+        "getContactSignUpNotification"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_013_account",
+      "phase_index": 13,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 6 (7 RPCs)",
+      "methods": [
+        "getContentSettings",
+        "getDefaultBackgroundEmojis",
+        "getDefaultEmojiStatuses",
+        "getDefaultGroupPhotoEmojis",
+        "getDefaultProfilePhotoEmojis",
+        "getGlobalPrivacySettings",
+        "getMultiWallPapers"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_014_account",
+      "phase_index": 14,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 7 (7 RPCs)",
+      "methods": [
+        "getNotifyExceptions",
+        "getNotifySettings",
+        "getPaidMessagesRevenue",
+        "getPasskeys",
+        "getPassword",
+        "getPasswordSettings",
+        "getPrivacy"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_015_account",
+      "phase_index": 15,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 8 (7 RPCs)",
+      "methods": [
+        "getReactionsNotifySettings",
+        "getRecentEmojiStatuses",
+        "getSavedMusicIds",
+        "getSavedRingtones",
+        "getSecureValue",
+        "getTheme",
+        "getThemes"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_016_account",
+      "phase_index": 16,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 9 (7 RPCs)",
+      "methods": [
+        "getTmpPassword",
+        "getUniqueGiftChatThemes",
+        "getWallPaper",
+        "getWallPapers",
+        "getWebAuthorizations",
+        "getWebBrowserSettings",
+        "initPasskeyRegistration"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_017_account",
+      "phase_index": 17,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 10 (7 RPCs)",
+      "methods": [
+        "initTakeoutSession",
+        "installTheme",
+        "installWallPaper",
+        "invalidateSignInCodes",
+        "registerDevice",
+        "registerPasskey",
+        "reorderUsernames"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_018_account",
+      "phase_index": 18,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 11 (7 RPCs)",
+      "methods": [
+        "reportPeer",
+        "reportProfilePhoto",
+        "resendPasswordEmail",
+        "resetAuthorization",
+        "resetNotifySettings",
+        "resetPassword",
+        "resetWallPapers"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_019_account",
+      "phase_index": 19,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 12 (7 RPCs)",
+      "methods": [
+        "resetWebAuthorization",
+        "resetWebAuthorizations",
+        "resolveBusinessChatLink",
+        "saveAutoDownloadSettings",
+        "saveAutoSaveSettings",
+        "saveMusic",
+        "saveRingtone"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_020_account",
+      "phase_index": 20,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 13 (7 RPCs)",
+      "methods": [
+        "saveSecureValue",
+        "saveTheme",
+        "saveWallPaper",
+        "sendChangePhoneCode",
+        "sendConfirmPhoneCode",
+        "sendVerifyEmailCode",
+        "sendVerifyPhoneCode"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_021_account",
+      "phase_index": 21,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 14 (7 RPCs)",
+      "methods": [
+        "setAccountTTL",
+        "setAuthorizationTTL",
+        "setContactSignUpNotification",
+        "setContentSettings",
+        "setGlobalPrivacySettings",
+        "setMainProfileTab",
+        "setPrivacy"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_022_account",
+      "phase_index": 22,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 15 (7 RPCs)",
+      "methods": [
+        "setReactionsNotifySettings",
+        "toggleConnectedBotPaused",
+        "toggleNoPaidMessagesException",
+        "toggleSponsoredMessages",
+        "toggleUsername",
+        "toggleWebBrowserSettingsException",
+        "unregisterDevice"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_023_account",
+      "phase_index": 23,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 16 (7 RPCs)",
+      "methods": [
+        "updateBirthday",
+        "updateBusinessAwayMessage",
+        "updateBusinessGreetingMessage",
+        "updateBusinessIntro",
+        "updateBusinessLocation",
+        "updateBusinessWorkHours",
+        "updateColor"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_024_account",
+      "phase_index": 24,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 17 (7 RPCs)",
+      "methods": [
+        "updateConnectedBot",
+        "updateDeviceLocked",
+        "updateEmojiStatus",
+        "updateNotifySettings",
+        "updatePasswordSettings",
+        "updatePersonalChannel",
+        "updateProfile"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_025_account",
+      "phase_index": 25,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 18 (7 RPCs)",
+      "methods": [
+        "updateStatus",
+        "updateTheme",
+        "updateUsername",
+        "updateWebBrowserSettings",
+        "uploadRingtone",
+        "uploadTheme",
+        "uploadWallPaper"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_026_account",
+      "phase_index": 26,
+      "namespace": "account",
+      "title": "Account Domain Suite Part 19 (2 RPCs)",
+      "methods": [
+        "verifyEmail",
+        "verifyPhone"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_027_users",
+      "phase_index": 27,
+      "namespace": "users",
+      "title": "Users Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "getFullUser",
+        "getRequirementsToContact",
+        "getSavedMusic",
+        "getSavedMusicByID",
+        "getUsers",
+        "setSecureValueErrors",
+        "suggestBirthday"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/UserProfileDrawer.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_028_contacts",
+      "phase_index": 28,
+      "namespace": "contacts",
+      "title": "Contacts Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "acceptContact",
+        "addContact",
+        "block",
+        "blockFromReplies",
+        "deleteByPhones",
+        "deleteContacts",
+        "editCloseFriends"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ContactsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_029_contacts",
+      "phase_index": 29,
+      "namespace": "contacts",
+      "title": "Contacts Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "exportContactToken",
+        "exportNoPaidMessagesToken",
+        "getBirthdays",
+        "getBlocked",
+        "getContactIDs",
+        "getContacts",
+        "getLocated"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ContactsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_030_contacts",
+      "phase_index": 30,
+      "namespace": "contacts",
+      "title": "Contacts Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "getSaved",
+        "getSponsoredPeers",
+        "getStatuses",
+        "getTopPeers",
+        "importContactToken",
+        "importContacts",
+        "importNoPaidMessagesToken"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ContactsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_031_contacts",
+      "phase_index": 31,
+      "namespace": "contacts",
+      "title": "Contacts Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "resetSaved",
+        "resetTopPeerRating",
+        "resolvePhone",
+        "resolveUsername",
+        "search",
+        "setBlocked",
+        "toggleTopPeers"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ContactsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_032_contacts",
+      "phase_index": 32,
+      "namespace": "contacts",
+      "title": "Contacts Domain Suite Part 5 (2 RPCs)",
+      "methods": [
+        "unblock",
+        "updateContactNote"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/ContactsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_033_messages",
+      "phase_index": 33,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "acceptEncryption",
+        "acceptUrlAuth",
+        "addChatUser",
+        "addPollAnswer",
+        "appendTodoList",
+        "checkChatInvite",
+        "checkHistoryImport"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_034_messages",
+      "phase_index": 34,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "checkHistoryImportPeer",
+        "checkQuickReplyShortcut",
+        "checkUrlAuthMatchCode",
+        "clearAllDrafts",
+        "clearRecentReactions",
+        "clearRecentStickers",
+        "clickSponsoredMessage"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_035_messages",
+      "phase_index": 35,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "composeMessageWithAI",
+        "composeRichMessageWithAI",
+        "createChat",
+        "createForumTopic",
+        "declineUrlAuth",
+        "deleteChat",
+        "deleteChatUser"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_036_messages",
+      "phase_index": 36,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "deleteExportedChatInvite",
+        "deleteFactCheck",
+        "deleteHistory",
+        "deleteMessages",
+        "deleteParticipantReaction",
+        "deleteParticipantReactions",
+        "deletePhoneCallHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ChatInviteLinksModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_037_messages",
+      "phase_index": 37,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 5 (7 RPCs)",
+      "methods": [
+        "deletePollAnswer",
+        "deleteQuickReplyMessages",
+        "deleteQuickReplyShortcut",
+        "deleteRevokedExportedChatInvites",
+        "deleteSavedHistory",
+        "deleteScheduledMessages",
+        "deleteTopicHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/CreatePollModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_038_messages",
+      "phase_index": 38,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 6 (7 RPCs)",
+      "methods": [
+        "discardEncryption",
+        "editChatAbout",
+        "editChatAdmin",
+        "editChatCreator",
+        "editChatDefaultBannedRights",
+        "editChatParticipantRank",
+        "editChatPhoto"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_039_messages",
+      "phase_index": 39,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 7 (7 RPCs)",
+      "methods": [
+        "editChatTitle",
+        "editExportedChatInvite",
+        "editFactCheck",
+        "editForumTopic",
+        "editInlineBotMessage",
+        "editMessage",
+        "editQuickReplyShortcut"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_040_messages",
+      "phase_index": 40,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 8 (7 RPCs)",
+      "methods": [
+        "exportChatInvite",
+        "faveSticker",
+        "forwardMessages",
+        "getAdminsWithInvites",
+        "getAllDrafts",
+        "getAllStickers",
+        "getArchivedStickers"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ChatInviteLinksModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_041_messages",
+      "phase_index": 41,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 9 (7 RPCs)",
+      "methods": [
+        "getAttachMenuBot",
+        "getAttachMenuBots",
+        "getAttachedStickers",
+        "getAvailableEffects",
+        "getAvailableReactions",
+        "getBotApp",
+        "getBotCallbackAnswer"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_042_messages",
+      "phase_index": 42,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 10 (7 RPCs)",
+      "methods": [
+        "getChatInviteImporters",
+        "getChats",
+        "getCommonChats",
+        "getCustomEmojiDocuments",
+        "getDefaultHistoryTTL",
+        "getDefaultTagReactions",
+        "getDhConfig"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ChatInviteLinksModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_043_messages",
+      "phase_index": 43,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 11 (7 RPCs)",
+      "methods": [
+        "getDialogFilters",
+        "getDialogUnreadMarks",
+        "getDialogs",
+        "getDiscussionMessage",
+        "getDocumentByHash",
+        "getEmojiGameInfo",
+        "getEmojiGroups"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/FolderManagerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_044_messages",
+      "phase_index": 44,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 12 (7 RPCs)",
+      "methods": [
+        "getEmojiKeywords",
+        "getEmojiKeywordsDifference",
+        "getEmojiKeywordsLanguages",
+        "getEmojiProfilePhotoGroups",
+        "getEmojiStatusGroups",
+        "getEmojiStickerGroups",
+        "getEmojiStickers"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_045_messages",
+      "phase_index": 45,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 13 (7 RPCs)",
+      "methods": [
+        "getEmojiURL",
+        "getExportedChatInvite",
+        "getExportedChatInvites",
+        "getExtendedMedia",
+        "getFactCheck",
+        "getFavedStickers",
+        "getFeaturedEmojiStickers"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_046_messages",
+      "phase_index": 46,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 14 (7 RPCs)",
+      "methods": [
+        "getFeaturedStickers",
+        "getForumTopics",
+        "getForumTopicsByID",
+        "getFullChat",
+        "getFutureChatCreatorAfterLeave",
+        "getGameHighScores",
+        "getHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_047_messages",
+      "phase_index": 47,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 15 (7 RPCs)",
+      "methods": [
+        "getInlineBotResults",
+        "getInlineGameHighScores",
+        "getMaskStickers",
+        "getMessageEditData",
+        "getMessageReactionsList",
+        "getMessageReadParticipants",
+        "getMessages"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_048_messages",
+      "phase_index": 48,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 16 (7 RPCs)",
+      "methods": [
+        "getMessagesReactions",
+        "getMessagesViews",
+        "getMyStickers",
+        "getOldFeaturedStickers",
+        "getOnlines",
+        "getOutboxReadDate",
+        "getPaidReactionPrivacy"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_049_messages",
+      "phase_index": 49,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 17 (7 RPCs)",
+      "methods": [
+        "getPeerDialogs",
+        "getPeerSettings",
+        "getPersonalChannelHistory",
+        "getPinnedDialogs",
+        "getPinnedSavedDialogs",
+        "getPollResults",
+        "getPollVotes"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_050_messages",
+      "phase_index": 50,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 18 (7 RPCs)",
+      "methods": [
+        "getPreparedInlineMessage",
+        "getQuickReplies",
+        "getQuickReplyMessages",
+        "getRecentLocations",
+        "getRecentReactions",
+        "getRecentStickers",
+        "getReplies"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_051_messages",
+      "phase_index": 51,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 19 (7 RPCs)",
+      "methods": [
+        "getRichMessage",
+        "getSavedDialogs",
+        "getSavedDialogsByID",
+        "getSavedGifs",
+        "getSavedHistory",
+        "getSavedReactionTags",
+        "getScheduledHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_052_messages",
+      "phase_index": 52,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 20 (7 RPCs)",
+      "methods": [
+        "getScheduledMessages",
+        "getSearchCounters",
+        "getSearchResultsCalendar",
+        "getSearchResultsPositions",
+        "getShareThemeBackdrops",
+        "getSplitRanges",
+        "getSponsoredMessages"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ScheduledMessagesModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_053_messages",
+      "phase_index": 53,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 21 (7 RPCs)",
+      "methods": [
+        "getStickerSet",
+        "getStickers",
+        "getSuggestedDialogFilters",
+        "getTopReactions",
+        "getUnreadMentions",
+        "getUnreadPollVotes",
+        "getUnreadReactions"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_054_messages",
+      "phase_index": 54,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 22 (7 RPCs)",
+      "methods": [
+        "getWebPage",
+        "getWebPagePreview",
+        "hideAllChatJoinRequests",
+        "hideChatJoinRequest",
+        "hidePeerSettingsBar",
+        "importChatInvite",
+        "initHistoryImport"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_055_messages",
+      "phase_index": 55,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 23 (7 RPCs)",
+      "methods": [
+        "installStickerSet",
+        "markDialogUnread",
+        "migrateChat",
+        "prolongWebView",
+        "rateTranscribedAudio",
+        "readDiscussion",
+        "readEncryptedHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_056_messages",
+      "phase_index": 56,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 24 (7 RPCs)",
+      "methods": [
+        "readFeaturedStickers",
+        "readHistory",
+        "readMentions",
+        "readMessageContents",
+        "readPollVotes",
+        "readReactions",
+        "readSavedHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_057_messages",
+      "phase_index": 57,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 25 (7 RPCs)",
+      "methods": [
+        "receivedMessages",
+        "receivedQueue",
+        "reorderPinnedDialogs",
+        "reorderPinnedForumTopics",
+        "reorderPinnedSavedDialogs",
+        "reorderQuickReplies",
+        "reorderStickerSets"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_058_messages",
+      "phase_index": 58,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 26 (7 RPCs)",
+      "methods": [
+        "report",
+        "reportEncryptedSpam",
+        "reportMessagesDelivery",
+        "reportMusicListen",
+        "reportReaction",
+        "reportReadMetrics",
+        "reportSpam"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_059_messages",
+      "phase_index": 59,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 27 (7 RPCs)",
+      "methods": [
+        "reportSponsoredMessage",
+        "requestAppWebView",
+        "requestChatJoinWebView",
+        "requestEncryption",
+        "requestMainWebView",
+        "requestSimpleWebView",
+        "requestUrlAuth"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_060_messages",
+      "phase_index": 60,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 28 (7 RPCs)",
+      "methods": [
+        "requestWebView",
+        "saveDefaultSendAs",
+        "saveDraft",
+        "saveGif",
+        "savePreparedInlineMessage",
+        "saveRecentSticker",
+        "search"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_061_messages",
+      "phase_index": 61,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 29 (7 RPCs)",
+      "methods": [
+        "searchCustomEmoji",
+        "searchEmojiStickerSets",
+        "searchGlobal",
+        "searchSentMedia",
+        "searchStickerSets",
+        "searchStickers",
+        "sendBotRequestedPeer"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_062_messages",
+      "phase_index": 62,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 30 (7 RPCs)",
+      "methods": [
+        "sendEncrypted",
+        "sendEncryptedFile",
+        "sendEncryptedService",
+        "sendInlineBotResult",
+        "sendMedia",
+        "sendMessage",
+        "sendMultiMedia"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_063_messages",
+      "phase_index": 63,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 31 (7 RPCs)",
+      "methods": [
+        "sendPaidReaction",
+        "sendQuickReplyMessages",
+        "sendReaction",
+        "sendScheduledMessages",
+        "sendScreenshotNotification",
+        "sendVote",
+        "sendWebViewData"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_064_messages",
+      "phase_index": 64,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 32 (7 RPCs)",
+      "methods": [
+        "sendWebViewResultMessage",
+        "setBotCallbackAnswer",
+        "setBotGuestChatResult",
+        "setBotPrecheckoutResults",
+        "setBotShippingResults",
+        "setChatAvailableReactions",
+        "setChatTheme"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_065_messages",
+      "phase_index": 65,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 33 (7 RPCs)",
+      "methods": [
+        "setChatWallPaper",
+        "setDefaultHistoryTTL",
+        "setDefaultReaction",
+        "setEncryptedTyping",
+        "setGameScore",
+        "setHistoryTTL",
+        "setInlineBotResults"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_066_messages",
+      "phase_index": 66,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 34 (7 RPCs)",
+      "methods": [
+        "setInlineGameScore",
+        "setShareTheme",
+        "setTyping",
+        "startBot",
+        "startHistoryImport",
+        "summarizeText",
+        "toggleBotInAttachMenu"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_067_messages",
+      "phase_index": 67,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 35 (7 RPCs)",
+      "methods": [
+        "toggleDialogFilterTags",
+        "toggleDialogPin",
+        "toggleNoForwards",
+        "togglePaidReactionPrivacy",
+        "togglePeerTranslations",
+        "toggleSavedDialogPin",
+        "toggleStickerSets"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/FolderManagerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_068_messages",
+      "phase_index": 68,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 36 (7 RPCs)",
+      "methods": [
+        "toggleSuggestedPostApproval",
+        "toggleTodoCompleted",
+        "transcribeAudio",
+        "translateRichMessage",
+        "translateText",
+        "uninstallStickerSet",
+        "unpinAllMessages"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_069_messages",
+      "phase_index": 69,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 37 (7 RPCs)",
+      "methods": [
+        "updateDialogFilter",
+        "updateDialogFiltersOrder",
+        "updatePinnedForumTopic",
+        "updatePinnedMessage",
+        "updateSavedReactionTag",
+        "uploadEncryptedFile",
+        "uploadImportedMedia"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/FolderManagerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_070_messages",
+      "phase_index": 70,
+      "namespace": "messages",
+      "title": "Messages Domain Suite Part 38 (2 RPCs)",
+      "methods": [
+        "uploadMedia",
+        "viewSponsoredMessage"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_071_updates",
+      "phase_index": 71,
+      "namespace": "updates",
+      "title": "Updates Domain Suite Part 1 (3 RPCs)",
+      "methods": [
+        "getChannelDifference",
+        "getDifference",
+        "getState"
+      ],
+      "method_count": 3,
+      "ui_component": "src/components/ChatViewport.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_072_photos",
+      "phase_index": 72,
+      "namespace": "photos",
+      "title": "Photos Domain Suite Part 1 (5 RPCs)",
+      "methods": [
+        "deletePhotos",
+        "getUserPhotos",
+        "updateProfilePhoto",
+        "uploadContactProfilePhoto",
+        "uploadProfilePhoto"
+      ],
+      "method_count": 5,
+      "ui_component": "src/components/MyProfileDrawer.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_073_upload",
+      "phase_index": 73,
+      "namespace": "upload",
+      "title": "Upload Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "getCdnFile",
+        "getCdnFileHashes",
+        "getFile",
+        "getFileHashes",
+        "getWebFile",
+        "reuploadCdnFile",
+        "saveBigFilePart"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/MediaPickerDrawer.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_074_upload",
+      "phase_index": 74,
+      "namespace": "upload",
+      "title": "Upload Domain Suite Part 2 (1 RPCs)",
+      "methods": [
+        "saveFilePart"
+      ],
+      "method_count": 1,
+      "ui_component": "src/components/MediaPickerDrawer.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_075_help",
+      "phase_index": 75,
+      "namespace": "help",
+      "title": "Help Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "acceptTermsOfService",
+        "dismissSuggestion",
+        "editUserInfo",
+        "getAppConfig",
+        "getAppUpdate",
+        "getCdnConfig",
+        "getConfig"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SupportModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_076_help",
+      "phase_index": 76,
+      "namespace": "help",
+      "title": "Help Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "getCountriesList",
+        "getDeepLinkInfo",
+        "getInviteText",
+        "getNearestDc",
+        "getPassportConfig",
+        "getPeerColors",
+        "getPeerProfileColors"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SupportModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_077_help",
+      "phase_index": 77,
+      "namespace": "help",
+      "title": "Help Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "getPremiumPromo",
+        "getPromoData",
+        "getRecentMeUrls",
+        "getSupport",
+        "getSupportName",
+        "getTermsOfServiceUpdate",
+        "getTimezonesList"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SupportModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_078_help",
+      "phase_index": 78,
+      "namespace": "help",
+      "title": "Help Domain Suite Part 4 (4 RPCs)",
+      "methods": [
+        "getUserInfo",
+        "hidePromoData",
+        "saveAppLog",
+        "setBotUpdatesStatus"
+      ],
+      "method_count": 4,
+      "ui_component": "src/components/SupportModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_079_channels",
+      "phase_index": 79,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "checkSearchPostsFlood",
+        "checkUsername",
+        "convertToGigagroup",
+        "createChannel",
+        "deactivateAllUsernames",
+        "deleteChannel",
+        "deleteHistory"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_080_channels",
+      "phase_index": 80,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "deleteMessages",
+        "deleteParticipantHistory",
+        "editAdmin",
+        "editBanned",
+        "editLocation",
+        "editPhoto",
+        "editTitle"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_081_channels",
+      "phase_index": 81,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "exportMessageLink",
+        "getAdminLog",
+        "getAdminedPublicChannels",
+        "getChannelRecommendations",
+        "getChannels",
+        "getFullChannel",
+        "getGroupsForDiscussion"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_082_channels",
+      "phase_index": 82,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "getInactiveChannels",
+        "getLeftChannels",
+        "getMessageAuthor",
+        "getMessages",
+        "getParticipant",
+        "getParticipants",
+        "getSendAs"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_083_channels",
+      "phase_index": 83,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 5 (7 RPCs)",
+      "methods": [
+        "inviteToChannel",
+        "joinChannel",
+        "leaveChannel",
+        "readHistory",
+        "readMessageContents",
+        "reorderUsernames",
+        "reportAntiSpamFalsePositive"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ChatInviteLinksModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_084_channels",
+      "phase_index": 84,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 6 (7 RPCs)",
+      "methods": [
+        "reportSpam",
+        "restrictSponsoredMessages",
+        "searchPosts",
+        "setBoostsToUnblockRestrictions",
+        "setDiscussionGroup",
+        "setEmojiStickers",
+        "setMainProfileTab"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_085_channels",
+      "phase_index": 85,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 7 (7 RPCs)",
+      "methods": [
+        "setStickers",
+        "toggleAntiSpam",
+        "toggleAutotranslation",
+        "toggleForum",
+        "toggleJoinRequest",
+        "toggleJoinToSend",
+        "toggleParticipantsHidden"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_086_channels",
+      "phase_index": 86,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 8 (7 RPCs)",
+      "methods": [
+        "togglePreHistoryHidden",
+        "toggleSignatures",
+        "toggleSlowMode",
+        "toggleUsername",
+        "toggleViewForumAsMessages",
+        "updateColor",
+        "updateEmojiStatus"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_087_channels",
+      "phase_index": 87,
+      "namespace": "channels",
+      "title": "Channels Domain Suite Part 9 (2 RPCs)",
+      "methods": [
+        "updatePaidMessagesPrice",
+        "updateUsername"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_088_bots",
+      "phase_index": 88,
+      "namespace": "bots",
+      "title": "Bots Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "addPreviewMedia",
+        "addUsername",
+        "allowSendMessage",
+        "answerWebhookJSONQuery",
+        "canSendMessage",
+        "checkDownloadFileParams",
+        "checkUsername"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/MiniAppModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_089_bots",
+      "phase_index": 89,
+      "namespace": "bots",
+      "title": "Bots Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "createBot",
+        "deletePreviewMedia",
+        "editAccessSettings",
+        "editPreviewMedia",
+        "exportBotToken",
+        "getAccessSettings",
+        "getAdminedBots"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/MiniAppModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_090_bots",
+      "phase_index": 90,
+      "namespace": "bots",
+      "title": "Bots Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "getBotCommands",
+        "getBotInfo",
+        "getBotMenuButton",
+        "getBotRecommendations",
+        "getPopularAppBots",
+        "getPreviewInfo",
+        "getPreviewMedias"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/MiniAppModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_091_bots",
+      "phase_index": 91,
+      "namespace": "bots",
+      "title": "Bots Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "getRequestedWebViewButton",
+        "invokeWebViewCustomMethod",
+        "removeUsername",
+        "reorderPreviewMedias",
+        "reorderUsernames",
+        "requestWebViewButton",
+        "resetBotCommands"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_092_bots",
+      "phase_index": 92,
+      "namespace": "bots",
+      "title": "Bots Domain Suite Part 5 (7 RPCs)",
+      "methods": [
+        "sendCustomRequest",
+        "setBotBroadcastDefaultAdminRights",
+        "setBotCommands",
+        "setBotGroupDefaultAdminRights",
+        "setBotInfo",
+        "setBotMenuButton",
+        "setCustomVerification"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/MiniAppModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_093_bots",
+      "phase_index": 93,
+      "namespace": "bots",
+      "title": "Bots Domain Suite Part 6 (5 RPCs)",
+      "methods": [
+        "setJoinChatResults",
+        "toggleUserEmojiStatusPermission",
+        "toggleUsername",
+        "updateStarRefProgram",
+        "updateUserEmojiStatus"
+      ],
+      "method_count": 5,
+      "ui_component": "src/components/MiniAppModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_094_payments",
+      "phase_index": 94,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "applyGiftCode",
+        "assignAppStoreTransaction",
+        "assignPlayMarketTransaction",
+        "botCancelStarsSubscription",
+        "canPurchaseStore",
+        "changeStarsSubscription",
+        "checkCanSendGift"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_095_payments",
+      "phase_index": 95,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "checkGiftCode",
+        "clearSavedInfo",
+        "connectStarRefBot",
+        "convertStarGift",
+        "craftStarGift",
+        "createOnrampSession",
+        "createStarGiftCollection"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_096_payments",
+      "phase_index": 96,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "deleteStarGift",
+        "deleteStarGiftCollection",
+        "depositStarGift",
+        "displayStarGift",
+        "editConnectedStarRefBot",
+        "exportInvoice",
+        "fulfillStarsSubscription"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_097_payments",
+      "phase_index": 97,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "getBankCardData",
+        "getConnectedStarRefBot",
+        "getConnectedStarRefBots",
+        "getCraftStarGifts",
+        "getCurrencyRates",
+        "getGiveawayInfo",
+        "getOnrampAvailability"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_098_payments",
+      "phase_index": 98,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 5 (7 RPCs)",
+      "methods": [
+        "getOnrampBaseCurrencies",
+        "getOnrampLimits",
+        "getOnrampProviders",
+        "getOnrampQuote",
+        "getPaymentForm",
+        "getPaymentReceipt",
+        "getPremiumGiftCodeOptions"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_099_payments",
+      "phase_index": 99,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 6 (7 RPCs)",
+      "methods": [
+        "getResaleStarGifts",
+        "getSavedInfo",
+        "getSavedStarGift",
+        "getSavedStarGifts",
+        "getStarGiftActiveAuctions",
+        "getStarGiftAuctionAcquiredGifts",
+        "getStarGiftAuctionState"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_100_payments",
+      "phase_index": 100,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 7 (7 RPCs)",
+      "methods": [
+        "getStarGiftCollections",
+        "getStarGiftUpgradeAttributes",
+        "getStarGiftUpgradePreview",
+        "getStarGiftWithdrawalUrl",
+        "getStarGifts",
+        "getStarsGiftOptions",
+        "getStarsGiveawayOptions"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_101_payments",
+      "phase_index": 101,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 8 (7 RPCs)",
+      "methods": [
+        "getStarsRevenueAdsAccountUrl",
+        "getStarsRevenueStats",
+        "getStarsRevenueWithdrawalUrl",
+        "getStarsStatus",
+        "getStarsSubscriptions",
+        "getStarsTopupOptions",
+        "getStarsTransactions"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_102_payments",
+      "phase_index": 102,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 9 (7 RPCs)",
+      "methods": [
+        "getStarsTransactionsByID",
+        "getSuggestedStarRefBots",
+        "getUniqueStarGift",
+        "getUniqueStarGiftValueInfo",
+        "launchPrepaidGiveaway",
+        "refundStarsCharge",
+        "reorderStarGiftCollections"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_103_payments",
+      "phase_index": 103,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 10 (7 RPCs)",
+      "methods": [
+        "resolveStarGiftOffer",
+        "saveStarGift",
+        "sendPaymentForm",
+        "sendStarGiftOffer",
+        "sendStarsForm",
+        "toggleChatStarGiftNotifications",
+        "toggleStarGiftsPinnedToTop"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_104_payments",
+      "phase_index": 104,
+      "namespace": "payments",
+      "title": "Payments Domain Suite Part 11 (6 RPCs)",
+      "methods": [
+        "transferStarGift",
+        "updateStarGiftCollection",
+        "updateStarGiftPrice",
+        "upgradeStarGift",
+        "validateRequestedInfo",
+        "withdrawStarGift"
+      ],
+      "method_count": 6,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_105_stickers",
+      "phase_index": 105,
+      "namespace": "stickers",
+      "title": "Stickers Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "addStickerToSet",
+        "changeSticker",
+        "changeStickerPosition",
+        "checkShortName",
+        "createStickerSet",
+        "deleteStickerSet",
+        "removeStickerFromSet"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StickerPickerDrawer.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_106_stickers",
+      "phase_index": 106,
+      "namespace": "stickers",
+      "title": "Stickers Domain Suite Part 2 (4 RPCs)",
+      "methods": [
+        "renameStickerSet",
+        "replaceSticker",
+        "setStickerSetThumb",
+        "suggestShortName"
+      ],
+      "method_count": 4,
+      "ui_component": "src/components/StickerPickerDrawer.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_107_phone",
+      "phase_index": 107,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "acceptCall",
+        "checkGroupCall",
+        "confirmCall",
+        "createConferenceCall",
+        "createGroupCall",
+        "declineConferenceCallInvite",
+        "deleteConferenceCallParticipants"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_108_phone",
+      "phase_index": 108,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "deleteGroupCallMessages",
+        "deleteGroupCallParticipantMessages",
+        "discardCall",
+        "discardGroupCall",
+        "editGroupCallParticipant",
+        "editGroupCallTitle",
+        "exportGroupCallInvite"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_109_phone",
+      "phase_index": 109,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "getCallConfig",
+        "getGroupCall",
+        "getGroupCallChainBlocks",
+        "getGroupCallJoinAs",
+        "getGroupCallStars",
+        "getGroupCallStreamChannels",
+        "getGroupCallStreamRtmpUrl"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_110_phone",
+      "phase_index": 110,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "getGroupParticipants",
+        "inviteConferenceCallParticipant",
+        "inviteToGroupCall",
+        "joinGroupCall",
+        "joinGroupCallPresentation",
+        "leaveGroupCall",
+        "leaveGroupCallPresentation"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_111_phone",
+      "phase_index": 111,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 5 (7 RPCs)",
+      "methods": [
+        "receivedCall",
+        "requestCall",
+        "saveCallDebug",
+        "saveCallLog",
+        "saveDefaultGroupCallJoinAs",
+        "saveDefaultSendAs",
+        "sendConferenceCallBroadcast"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_112_phone",
+      "phase_index": 112,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 6 (7 RPCs)",
+      "methods": [
+        "sendGroupCallEncryptedMessage",
+        "sendGroupCallMessage",
+        "sendSignalingData",
+        "setCallRating",
+        "startScheduledGroupCall",
+        "toggleGroupCallRecord",
+        "toggleGroupCallSettings"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_113_phone",
+      "phase_index": 113,
+      "namespace": "phone",
+      "title": "Phone Domain Suite Part 7 (1 RPCs)",
+      "methods": [
+        "toggleGroupCallStartSubscription"
+      ],
+      "method_count": 1,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_114_langpack",
+      "phase_index": 114,
+      "namespace": "langpack",
+      "title": "Langpack Domain Suite Part 1 (5 RPCs)",
+      "methods": [
+        "getDifference",
+        "getLangPack",
+        "getLanguage",
+        "getLanguages",
+        "getStrings"
+      ],
+      "method_count": 5,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_115_folders",
+      "phase_index": 115,
+      "namespace": "folders",
+      "title": "Folders Domain Suite Part 1 (1 RPCs)",
+      "methods": [
+        "editPeerFolders"
+      ],
+      "method_count": 1,
+      "ui_component": "src/components/FolderManagerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_116_stats",
+      "phase_index": 116,
+      "namespace": "stats",
+      "title": "Stats Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "getBroadcastStats",
+        "getMegagroupStats",
+        "getMessagePublicForwards",
+        "getMessageStats",
+        "getPollStats",
+        "getStoryPublicForwards",
+        "getStoryStats"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/GroupStatsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_117_stats",
+      "phase_index": 117,
+      "namespace": "stats",
+      "title": "Stats Domain Suite Part 2 (1 RPCs)",
+      "methods": [
+        "loadAsyncGraph"
+      ],
+      "method_count": 1,
+      "ui_component": "src/components/GroupStatsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_118_chatlists",
+      "phase_index": 118,
+      "namespace": "chatlists",
+      "title": "Chatlists Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "checkChatlistInvite",
+        "deleteExportedInvite",
+        "editExportedInvite",
+        "exportChatlistInvite",
+        "getChatlistUpdates",
+        "getExportedInvites",
+        "getLeaveChatlistSuggestions"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/ChatInviteLinksModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_119_chatlists",
+      "phase_index": 119,
+      "namespace": "chatlists",
+      "title": "Chatlists Domain Suite Part 2 (4 RPCs)",
+      "methods": [
+        "hideChatlistUpdates",
+        "joinChatlistInvite",
+        "joinChatlistUpdates",
+        "leaveChatlist"
+      ],
+      "method_count": 4,
+      "ui_component": "src/components/FolderManagerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_120_stories",
+      "phase_index": 120,
+      "namespace": "stories",
+      "title": "Stories Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "activateStealthMode",
+        "canSendStory",
+        "createAlbum",
+        "deleteAlbum",
+        "deleteStories",
+        "editStory",
+        "exportStoryLink"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_121_stories",
+      "phase_index": 121,
+      "namespace": "stories",
+      "title": "Stories Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "getAlbumStories",
+        "getAlbums",
+        "getAllReadPeerStories",
+        "getAllStories",
+        "getChatsToSend",
+        "getPeerMaxIDs",
+        "getPeerStories"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_122_stories",
+      "phase_index": 122,
+      "namespace": "stories",
+      "title": "Stories Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "getPinnedStories",
+        "getStoriesArchive",
+        "getStoriesByID",
+        "getStoriesViews",
+        "getStoryReactionsList",
+        "getStoryViewsList",
+        "incrementStoryViews"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_123_stories",
+      "phase_index": 123,
+      "namespace": "stories",
+      "title": "Stories Domain Suite Part 4 (7 RPCs)",
+      "methods": [
+        "readStories",
+        "reorderAlbums",
+        "report",
+        "searchPosts",
+        "sendReaction",
+        "sendStory",
+        "startLive"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_124_stories",
+      "phase_index": 124,
+      "namespace": "stories",
+      "title": "Stories Domain Suite Part 5 (5 RPCs)",
+      "methods": [
+        "toggleAllStoriesHidden",
+        "togglePeerStoriesHidden",
+        "togglePinned",
+        "togglePinnedToTop",
+        "updateAlbum"
+      ],
+      "method_count": 5,
+      "ui_component": "src/components/StoryViewerModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_125_premium",
+      "phase_index": 125,
+      "namespace": "premium",
+      "title": "Premium Domain Suite Part 1 (5 RPCs)",
+      "methods": [
+        "applyBoost",
+        "getBoostsList",
+        "getBoostsStatus",
+        "getMyBoosts",
+        "getUserBoosts"
+      ],
+      "method_count": 5,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_126_smsjobs",
+      "phase_index": 126,
+      "namespace": "smsjobs",
+      "title": "Smsjobs Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "finishJob",
+        "getSmsJob",
+        "getStatus",
+        "isEligibleToJoin",
+        "join",
+        "leave",
+        "updateSettings"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_127_fragment",
+      "phase_index": 127,
+      "namespace": "fragment",
+      "title": "Fragment Domain Suite Part 1 (1 RPCs)",
+      "methods": [
+        "getCollectibleInfo"
+      ],
+      "method_count": 1,
+      "ui_component": "src/components/StarGiftsModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_128_aicompose",
+      "phase_index": 128,
+      "namespace": "aicompose",
+      "title": "Aicompose Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "createTone",
+        "deleteTone",
+        "getTone",
+        "getToneExample",
+        "getTones",
+        "saveTone",
+        "updateTone"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_129_communities",
+      "phase_index": 129,
+      "namespace": "communities",
+      "title": "Communities Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "create",
+        "getJoinedCommunities",
+        "getParticipantJoinedChats",
+        "getPeerLinkRequests",
+        "toggleAllPeerLinkRequestApproval",
+        "toggleCommunityCollapsedInDialogs",
+        "toggleParticipantBanned"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/UserMutualGroupsActivity.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_130_communities",
+      "phase_index": 130,
+      "namespace": "communities",
+      "title": "Communities Domain Suite Part 2 (2 RPCs)",
+      "methods": [
+        "togglePeerLink",
+        "togglePeerLinkRequestApproval"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/UserMutualGroupsActivity.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_131_ephemeral",
+      "phase_index": 131,
+      "namespace": "ephemeral",
+      "title": "Ephemeral Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "deleteAllWelcomeMessages",
+        "deleteMessage",
+        "deleteWelcomeMessage",
+        "editMessage",
+        "getCallbackAnswer",
+        "getWelcomeMessages",
+        "reportMessage"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/AutoDeleteModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_132_ephemeral",
+      "phase_index": 132,
+      "namespace": "ephemeral",
+      "title": "Ephemeral Domain Suite Part 2 (1 RPCs)",
+      "methods": [
+        "sendMessage"
+      ],
+      "method_count": 1,
+      "ui_component": "src/components/AutoDeleteModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_133_toncenter",
+      "phase_index": 133,
+      "namespace": "toncenter",
+      "title": "Toncenter Domain Suite Part 1 (2 RPCs)",
+      "methods": [
+        "getStreamingUrl",
+        "performApiRequest"
+      ],
+      "method_count": 2,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_134_wallet",
+      "phase_index": 134,
+      "namespace": "wallet",
+      "title": "Wallet Domain Suite Part 1 (7 RPCs)",
+      "methods": [
+        "disableBackup",
+        "enableBackup",
+        "exportSecretPhrase",
+        "fetchEncryptedSecretPhrasePart",
+        "getBackupHolderDcs",
+        "getExistingWaltBalance",
+        "getGaslessInfo"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_135_wallet",
+      "phase_index": 135,
+      "namespace": "wallet",
+      "title": "Wallet Domain Suite Part 2 (7 RPCs)",
+      "methods": [
+        "getNfts",
+        "getProofChallenge",
+        "getState",
+        "getTransactions",
+        "getTransactionsByIDs",
+        "getTransactionsByMsgHash",
+        "getUserAddresses"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_136_wallet",
+      "phase_index": 136,
+      "namespace": "wallet",
+      "title": "Wallet Domain Suite Part 3 (7 RPCs)",
+      "methods": [
+        "replaceWallet",
+        "sendTransfer",
+        "setCardStickers",
+        "tonConnectClaimRequest",
+        "tonConnectCloseSession",
+        "tonConnectCreateSession",
+        "tonConnectGetPending"
+      ],
+      "method_count": 7,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    },
+    {
+      "id": "microphase_137_wallet",
+      "phase_index": 137,
+      "namespace": "wallet",
+      "title": "Wallet Domain Suite Part 4 (5 RPCs)",
+      "methods": [
+        "tonConnectGetSessions",
+        "tonConnectNextEventId",
+        "tonConnectRegisterKey",
+        "tonConnectSubmitConnectResult",
+        "tonConnectSubmitResponse"
+      ],
+      "method_count": 5,
+      "ui_component": "src/components/TonWalletModal.tsx",
+      "status": "PENDING",
+      "ui_states": {
+        "glass_loading": true,
+        "honest_empty": true,
+        "error_retry": true,
+        "success": true
+      },
+      "binary_error_handling": [
+        "FLOOD_WAIT",
+        "RPC_CALL_FAIL",
+        "AUTH_KEY_UNREGISTERED"
+      ],
+      "rtl_ready": true,
+      "dark_theme": true
+    }
+  ]
+}
