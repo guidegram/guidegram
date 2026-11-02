@@ -16047,6 +16047,87 @@ export class AccountManager {
     }
   }
 
+  // Microphase 015: Account Domain Suite Part 8
+  public async getReactionsNotifySettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({ _: 'account.getReactionsNotifySettings' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getReactionsNotifySettings error:', err)
+      return null
+    }
+  }
+
+  public async getRecentEmojiStatuses(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { statuses: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getRecentEmojiStatuses',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getRecentEmojiStatuses error:', err)
+      return { statuses: [] }
+    }
+  }
+
+  public async getSavedMusicIds(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      return await holder.client.call({
+        _: 'account.getSavedMusicIds',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getSavedMusicIds error:', err)
+      return []
+    }
+  }
+
+  public async getTheme(accountId: string, format: string, theme: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      let inputTheme: any = theme
+      if (typeof theme === 'string') {
+        inputTheme = { _: 'inputThemeSlug', slug: theme }
+      } else if (typeof theme === 'number' || typeof theme === 'bigint') {
+        inputTheme = { _: 'inputTheme', id: toLong(theme), accessHash: 0n }
+      }
+      return await holder.client.call({
+        _: 'account.getTheme',
+        format: format || 'desktop',
+        theme: inputTheme,
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getTheme error:', err)
+      return null
+    }
+  }
+
+  public async getThemes(accountId: string, format: string = 'desktop', hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { themes: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getThemes',
+        format: format || 'desktop',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getThemes error:', err)
+      return { themes: [] }
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

@@ -257,6 +257,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isLoadingPasskeys, setIsLoadingPasskeys] = useState<boolean>(false)
   const [notifyExceptionsCount, setNotifyExceptionsCount] = useState<number | null>(null)
   const [isLoadingNotifyExceptions, setIsLoadingNotifyExceptions] = useState<boolean>(false)
+  const [reactionsNotifySettings, setReactionsNotifySettings] = useState<any>(null)
+  const [isLoadingReactionsNotify, setIsLoadingReactionsNotify] = useState<boolean>(false)
+  const [savedMusicCount, setSavedMusicCount] = useState<number | null>(null)
+  const [cloudThemesList, setCloudThemesList] = useState<any[]>([])
+  const [isLoadingCloudThemes, setIsLoadingCloudThemes] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -978,6 +983,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     if (isOpen && activeTab === 'privacy') {
       loadPrivacySettings()
+    }
+  }, [isOpen, activeTab, targetAccountId])
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'notifications') {
+      if (window.guidegram?.getReactionsNotifySettings) {
+        setIsLoadingReactionsNotify(true)
+        window.guidegram.getReactionsNotifySettings(targetAccountId)
+          .then((res: any) => {
+            if (res) setReactionsNotifySettings(res)
+          })
+          .catch(() => {})
+          .finally(() => setIsLoadingReactionsNotify(false))
+      }
+      if (window.guidegram?.getSavedMusicIds) {
+        window.guidegram.getSavedMusicIds(targetAccountId)
+          .then((ids: any) => {
+            if (Array.isArray(ids)) setSavedMusicCount(ids.length)
+          })
+          .catch(() => {})
+      }
+    }
+  }, [isOpen, activeTab, targetAccountId])
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'chat') {
+      if (window.guidegram?.getThemes) {
+        setIsLoadingCloudThemes(true)
+        window.guidegram.getThemes(targetAccountId, 'desktop')
+          .then((res: any) => {
+            if (Array.isArray(res?.themes)) setCloudThemesList(res.themes)
+          })
+          .catch(() => {})
+          .finally(() => setIsLoadingCloudThemes(false))
+      }
     }
   }, [isOpen, activeTab, targetAccountId])
 
@@ -2268,6 +2308,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     checked={contactSignUpNotif}
                     onChange={(checked) => setContactSignUpNotif(checked)}
                   />
+                </div>
+
+                {/* Reactions Notifications & Cloud Audio (MTProto Layer 232 Microphase 015) */}
+                <div className="pt-2 p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-gray-200">
+                        {isPersian ? 'اعلان‌های واکنش و رسانه‌های ابری' : 'Reaction Notifications & Cloud Media'}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        {isPersian ? 'مدیریت واکنش‌ها به پیام‌ها و فایل‌های صوتی ذخیره‌شده ابری' : 'Manage reaction notifications on your messages and saved audio'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-dark-900 border border-white/5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-accent-cyan" />
+                      <span className="text-gray-200 font-medium">
+                        {isPersian ? 'اعلان واکنش‌ها به پیام‌های من' : 'Reactions on my messages'}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-primary-400">
+                      {isLoadingReactionsNotify ? (
+                        <RefreshCw className="w-3 h-3 animate-spin inline" />
+                      ) : reactionsNotifySettings?.messagesNotify ? (
+                        isPersian ? 'فعال' : 'Enabled'
+                      ) : (
+                        isPersian ? 'پیش‌فرض' : 'Default'
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-dark-900 border border-white/5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Music className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-gray-200 font-medium">
+                        {isPersian ? 'تعداد موسیقی‌های ذخیره‌شده در ابر' : 'Saved Cloud Music Track IDs'}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-medium text-gray-300">
+                      {savedMusicCount !== null ? `${savedMusicCount} ${isPersian ? 'ترک' : 'tracks'}` : '—'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

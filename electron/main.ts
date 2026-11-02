@@ -5190,6 +5190,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 015: Account Domain Suite Part 8
+  ipcMain.handle('telegram:get-reactions-notify-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getReactionsNotifySettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getReactionsNotifySettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-recent-emoji-statuses', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getRecentEmojiStatuses(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getRecentEmojiStatuses error:`, err)
+      return { statuses: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-saved-music-ids', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getSavedMusicIds(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSavedMusicIds error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-theme', async (_event, { accountId, format, theme }) => {
+    try {
+      return await accountManager.getTheme(accountId, format, theme)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getTheme error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-themes', async (_event, { accountId, format, hash }) => {
+    try {
+      return await accountManager.getThemes(accountId, format, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getThemes error:`, err)
+      return { themes: [] }
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -1890,6 +1890,16 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-passkeys', { accountId }),
   getPasswordSettings: (accountId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:get-password-settings', { accountId }),
+  getReactionsNotifySettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-reactions-notify-settings', { accountId }),
+  getRecentEmojiStatuses: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-recent-emoji-statuses', { accountId, hash }),
+  getSavedMusicIds: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-saved-music-ids', { accountId, hash }),
+  getTheme: (accountId: string, format: string, theme: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-theme', { accountId, format, theme }),
+  getThemes: (accountId: string, format?: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-themes', { accountId, format, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
