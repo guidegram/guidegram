@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, Pin, ShieldCheck, ShieldOff, X, Clock, Trash2, Globe, MessageSquare, Radio, Users, User, Archive, RefreshCw, Sparkles, Check, CheckCheck, Plus, Image, Link2, FileText, Music, Mic, Lock, UserCheck, UserX, Calendar, Bot, ExternalLink, Volume2, VolumeX } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer } from '../types/telegram'
+import { DialogItem, AccountInfo, MessageItem, CloudFolderItem, ActiveStoryPeer, MessageEntityItem } from '../types/telegram'
 import { TabCategory } from './ChatTabs'
 import { Avatar } from './Avatar'
 import { isRTL, formatFileSize, formatDuration } from '../utils/textUtils'
@@ -123,6 +123,61 @@ export const buildFlexibleSearchRegex = (q: string): RegExp | null => {
   } catch {
     return null
   }
+}
+
+/**
+ * Renders a dialog snippet with custom emoji animations (Telegram Premium),
+ * handling UTF-16 code unit offsets accurately and seamlessly in chat list previews.
+ */
+export const renderDialogSnippet = (
+  text?: string,
+  entities?: MessageEntityItem[],
+  accountId?: string
+): React.ReactNode => {
+  if (!text) return '...'
+  const customEmojiEnts = entities?.filter(
+    (e) => e.type === 'custom_emoji' && e.documentId && typeof e.offset === 'number' && typeof e.length === 'number'
+  )
+
+  if (!customEmojiEnts || customEmojiEnts.length === 0) {
+    return text
+  }
+
+  const points = new Set<number>([0, text.length])
+  for (const ent of customEmojiEnts) {
+    const s = Math.max(0, Math.min(text.length, ent.offset))
+    const e = Math.max(0, Math.min(text.length, ent.offset + ent.length))
+    if (s < text.length) points.add(s)
+    if (e < text.length) points.add(e)
+  }
+
+  const sortedPoints = Array.from(points).sort((a, b) => a - b)
+  const nodes: React.ReactNode[] = []
+
+  for (let i = 0; i < sortedPoints.length - 1; i++) {
+    const start = sortedPoints[i]
+    const end = sortedPoints[i + 1]
+    if (start >= end) continue
+
+    const sub = text.slice(start, end)
+    const matchEmoji = customEmojiEnts.find((e) => e.offset <= start && e.offset + e.length >= end)
+
+    if (matchEmoji && matchEmoji.documentId) {
+      nodes.push(
+        <CustomEmojiView
+          key={`dialog-ce-${start}-${matchEmoji.documentId}`}
+          accountId={accountId || ''}
+          documentId={matchEmoji.documentId}
+          fallback={sub}
+          className="inline-block w-4 h-4 align-[-0.15em] object-contain mx-0.5 select-none shrink-0"
+        />
+      )
+    } else {
+      nodes.push(sub)
+    }
+  }
+
+  return nodes
 }
 
 export const ChatList = React.memo<ChatListProps>(({
@@ -1744,7 +1799,9 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                 {dialog.draft?.text ? (
                   <>
                     <span className="text-red-400 font-semibold mr-1 shrink-0">{t('chat.draft') || 'Draft:'}</span>
-                    <span className="text-gray-300 truncate">{dialog.draft.text}</span>
+                    <span className="text-gray-300 truncate font-persian" dir="auto">
+                      {renderDialogSnippet(dialog.draft.text, dialog.draft.entities, dialog.accountId)}
+                    </span>
                   </>
                 ) : (
                   <>
@@ -1776,9 +1833,13 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                         )}
 
                         <span className="truncate font-persian" dir="auto">
-                          {dialog.lastMessageText === '[File]' && dialog.lastMessageMediaType === 'document'
-                            ? '📄 File'
-                            : (dialog.lastMessageText || '...')}
+                          {renderDialogSnippet(
+                            dialog.lastMessageText === '[File]' && dialog.lastMessageMediaType === 'document'
+                              ? '📄 File'
+                              : dialog.lastMessageText,
+                            dialog.lastMessageEntities,
+                            dialog.accountId
+                          )}
                         </span>
                       </>
                     )}

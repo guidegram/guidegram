@@ -6842,7 +6842,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   )}
                 </div>
                 <div className="text-[10px] text-gray-400 truncate max-w-xl">
-                  {currentPinned.text || `Message #${currentPinned.id} (Click to cycle & jump)`}
+                  {currentPinned.text
+                    ? renderFormattedText(currentPinned.text, currentPinned.entities, chat?.accountId)
+                    : `Message #${currentPinned.id} (Click to cycle & jump)`}
                 </div>
               </div>
             </div>
@@ -7675,7 +7677,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                             </div>
                             <div className="text-[11px] text-gray-300 truncate font-normal">
                               {rText ? (
-                                rText
+                                renderFormattedText(rText, msg.replyTo?.entities || repliedMsg?.entities, chat?.accountId)
                               ) : rIsVoice ? (
                                 <span className="inline-flex items-center gap-1 text-accent-cyan font-medium">
                                   <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan inline-block"></span>
@@ -8606,7 +8608,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                   className="text-xs text-gray-300 truncate font-normal leading-normal"
                 >
                   {replyMessage.text ? (
-                    replyMessage.text
+                    renderFormattedText(replyMessage.text, replyMessage.entities, chat?.accountId)
                   ) : replyMessage.mediaType === 'photo' ? (
                     'Photo'
                   ) : replyMessage.mediaType === 'video' ? (

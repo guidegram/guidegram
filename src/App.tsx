@@ -77,6 +77,7 @@ export function mergeDialogPair(oldItem: DialogItem, newItem: DialogItem): Dialo
     unreadCount: typeof newItem.unreadCount === 'number' ? newItem.unreadCount : oldItem.unreadCount,
     lastMessageDate: Math.max(oldDate, newDate),
     lastMessageText: isOldNewer ? (oldItem.lastMessageText || newItem.lastMessageText) : (newItem.lastMessageText || oldItem.lastMessageText),
+    lastMessageEntities: isOldNewer ? (oldItem.lastMessageEntities || newItem.lastMessageEntities) : (newItem.lastMessageEntities || oldItem.lastMessageEntities),
     lastMessageId: isOldNewer ? (oldItem.lastMessageId || newItem.lastMessageId) : (newItem.lastMessageId || oldItem.lastMessageId),
     lastMessageIsOutgoing: isOldNewer ? oldItem.lastMessageIsOutgoing : newItem.lastMessageIsOutgoing,
     lastMessageRead: isOldNewer ? oldItem.lastMessageRead : newItem.lastMessageRead,
@@ -817,6 +818,7 @@ export const App: React.FC = () => {
               isSavedMessages: isSaved,
               avatarUrl: dialogAvatar,
               lastMessageText: msgText,
+              lastMessageEntities: message?.entities,
               lastMessageDate: msgDate,
               lastMessageId: message?.id,
               lastMessageIsOutgoing: isOutgoing,
@@ -854,6 +856,7 @@ export const App: React.FC = () => {
                     ? d.unreadCount + 1
                     : (isOutgoing || chatId === activeChatId ? 0 : d.unreadCount),
                   lastMessageText: msgText || d.lastMessageText,
+                  lastMessageEntities: message?.entities !== undefined ? message.entities : d.lastMessageEntities,
                   lastMessageDate: msgDate,
                   lastMessageId: message?.id ?? d.lastMessageId,
                   lastMessageIsOutgoing: isOutgoing,

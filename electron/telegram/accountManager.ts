@@ -2387,6 +2387,9 @@ export class AccountManager {
         this.botButtonCache.set(key, data)
       })
 
+      const rawEnts = (msg as any).entities || raw.entities
+      const entities = parseMtprotoEntities(rawEnts)
+
       const item: MessageItem = {
         id: msg.id,
         chatId,
@@ -2395,6 +2398,7 @@ export class AccountManager {
         date,
         isOutgoing,
         replyMarkup,
+        entities,
         isService,
         actionType,
         actionData,
@@ -2784,6 +2788,7 @@ export class AccountManager {
         this.peerNotifySettings.set(`${accountId}_-${cleanPeerId}`, { isMuted })
 
         let lastMessageText = ''
+        let lastMessageEntities: MessageEntityItem[] | undefined = undefined
         let lastMessageDate = 0
         let lastMessageId: number | undefined = undefined
         let lastMessageIsOutgoing = false
@@ -2851,6 +2856,29 @@ export class AccountManager {
                   }
                 }
               }
+            }
+          }
+
+          const rawLast = (d.lastMessage as any).raw || d.lastMessage
+          const rawEnts = (d.lastMessage as any).entities || rawLast?.entities
+          if (rawEnts && Array.isArray(rawEnts)) {
+            const parsedEnts = parseMtprotoEntities(rawEnts)
+            if (parsedEnts && parsedEnts.length > 0) {
+              if (lastMessageMediaType === 'document' && d.lastMessage.text) {
+                lastMessageEntities = parsedEnts.map((e) => ({
+                  ...e,
+                  offset: e.offset + 3,
+                }))
+              } else {
+                lastMessageEntities = parsedEnts
+              }
+            }
+          }
+
+          if (!lastMessageEntities && d.lastMessage.id) {
+            const cachedRaw = this.rawMessagesCache.get(`${accountId}_${peerId}_${d.lastMessage.id}`)
+            if (cachedRaw?.entities) {
+              lastMessageEntities = parseMtprotoEntities(cachedRaw.entities)
             }
           }
 
@@ -2954,6 +2982,7 @@ export class AccountManager {
           isCreator,
           isAdmin,
           lastMessageText,
+          lastMessageEntities,
           lastMessageDate,
           lastMessageId,
           lastMessageIsOutgoing,
@@ -3117,6 +3146,7 @@ export class AccountManager {
                   isContact: isSelf ? false : Boolean(contactName || nd.isContact || prevItem.isContact),
                   lastMessageDate: Math.max(prevDate, newDate),
                   lastMessageText: isPrevNewer ? (prevItem.lastMessageText || nd.lastMessageText) : (nd.lastMessageText || prevItem.lastMessageText),
+                  lastMessageEntities: isPrevNewer ? (prevItem.lastMessageEntities || nd.lastMessageEntities) : (nd.lastMessageEntities || prevItem.lastMessageEntities),
                   lastMessageId: isPrevNewer ? (prevItem.lastMessageId || nd.lastMessageId) : (nd.lastMessageId || prevItem.lastMessageId),
                   lastMessageIsOutgoing: isPrevNewer ? prevItem.lastMessageIsOutgoing : nd.lastMessageIsOutgoing,
                   lastMessageRead: isPrevNewer ? prevItem.lastMessageRead : nd.lastMessageRead,
@@ -3164,6 +3194,12 @@ export class AccountManager {
 
     const cached = this.store.loadDialogsCache(accountId)
     for (const d of cached) {
+      if (!d.lastMessageEntities && d.lastMessageId) {
+        const raw = this.rawMessagesCache.get(`${accountId}_${d.id}_${d.lastMessageId}`)
+        if (raw?.entities) {
+          d.lastMessageEntities = parseMtprotoEntities(raw.entities)
+        }
+      }
       if (d.accessHash) {
         try {
           const hash = Long.fromString(d.accessHash)
@@ -7811,6 +7847,7 @@ export class AccountManager {
         cached[idx] = {
           ...cached[idx],
           lastMessageText: text,
+          lastMessageEntities: options?.entities ? (parseMtprotoEntities(tlEntities) || options.entities) : undefined,
           lastMessageDate: nowMs,
           lastMessageId: msgId,
           lastMessageIsOutgoing: true,
@@ -16678,6 +16715,7 @@ export class AccountManager {
               title: resolvedTitle,
               avatarUrl: cleanAvatar || cached[idx].avatarUrl,
               lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
+              lastMessageEntities: entities,
               lastMessageDate: msgDateMs,
               lastMessageId: item.id,
               lastMessageIsOutgoing: item.isOutgoing,
@@ -16692,6 +16730,7 @@ export class AccountManager {
               avatarUrl: cleanAvatar,
               unreadCount: item.isOutgoing ? 0 : 1,
               lastMessageText: item.text || (item.mediaType ? `[${item.mediaType}]` : ''),
+              lastMessageEntities: entities,
               lastMessageDate: msgDateMs,
               lastMessageId: item.id,
               lastMessageIsOutgoing: item.isOutgoing,

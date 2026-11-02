@@ -95,6 +95,7 @@ export interface MessageReactionItem {
 export interface PinnedMessageItem {
   id: number
   text?: string
+  entities?: MessageEntityItem[]
   senderName?: string
   date?: number
 }
@@ -136,6 +137,7 @@ export interface DialogItem {
   isCreator?: boolean
   isAdmin?: boolean
   lastMessageText?: string
+  lastMessageEntities?: MessageEntityItem[]
   lastMessageDate?: number
   lastMessageId?: number
   lastMessageIsOutgoing?: boolean
@@ -340,6 +342,7 @@ export interface ReplyInfo {
   senderName?: string
   senderId?: string
   text?: string
+  entities?: MessageEntityItem[]
   mediaType?: 'photo' | 'video' | 'document' | 'voice' | 'sticker' | 'webpage' | 'audio'
   mediaThumbnailUrl?: string
   isVoice?: boolean
