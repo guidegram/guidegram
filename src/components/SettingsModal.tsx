@@ -571,6 +571,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setActiveTheme(theme)
     localStorage.setItem('guidegram_theme_mode', theme)
     document.documentElement.setAttribute('data-chat-theme', theme)
+    if (targetAccountId && window.guidegram?.installTheme) {
+      window.guidegram.installTheme(targetAccountId, theme === 'night' || theme === 'tinted').catch(() => {})
+    }
     showToast(`Theme changed to ${theme.charAt(0).toUpperCase() + theme.slice(1)}`)
   }
 
@@ -589,6 +592,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     } else {
       localStorage.setItem('guidegram_chat_wallpaper', wallpaperValue)
       document.documentElement.style.setProperty('--chat-wallpaper', wallpaperValue)
+      if (targetAccountId && window.guidegram?.installWallPaper) {
+        window.guidegram.installWallPaper(targetAccountId, { _: 'inputWallPaperSlug', slug: wallpaperValue }).catch(() => {})
+      }
     }
     showToast(`Wallpaper set to ${name}`)
   }

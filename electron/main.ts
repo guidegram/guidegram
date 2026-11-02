@@ -5300,6 +5300,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 017: Account Domain Suite Part 10
+  ipcMain.handle('telegram:init-takeout-session', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.initTakeoutSession(accountId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] initTakeoutSession error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:install-theme', async (_event, { accountId, dark, theme, format, baseTheme }) => {
+    try {
+      return await accountManager.installTheme(accountId, dark, theme, format, baseTheme)
+    } catch (err: any) {
+      Logger.warn(`[IPC] installTheme error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:install-wallpaper', async (_event, { accountId, wallpaper, settings }) => {
+    try {
+      return await accountManager.installWallPaper(accountId, wallpaper, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] installWallPaper error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:invalidate-signin-codes', async (_event, { accountId, codes }) => {
+    try {
+      return await accountManager.invalidateSignInCodes(accountId, codes)
+    } catch (err: any) {
+      Logger.warn(`[IPC] invalidateSignInCodes error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:register-device', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.registerDevice(accountId, options)
+    } catch (err: any) {
+      Logger.warn(`[IPC] registerDevice error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:register-passkey', async (_event, { accountId, credential }) => {
+    try {
+      return await accountManager.registerPasskey(accountId, credential)
+    } catch (err: any) {
+      Logger.warn(`[IPC] registerPasskey error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:reorder-usernames', async (_event, { accountId, order }) => {
+    try {
+      return await accountManager.reorderUsernames(accountId, order)
+    } catch (err: any) {
+      Logger.warn(`[IPC] reorderUsernames error:`, err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -1914,6 +1914,26 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-web-browser-settings', { accountId, hash }),
   initPasskeyRegistration: (accountId: string, params?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:init-passkey-registration', { accountId, params }),
+  initTakeoutSession: (accountId: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:init-takeout-session', { accountId, options }),
+  installTheme: (
+    accountId: string,
+    dark?: boolean,
+    theme?: any,
+    format?: string,
+    baseTheme?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:install-theme', { accountId, dark, theme, format, baseTheme }),
+  installWallPaper: (accountId: string, wallpaper?: any, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:install-wallpaper', { accountId, wallpaper, settings }),
+  invalidateSignInCodes: (accountId: string, codes: string[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:invalidate-signin-codes', { accountId, codes }),
+  registerDevice: (accountId: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:register-device', { accountId, options }),
+  registerPasskey: (accountId: string, credential?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:register-passkey', { accountId, credential }),
+  reorderUsernames: (accountId: string, order: string[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:reorder-usernames', { accountId, order }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

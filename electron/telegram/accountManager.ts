@@ -16171,6 +16171,66 @@ export class AccountManager {
     return this.securityService.initPasskeyRegistration(holder as any, params)
   }
 
+  // Microphase 017: Account Domain Suite Part 10
+  public async initTakeoutSession(accountId: string, options: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.initTakeoutSession(
+      holder as any,
+      options.contacts,
+      options.messageUsers,
+      options.messageChats,
+      options.messageMegagroups,
+      options.messageChannels,
+      options.files,
+      options.fileMaxSize
+    )
+  }
+
+  public async installTheme(accountId: string, dark?: boolean, theme?: any, format?: string, baseTheme?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.installTheme(holder as any, dark, theme, format, baseTheme)
+  }
+
+  public async installWallPaper(accountId: string, wallpaper?: any, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.installWallPaper(holder as any, wallpaper, settings)
+  }
+
+  public async invalidateSignInCodes(accountId: string, codes: string[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.invalidateSignInCodes(holder as any, codes as any)
+  }
+
+  public async registerDevice(accountId: string, options: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.registerDevice(
+      holder as any,
+      options.noMuted,
+      options.tokenType,
+      options.token,
+      options.appSandbox,
+      options.secret,
+      options.otherUids
+    )
+  }
+
+  public async registerPasskey(accountId: string, credential?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.registerPasskey(holder as any, credential)
+  }
+
+  public async reorderUsernames(accountId: string, order: string[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.reorderUsernames(holder as any, order as any)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {
