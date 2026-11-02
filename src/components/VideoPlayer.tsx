@@ -14,6 +14,7 @@ import {
   PictureInPicture,
   Download,
   AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { formatDuration } from '../utils/textUtils'
 
@@ -40,7 +41,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const [isPlaying, setIsPlaying] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
-  const [totalDuration, setTotalDuration] = useState(duration)
+  const [totalDuration, setTotalDuration] = useState(() =>
+    typeof duration === 'number' && !isNaN(duration) && isFinite(duration) && duration > 0 ? duration : 0
+  )
   const [bufferedPercent, setBufferedPercent] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
@@ -127,17 +130,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!video) return
 
     const handleLoadedMetadata = () => {
-      if (video.duration && !isNaN(video.duration)) {
+      if (video.duration && !isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
         setTotalDuration(video.duration)
       }
       setHasError(false)
     }
 
     const handleTimeUpdate = () => {
-      setCurrentTime(video.currentTime)
-      if (video.buffered.length > 0 && video.duration) {
-        const bufferedEnd = video.buffered.end(video.buffered.length - 1)
-        setBufferedPercent(Math.min(100, (bufferedEnd / video.duration) * 100))
+      if (!isNaN(video.currentTime) && isFinite(video.currentTime)) {
+        setCurrentTime(video.currentTime)
+      }
+      if (video.duration && !isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
+        setTotalDuration(video.duration)
+      }
+      if (video.buffered.length > 0 && video.duration && isFinite(video.duration) && video.duration > 0) {
+        try {
+          const bufferedEnd = video.buffered.end(video.buffered.length - 1)
+          if (!isNaN(bufferedEnd) && isFinite(bufferedEnd)) {
+            setBufferedPercent(Math.min(100, Math.max(0, (bufferedEnd / video.duration) * 100)))
+          }
+        } catch (_) {}
       }
     }
 
@@ -225,10 +237,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleSeekMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
+    if (!rect.width || isNaN(rect.width) || rect.width <= 0) return
     const pos = (e.clientX - rect.left) / rect.width
-    const clampedPos = Math.max(0, Math.min(1, pos))
+    const clampedPos = Math.max(0, Math.min(1, isNaN(pos) ? 0 : pos))
     setHoverPos(e.clientX - rect.left)
-    setHoverTime(clampedPos * (totalDuration || 0))
+    const validTotal = typeof totalDuration === 'number' && isFinite(totalDuration) && totalDuration > 0 ? totalDuration : 0
+    setHoverTime(clampedPos * validTotal)
   }
 
   const handleSeekMouseLeave = () => {
@@ -276,13 +290,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }, 3000)
   }
 
-  const playedPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
+  const safeTotal = typeof totalDuration === 'number' && isFinite(totalDuration) && totalDuration > 0 ? totalDuration : 0
+  const safeCurrent = typeof currentTime === 'number' && isFinite(currentTime) && currentTime >= 0 ? currentTime : 0
+  const playedPercent = safeTotal > 0 ? Math.min(100, Math.max(0, (safeCurrent / safeTotal) * 100)) : 0
+
+  const handleRetryStream = () => {
+    setHasError(false)
+    const video = videoRef.current
+    if (video) {
+      video.load()
+      video.play().catch(() => {})
+      setIsPlaying(true)
+    }
+  }
 
   return (
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="relative rounded-2xl overflow-hidden bg-black max-w-xl border border-white/10 shadow-2xl group select-none flex flex-col justify-center"
+      className="relative rounded-2xl overflow-hidden bg-black max-w-xl border border-white/10 shadow-2xl group select-none flex flex-col justify-center min-h-[220px]"
     >
       {/* Video stream element */}
       <video
@@ -303,7 +329,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           whileTap={{ scale: 0.9 }}
           type="button"
           onClick={onClose}
-          className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/60 hover:bg-black/85 text-white backdrop-blur-md transition-colors z-30 cursor-pointer shadow-md"
+          className="absolute top-2.5 right-2.5 p-2 rounded-full bg-black/70 hover:bg-black/90 text-white backdrop-blur-md transition-colors z-50 cursor-pointer shadow-md border border-white/10"
           title="Close Player (Esc)"
         >
           <X className="w-4 h-4" />
@@ -317,25 +343,47 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Error state overlay */}
+      {/* Error state overlay (Full Surgical Isolation - Never overlaps controls) */}
       {hasError && (
-        <div className="absolute inset-0 bg-dark-950/90 flex flex-col items-center justify-center p-6 text-center z-25 gap-3">
-          <AlertCircle className="w-10 h-10 text-accent-rose" />
-          <div className="text-sm font-semibold text-gray-100">Unable to stream video</div>
-          <p className="text-xs text-gray-400 max-w-xs">The video format may require downloading or external playback.</p>
-          {onDownload && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute inset-0 bg-dark-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center z-40 gap-3"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-accent-rose/15 border border-accent-rose/30 flex items-center justify-center text-accent-rose shadow-lg mb-0.5">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div className="text-sm font-semibold text-gray-100 tracking-wide">Unable to stream video</div>
+          <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+            The video format or streaming response requires direct local playback or saving to your Guidegram folder.
+          </p>
+
+          <div className="flex items-center gap-2.5 mt-2">
+            {onDownload && (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                type="button"
+                onClick={onDownload}
+                className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-glow transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Save to Downloads</span>
+              </motion.button>
+            )}
+
             <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               type="button"
-              onClick={onDownload}
-              className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-glow transition-colors"
+              onClick={handleRetryStream}
+              className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-medium flex items-center gap-1.5 cursor-pointer backdrop-blur-md transition-all border border-white/10"
             >
-              <Download className="w-4 h-4" />
-              <span>Download Video File</span>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Retry</span>
             </motion.button>
-          )}
-        </div>
+          </div>
+        </motion.div>
       )}
 
       {/* Center Play/Pause indicator overlay when paused */}
@@ -360,9 +408,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Custom Bottom Controls Bar */}
+      {/* Custom Bottom Controls Bar - Hidden Completely When hasError is Active */}
       <AnimatePresence>
-        {(showControls || !isPlaying) && (
+        {(showControls || !isPlaying) && !hasError && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -402,9 +450,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <input
             type="range"
             min={0}
-            max={totalDuration || 100}
+            max={safeTotal || 100}
             step={0.1}
-            value={currentTime}
+            value={safeCurrent}
             onChange={handleSeek}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />

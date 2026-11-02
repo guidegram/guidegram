@@ -3671,19 +3671,23 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       const cacheKey = thumb ? `${msg.id}_thumb` : `${msg.id}`
       if (force) {
         failedMediaKeysRef.current.delete(cacheKey)
-        failedMediaKeysRef.current.delete(`${msg.id}`)
+        if (!thumb) failedMediaKeysRef.current.delete(`${msg.id}`)
       }
       if (
         downloadedMedia[cacheKey] ||
         loadingMediaIds[cacheKey] ||
-        loadingMediaIds[msg.id] ||
+        (!thumb && loadingMediaIds[msg.id]) ||
         failedMediaKeysRef.current.has(cacheKey) ||
         !window.guidegram?.downloadMedia
       ) {
-        return downloadedMedia[cacheKey] || downloadedMedia[msg.id] || null
+        return downloadedMedia[cacheKey] || (!thumb ? downloadedMedia[msg.id] : null) || null
       }
 
-      setLoadingMediaIds((prev) => ({ ...prev, [cacheKey]: true, [msg.id]: true }))
+      setLoadingMediaIds((prev) => ({
+        ...prev,
+        [cacheKey]: true,
+        ...(!thumb ? { [msg.id]: true } : {}),
+      }))
       try {
         const targetAccountId = msg.accountId || chat?.accountId
         const targetChatId = msg.chatId || chat?.id
@@ -3701,35 +3705,35 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
             const next = {
               ...prev,
               [cacheKey]: dataUrl,
-              [msg.id]: dataUrl,
+              ...(!thumb ? { [msg.id]: dataUrl } : {}),
             }
             const keys = Object.keys(next)
-            if (keys.length > 60) {
-              const toRemove = keys.slice(0, keys.length - 60)
+            if (keys.length > 80) {
+              const toRemove = keys.slice(0, keys.length - 80)
               for (const k of toRemove) delete (next as Record<string, any>)[k]
             }
             return next
           })
           failedMediaKeysRef.current.delete(cacheKey)
-          failedMediaKeysRef.current.delete(`${msg.id}`)
+          if (!thumb) failedMediaKeysRef.current.delete(`${msg.id}`)
           return dataUrl
         } else {
           failedMediaKeysRef.current.add(cacheKey)
           if (!thumb) {
-            showToast('Failed to load image. Click to retry.')
+            showToast('Failed to load media. Click to retry.')
           }
         }
       } catch (err: any) {
         failedMediaKeysRef.current.add(cacheKey)
         console.warn(`Failed to download media for ${msg.id}:`, err)
         if (!thumb) {
-          showToast(`Failed to load image: ${err?.message || 'Error'}`)
+          showToast(`Failed to load media: ${err?.message || 'Error'}`)
         }
       } finally {
         setLoadingMediaIds((prev) => {
           const next = { ...prev }
           delete next[cacheKey]
-          delete next[msg.id]
+          if (!thumb) delete next[msg.id]
           return next
         })
       }
@@ -3753,7 +3757,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
     }
   }
 
-  // Save media to file via native dialog
+  // Save media directly to Guidegram downloads folder
   const handleSaveMedia = async (msg: MessageItem) => {
     try {
       showToast(t('chat.preparing_save'))
@@ -3764,11 +3768,12 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         msg.mediaFileName
       )
       if (res?.success) {
-        showToast(t('chat.file_saved'))
+        const name = res.fileName || msg.mediaFileName || 'file'
+        showToast(`Saved to downloads: ${name}`)
       } else if (res?.canceled) {
         // user canceled dialog
       } else {
-        showToast(t('chat.file_save_error'))
+        showToast(res?.error || t('chat.file_save_error'))
       }
     } catch (err: any) {
       showToast(t('chat.file_download_error', { error: err?.message || 'unknown' }))
@@ -5834,9 +5839,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               onClick={async (e) => {
                 e.stopPropagation()
                 if (isDownloaded) {
-                  if (window.guidegram?.saveMediaToFile) {
-                    await window.guidegram.saveMediaToFile(msg.accountId, msg.chatId, msg.id, msg.mediaFileName || `${trackTitle}.mp3`)
-                  }
+                  await handleSaveMedia(msg)
                 } else {
                   await requestMediaDownload(msg, false, true)
                 }
@@ -5924,9 +5927,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               onClick={async (e) => {
                 e.stopPropagation()
                 if (isDownloaded) {
-                  if (window.guidegram?.saveMediaToFile) {
-                    await window.guidegram.saveMediaToFile(msg.accountId, msg.chatId, msg.id, msg.mediaFileName)
-                  }
+                  await handleSaveMedia(msg)
                 } else {
                   await requestMediaDownload(msg, false, true)
                 }

@@ -42,7 +42,9 @@ export function formatFileSize(bytes?: number): string {
  * Format seconds into mm:ss or hh:mm:ss
  */
 export function formatDuration(seconds?: number): string {
-  if (!seconds || isNaN(seconds) || seconds <= 0) return '00:00'
+  if (seconds === undefined || seconds === null || isNaN(seconds) || !isFinite(seconds) || seconds <= 0) {
+    return '00:00'
+  }
   const secs = Math.floor(seconds)
   const h = Math.floor(secs / 3600)
   const m = Math.floor((secs % 3600) / 60)

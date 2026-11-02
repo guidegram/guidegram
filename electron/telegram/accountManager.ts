@@ -2755,23 +2755,26 @@ export class AccountManager {
         // Accurate isMuted calculation (Official Telegram MTProto & TDesktop spec):
         const rawNotify = (d.raw as any)?.notifySettings || (d.raw as any)?.notify_settings
         const muteUntil = rawNotify?.muteUntil ?? (rawNotify as any)?.mute_until
-        const silent = Boolean(rawNotify?.silent)
+        const silent = rawNotify?.silent
         const nowSec = Math.floor(Date.now() / 1000)
 
         let isMuted = false
-        if (d.isMuted === true) {
-          isMuted = true
-        } else if (d.isMuted === false) {
-          isMuted = false
-        } else if (silent || (muteUntil !== undefined && Number(muteUntil) > nowSec) || Number(muteUntil) === 2147483647) {
+        if (
+          d.isMuted === true ||
+          silent === true ||
+          (muteUntil !== undefined && muteUntil !== null && Number(muteUntil) > nowSec) ||
+          Number(muteUntil) === 2147483647
+        ) {
           // Explicitly muted by user or timestamp in the future
           isMuted = true
-        } else if (muteUntil !== undefined && Number(muteUntil) === 0) {
+        } else if (muteUntil !== undefined && muteUntil !== null && Number(muteUntil) === 0) {
           // Explicitly unmuted by user (Telegram MTProto sends mute_until: 0 on unmute)
           isMuted = false
         } else if (isBroadcast) {
           // Broadcast channels in Telegram are strictly muted by default unless explicitly unmuted (muteUntil === 0)
           isMuted = true
+        } else {
+          isMuted = false
         }
 
         const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
@@ -4712,9 +4715,8 @@ export class AccountManager {
           if (!rawLoc) return null
           fileLocation = rawLoc
         }
-        if (!fileLocation) return null
-
-        const cachedPath = path.join(this.mediaDir, `media_${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}${ext}`)
+        const finalExt = thumb ? '.jpg' : ext
+        const cachedPath = path.join(this.mediaDir, `media_${accountId}_${chatId}_${messageId}${thumb ? '_thumb' : ''}${finalExt}`)
 
         if (!fs.existsSync(cachedPath) || fs.statSync(cachedPath).size === 0) {
           try {
@@ -4969,39 +4971,82 @@ export class AccountManager {
     accountId: string,
     chatId: string,
     messageId: number,
-    defaultName?: string
-  ): Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }> {
+    defaultName?: string,
+    promptSaveAs = false
+  ): Promise<{ success: boolean; filePath?: string; fileName?: string; canceled?: boolean; error?: string }> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) return { success: false, error: 'Account not connected' }
 
     try {
-      const mediaUrl = await this.downloadMedia(accountId, chatId, messageId, false)
-      if (!mediaUrl) return { success: false, error: 'Failed to download media' }
-
-      let sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId, mediaUrl)
+      let sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId)
+      if (!sourcePath || !fs.existsSync(sourcePath)) {
+        const mediaUrl = await this.downloadMedia(accountId, chatId, messageId, false)
+        if (!mediaUrl) return { success: false, error: 'Failed to download media' }
+        sourcePath = this.getExistingCachedMediaPath(accountId, chatId, messageId, mediaUrl)
+      }
 
       if (!sourcePath || !fs.existsSync(sourcePath)) {
         return { success: false, error: 'Cached file not found' }
       }
 
-      const safeDefaultName = defaultName || path.basename(sourcePath)
-      const downloadsFolder = app.getPath('downloads')
-      const targetDefault = path.join(downloadsFolder, safeDefaultName)
+      // Determine clean filename
+      let safeDefaultName = defaultName ? path.basename(defaultName).trim() : ''
+      const sourceExt = path.extname(sourcePath)
+      if (!safeDefaultName) {
+        safeDefaultName = path.basename(sourcePath)
+      } else if (!path.extname(safeDefaultName) && sourceExt) {
+        safeDefaultName = `${safeDefaultName}${sourceExt}`
+      }
+      // Sanitize Windows invalid filename characters: < > : " / \ | ? *
+      safeDefaultName = safeDefaultName.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
 
-      if (win) {
+      // Resolve Guidegram root folder & downloads directory
+      const guidegramDir = app.isPackaged ? path.dirname(app.getPath('exe')) : process.cwd()
+      const downloadsFolder = path.join(guidegramDir, 'downloads')
+      if (!fs.existsSync(downloadsFolder)) {
+        try {
+          fs.mkdirSync(downloadsFolder, { recursive: true })
+        } catch (e) {
+          Logger.warn('[AccountManager] Failed to create downloads folder in guidegramDir, fallback to app downloads:', e)
+        }
+      }
+
+      const activeDownloadsDir = fs.existsSync(downloadsFolder) ? downloadsFolder : app.getPath('downloads')
+      let targetPath = path.join(activeDownloadsDir, safeDefaultName)
+
+      if (promptSaveAs && win) {
         const res = await dialog.showSaveDialog(win, {
           title: 'Save Media to Computer',
-          defaultPath: targetDefault,
+          defaultPath: targetPath,
         })
         if (res.canceled || !res.filePath) {
           return { success: false, canceled: true }
         }
-        await fs.promises.copyFile(sourcePath, res.filePath)
-        return { success: true, filePath: res.filePath }
+        targetPath = res.filePath
       } else {
-        await fs.promises.copyFile(sourcePath, targetDefault)
-        return { success: true, filePath: targetDefault }
+        // Automatic deduplication and collision management
+        if (fs.existsSync(targetPath)) {
+          try {
+            const existingStat = fs.statSync(targetPath)
+            const sourceStat = fs.statSync(sourcePath)
+            if (existingStat.size === sourceStat.size) {
+              return { success: true, filePath: targetPath, fileName: path.basename(targetPath) }
+            }
+          } catch (_) {}
+
+          const ext = path.extname(safeDefaultName)
+          const base = path.basename(safeDefaultName, ext)
+          let counter = 1
+          while (fs.existsSync(targetPath)) {
+            targetPath = path.join(activeDownloadsDir, `${base} (${counter})${ext}`)
+            counter++
+          }
+        }
       }
+
+      await fs.promises.copyFile(sourcePath, targetPath)
+      Logger.info(`[AccountManager] Media saved automatically to Guidegram downloads: "${targetPath}"`)
+      return { success: true, filePath: targetPath, fileName: path.basename(targetPath) }
     } catch (err: any) {
       Logger.error('[AccountManager] saveMediaToFile error:', err)
       return { success: false, error: err?.message || 'Download failed' }
@@ -7525,11 +7570,14 @@ export class AccountManager {
         settings: {
           _: 'inputPeerNotifySettings',
           muteUntil: mute ? 2147483647 : 0,
+          silent: mute ? true : false,
         },
       })
       const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
       this.peerNotifySettings.set(`${accountId}_${chatId}`, { isMuted: mute })
       this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted: mute })
+      this.peerNotifySettings.set(`${accountId}_-100${cleanPeerId}`, { isMuted: mute })
+      this.peerNotifySettings.set(`${accountId}_-${cleanPeerId}`, { isMuted: mute })
 
       // Persist to disk dialog cache
       try {
@@ -16909,9 +16957,20 @@ export class AccountManager {
           const rawNotify = update.notifySettings || update.notify_settings
           if (peerId && rawNotify) {
             const muteUntil = rawNotify.muteUntil ?? rawNotify.mute_until
-            const silent = Boolean(rawNotify.silent)
-            const isMuted = silent || (typeof muteUntil === 'number' && muteUntil > Date.now() / 1000) || muteUntil === 2147483647
+            const silent = rawNotify.silent
+            const nowSec = Math.floor(Date.now() / 1000)
             const cleanId = peerId.replace(/^-100/, '').replace(/^-/, '')
+            const isBroadcastChannel = peerId.startsWith('-100')
+            let isMuted = false
+            if (silent === true || (typeof muteUntil === 'number' && muteUntil > nowSec) || Number(muteUntil) === 2147483647) {
+              isMuted = true
+            } else if (typeof muteUntil === 'number' && muteUntil === 0) {
+              isMuted = false
+            } else if (isBroadcastChannel) {
+              isMuted = true
+            } else {
+              isMuted = false
+            }
             this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
             this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted })
             this.peerNotifySettings.set(`${accountId}_-100${cleanId}`, { isMuted })

@@ -185,9 +185,10 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
           defaultName
         )
         if (res?.success) {
-          showToast(t('chat.file_saved') || 'Image saved successfully')
+          const name = res.fileName || defaultName
+          showToast(`Saved ${name} to downloads`)
         } else if (!res?.canceled) {
-          showToast(t('chat.file_save_error') || 'Failed to save image')
+          showToast(res?.error || t('chat.file_save_error') || 'Failed to save image')
         }
         return
       }

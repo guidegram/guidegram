@@ -485,9 +485,10 @@ const guidegramAPI = {
     accountId: string,
     chatId: string,
     messageId: number,
-    defaultName?: string
-  ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> =>
-    ipcRenderer.invoke('telegram:save-media-to-file', { accountId, chatId, messageId, defaultName }),
+    defaultName?: string,
+    promptSaveAs?: boolean
+  ): Promise<{ success: boolean; filePath?: string; fileName?: string; canceled?: boolean; error?: string }> =>
+    ipcRenderer.invoke('telegram:save-media-to-file', { accountId, chatId, messageId, defaultName, promptSaveAs }),
   showItemInFolder: (filePath: string): Promise<boolean> =>
     ipcRenderer.invoke('system:show-in-folder', { filePath }),
   showMediaInFolder: (

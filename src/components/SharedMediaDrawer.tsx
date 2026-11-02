@@ -46,7 +46,7 @@ function formatBytes(bytes?: number): string {
 }
 
 function formatDuration(sec?: number): string {
-  if (!sec || sec <= 0) return '0:00'
+  if (sec === undefined || sec === null || isNaN(sec) || !isFinite(sec) || sec <= 0) return '0:00'
   const m = Math.floor(sec / 60)
   const s = Math.floor(sec % 60)
   return `${m}:${s < 10 ? '0' : ''}${s}`

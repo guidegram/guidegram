@@ -849,9 +849,16 @@ app.whenReady().then(async () => {
         return new Response('Media file not found', { status: 404 })
       }
 
-      // Stream media safely via RFC 9110 compliant MediaStreamValidator (Layer 08 / Layer 11)
+      // Stream media safely via native net.fetch (with RFC 9110 MediaStreamValidator fallback)
       const rangeHeader = request.headers.get('Range') || request.headers.get('range')
-      return await MediaStreamValidator.createMediaResponse(decodedPath, rangeHeader)
+      try {
+        const fileUrl = pathToFileURL(decodedPath).toString()
+        return await net.fetch(fileUrl, {
+          headers: rangeHeader ? { Range: rangeHeader } : undefined,
+        })
+      } catch (_) {
+        return await MediaStreamValidator.createMediaResponse(decodedPath, rangeHeader)
+      }
     } catch (err) {
       Logger.error('[Protocol] Failed to serve guidegram-media request:', err)
       return new Response('Media error', { status: 500 })
@@ -859,8 +866,16 @@ app.whenReady().then(async () => {
   })
 
   sessionStore = new SessionStore(portableDataDir)
+  const guidegramRootDir = app.isPackaged ? path.dirname(app.getPath('exe')) : process.cwd()
+  const guidegramDownloadsDir = path.join(guidegramRootDir, 'downloads')
+  if (!fs.existsSync(guidegramDownloadsDir)) {
+    try { fs.mkdirSync(guidegramDownloadsDir, { recursive: true }) } catch {}
+  }
+
   StorageGuardrails.addAllowedRoot(sessionStore.getDataDirectory())
   StorageGuardrails.addAllowedRoot(path.join(sessionStore.getDataDirectory(), 'media_cache'))
+  StorageGuardrails.addAllowedRoot(guidegramRootDir)
+  StorageGuardrails.addAllowedRoot(guidegramDownloadsDir)
 
   // Auto-grant microphone permission for voice message recording
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -2171,12 +2186,12 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('telegram:save-media-to-file', async (_event, { accountId, chatId, messageId, defaultName }) => {
+  ipcMain.handle('telegram:save-media-to-file', async (_event, { accountId, chatId, messageId, defaultName, promptSaveAs }) => {
     try {
-      return await accountManager.saveMediaToFile(mainWindow, accountId, chatId, messageId, defaultName)
+      return await accountManager.saveMediaToFile(mainWindow, accountId, chatId, messageId, defaultName, !!promptSaveAs)
     } catch (err: any) {
       Logger.warn(`[IPC] saveMediaToFile error:`, err)
-      throw err
+      return { success: false, error: err?.message || 'Failed to save media' }
     }
   })
 
