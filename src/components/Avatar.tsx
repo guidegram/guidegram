@@ -71,6 +71,40 @@ export const Avatar: React.FC<AvatarProps> = ({
   const [currentUrl, setCurrentUrl] = useState<string | null>(effectiveUrl)
   const [hasError, setHasError] = useState(false)
 
+  // React state synchronization for prop updates
+  const [prevAvatarUrlProp, setPrevAvatarUrlProp] = useState<string | undefined>(avatarUrl)
+  if (avatarUrl !== prevAvatarUrlProp) {
+    setPrevAvatarUrlProp(avatarUrl)
+    if (cacheKey && (!avatarUrl || avatarUrl === '')) {
+      avatarMemoryCache.delete(cacheKey)
+    }
+  }
+
+  // Real-time avatar update listener from Telegram MTProto
+  useEffect(() => {
+    if (!cacheKey || !accountId || !peerId || !window.guidegram?.on) return
+
+    const unsubAvatarUpdated = window.guidegram.on(
+      'telegram:user-avatar-updated',
+      (payload: { accountId: string; userId: string; avatarUrl?: string }) => {
+        if (payload?.accountId === accountId && payload?.userId === peerId) {
+          if (payload.avatarUrl) {
+            avatarMemoryCache.set(cacheKey, payload.avatarUrl)
+            setCurrentUrl(payload.avatarUrl)
+            setHasError(false)
+          } else {
+            avatarMemoryCache.delete(cacheKey)
+            setCurrentUrl(null)
+          }
+        }
+      }
+    )
+
+    return () => {
+      unsubAvatarUpdated?.()
+    }
+  }, [cacheKey, accountId, peerId])
+
   // Synchronize state when effective URL changes (without setState during render)
   useEffect(() => {
     setCurrentUrl(effectiveUrl)

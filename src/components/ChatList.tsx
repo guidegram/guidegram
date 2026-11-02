@@ -29,6 +29,22 @@ interface ChatListProps {
   onLoadMoreDialogs?: () => void
   onOpenProxyModal?: () => void
   onFoldersUpdated?: (folders: CloudFolderItem[]) => void
+  onToggleMute?: (accountId: string, chatId: string, nextMuted: boolean) => void
+}
+
+/**
+ * Resolves whether a dialog is muted according to Telegram MTProto specifications.
+ * Broadcast channels default to muted unless explicitly unmuted (isMuted === false).
+ */
+export const isDialogMuted = (d?: DialogItem | null): boolean => {
+  if (!d) return false
+  if (typeof d.isMuted === 'boolean') {
+    return d.isMuted
+  }
+  if (d.isChannel) {
+    return true
+  }
+  return false
 }
 
 export const peerMatches = (list?: string[], targetId?: string): boolean => {
@@ -126,6 +142,7 @@ export const ChatList = React.memo<ChatListProps>(({
   onLoadMoreDialogs,
   onOpenProxyModal,
   onFoldersUpdated,
+  onToggleMute,
 }) => {
   const { t, language, isRTL: isAppRtl, formatNumber } = useI18n()
   const isFa = language === 'fa'
@@ -194,12 +211,17 @@ export const ChatList = React.memo<ChatListProps>(({
 
   const handleToggleMute = useCallback(async (dialog: DialogItem) => {
     setContextMenu(null)
-    const nextMuted = !dialog.isMuted
-    dialog.isMuted = nextMuted
+    const currentMuted = isDialogMuted(dialog)
+    const nextMuted = !currentMuted
+    if (onToggleMute) {
+      onToggleMute(dialog.accountId, dialog.id, nextMuted)
+    } else {
+      dialog.isMuted = nextMuted
+    }
     if (window.guidegram?.toggleChatNotifications) {
       await window.guidegram.toggleChatNotifications(dialog.accountId, dialog.id, nextMuted)
     }
-  }, [])
+  }, [onToggleMute])
 
   const handleTogglePin = useCallback(async (dialog: DialogItem) => {
     setContextMenu(null)
@@ -453,7 +475,7 @@ export const ChatList = React.memo<ChatListProps>(({
       const folder = cloudFolders?.find((f) => f.id === folderId)
       if (folder) {
         if (peerMatches(folder.excludePeerIds, dialog.id)) return false
-        if (folder.excludeMuted && dialog.isMuted) return false
+        if (folder.excludeMuted && isDialogMuted(dialog)) return false
         if (folder.excludeRead && dialog.unreadCount === 0) return false
         if (folder.excludeArchived && (dialog.folderId === 1 || (dialog as any).archived)) return false
 
@@ -1454,7 +1476,7 @@ export const ChatList = React.memo<ChatListProps>(({
             onClick={() => handleToggleMute(contextMenu.dialog)}
             className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-200 hover:bg-white/10 transition-colors text-left"
           >
-            {contextMenu.dialog.isMuted ? (
+            {isDialogMuted(contextMenu.dialog) ? (
               <>
                 <Volume2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>{t('chat.unmute') || 'Unmute'}</span>
@@ -1784,7 +1806,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                 {dialog.unreadCount > 0 && !dialog.lastMessageIsOutgoing && (
                   <span
                     title={
-                      dialog.isMuted
+                      isDialogMuted(dialog)
                         ? t('chat.unread_muted', {
                             count: formatNumber(dialog.unreadCount),
                           })
@@ -1795,7 +1817,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors flex items-center justify-center min-w-[18px] text-center ${
                       isSelected
                         ? 'bg-white text-dark-900 font-bold'
-                        : dialog.isMuted
+                        : isDialogMuted(dialog)
                         ? 'bg-white/15 text-gray-300 border border-white/5'
                         : 'bg-primary-600 text-white shadow-sm'
                     }`}
@@ -1829,7 +1851,7 @@ export const DialogListItem = React.memo<DialogListItemProps>(
       prev.dialog.title === next.dialog.title &&
       prev.isPinnedOverride === next.isPinnedOverride &&
       prev.dialog.isPinned === next.dialog.isPinned &&
-      prev.dialog.isMuted === next.dialog.isMuted &&
+      isDialogMuted(prev.dialog) === isDialogMuted(next.dialog) &&
       prev.dialog.customEmojiStatusId === next.dialog.customEmojiStatusId &&
       prev.dialog.isPremium === next.dialog.isPremium &&
       prev.onOpenStory === next.onOpenStory &&

@@ -554,10 +554,12 @@ export const App: React.FC = () => {
         //    unless explicitly unmuted by the user (targetDialog?.isMuted === false).
         const payloadMuted = (payload as any)?.chatInfo?.isMuted
         let isChatMuted = false
-        if (typeof targetDialog?.isMuted === 'boolean') {
-          isChatMuted = targetDialog.isMuted
-        } else if (typeof payloadMuted === 'boolean') {
-          isChatMuted = payloadMuted
+        if (targetDialog?.isMuted === true || payloadMuted === true) {
+          isChatMuted = true
+        } else if (targetDialog?.isMuted === false) {
+          isChatMuted = false
+        } else if (payloadMuted === false) {
+          isChatMuted = false
         } else if (isChannel) {
           isChatMuted = true
         }
@@ -842,6 +844,7 @@ export const App: React.FC = () => {
                 const shouldIncrement = !isSaved && chatId !== activeChatId && !message?.isOutgoing
                 return {
                   ...d,
+                  isMuted: (payload as any)?.chatInfo?.isMuted !== undefined ? (payload as any).chatInfo.isMuted : d.isMuted,
                   isSavedMessages: d.isSavedMessages || isSaved,
                   isContact: Boolean(d.isContact || (payload as any)?.chatInfo?.isContact || (payload as any)?.message?.sender?.isContact),
                   avatarUrl: d.avatarUrl || (payload as any)?.chatInfo?.avatarUrl || (!message?.isOutgoing ? (payload as any)?.message?.senderAvatarUrl : undefined) || d.avatarUrl,
@@ -2523,6 +2526,16 @@ export const App: React.FC = () => {
     setActiveNotifications((prev) => prev.filter((n) => !(n.chatId === chatId && n.accountId === accountId)))
   }
 
+  const handleToggleMuteChat = useCallback((accountId: string, chatId: string, nextMuted: boolean) => {
+    setDialogsByAccount((prev) => {
+      const list = prev[accountId] || []
+      return {
+        ...prev,
+        [accountId]: list.map((d) => (d.id === chatId || isPeerMatch(d.id, chatId) ? { ...d, isMuted: nextMuted } : d)),
+      }
+    })
+  }, [])
+
   const handleDismissNotification = (id: string) => {
     setActiveNotifications((prev) => prev.filter((n) => n.id !== id))
   }
@@ -2986,6 +2999,7 @@ export const App: React.FC = () => {
                   onLoadMoreDialogs={handleLoadMoreDialogs}
                   onOpenProxyModal={() => setIsProxyModalOpen(true)}
                   onFoldersUpdated={(updated) => setCloudFolders(updated)}
+                  onToggleMute={handleToggleMuteChat}
                 />
               </div>
             ) : (
@@ -3104,6 +3118,7 @@ export const App: React.FC = () => {
                   onLoadMoreDialogs={handleLoadMoreDialogs}
                   onOpenProxyModal={() => setIsProxyModalOpen(true)}
                   onFoldersUpdated={(updated) => setCloudFolders(updated)}
+                  onToggleMute={handleToggleMuteChat}
                 />
               </aside>
 
