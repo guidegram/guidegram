@@ -5472,6 +5472,60 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:save-theme', async (_event, { accountId, theme, unsave }) => {
+    try {
+      return await accountManager.saveTheme(accountId, theme, unsave)
+    } catch (err: any) {
+      Logger.warn(`[IPC] saveTheme error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:save-wallpaper', async (_event, { accountId, wallpaper, unsave, settings }) => {
+    try {
+      return await accountManager.saveWallPaper(accountId, wallpaper, unsave, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] saveWallPaper error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:send-change-phone-code', async (_event, { accountId, phoneNumber, settings }) => {
+    try {
+      return await accountManager.sendChangePhoneCode(accountId, phoneNumber, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendChangePhoneCode error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:send-confirm-phone-code', async (_event, { accountId, hash, settings }) => {
+    try {
+      return await accountManager.sendConfirmPhoneCode(accountId, hash, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendConfirmPhoneCode error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:send-verify-email-code', async (_event, { accountId, purpose, email }) => {
+    try {
+      return await accountManager.sendVerifyEmailCode(accountId, purpose, email)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendVerifyEmailCode error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:send-verify-phone-code', async (_event, { accountId, phoneNumber, settings }) => {
+    try {
+      return await accountManager.sendVerifyPhoneCode(accountId, phoneNumber, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] sendVerifyPhoneCode error:`, err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

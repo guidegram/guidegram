@@ -16310,6 +16310,42 @@ export class AccountManager {
     return this.securityService.saveMusic(holder as any, unsave, id, afterId)
   }
 
+  public async saveTheme(accountId: string, theme?: any, unsave?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.saveTheme(holder as any, theme, unsave)
+  }
+
+  public async saveWallPaper(accountId: string, wallpaper?: any, unsave?: boolean, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.saveWallPaper(holder as any, wallpaper, unsave, settings)
+  }
+
+  public async sendChangePhoneCode(accountId: string, phoneNumber?: string, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.sendChangePhoneCode(holder as any, phoneNumber, settings)
+  }
+
+  public async sendConfirmPhoneCode(accountId: string, hash?: string, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.sendConfirmPhoneCode(holder as any, hash, settings)
+  }
+
+  public async sendVerifyEmailCode(accountId: string, purpose?: any, email?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.sendVerifyEmailCode(holder as any, purpose, email)
+  }
+
+  public async sendVerifyPhoneCode(accountId: string, phoneNumber?: string, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.sendVerifyPhoneCode(holder as any, phoneNumber, settings)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

@@ -598,6 +598,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleSendVerifyEmailCode = async (email: string) => {
+    if (!targetAccountId || !window.guidegram?.sendVerifyEmailCode) return null
+    try {
+      const res = await window.guidegram.sendVerifyEmailCode(targetAccountId, { _: 'emailVerifyPurposeLoginSetup' }, email)
+      showToast(isPersian ? 'کد تأیید ایمیل ارسال شد.' : 'Verification code sent to email.')
+      return res
+    } catch {
+      showToast(isPersian ? 'خطا در ارسال کد به ایمیل' : 'Failed to send verification code.')
+      return null
+    }
+  }
+
+  const handleSendChangePhoneCode = async (phoneNumber: string) => {
+    if (!targetAccountId || !window.guidegram?.sendChangePhoneCode) return null
+    try {
+      const res = await window.guidegram.sendChangePhoneCode(targetAccountId, phoneNumber)
+      showToast(isPersian ? 'کد تغییر شماره ارسال شد.' : 'Change phone code sent.')
+      return res
+    } catch {
+      showToast(isPersian ? 'خطا در ارسال کد تغییر شماره' : 'Failed to send change phone code.')
+      return null
+    }
+  }
+
   const handleDeclineResetTwoFactor = async () => {
     if (!targetAccountId) return
     try {
@@ -642,6 +666,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (targetAccountId && window.guidegram?.installTheme) {
       window.guidegram.installTheme(targetAccountId, theme === 'night' || theme === 'tinted').catch(() => {})
     }
+    if (targetAccountId && window.guidegram?.saveTheme) {
+      window.guidegram.saveTheme(targetAccountId, { _: 'inputThemeSlug', slug: theme }, false).catch(() => {})
+    }
     showToast(`Theme changed to ${theme.charAt(0).toUpperCase() + theme.slice(1)}`)
   }
 
@@ -665,6 +692,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       document.documentElement.style.setProperty('--chat-wallpaper', wallpaperValue)
       if (targetAccountId && window.guidegram?.installWallPaper) {
         window.guidegram.installWallPaper(targetAccountId, { _: 'inputWallPaperSlug', slug: wallpaperValue }).catch(() => {})
+      }
+      if (targetAccountId && window.guidegram?.saveWallPaper) {
+        window.guidegram.saveWallPaper(targetAccountId, { _: 'inputWallPaperSlug', slug: wallpaperValue }).catch(() => {})
       }
     }
     showToast(`Wallpaper set to ${name}`)

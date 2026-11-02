@@ -1965,6 +1965,18 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:save-auto-save-settings', { accountId, users, chats, broadcasts, peerId, settings }),
   saveMusic: (accountId: string, unsave?: boolean, id?: any, afterId?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:save-music', { accountId, unsave, id, afterId }),
+  saveTheme: (accountId: string, theme?: any, unsave?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-theme', { accountId, theme, unsave }),
+  saveWallPaper: (accountId: string, wallpaper?: any, unsave?: boolean, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:save-wallpaper', { accountId, wallpaper, unsave, settings }),
+  sendChangePhoneCode: (accountId: string, phoneNumber?: string, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:send-change-phone-code', { accountId, phoneNumber, settings }),
+  sendConfirmPhoneCode: (accountId: string, hash?: string, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:send-confirm-phone-code', { accountId, hash, settings }),
+  sendVerifyEmailCode: (accountId: string, purpose?: any, email?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:send-verify-email-code', { accountId, purpose, email }),
+  sendVerifyPhoneCode: (accountId: string, phoneNumber?: string, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:send-verify-phone-code', { accountId, phoneNumber, settings }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
