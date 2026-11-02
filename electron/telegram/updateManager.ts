@@ -24,9 +24,30 @@ export class UpdateManager {
       const releaseData = await this.fetchLatestRelease(proxy)
       if (!releaseData) return null
 
+      // Strictly guard against draft or prerelease payloads
+      if (releaseData.draft || releaseData.prerelease) {
+        Logger.info(`[UpdateManager] Ignoring draft or prerelease: ${releaseData.tag_name}`)
+        return null
+      }
+
       const tagName: string = releaseData.tag_name || ''
+      // Guard against prerelease tags (e.g., v2.6.0-rc.1, 2.6.0-beta)
+      if (tagName.includes('-')) {
+        Logger.info(`[UpdateManager] Ignoring prerelease tag: ${tagName}`)
+        return null
+      }
+
       const latestVer = tagName.replace(/^v/, '').trim()
-      const isNewer = this.compareSemver(latestVer, this.currentVersion) > 0
+      let isNewer = this.compareSemver(latestVer, this.currentVersion) > 0
+
+      // If current client is on a prerelease/RC build and an official stable release of the same base version is published,
+      // the official stable release is considered newer and must trigger the update.
+      if (!isNewer && this.currentVersion.includes('-')) {
+        const curBase = this.currentVersion.split('-')[0].trim()
+        if (this.compareSemver(latestVer, curBase) >= 0) {
+          isNewer = true
+        }
+      }
 
       // Find Windows zip asset (required for seamless background portable update)
       let downloadUrl: string | undefined
@@ -138,7 +159,7 @@ export class UpdateManager {
   }
 
   /**
-   * Fetch latest release JSON from GitHub API (supports proxy fallback & semver sorting)
+   * Fetch latest stable release JSON from GitHub API (targets /releases/latest, excludes prereleases/drafts)
    */
   private async fetchLatestRelease(proxy?: ProxyConfig): Promise<any> {
     return new Promise((resolve) => {
@@ -161,19 +182,27 @@ export class UpdateManager {
             if (res.statusCode === 200) {
               try {
                 const parsed = JSON.parse(body)
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  // Filter non-draft releases and sort descending by semver
-                  const nonDraft = parsed.filter((r: any) => !r.draft)
-                  nonDraft.sort((a: any, b: any) => {
-                    const verA = (a.tag_name || '').replace(/^v/, '').trim()
-                    const verB = (b.tag_name || '').replace(/^v/, '').trim()
-                    return this.compareSemver(verB, verA)
-                  })
-                  resolve(nonDraft[0] || parsed[0])
-                  return
-                } else if (parsed && typeof parsed === 'object') {
-                  resolve(parsed)
-                  return
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                  // Direct /releases/latest response: GitHub natively returns the latest non-prerelease, non-draft release
+                  const tag = (parsed.tag_name || '').trim()
+                  if (!parsed.draft && !parsed.prerelease && !tag.includes('-')) {
+                    resolve(parsed)
+                    return
+                  }
+                } else if (Array.isArray(parsed) && parsed.length > 0) {
+                  // Fallback /releases endpoint: strictly filter out drafts, prereleases, and hyphenated pre-release tags
+                  const stableReleases = parsed.filter(
+                    (r: any) => !r.draft && !r.prerelease && !(r.tag_name || '').includes('-')
+                  )
+                  if (stableReleases.length > 0) {
+                    stableReleases.sort((a: any, b: any) => {
+                      const verA = (a.tag_name || '').replace(/^v/, '').trim()
+                      const verB = (b.tag_name || '').replace(/^v/, '').trim()
+                      return this.compareSemver(verB, verA)
+                    })
+                    resolve(stableReleases[0])
+                    return
+                  }
                 }
               } catch (_) {
                 // Ignore parse error and proceed to fallback
@@ -181,7 +210,8 @@ export class UpdateManager {
             }
 
             if (!isFallback) {
-              makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases/latest`, true)
+              // If /releases/latest returns non-200 or no valid stable release, fallback to querying /releases list
+              makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases`, true)
             } else {
               resolve(null)
             }
@@ -190,7 +220,7 @@ export class UpdateManager {
 
         req.on('error', () => {
           if (!isFallback) {
-            makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases/latest`, true)
+            makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases`, true)
           } else {
             resolve(null)
           }
@@ -199,7 +229,7 @@ export class UpdateManager {
         req.on('timeout', () => {
           req.destroy()
           if (!isFallback) {
-            makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases/latest`, true)
+            makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases`, true)
           } else {
             resolve(null)
           }
@@ -208,7 +238,8 @@ export class UpdateManager {
         req.end()
       }
 
-      makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases`)
+      // Query GitHub's official latest stable release endpoint first
+      makeRequest(`/repos/${this.repoOwner}/${this.repoName}/releases/latest`)
     })
   }
 
