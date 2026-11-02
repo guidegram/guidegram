@@ -253,6 +253,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [sensitiveContentEnabled, setSensitiveContentEnabled] = useState<boolean>(false)
   const [archiveAndMuteNonContacts, setArchiveAndMuteNonContacts] = useState<boolean>(false)
   const [isLoadingContentSettings, setIsLoadingContentSettings] = useState<boolean>(false)
+  const [passkeysList, setPasskeysList] = useState<any[]>([])
+  const [isLoadingPasskeys, setIsLoadingPasskeys] = useState<boolean>(false)
+  const [notifyExceptionsCount, setNotifyExceptionsCount] = useState<number | null>(null)
+  const [isLoadingNotifyExceptions, setIsLoadingNotifyExceptions] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -935,6 +939,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             setArchiveAndMuteNonContacts(gps.archiveAndMuteNewNoncontactPeers)
           }
         } catch {}
+      }
+      if (window.guidegram?.getPasskeys) {
+        setIsLoadingPasskeys(true)
+        try {
+          const pk = await window.guidegram.getPasskeys(targetAccountId)
+          if (Array.isArray(pk?.passkeys)) {
+            setPasskeysList(pk.passkeys)
+          }
+        } catch {}
+        finally {
+          setIsLoadingPasskeys(false)
+        }
+      }
+      if (window.guidegram?.getNotifyExceptions) {
+        setIsLoadingNotifyExceptions(true)
+        try {
+          const exc = await window.guidegram.getNotifyExceptions(targetAccountId)
+          if (Array.isArray(exc?.updates)) {
+            setNotifyExceptionsCount(exc.updates.length)
+          } else if (Array.isArray(exc?.chats)) {
+            setNotifyExceptionsCount(exc.chats.length)
+          } else {
+            setNotifyExceptionsCount(0)
+          }
+        } catch {}
+        finally {
+          setIsLoadingNotifyExceptions(false)
+        }
       }
     } catch (err) {
       console.warn('[SettingsModal] Failed to load privacy settings:', err)
@@ -2773,6 +2805,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     checked={archiveAndMuteNonContacts}
                     onChange={(checked) => setArchiveAndMuteNonContacts(checked)}
                   />
+                </div>
+
+                {/* Section: Passkeys & Notification Exceptions (MTProto Layer 232 Microphase 014) */}
+                <div className="space-y-3 pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-gray-300 flex items-center gap-2">
+                      <Key className="w-3.5 h-3.5 text-accent-cyan" />
+                      {isPersian ? 'کلیدهای عبور ورود بدون رمز (Passkeys)' : 'Passkeys (Passwordless Login)'}
+                    </div>
+                    {isLoadingPasskeys && (
+                      <RefreshCw className="w-3 h-3 text-gray-400 animate-spin" />
+                    )}
+                  </div>
+                  {isLoadingPasskeys ? (
+                    <div className="p-3 rounded-xl bg-dark-900 border border-white/5 animate-pulse text-xs text-gray-400">
+                      {isPersian ? 'در حال بارگذاری کلیدهای عبور...' : 'Loading registered passkeys...'}
+                    </div>
+                  ) : passkeysList.length === 0 ? (
+                    <div className="p-3 rounded-xl bg-dark-900/60 border border-white/5 flex items-center justify-between text-xs text-gray-400">
+                      <span>{isPersian ? 'هیچ کلید عبور فعالی روی این حساب ثبت نشده است.' : 'No passkeys registered for this account.'}</span>
+                      <span className="text-[10px] text-gray-500 font-mono">Layer 232</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {passkeysList.map((pk: any, idx: number) => (
+                        <div key={idx} className="p-2.5 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <Key className="w-3 h-3 text-accent-cyan" />
+                            <span className="font-medium text-gray-200">{pk.name || `Passkey #${idx + 1}`}</span>
+                          </div>
+                          <span className="text-[10px] text-gray-500 font-mono">{pk.date ? new Date(pk.date * 1000).toLocaleDateString() : 'Active'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-xs font-medium text-gray-300 flex items-center gap-2">
+                      <Bell className="w-3.5 h-3.5 text-amber-400" />
+                      {isPersian ? 'استثنائات اعلان‌ها (Notification Exceptions)' : 'Notification Exceptions'}
+                    </div>
+                    <div className="text-xs font-semibold px-2 py-0.5 rounded-full bg-dark-900 border border-white/5 text-gray-300">
+                      {isLoadingNotifyExceptions ? (
+                        <RefreshCw className="w-2.5 h-2.5 text-gray-400 animate-spin inline" />
+                      ) : notifyExceptionsCount !== null ? (
+                        `${notifyExceptionsCount} ${isPersian ? 'چت' : 'chats'}`
+                      ) : (
+                        '—'
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

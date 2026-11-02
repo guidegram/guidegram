@@ -5144,6 +5144,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 014: Account Domain Suite Part 7
+  ipcMain.handle('telegram:get-notify-settings', async (_event, { accountId, scope }) => {
+    try {
+      return await accountManager.getNotifySettings(accountId, scope)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getNotifySettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-notify-exceptions', async (_event, { accountId, compareSound, compareStories }) => {
+    try {
+      return await accountManager.getNotifyExceptions(accountId, compareSound, compareStories)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getNotifyExceptions error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-paid-messages-revenue', async (_event, { accountId, userId, parentPeerId }) => {
+    try {
+      return await accountManager.getPaidMessagesRevenue(accountId, userId, parentPeerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getPaidMessagesRevenue error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-passkeys', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getPasskeys(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getPasskeys error:`, err)
+      return { passkeys: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-password-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getPasswordSettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getPasswordSettings error:`, err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

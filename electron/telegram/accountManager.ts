@@ -15949,6 +15949,104 @@ export class AccountManager {
     }
   }
 
+  public async getNotifySettings(accountId: string, scope: 'users' | 'chats' | 'broadcasts' | string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      let peer: any
+      if (scope === 'users') {
+        peer = { _: 'inputNotifyUsers' }
+      } else if (scope === 'chats') {
+        peer = { _: 'inputNotifyChats' }
+      } else if (scope === 'broadcasts') {
+        peer = { _: 'inputNotifyBroadcasts' }
+      } else {
+        const id = parseInt(scope, 10)
+        peer = {
+          _: 'inputNotifyPeer',
+          peer: isNaN(id)
+            ? { _: 'inputPeerEmpty' }
+            : id > 0
+              ? { _: 'inputPeerUser', userId: id, accessHash: 0n }
+              : { _: 'inputPeerChat', chatId: -id },
+        }
+      }
+      return await holder.client.call({ _: 'account.getNotifySettings', peer })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getNotifySettings error:', err)
+      return null
+    }
+  }
+
+  public async getNotifyExceptions(
+    accountId: string,
+    compareSound?: boolean,
+    compareStories?: boolean
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({
+        _: 'account.getNotifyExceptions',
+        compareSound: Boolean(compareSound),
+        compareStories: Boolean(compareStories),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getNotifyExceptions error:', err)
+      return null
+    }
+  }
+
+  public async getPaidMessagesRevenue(
+    accountId: string,
+    userId: string | number,
+    parentPeerId?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      const uid = parseInt(String(userId), 10) || 0
+      return await holder.client.call({
+        _: 'account.getPaidMessagesRevenue',
+        userId: { _: 'inputUser', userId: uid, accessHash: 0n },
+        ...(parentPeerId ? { parentPeer: { _: 'inputPeerChat', chatId: Math.abs(parseInt(parentPeerId, 10) || 0) } } : {}),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getPaidMessagesRevenue error:', err)
+      return null
+    }
+  }
+
+  public async getPasskeys(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { passkeys: [] }
+
+    try {
+      return await holder.client.call({ _: 'account.getPasskeys' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getPasskeys error:', err)
+      return { passkeys: [] }
+    }
+  }
+
+  public async getPasswordSettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({
+        _: 'account.getPasswordSettings',
+        password: { _: 'inputCheckPasswordEmpty' },
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getPasswordSettings error:', err)
+      return null
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

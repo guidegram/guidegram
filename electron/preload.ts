@@ -1869,6 +1869,27 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-default-profile-photo-emojis', { accountId, hash }),
   getDefaultGroupPhotoEmojis: (accountId: string, hash?: number | string): Promise<any> =>
     ipcRenderer.invoke('telegram:get-default-group-photo-emojis', { accountId, hash }),
+  getNotifySettings: (
+    accountId: string,
+    scope: 'users' | 'chats' | 'broadcasts' | string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-notify-settings', { accountId, scope }),
+  getNotifyExceptions: (
+    accountId: string,
+    compareSound?: boolean,
+    compareStories?: boolean
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-notify-exceptions', { accountId, compareSound, compareStories }),
+  getPaidMessagesRevenue: (
+    accountId: string,
+    userId: string | number,
+    parentPeerId?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-paid-messages-revenue', { accountId, userId, parentPeerId }),
+  getPasskeys: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-passkeys', { accountId }),
+  getPasswordSettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-password-settings', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
