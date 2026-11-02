@@ -5526,6 +5526,61 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:set-authorization-ttl', async (_event, { accountId, authorizationTtlDays }) => {
+    try {
+      return await accountManager.setAuthorizationTTL(accountId, authorizationTtlDays)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setAuthorizationTTL error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:set-contact-sign-up-notification', async (_event, { accountId, silent }) => {
+    try {
+      return await accountManager.setContactSignUpNotification(accountId, silent)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setContactSignUpNotification error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:set-content-settings', async (_event, { accountId, sensitiveEnabled }) => {
+    try {
+      return await accountManager.setContentSettings(accountId, sensitiveEnabled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setContentSettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:set-global-privacy-settings', async (_event, { accountId, settings }) => {
+    try {
+      return await accountManager.setGlobalPrivacySettings(accountId, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setGlobalPrivacySettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:set-main-profile-tab', async (_event, { accountId, tab }) => {
+    try {
+      return await accountManager.setMainProfileTab(accountId, tab)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setMainProfileTab error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:set-privacy', async (_event, { accountId, key, rules }) => {
+    try {
+      return await accountManager.setPrivacy(accountId, key, rules)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setPrivacy error:`, err)
+      return false
+    }
+  })
+
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

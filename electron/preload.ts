@@ -1977,6 +1977,19 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:send-verify-email-code', { accountId, purpose, email }),
   sendVerifyPhoneCode: (accountId: string, phoneNumber?: string, settings?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:send-verify-phone-code', { accountId, phoneNumber, settings }),
+  setAuthorizationTTL: (accountId: string, authorizationTtlDays?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-authorization-ttl', { accountId, authorizationTtlDays }),
+  setContactSignUpNotification: (accountId: string, silent?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-contact-sign-up-notification', { accountId, silent }),
+  setContentSettings: (accountId: string, sensitiveEnabled?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-content-settings', { accountId, sensitiveEnabled }),
+  setGlobalPrivacySettings: (accountId: string, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-global-privacy-settings', { accountId, settings }),
+  setMainProfileTab: (accountId: string, tab?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-main-profile-tab', { accountId, tab }),
+  setPrivacy: (accountId: string, key?: any, rules?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-privacy', { accountId, key, rules }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

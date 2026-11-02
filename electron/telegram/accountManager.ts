@@ -16346,6 +16346,42 @@ export class AccountManager {
     return this.securityService.sendVerifyPhoneCode(holder as any, phoneNumber, settings)
   }
 
+  public async setAuthorizationTTL(accountId: string, authorizationTtlDays?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.setAuthorizationTTL(holder as any, authorizationTtlDays)
+  }
+
+  public async setContactSignUpNotification(accountId: string, silent?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.setContactSignUpNotification(holder as any, silent)
+  }
+
+  public async setContentSettings(accountId: string, sensitiveEnabled?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.setContentSettings(holder as any, sensitiveEnabled)
+  }
+
+  public async setGlobalPrivacySettings(accountId: string, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.setGlobalPrivacySettings(holder as any, settings)
+  }
+
+  public async setMainProfileTab(accountId: string, tab?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.setMainProfileTab(holder as any, tab)
+  }
+
+  public async setPrivacy(accountId: string, key?: any, rules?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.setPrivacy(holder as any, key, rules)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

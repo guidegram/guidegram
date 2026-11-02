@@ -637,6 +637,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleSetAuthorizationTTL = async (days: number) => {
+    if (!targetAccountId || !window.guidegram?.setAuthorizationTTL) return
+    try {
+      await window.guidegram.setAuthorizationTTL(targetAccountId, days)
+      showToast(isPersian ? `مهلت نشست‌ها به ${days} روز تغییر یافت.` : `Session TTL updated to ${days} days.`)
+    } catch {
+      showToast(isPersian ? 'خطا در تنظیم مهلت نشست‌ها' : 'Failed to update session TTL.')
+    }
+  }
+
+  const handleSetAccountTTL = async (days: number) => {
+    if (!targetAccountId || !window.guidegram?.setAccountTTL) return
+    try {
+      await window.guidegram.setAccountTTL(targetAccountId, days)
+      showToast(isPersian ? `حساب کاربری پس از ${days} روز عدم فعالیت حذف خواهد شد.` : `Account self-destruction set to ${days} days.`)
+    } catch {
+      showToast(isPersian ? 'خطا در تنظیم مهلت حذف حساب' : 'Failed to update account TTL.')
+    }
+  }
+
+  const handleSetContactSignUpNotification = async (silent: boolean) => {
+    if (!targetAccountId || !window.guidegram?.setContactSignUpNotification) return
+    try {
+      await window.guidegram.setContactSignUpNotification(targetAccountId, silent)
+      showToast(isPersian ? (silent ? 'اعلان ثبت‌نام مخاطبین خاموش شد.' : 'اعلان ثبت‌نام مخاطبین فعال شد.') : (silent ? 'Contact sign-up notifications muted.' : 'Contact sign-up notifications unmuted.'))
+    } catch {
+      showToast(isPersian ? 'خطا در تغییر وضعیت اعلان مخاطبین' : 'Failed to update contact sign-up notifications.')
+    }
+  }
+
+  const handleSetContentSettings = async (sensitiveEnabled: boolean) => {
+    if (!targetAccountId || !window.guidegram?.setContentSettings) return
+    try {
+      await window.guidegram.setContentSettings(targetAccountId, sensitiveEnabled)
+      showToast(isPersian ? (sensitiveEnabled ? 'نمایش محتوای حساس فعال شد.' : 'نمایش محتوای حساس فیلتر شد.') : (sensitiveEnabled ? 'Sensitive content filtering disabled.' : 'Sensitive content filtering enabled.'))
+    } catch {
+      showToast(isPersian ? 'خطا در ذخیره تنظیمات محتوای حساس' : 'Failed to update content sensitivity.')
+    }
+  }
+
+  const handleSetGlobalPrivacySettings = async (settings: any) => {
+    if (!targetAccountId || !window.guidegram?.setGlobalPrivacySettings) return
+    try {
+      await window.guidegram.setGlobalPrivacySettings(targetAccountId, settings)
+      showToast(isPersian ? 'تنظیمات سراسری حریم خصوصی به‌روز شد.' : 'Global privacy settings updated.')
+    } catch {
+      showToast(isPersian ? 'خطا در به‌روزرسانی تنظیمات سراسری حریم خصوصی' : 'Failed to update global privacy settings.')
+    }
+  }
+
+  const handleSetMainProfileTab = async (tab: any) => {
+    if (!targetAccountId || !window.guidegram?.setMainProfileTab) return
+    try {
+      await window.guidegram.setMainProfileTab(targetAccountId, tab)
+      showToast(isPersian ? 'تب اصلی پروفایل تغییر یافت.' : 'Main profile tab updated.')
+    } catch {
+      showToast(isPersian ? 'خطا در تغییر تب اصلی پروفایل' : 'Failed to update main profile tab.')
+    }
+  }
+
   const openPrivacyRule = (
     key: keyof PrivacySecuritySettings,
     title: string,
@@ -656,8 +716,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     })
     setSelectedPrivacyRule((prev) => (prev ? { ...prev, currentValue: val } : null))
     localStorage.setItem(`guidegram_privacy_${key}`, val)
+
+    if (targetAccountId && window.guidegram?.setPrivacy) {
+      let mtprotoKey: any = { _: 'inputPrivacyKeyStatusTimestamp' }
+      if (key === 'phoneNumberPrivacy') mtprotoKey = { _: 'inputPrivacyKeyPhoneNumber' }
+      else if (key === 'forwardedMessagesPrivacy') mtprotoKey = { _: 'inputPrivacyKeyForwards' }
+      else if (key === 'callsPrivacy') mtprotoKey = { _: 'inputPrivacyKeyPhoneCall' }
+      else if (key === 'invitesPrivacy') mtprotoKey = { _: 'inputPrivacyKeyChatInvite' }
+      else if (key === 'profilePhotosPrivacy') mtprotoKey = { _: 'inputPrivacyKeyProfilePhoto' }
+      else if (key === 'voiceMessagesPrivacy') mtprotoKey = { _: 'inputPrivacyKeyVoiceMessages' }
+      else if (key === 'lastSeenPrivacy') mtprotoKey = { _: 'inputPrivacyKeyStatusTimestamp' }
+
+
+      let mtprotoRules: any[] = [{ _: 'inputPrivacyValueAllowAll' }]
+      if (val === 'nobody' || val === 'never') {
+        mtprotoRules = [{ _: 'inputPrivacyValueDisallowAll' }]
+      } else if (val === 'contacts') {
+        mtprotoRules = [{ _: 'inputPrivacyValueAllowContacts' }]
+      }
+
+      window.guidegram.setPrivacy(targetAccountId, mtprotoKey, mtprotoRules).catch(() => {})
+    }
+
     showToast(`Updated ${selectedPrivacyRule.title} to "${val}"`)
   }
+
 
   const handleSelectTheme = (theme: 'classic' | 'day' | 'tinted' | 'night') => {
     setActiveTheme(theme)
