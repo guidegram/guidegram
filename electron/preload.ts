@@ -1857,6 +1857,18 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-channel-restricted-status-emojis', { accountId, hash }),
   getConnectedBots: (accountId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:get-connected-bots', { accountId }),
+  getContentSettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-content-settings', { accountId }),
+  getGlobalPrivacySettings: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-global-privacy-settings', { accountId }),
+  getMultiWallPapers: (accountId: string, wallpapers?: any[]): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-multi-wallpapers', { accountId, wallpapers }),
+  getDefaultBackgroundEmojis: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-default-background-emojis', { accountId, hash }),
+  getDefaultProfilePhotoEmojis: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-default-profile-photo-emojis', { accountId, hash }),
+  getDefaultGroupPhotoEmojis: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-default-group-photo-emojis', { accountId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

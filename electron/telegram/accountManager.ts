@@ -15864,6 +15864,91 @@ export class AccountManager {
     }
   }
 
+  public async getContentSettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { sensitiveEnabled: false, sensitiveCanChange: false }
+
+    try {
+      return await holder.client.call({ _: 'account.getContentSettings' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getContentSettings error:', err)
+      return { sensitiveEnabled: false, sensitiveCanChange: false }
+    }
+  }
+
+  public async getGlobalPrivacySettings(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+
+    try {
+      return await holder.client.call({ _: 'account.getGlobalPrivacySettings' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getGlobalPrivacySettings error:', err)
+      return null
+    }
+  }
+
+  public async getMultiWallPapers(accountId: string, wallpapers: any[] = []): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.getMultiWallPapers',
+        wallpapers: wallpapers as any,
+      } as any)
+      return Array.isArray(res) ? res : []
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getMultiWallPapers error:', err)
+      return []
+    }
+  }
+
+  public async getDefaultBackgroundEmojis(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { documentIds: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getDefaultBackgroundEmojis',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getDefaultBackgroundEmojis error:', err)
+      return { documentIds: [] }
+    }
+  }
+
+  public async getDefaultProfilePhotoEmojis(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { documentIds: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getDefaultProfilePhotoEmojis',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getDefaultProfilePhotoEmojis error:', err)
+      return { documentIds: [] }
+    }
+  }
+
+  public async getDefaultGroupPhotoEmojis(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { documentIds: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getDefaultGroupPhotoEmojis',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getDefaultGroupPhotoEmojis error:', err)
+      return { documentIds: [] }
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

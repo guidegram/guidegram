@@ -250,6 +250,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isLoadingSignUpNotif, setIsLoadingSignUpNotif] = useState<boolean>(false)
   const [connectedBotsList, setConnectedBotsList] = useState<any[]>([])
   const [isLoadingConnectedBots, setIsLoadingConnectedBots] = useState<boolean>(false)
+  const [sensitiveContentEnabled, setSensitiveContentEnabled] = useState<boolean>(false)
+  const [archiveAndMuteNonContacts, setArchiveAndMuteNonContacts] = useState<boolean>(false)
+  const [isLoadingContentSettings, setIsLoadingContentSettings] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -912,6 +915,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         finally {
           setIsLoadingConnectedBots(false)
         }
+      }
+      if (window.guidegram?.getContentSettings) {
+        setIsLoadingContentSettings(true)
+        try {
+          const cs = await window.guidegram.getContentSettings(targetAccountId)
+          if (typeof cs?.sensitiveEnabled === 'boolean') {
+            setSensitiveContentEnabled(cs.sensitiveEnabled)
+          }
+        } catch {}
+        finally {
+          setIsLoadingContentSettings(false)
+        }
+      }
+      if (window.guidegram?.getGlobalPrivacySettings) {
+        try {
+          const gps = await window.guidegram.getGlobalPrivacySettings(targetAccountId)
+          if (typeof gps?.archiveAndMuteNewNoncontactPeers === 'boolean') {
+            setArchiveAndMuteNonContacts(gps.archiveAndMuteNewNoncontactPeers)
+          }
+        } catch {}
       }
     } catch (err) {
       console.warn('[SettingsModal] Failed to load privacy settings:', err)
@@ -2728,6 +2751,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     icon={<Laptop className="w-3.5 h-3.5 text-emerald-400" />}
                     checked={antiFingerprinting}
                     onChange={setAntiFingerprinting}
+                  />
+                </div>
+
+                {/* Section: Sensitive Content & Global Privacy (MTProto Layer 232) */}
+                <div className="space-y-2.5 pt-3 border-t border-white/5">
+                  <div className="text-xs font-bold text-gray-300">
+                    {isPersian ? 'محتوای حساس و حریم خصوصی سراسری' : 'Sensitive Content & Global Rules'}
+                  </div>
+                  <ToggleItem
+                    title={isPersian ? 'نمایش محتوای حساس' : 'Disable filtering'}
+                    desc={isPersian ? 'نمایش رسانه‌های حساس در کانال‌های عمومی روی تمام دستگاه‌ها' : 'Display sensitive media in public channels on all your devices'}
+                    icon={<Eye className="w-3.5 h-3.5 text-accent-rose" />}
+                    checked={sensitiveContentEnabled}
+                    onChange={(checked) => setSensitiveContentEnabled(checked)}
+                  />
+                  <ToggleItem
+                    title={isPersian ? 'بایگانی و بی‌صدا کردن افراد ناشناس' : 'Archive and Mute Non-Contacts'}
+                    desc={isPersian ? 'انتقال خودکار چت‌های جدید از افراد ناشناس به آرشیو بدون صدا' : 'Automatically archive and mute new chats from unknown users'}
+                    icon={<FolderLock className="w-3.5 h-3.5 text-amber-400" />}
+                    checked={archiveAndMuteNonContacts}
+                    onChange={(checked) => setArchiveAndMuteNonContacts(checked)}
                   />
                 </div>
               </div>

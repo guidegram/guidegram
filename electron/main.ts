@@ -5090,6 +5090,60 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-content-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getContentSettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getContentSettings error:`, err)
+      return { sensitiveEnabled: false, sensitiveCanChange: false }
+    }
+  })
+
+  ipcMain.handle('telegram:get-global-privacy-settings', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getGlobalPrivacySettings(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getGlobalPrivacySettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-multi-wallpapers', async (_event, { accountId, wallpapers }) => {
+    try {
+      return await accountManager.getMultiWallPapers(accountId, wallpapers)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getMultiWallPapers error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-default-background-emojis', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getDefaultBackgroundEmojis(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getDefaultBackgroundEmojis error:`, err)
+      return { documentIds: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-default-profile-photo-emojis', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getDefaultProfilePhotoEmojis(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getDefaultProfilePhotoEmojis error:`, err)
+      return { documentIds: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-default-group-photo-emojis', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getDefaultGroupPhotoEmojis(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getDefaultGroupPhotoEmojis error:`, err)
+      return { documentIds: [] }
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
