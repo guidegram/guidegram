@@ -12595,6 +12595,38 @@ export class AccountManager {
     }
   }
 
+  public async editBusinessChatLink(
+    accountId: string,
+    slug: string,
+    link: { message: string; title?: string }
+  ): Promise<BusinessChatLink> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
+
+    try {
+      const res: any = await holder.client.call({
+        _: 'account.editBusinessChatLink',
+        slug,
+        link: {
+          _: 'inputBusinessChatLink',
+          message: link.message,
+          title: link.title || undefined,
+        },
+      })
+
+      return {
+        link: res.link,
+        message: res.message || '',
+        title: res.title,
+        views: res.views || 0,
+        slug,
+      }
+    } catch (err) {
+      Logger.error('[AccountManager] editBusinessChatLink error:', err)
+      throw err
+    }
+  }
+
   private intToHexColor(colorInt?: number): string | undefined {
     if (colorInt === undefined || colorInt === null) return undefined
     const hex = (colorInt >>> 0).toString(16).padStart(6, '0')
@@ -15600,6 +15632,77 @@ export class AccountManager {
     } catch (err) {
       Logger.warn('[AccountManager] account.createTheme error:', err)
       throw err
+    }
+  }
+
+  public async deletePasskey(accountId: string, id: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({
+        _: 'account.deletePasskey',
+        id,
+      })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.deletePasskey error:', err)
+      return false
+    }
+  }
+
+  public async deleteWebBrowserSettingsExceptions(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      await holder.client.call({
+        _: 'account.deleteWebBrowserSettingsExceptions',
+      })
+      return true
+    } catch (err) {
+      Logger.warn('[AccountManager] account.deleteWebBrowserSettingsExceptions error:', err)
+      return false
+    }
+  }
+
+  public async disablePeerConnectedBot(accountId: string, peerId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      // Resolve peer or construct InputPeer
+      const peerInt = parseInt(peerId, 10)
+      const inputPeer: any = isNaN(peerInt)
+        ? { _: 'inputPeerEmpty' }
+        : peerInt > 0
+          ? { _: 'inputPeerUser', userId: peerInt, accessHash: 0n }
+          : { _: 'inputPeerChat', chatId: -peerInt }
+
+      const res = await holder.client.call({
+        _: 'account.disablePeerConnectedBot',
+        peer: inputPeer,
+      })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.disablePeerConnectedBot error:', err)
+      return false
+    }
+  }
+
+  public async finishTakeoutSession(accountId: string, success: boolean = true): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({
+        _: 'account.finishTakeoutSession',
+        success: success ? true : undefined,
+      } as any)
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.finishTakeoutSession error:', err)
+      return false
     }
   }
 

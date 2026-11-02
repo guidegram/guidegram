@@ -79,6 +79,7 @@ import {
   Search,
   Wifi,
   Signal,
+  Edit3,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -703,6 +704,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const success = await window.guidegram.deleteBusinessChatLink(accounts[0].id, slug)
     if (success) {
       setBusinessLinks((prev) => prev.filter((l) => l.slug !== slug))
+    }
+  }
+
+  const handleEditBusinessLink = async (slug: string) => {
+    if (!accounts[0]?.id || !window.guidegram?.editBusinessChatLink) return
+    const current = businessLinks.find((l) => l.slug === slug)
+    const newMsg = prompt('Edit Business Link Message:', current?.message || '')
+    if (newMsg === null) return
+    const newTitle = prompt('Edit Business Link Title:', current?.title || '') || undefined
+    try {
+      const updated = await window.guidegram.editBusinessChatLink(accounts[0].id, slug, {
+        message: newMsg.trim(),
+        title: newTitle,
+      })
+      setBusinessLinks((prev) => prev.map((l) => (l.slug === slug ? updated : l)))
+      setBusinessToast(t('business.saved_success'))
+      setTimeout(() => setBusinessToast(null), 3000)
+    } catch (err) {
+      console.warn('[Settings] Failed to edit business link:', err)
     }
   }
 
@@ -1549,14 +1569,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <span>{copiedLink === (bl.slug || bl.link) ? t('business.copied') : t('business.copy_link')}</span>
                             </button>
                             {bl.slug && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteBusinessLink(bl.slug!)}
-                                className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
-                                title={t('business.delete_link')}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditBusinessLink(bl.slug!)}
+                                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-primary-400 transition-colors cursor-pointer"
+                                  title="Edit Link Message & Title"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteBusinessLink(bl.slug!)}
+                                  className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer"
+                                  title={t('business.delete_link')}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -4720,7 +4750,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="p-3 rounded-xl bg-dark-900 border border-white/5 space-y-2 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-gray-300 font-semibold">Windows Hello / Passkey</span>
-                <span className="text-emerald-400 font-medium">Ready</span>
+                <span className={privacyData?.passkeys ? 'text-emerald-400 font-medium' : 'text-gray-400 font-medium'}>
+                  {privacyData?.passkeys ? 'Linked & Active' : 'Ready'}
+                </span>
               </div>
               <p className="text-[11px] text-gray-500">
                 Cryptographic key pair linked to this device for instant zero-SMS login.
@@ -4728,17 +4760,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="pt-2 flex justify-end gap-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => {
-                  setPrivacyData((prev) => (prev ? { ...prev, passkeys: true } : null))
-                  showToast('Passkey registered for this device')
-                  setActiveSubModal(null)
-                }}
-                className="w-full py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
-              >
-                Register Passkey for this PC
-              </button>
+              {privacyData?.passkeys ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const targetId = activeAccountId || accounts[0]?.id
+                    if (targetId && window.guidegram?.deletePasskey) {
+                      await window.guidegram.deletePasskey(targetId, 'default_device_passkey')
+                    }
+                    setPrivacyData((prev) => (prev ? { ...prev, passkeys: false } : null))
+                    showToast('Passkey removed from this Telegram account')
+                    setActiveSubModal(null)
+                  }}
+                  className="w-full py-2 rounded-xl text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/20 text-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove Passkey from Account</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrivacyData((prev) => (prev ? { ...prev, passkeys: true } : null))
+                    showToast('Passkey registered for this device')
+                    setActiveSubModal(null)
+                  }}
+                  className="w-full py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
+                >
+                  Register Passkey for this PC
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -4876,17 +4927,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="pt-2 flex justify-between items-center border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => {
-                  setPrivacyData((prev) => (prev ? { ...prev, connectedWebsitesCount: 0 } : null))
-                  showToast('Disconnected all website sessions')
-                  setActiveSubModal(null)
-                }}
-                className="text-xs text-rose-400 hover:underline font-semibold cursor-pointer"
-              >
-                Disconnect All Websites
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrivacyData((prev) => (prev ? { ...prev, connectedWebsitesCount: 0 } : null))
+                    showToast('Disconnected all website sessions')
+                    setActiveSubModal(null)
+                  }}
+                  className="text-xs text-rose-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Disconnect All Websites
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const targetId = activeAccountId || accounts[0]?.id
+                    if (targetId && window.guidegram?.deleteWebBrowserSettingsExceptions) {
+                      await window.guidegram.deleteWebBrowserSettingsExceptions(targetId)
+                    }
+                    showToast('In-App browser security exceptions reset')
+                  }}
+                  className="text-xs text-amber-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Reset Exceptions
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setActiveSubModal(null)}

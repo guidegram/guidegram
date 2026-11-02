@@ -828,6 +828,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:create-business-chat-link', { accountId, link }),
   deleteBusinessChatLink: (accountId: string, slug: string): Promise<boolean> =>
     ipcRenderer.invoke('telegram:delete-business-chat-link', { accountId, slug }),
+  editBusinessChatLink: (
+    accountId: string,
+    slug: string,
+    link: { message: string; title?: string }
+  ): Promise<BusinessChatLink> =>
+    ipcRenderer.invoke('telegram:edit-business-chat-link', { accountId, slug, link }),
   getSavedStarGifts: (accountId: string, userId?: string): Promise<StarGiftItem[]> =>
     ipcRenderer.invoke('telegram:get-star-gifts', { accountId, userId }),
   getStarGifts: (accountId: string): Promise<StarGiftItem[]> =>
@@ -1816,6 +1822,14 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:delete-autosave-exceptions', { accountId }),
   createTheme: (accountId: string, params: { slug: string; title: string; settings?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:create-theme', { accountId, ...params }),
+  deletePasskey: (accountId: string, id: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-passkey', { accountId, id }),
+  deleteWebBrowserSettingsExceptions: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-web-browser-settings-exceptions', { accountId }),
+  disablePeerConnectedBot: (accountId: string, peerId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:disable-peer-connected-bot', { accountId, peerId }),
+  finishTakeoutSession: (accountId: string, success: boolean = true): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:finish-takeout-session', { accountId, success }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

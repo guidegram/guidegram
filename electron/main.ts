@@ -2984,6 +2984,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:edit-business-chat-link', async (_event, { accountId, slug, link }) => {
+    try {
+      return await accountManager.editBusinessChatLink(accountId, slug, link)
+    } catch (err: any) {
+      Logger.warn(`[IPC] editBusinessChatLink error:`, err)
+      throw err
+    }
+  })
+
   ipcMain.handle('telegram:get-star-gifts', async (_event, { accountId, userId }) => {
     try {
       return await accountManager.getSavedStarGifts(accountId, userId)
@@ -4940,6 +4949,42 @@ function setupIpcHandlers() {
     } catch (err: any) {
       Logger.warn(`[IPC] createTheme error:`, err)
       throw err
+    }
+  })
+
+  ipcMain.handle('telegram:delete-passkey', async (_event, { accountId, id }) => {
+    try {
+      return await accountManager.deletePasskey(accountId, id)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deletePasskey error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:delete-web-browser-settings-exceptions', async (_event, { accountId }) => {
+    try {
+      return await accountManager.deleteWebBrowserSettingsExceptions(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteWebBrowserSettingsExceptions error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:disable-peer-connected-bot', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.disablePeerConnectedBot(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] disablePeerConnectedBot error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:finish-takeout-session', async (_event, { accountId, success }) => {
+    try {
+      return await accountManager.finishTakeoutSession(accountId, success)
+    } catch (err: any) {
+      Logger.warn(`[IPC] finishTakeoutSession error:`, err)
+      return false
     }
   })
 
