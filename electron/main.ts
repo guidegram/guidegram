@@ -5045,6 +5045,51 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:get-contact-signup-notification', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getContactSignUpNotification(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getContactSignUpNotification error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:get-chat-themes', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getChatThemes(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getChatThemes error:`, err)
+      return { themes: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-channel-default-emoji-statuses', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getChannelDefaultEmojiStatuses(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getChannelDefaultEmojiStatuses error:`, err)
+      return { statuses: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-channel-restricted-status-emojis', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getChannelRestrictedStatusEmojis(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getChannelRestrictedStatusEmojis error:`, err)
+      return { documentIds: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-connected-bots', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getConnectedBots(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getConnectedBots error:`, err)
+      return { connectedBots: [] }
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

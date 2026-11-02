@@ -1847,6 +1847,16 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-authorization-form', { accountId, botId, scope, publicKey }),
   getBotBusinessConnection: (accountId: string, connectionId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:get-bot-business-connection', { accountId, connectionId }),
+  getContactSignUpNotification: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:get-contact-signup-notification', { accountId }),
+  getChatThemes: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-chat-themes', { accountId, hash }),
+  getChannelDefaultEmojiStatuses: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-channel-default-emoji-statuses', { accountId, hash }),
+  getChannelRestrictedStatusEmojis: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-channel-restricted-status-emojis', { accountId, hash }),
+  getConnectedBots: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-connected-bots', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

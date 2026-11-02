@@ -24,6 +24,7 @@ import {
   Trash2,
   Send,
   Code,
+  Bot,
   Zap,
   CheckCheck,
   Minimize2,
@@ -245,6 +246,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isUpdatingTTL, setIsUpdatingTTL] = useState<boolean>(false)
   const [ttlToast, setTtlToast] = useState<string | null>(null)
   const [autoSaveData, setAutoSaveData] = useState<any>(null)
+  const [contactSignUpNotif, setContactSignUpNotif] = useState<boolean>(true)
+  const [isLoadingSignUpNotif, setIsLoadingSignUpNotif] = useState<boolean>(false)
+  const [connectedBotsList, setConnectedBotsList] = useState<any[]>([])
+  const [isLoadingConnectedBots, setIsLoadingConnectedBots] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -885,6 +890,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           const autoSave = await window.guidegram.getAutoSaveSettings(targetAccountId)
           if (autoSave) setAutoSaveData(autoSave)
         } catch {}
+      }
+      if (window.guidegram?.getContactSignUpNotification) {
+        setIsLoadingSignUpNotif(true)
+        try {
+          const silent = await window.guidegram.getContactSignUpNotification(targetAccountId)
+          setContactSignUpNotif(!silent)
+        } catch {}
+        finally {
+          setIsLoadingSignUpNotif(false)
+        }
+      }
+      if (window.guidegram?.getConnectedBots) {
+        setIsLoadingConnectedBots(true)
+        try {
+          const bots = await window.guidegram.getConnectedBots(targetAccountId)
+          if (Array.isArray(bots?.connectedBots)) {
+            setConnectedBotsList(bots.connectedBots)
+          }
+        } catch {}
+        finally {
+          setIsLoadingConnectedBots(false)
+        }
       }
     } catch (err) {
       console.warn('[SettingsModal] Failed to load privacy settings:', err)
@@ -2165,6 +2192,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Events & Contact Joined Notifications (MTProto Layer 232) */}
+                <div className="pt-2 p-3.5 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold text-gray-200">
+                        {isPersian ? 'رویدادها و اعلان‌ها' : 'Events & Contact Notifications'}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        {isPersian ? 'اعلان عضویت مخاطبین جدید در تلگرام' : 'Notify when a contact joins Telegram'}
+                      </div>
+                    </div>
+                  </div>
+                  <ToggleItem
+                    title={isPersian ? 'عضویت مخاطب در تلگرام' : 'Contact joined Telegram'}
+                    desc={isPersian ? 'نمایش اعلان هنگامی که یکی از مخاطبین شما به تلگرام می‌پیوندد' : 'Receive push notifications when one of your phone contacts signs up'}
+                    icon={<UserPlus className="w-3.5 h-3.5 text-accent-cyan" />}
+                    checked={contactSignUpNotif}
+                    onChange={(checked) => setContactSignUpNotif(checked)}
+                  />
                 </div>
               </div>
             )}
@@ -5013,32 +5061,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="space-y-2 text-xs">
-              {[
-                { domain: 'fragment.com', desc: 'Telegram Fragment Marketplace', ip: '172.67.142.12', active: 'Today at 11:20' },
-                { domain: 'web.telegram.org', desc: 'Telegram Web Application', ip: '104.21.55.91', active: 'Yesterday at 16:40' },
-              ].map((site, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-gray-200">{site.domain}</div>
-                    <div className="text-[11px] text-gray-400">{site.desc}</div>
-                    <div className="text-[10px] text-gray-500 font-mono mt-0.5">IP: {site.ip} • {site.active}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPrivacyData((prev) =>
-                        prev
-                          ? { ...prev, connectedWebsitesCount: Math.max(0, (prev.connectedWebsitesCount || 1) - 1) }
-                          : null
-                      )
-                      showToast(`Disconnected ${site.domain}`)
-                    }}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              {isLoadingConnectedBots ? (
+                <div className="space-y-2 py-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="p-3 rounded-xl bg-dark-900 border border-white/5 animate-pulse flex items-center justify-between">
+                      <div className="space-y-1.5">
+                        <div className="w-28 h-3.5 bg-white/10 rounded" />
+                        <div className="w-40 h-2.5 bg-white/5 rounded" />
+                      </div>
+                      <div className="w-6 h-6 bg-white/5 rounded-lg" />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : connectedBotsList.length > 0 ? (
+                connectedBotsList.map((bot: any, idx: number) => {
+                  const botId = bot?.botId ? String(bot.botId) : `bot-${idx}`
+                  return (
+                    <div key={botId} className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-200 flex items-center gap-1.5">
+                          <Bot className="w-3.5 h-3.5 text-accent-cyan" />
+                          <span>Bot #{botId}</span>
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {bot?.rights?.canReply ? 'Can reply to messages' : 'Connected bot session'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const targetId = activeAccountId || accounts[0]?.id
+                          if (targetId && window.guidegram?.disablePeerConnectedBot) {
+                            await window.guidegram.disablePeerConnectedBot(targetId, botId)
+                          }
+                          setConnectedBotsList((prev) => prev.filter((b: any) => String(b.botId) !== botId))
+                          showToast(`Disconnected bot #${botId}`)
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        title="Disconnect bot"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="py-6 text-center space-y-2">
+                  <Globe className="w-8 h-8 text-gray-600 mx-auto opacity-40" />
+                  <div className="text-xs text-gray-400">
+                    {isPersian ? 'هیچ وب‌سایت یا ربات متصلی یافت نشد' : 'No connected websites or business bots active'}
+                  </div>
+                  <div className="text-[11px] text-gray-500">
+                    {isPersian ? 'سشن‌های متصل به تلگرام شما در این بخش نمایش داده می‌شوند' : 'External sessions authenticated via Telegram Login will appear here'}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-2 flex justify-between items-center border-t border-white/5">

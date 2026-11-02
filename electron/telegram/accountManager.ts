@@ -15794,6 +15794,76 @@ export class AccountManager {
     }
   }
 
+  public async getContactSignUpNotification(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+
+    try {
+      const res = await holder.client.call({ _: 'account.getContactSignUpNotification' })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getContactSignUpNotification error:', err)
+      return false
+    }
+  }
+
+  public async getChatThemes(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { themes: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getChatThemes',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getChatThemes error:', err)
+      return { themes: [] }
+    }
+  }
+
+  public async getChannelDefaultEmojiStatuses(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { statuses: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getChannelDefaultEmojiStatuses',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getChannelDefaultEmojiStatuses error:', err)
+      return { statuses: [] }
+    }
+  }
+
+  public async getChannelRestrictedStatusEmojis(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { documentIds: [] }
+
+    try {
+      return await holder.client.call({
+        _: 'account.getChannelRestrictedStatusEmojis',
+        hash: toLong(hash),
+      } as any)
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getChannelRestrictedStatusEmojis error:', err)
+      return { documentIds: [] }
+    }
+  }
+
+  public async getConnectedBots(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { connectedBots: [] }
+
+    try {
+      return await holder.client.call({ _: 'account.getConnectedBots' })
+    } catch (err) {
+      Logger.warn('[AccountManager] account.getConnectedBots error:', err)
+      return { connectedBots: [] }
+    }
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {
