@@ -16128,6 +16128,49 @@ export class AccountManager {
     }
   }
 
+  // Microphase 016: Account Domain Suite Part 9
+  public async getTmpPassword(accountId: string, passwordSRP?: any, period = 3600): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.getTmpPassword(holder as any, passwordSRP, period)
+  }
+
+  public async getUniqueGiftChatThemes(accountId: string, offset = '', limit = 50, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { themes: [] }
+    return this.securityService.getUniqueGiftChatThemes(holder as any, offset, limit, toLong(hash) as any)
+  }
+
+  public async getWallPaper(accountId: string, wallpaper: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.getWallPaper(holder as any, wallpaper)
+  }
+
+  public async getWallPapers(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { wallpapers: [] }
+    return this.securityService.getWallPapers(holder as any, toLong(hash) as any)
+  }
+
+  public async getWebAuthorizations(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return { authorizations: [] }
+    return this.securityService.getWebAuthorizations(holder as any)
+  }
+
+  public async getWebBrowserSettings(accountId: string, hash: number | string = 0): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.getWebBrowserSettings(holder as any, toLong(hash) as any)
+  }
+
+  public async initPasskeyRegistration(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.initPasskeyRegistration(holder as any, params)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

@@ -5236,6 +5236,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 016: Account Domain Suite Part 9
+  ipcMain.handle('telegram:get-tmp-password', async (_event, { accountId, passwordSRP, period }) => {
+    try {
+      return await accountManager.getTmpPassword(accountId, passwordSRP, period)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getTmpPassword error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-unique-gift-chat-themes', async (_event, { accountId, offset, limit, hash }) => {
+    try {
+      return await accountManager.getUniqueGiftChatThemes(accountId, offset, limit, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getUniqueGiftChatThemes error:`, err)
+      return { themes: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-wallpaper', async (_event, { accountId, wallpaper }) => {
+    try {
+      return await accountManager.getWallPaper(accountId, wallpaper)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWallPaper error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-wallpapers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getWallPapers(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWallPapers error:`, err)
+      return { wallpapers: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-web-authorizations', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getWebAuthorizations(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWebAuthorizations error:`, err)
+      return { authorizations: [] }
+    }
+  })
+
+  ipcMain.handle('telegram:get-web-browser-settings', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getWebBrowserSettings(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getWebBrowserSettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:init-passkey-registration', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.initPasskeyRegistration(accountId, params)
+    } catch (err: any) {
+      Logger.warn(`[IPC] initPasskeyRegistration error:`, err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

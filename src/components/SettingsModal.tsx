@@ -262,6 +262,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [savedMusicCount, setSavedMusicCount] = useState<number | null>(null)
   const [cloudThemesList, setCloudThemesList] = useState<any[]>([])
   const [isLoadingCloudThemes, setIsLoadingCloudThemes] = useState<boolean>(false)
+  const [webAuthorizationsList, setWebAuthorizationsList] = useState<any[]>([])
+  const [isLoadingWebAuths, setIsLoadingWebAuths] = useState<boolean>(false)
+  const [isRegisteringPasskey, setIsRegisteringPasskey] = useState<boolean>(false)
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -1020,6 +1023,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     }
   }, [isOpen, activeTab, targetAccountId])
+
+  useEffect(() => {
+    if (activeSubModal === 'connectedWebsites') {
+      const targetId = activeAccountId || accounts[0]?.id
+      if (targetId && window.guidegram?.getWebAuthorizations) {
+        setIsLoadingWebAuths(true)
+        window.guidegram.getWebAuthorizations(targetId)
+          .then((res: any) => {
+            if (Array.isArray(res?.authorizations)) {
+              setWebAuthorizationsList(res.authorizations)
+            }
+          })
+          .catch(() => {})
+          .finally(() => setIsLoadingWebAuths(false))
+      }
+    }
+  }, [activeSubModal, activeAccountId, accounts])
 
   const loadCacheStats = async () => {
     try {
@@ -5152,14 +5172,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => {
-                    setPrivacyData((prev) => (prev ? { ...prev, passkeys: true } : null))
-                    showToast('Passkey registered for this device')
-                    setActiveSubModal(null)
+                  disabled={isRegisteringPasskey}
+                  onClick={async () => {
+                    const targetId = activeAccountId || accounts[0]?.id
+                    if (targetId && window.guidegram?.initPasskeyRegistration) {
+                      setIsRegisteringPasskey(true)
+                      try {
+                        const challenge = await window.guidegram.initPasskeyRegistration(targetId)
+                        if (challenge) {
+                          setPrivacyData((prev) => (prev ? { ...prev, passkeys: true } : null))
+                          showToast('Passkey registration challenge initialized (Layer 232)')
+                        } else {
+                          showToast('Passkey registration initiated')
+                        }
+                      } catch (err: any) {
+                        showToast('Failed to initialize passkey registration')
+                      } finally {
+                        setIsRegisteringPasskey(false)
+                        setActiveSubModal(null)
+                      }
+                    } else {
+                      setPrivacyData((prev) => (prev ? { ...prev, passkeys: true } : null))
+                      showToast('Passkey registered for this device')
+                      setActiveSubModal(null)
+                    }
                   }}
-                  className="w-full py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer"
+                  className="w-full py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white shadow-glow transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Register Passkey for this PC
+                  {isRegisteringPasskey ? 'Initializing Passkey...' : 'Register Passkey for this PC'}
                 </button>
               )}
             </div>
@@ -5269,7 +5309,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Websites and bots where you logged in with your Telegram account via Telegram Login Widget.
             </div>
 
-            <div className="space-y-2 text-xs">
+            <div className="space-y-3 text-xs max-h-72 overflow-y-auto">
+              {/* Connected Web Authorizations (MTProto Layer 232) */}
+              {isLoadingWebAuths ? (
+                <div className="p-3 rounded-xl bg-dark-900 border border-white/5 animate-pulse text-xs text-gray-400">
+                  {isPersian ? 'در حال دریافت نشست‌های وب‌سایت‌ها...' : 'Loading web authorizations...'}
+                </div>
+              ) : webAuthorizationsList.length > 0 ? (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                    {isPersian ? 'نشست‌های وب‌سایت‌های متصل (Web Authorizations)' : 'Website Login Sessions'}
+                  </div>
+                  {webAuthorizationsList.map((auth: any, idx: number) => (
+                    <div key={auth.hash || idx} className="p-2.5 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-semibold text-gray-200 flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-accent-cyan" />
+                          <span>{auth.domain || 'External Website'}</span>
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-mono">
+                          {auth.browser || 'Browser'} • {auth.platform || 'Web'} • {auth.ip || ''}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        {auth.dateCreated ? new Date(auth.dateCreated * 1000).toLocaleDateString() : 'Active'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Connected Business Bots */}
               {isLoadingConnectedBots ? (
                 <div className="space-y-2 py-3">
                   {[1, 2].map((i) => (
@@ -5283,38 +5353,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ))}
                 </div>
               ) : connectedBotsList.length > 0 ? (
-                connectedBotsList.map((bot: any, idx: number) => {
-                  const botId = bot?.botId ? String(bot.botId) : `bot-${idx}`
-                  return (
-                    <div key={botId} className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-gray-200 flex items-center gap-1.5">
-                          <Bot className="w-3.5 h-3.5 text-accent-cyan" />
-                          <span>Bot #{botId}</span>
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                    {isPersian ? 'ربات‌های بیزینس متصل' : 'Connected Business Bots'}
+                  </div>
+                  {connectedBotsList.map((bot: any, idx: number) => {
+                    const botId = bot?.botId ? String(bot.botId) : `bot-${idx}`
+                    return (
+                      <div key={botId} className="p-3 rounded-xl bg-dark-900 border border-white/5 flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-gray-200 flex items-center gap-1.5">
+                            <Bot className="w-3.5 h-3.5 text-accent-cyan" />
+                            <span>Bot #{botId}</span>
+                          </div>
+                          <div className="text-[11px] text-gray-400">
+                            {bot?.rights?.canReply ? 'Can reply to messages' : 'Connected bot session'}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-gray-400">
-                          {bot?.rights?.canReply ? 'Can reply to messages' : 'Connected bot session'}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const targetId = activeAccountId || accounts[0]?.id
+                            if (targetId && window.guidegram?.disablePeerConnectedBot) {
+                              await window.guidegram.disablePeerConnectedBot(targetId, botId)
+                            }
+                            setConnectedBotsList((prev) => prev.filter((b: any) => String(b.botId) !== botId))
+                            showToast(`Disconnected bot #${botId}`)
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                          title="Disconnect bot"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const targetId = activeAccountId || accounts[0]?.id
-                          if (targetId && window.guidegram?.disablePeerConnectedBot) {
-                            await window.guidegram.disablePeerConnectedBot(targetId, botId)
-                          }
-                          setConnectedBotsList((prev) => prev.filter((b: any) => String(b.botId) !== botId))
-                          showToast(`Disconnected bot #${botId}`)
-                        }}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                        title="Disconnect bot"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )
-                })
-              ) : (
+                    )
+                  })}
+                </div>
+              ) : null}
+
+              {!isLoadingConnectedBots && !isLoadingWebAuths && connectedBotsList.length === 0 && webAuthorizationsList.length === 0 && (
                 <div className="py-6 text-center space-y-2">
                   <Globe className="w-8 h-8 text-gray-600 mx-auto opacity-40" />
                   <div className="text-xs text-gray-400">

@@ -1900,6 +1900,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:get-theme', { accountId, format, theme }),
   getThemes: (accountId: string, format?: string, hash?: number | string): Promise<any> =>
     ipcRenderer.invoke('telegram:get-themes', { accountId, format, hash }),
+  getTmpPassword: (accountId: string, passwordSRP?: any, period?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-tmp-password', { accountId, passwordSRP, period }),
+  getUniqueGiftChatThemes: (accountId: string, offset?: string, limit?: number, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-unique-gift-chat-themes', { accountId, offset, limit, hash }),
+  getWallPaper: (accountId: string, wallpaper: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-wallpaper', { accountId, wallpaper }),
+  getWallPapers: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-wallpapers', { accountId, hash }),
+  getWebAuthorizations: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-web-authorizations', { accountId }),
+  getWebBrowserSettings: (accountId: string, hash?: number | string): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-web-browser-settings', { accountId, hash }),
+  initPasskeyRegistration: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:init-passkey-registration', { accountId, params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
