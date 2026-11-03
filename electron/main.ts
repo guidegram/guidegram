@@ -7054,6 +7054,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 050)
+  ipcMain.handle('telegram:messages:get-prepared-inline-message', async (_event, { accountId, botId, id }) => {
+    try {
+      return await accountManager.getPreparedInlineMessage(accountId, botId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPreparedInlineMessage error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-quick-replies', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getQuickRepliesRaw(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getQuickReplies error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-quick-reply-messages', async (_event, { accountId, shortcutId, id, hash }) => {
+    try {
+      return await accountManager.getQuickReplyMessages(accountId, shortcutId, id, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getQuickReplyMessages error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-recent-locations', async (_event, { accountId, peerId, limit, hash }) => {
+    try {
+      return await accountManager.getRecentLocationsRaw(accountId, peerId, limit, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getRecentLocations error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-recent-reactions', async (_event, { accountId, limit, hash }) => {
+    try {
+      return await accountManager.getRecentReactions(accountId, limit, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getRecentReactions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-recent-stickers', async (_event, { accountId, attached, hash }) => {
+    try {
+      return await accountManager.getRecentStickersRaw(accountId, attached, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getRecentStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-replies', async (_event, { accountId, peerId, msgId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash }) => {
+    try {
+      return await accountManager.getReplies(accountId, peerId, msgId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getReplies error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

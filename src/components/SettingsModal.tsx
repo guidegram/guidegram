@@ -3522,6 +3522,183 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 050: Messages Domain Suite Part 18
+  const [m050PreparedBotId, setM050PreparedBotId] = useState('')
+  const [m050PreparedId, setM050PreparedId] = useState('')
+  const [m050PreparedResult, setM050PreparedResult] = useState<string | null>(null)
+
+  const [m050QuickRepliesCount, setM050QuickRepliesCount] = useState<number | null>(null)
+
+  const [m050ShortcutId, setM050ShortcutId] = useState('')
+  const [m050QuickMessagesCount, setM050QuickMessagesCount] = useState<number | null>(null)
+
+  const [m050LocationsPeer, setM050LocationsPeer] = useState('')
+  const [m050LocationsCount, setM050LocationsCount] = useState<number | null>(null)
+
+  const [m050RecentReactionsCount, setM050RecentReactionsCount] = useState<number | null>(null)
+
+  const [m050RecentStickersAttached, setM050RecentStickersAttached] = useState(false)
+  const [m050RecentStickersCount, setM050RecentStickersCount] = useState<number | null>(null)
+
+  const [m050RepliesPeer, setM050RepliesPeer] = useState('')
+  const [m050RepliesMsgId, setM050RepliesMsgId] = useState('')
+  const [m050RepliesCount, setM050RepliesCount] = useState<number | null>(null)
+
+  const [m050LoadingOp, setM050LoadingOp] = useState<string | null>(null)
+  const [m050Status, setM050Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM050GetPreparedInlineMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPreparedInlineMessage) return
+    if (!m050PreparedBotId.trim() || !m050PreparedId.trim()) {
+      setM050Status({ type: 'error', message: 'لطفاً شناسه ربات و شناسه پیام آماده را وارد کنید' })
+      return
+    }
+    setM050LoadingOp('getPreparedInlineMessage')
+    setM050Status(null)
+    try {
+      const res = await window.guidegram.getPreparedInlineMessage(targetId, m050PreparedBotId.trim(), m050PreparedId.trim())
+      const desc = res?._ ? `پیام اینلاین آماده: ${res._}` : 'داده‌های پیام آماده استعلام شد'
+      setM050PreparedResult(desc)
+      setM050Status({ type: 'success', message: desc })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت پیام اینلاین آماده' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
+  const handleM050GetQuickReplies = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getQuickRepliesRaw || window.guidegram?.getQuickReplies
+    if (!targetId || !fn) return
+    setM050LoadingOp('getQuickReplies')
+    setM050Status(null)
+    try {
+      const res = await fn(targetId, 0)
+      const count = Array.isArray(res?.quickReplies) ? res.quickReplies.length : (Array.isArray(res) ? res.length : 0)
+      setM050QuickRepliesCount(count)
+      setM050Status({ type: 'success', message: `تعداد ${count} شورت‌کات پاسخ سریع یافت شد` })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت لیست پاسخ‌های سریع' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
+  const handleM050GetQuickReplyMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getQuickReplyMessages) return
+    const sId = parseInt(m050ShortcutId.trim(), 10)
+    if (isNaN(sId)) {
+      setM050Status({ type: 'error', message: 'شناسه شورت‌کات باید عددی باشد' })
+      return
+    }
+    setM050LoadingOp('getQuickReplyMessages')
+    setM050Status(null)
+    try {
+      const res = await window.guidegram.getQuickReplyMessages(targetId, { shortcutId: sId })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (Array.isArray(res) ? res.length : 0)
+      setM050QuickMessagesCount(count)
+      setM050Status({ type: 'success', message: `تعداد ${count} پیام برای این شورت‌کات دریافت شد` })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت پیام‌های پاسخ سریع' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
+  const handleM050GetRecentLocations = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getRecentLocationsRaw || window.guidegram?.getRecentLocations
+    if (!targetId || !fn) return
+    if (!m050LocationsPeer.trim()) {
+      setM050Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    setM050LoadingOp('getRecentLocations')
+    setM050Status(null)
+    try {
+      const res = await fn(targetId, { peerId: m050LocationsPeer.trim(), limit: 50 })
+      const count = Array.isArray(res?.locations) ? res.locations.length : (Array.isArray(res?.messages) ? res.messages.length : 0)
+      setM050LocationsCount(count)
+      setM050Status({ type: 'success', message: `تعداد ${count} لوکیشن زنده/اخیر در گفتگو یافت شد` })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت لوکیشن‌های اخیر' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
+  const handleM050GetRecentReactions = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getRecentReactions) return
+    setM050LoadingOp('getRecentReactions')
+    setM050Status(null)
+    try {
+      const res = await window.guidegram.getRecentReactions(targetId, 50, 0)
+      const count = Array.isArray(res?.reactions) ? res.reactions.length : (Array.isArray(res) ? res.length : 0)
+      setM050RecentReactionsCount(count)
+      setM050Status({ type: 'success', message: `تعداد ${count} ری‌اکشن اخیر استعلام شد` })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت ری‌اکشن‌های اخیر' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
+  const handleM050GetRecentStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getRecentStickersRaw || window.guidegram?.getRecentStickers
+    if (!targetId || !fn) return
+    setM050LoadingOp('getRecentStickers')
+    setM050Status(null)
+    try {
+      const res = await fn(targetId, m050RecentStickersAttached, 0)
+      const count = Array.isArray(res?.stickers) ? res.stickers.length : (Array.isArray(res) ? res.length : 0)
+      setM050RecentStickersCount(count)
+      setM050Status({ type: 'success', message: `تعداد ${count} استیکر اخیر دریافت شد` })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت استیکرهای اخیر' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
+  const handleM050GetReplies = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getReplies) return
+    if (!m050RepliesPeer.trim()) {
+      setM050Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m050RepliesMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM050Status({ type: 'error', message: 'شناسه پیام باید عددی باشد' })
+      return
+    }
+    setM050LoadingOp('getReplies')
+    setM050Status(null)
+    try {
+      const res = await window.guidegram.getReplies(targetId, {
+        peerId: m050RepliesPeer.trim(),
+        msgId: msgIdNum,
+        limit: 50,
+      })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM050RepliesCount(count)
+      setM050Status({ type: 'success', message: `تعداد ${count} ریپلای یا پیام ترد استعلام شد` })
+    } catch (err: any) {
+      setM050Status({ type: 'error', message: err?.message || 'خطا در دریافت ریپلای‌های پیام' })
+    } finally {
+      setM050LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -9730,6 +9907,240 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m049VotesCount !== null && (
                         <div className="text-[10px] text-indigo-400 font-mono">
                           آرای استعلام‌شده: {m049VotesCount} رأی
+                        </div>
+                      )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 050: Messages Domain Suite Part 18 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-fuchsia-400" />
+                        <span>میکروفاز ۰۵۰: اینلاین وب‌اپ، پاسخ‌های سریع، لوکیشن‌ها، ری‌اکشن‌ها و ریپلای‌ها (Messages Suite Part 18)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getPreparedInlineMessage, getQuickReplies, getQuickReplyMessages, getRecentLocations, getRecentReactions, getRecentStickers, getReplies
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m050Status && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                        m050Status.type === 'success'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                          : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
+                      }`}
+                    >
+                      {m050Status.type === 'success' ? (
+                        <Check className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                      )}
+                      <span className="flex-1">{m050Status.message}</span>
+                      <button
+                        type="button"
+                        onClick={() => setM050Status(null)}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* 1. messages.getPreparedInlineMessage */}
+                    <form onSubmit={handleM050GetPreparedInlineMessage} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Bot className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۱. پیام آماده وب‌اپ اینلاین (getPreparedInlineMessage)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m050PreparedBotId}
+                          onChange={(e) => setM050PreparedBotId(e.target.value)}
+                          placeholder="شناسه ربات"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-fuchsia-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m050PreparedId}
+                          onChange={(e) => setM050PreparedId(e.target.value)}
+                          placeholder="شناسه پیام آماده"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-fuchsia-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m050LoadingOp === 'getPreparedInlineMessage'}
+                          className="px-3 py-1.5 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m050LoadingOp === 'getPreparedInlineMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m050PreparedResult && (
+                        <div className="text-[10px] text-fuchsia-400 font-mono truncate">
+                          {m050PreparedResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getQuickReplies */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۲. شورت‌کات‌های پاسخ سریع (getQuickReplies)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM050GetQuickReplies}
+                        disabled={m050LoadingOp === 'getQuickReplies'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m050LoadingOp === 'getQuickReplies' ? 'در حال استعلام...' : `استعلام پاسخ‌های سریع ${m050QuickRepliesCount !== null ? `(${m050QuickRepliesCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 3. messages.getQuickReplyMessages */}
+                    <form onSubmit={handleM050GetQuickReplyMessages} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۳. پیام‌های شورت‌کات پاسخ سریع (getQuickReplyMessages)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m050ShortcutId}
+                          onChange={(e) => setM050ShortcutId(e.target.value)}
+                          placeholder="شناسه شورت‌کات عددی"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-fuchsia-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m050LoadingOp === 'getQuickReplyMessages'}
+                          className="px-3 py-1.5 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m050LoadingOp === 'getQuickReplyMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m050QuickMessagesCount !== null && (
+                        <div className="text-[10px] text-fuchsia-400 font-mono">
+                          پیام‌های شورت‌کات: {m050QuickMessagesCount} عدد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 4. messages.getRecentLocations */}
+                    <form onSubmit={handleM050GetRecentLocations} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۴. لوکیشن‌های اخیر گفتگو (getRecentLocations)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m050LocationsPeer}
+                          onChange={(e) => setM050LocationsPeer(e.target.value)}
+                          placeholder="شناسه گروه یا گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-fuchsia-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m050LoadingOp === 'getRecentLocations'}
+                          className="px-3 py-1.5 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m050LoadingOp === 'getRecentLocations' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m050LocationsCount !== null && (
+                        <div className="text-[10px] text-fuchsia-400 font-mono">
+                          لوکیشن‌های یافت‌شده: {m050LocationsCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 5. messages.getRecentReactions */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Heart className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۵. ری‌اکشن‌های اخیر استفاده‌شده (getRecentReactions)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM050GetRecentReactions}
+                        disabled={m050LoadingOp === 'getRecentReactions'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m050LoadingOp === 'getRecentReactions' ? 'در حال استعلام...' : `استعلام ری‌اکشن‌های اخیر ${m050RecentReactionsCount !== null ? `(${m050RecentReactionsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 6. messages.getRecentStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Smile className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۶. استیکرهای اخیر (getRecentStickers)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <button
+                          type="button"
+                          onClick={handleM050GetRecentStickers}
+                          disabled={m050LoadingOp === 'getRecentStickers'}
+                          className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m050LoadingOp === 'getRecentStickers' ? 'در حال استعلام...' : `استیکرهای اخیر ${m050RecentStickersCount !== null ? `(${m050RecentStickersCount})` : ''}`}
+                        </button>
+                        <label className="flex items-center gap-2 cursor-pointer text-[11px] text-gray-400">
+                          <input
+                            type="checkbox"
+                            checked={m050RecentStickersAttached}
+                            onChange={(e) => setM050RecentStickersAttached(e.target.checked)}
+                            className="rounded border-white/10 bg-dark-900 text-fuchsia-500 focus:ring-0"
+                          />
+                          <span>فقط استیکرهای ضمیمه‌شده به عکس/ویدیو (attached)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* 7. messages.getReplies */}
+                    <form onSubmit={handleM050GetReplies} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <CornerDownLeft className="w-3.5 h-3.5 text-fuchsia-400" />
+                        <span>۷. ریپلای‌ها و ترد گفتگو (getReplies)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m050RepliesPeer}
+                          onChange={(e) => setM050RepliesPeer(e.target.value)}
+                          placeholder="شناسه گفتگو یا کانال"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-fuchsia-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m050RepliesMsgId}
+                          onChange={(e) => setM050RepliesMsgId(e.target.value)}
+                          placeholder="شناسه پیام والد"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-fuchsia-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m050LoadingOp === 'getReplies'}
+                          className="px-4 py-1.5 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m050LoadingOp === 'getReplies' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام ریپلای‌ها'}
+                        </button>
+                      </div>
+                      {m050RepliesCount !== null && (
+                        <div className="text-[10px] text-fuchsia-400 font-mono">
+                          ریپلای‌های استعلام‌شده: {m050RepliesCount} عدد
                         </div>
                       )}
                     </form>

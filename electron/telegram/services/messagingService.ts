@@ -2990,12 +2990,13 @@ export class MessagingService {
     }
   }
 
-  public async getQuickReplyMessages(holder: RpcClientHolder, shortcutId?: number, id?: number, hash?: bigint | number): Promise<any> {
+  public async getQuickReplyMessages(holder: RpcClientHolder, shortcutId?: number, id?: number | number[], hash?: bigint | number): Promise<any> {
     try {
+      const ids = id !== undefined ? (Array.isArray(id) ? id : [id]) : undefined
       return await holder.client.call({
         _: 'messages.getQuickReplyMessages',
         'shortcut_id': shortcutId,
-        'id': id,
+        'id': ids,
         'hash': hash,
       })
     } catch (err) {

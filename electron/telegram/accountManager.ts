@@ -19652,6 +19652,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getPollVotes(holder as any, accountId, peerId, id, option, offset, limit)
   }
+
+  // --- Microphase 050: Messages domain part 18 ---
+  public async getPreparedInlineMessage(accountId: string, botId?: string, id?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPreparedInlineMessage(holder as any, accountId, botId, id)
+  }
+
+  public async getQuickRepliesRaw(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getQuickReplies(holder as any, hash)
+  }
+
+  public async getQuickReplyMessages(accountId: string, shortcutId?: number, id?: number | number[], hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getQuickReplyMessages(holder as any, shortcutId, id, hash)
+  }
+
+  public async getRecentLocationsRaw(accountId: string, peerId?: string, limit?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getRecentLocations(holder as any, accountId, peerId, limit, hash)
+  }
+
+  public async getRecentReactions(accountId: string, limit?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getRecentReactions(holder as any, limit, hash)
+  }
+
+  public async getRecentStickersRaw(accountId: string, attached?: boolean, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getRecentStickers(holder as any, attached, hash)
+  }
+
+  public async getReplies(accountId: string, peerId?: string, msgId?: number, offsetId?: number, offsetDate?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getReplies(holder as any, accountId, peerId, msgId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+  }
 }
 
 
