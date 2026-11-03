@@ -4617,6 +4617,195 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 056 State & Handlers (Messages Domain Part 24 - Layer 232)
+  const [m056Status, setM056Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m056LoadingOp, setM056LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.readFeaturedStickers
+  const [m056StickerSetIds, setM056StickerSetIds] = useState('')
+
+  // 2. messages.readHistory
+  const [m056ReadHistoryPeer, setM056ReadHistoryPeer] = useState('')
+  const [m056ReadHistoryMaxId, setM056ReadHistoryMaxId] = useState('')
+
+  // 3. messages.readMentions
+  const [m056ReadMentionsPeer, setM056ReadMentionsPeer] = useState('')
+  const [m056ReadMentionsTopMsgId, setM056ReadMentionsTopMsgId] = useState('')
+
+  // 4. messages.readMessageContents
+  const [m056ReadContentsMsgIds, setM056ReadContentsMsgIds] = useState('')
+
+  // 5. messages.readPollVotes
+  const [m056ReadPollVotesPeer, setM056ReadPollVotesPeer] = useState('')
+  const [m056ReadPollVotesTopMsgId, setM056ReadPollVotesTopMsgId] = useState('')
+
+  // 6. messages.readReactions
+  const [m056ReadReactionsPeer, setM056ReadReactionsPeer] = useState('')
+  const [m056ReadReactionsTopMsgId, setM056ReadReactionsTopMsgId] = useState('')
+
+  // 7. messages.readSavedHistory
+  const [m056ReadSavedParentPeer, setM056ReadSavedParentPeer] = useState('')
+  const [m056ReadSavedTopicPeer, setM056ReadSavedTopicPeer] = useState('')
+  const [m056ReadSavedMaxId, setM056ReadSavedMaxId] = useState('')
+
+  const handleM056ReadFeaturedStickers = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readFeaturedStickersRaw) return
+    if (!m056StickerSetIds.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه استیکرست‌های ویژه الزامی است' })
+      return
+    }
+    setM056LoadingOp('readFeaturedStickers')
+    setM056Status(null)
+    try {
+      const ids = m056StickerSetIds.split(',').map((s) => s.trim()).filter(Boolean)
+      await window.guidegram.readFeaturedStickersRaw(targetId, ids)
+      setM056Status({ type: 'success', message: 'استیکرهای ویژه (Featured Stickers) با موفقیت خوانده شدند' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در خواندن استیکرهای ویژه' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
+  const handleM056ReadHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readHistoryRaw) return
+    if (!m056ReadHistoryPeer.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه گفتگو برای ثبت خوانده‌شدن الزامی است' })
+      return
+    }
+    setM056LoadingOp('readHistory')
+    setM056Status(null)
+    try {
+      await window.guidegram.readHistoryRaw(targetId, {
+        peerId: m056ReadHistoryPeer.trim(),
+        maxId: m056ReadHistoryMaxId.trim() ? Number(m056ReadHistoryMaxId.trim()) : 0,
+      })
+      setM056Status({ type: 'success', message: 'تاریخچه پیام‌های گفتگو با موفقیت خوانده شد (readHistory)' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در ثبت خوانده شدن تاریخچه' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
+  const handleM056ReadMentions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readMentionsRaw) return
+    if (!m056ReadMentionsPeer.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه گفتگو برای خواندن منشن‌ها الزامی است' })
+      return
+    }
+    setM056LoadingOp('readMentions')
+    setM056Status(null)
+    try {
+      await window.guidegram.readMentionsRaw(targetId, {
+        peerId: m056ReadMentionsPeer.trim(),
+        topMsgId: m056ReadMentionsTopMsgId.trim() ? Number(m056ReadMentionsTopMsgId.trim()) : undefined,
+      })
+      setM056Status({ type: 'success', message: 'کلیه منشن‌های گفتگو خوانده شدند (readMentions)' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در خواندن منشن‌ها' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
+  const handleM056ReadMessageContents = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readMessageContentsRaw) return
+    if (!m056ReadContentsMsgIds.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه پیام‌ها (جداشده با کاما) الزامی است' })
+      return
+    }
+    setM056LoadingOp('readMessageContents')
+    setM056Status(null)
+    try {
+      const ids = m056ReadContentsMsgIds.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n))
+      await window.guidegram.readMessageContentsRaw(targetId, ids)
+      setM056Status({ type: 'success', message: 'محتوای رسانه و ویس پیام‌ها خوانده شد (readMessageContents)' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در خواندن محتوای پیام‌ها' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
+  const handleM056ReadPollVotes = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readPollVotesRaw) return
+    if (!m056ReadPollVotesPeer.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه گفتگو برای خواندن آرا نظرسنجی الزامی است' })
+      return
+    }
+    setM056LoadingOp('readPollVotes')
+    setM056Status(null)
+    try {
+      await window.guidegram.readPollVotesRaw(targetId, {
+        peerId: m056ReadPollVotesPeer.trim(),
+        topMsgId: m056ReadPollVotesTopMsgId.trim() ? Number(m056ReadPollVotesTopMsgId.trim()) : undefined,
+      })
+      setM056Status({ type: 'success', message: 'آرا و مشارکت‌های نظرسنجی با موفقیت خوانده شدند (readPollVotes)' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در خواندن آرای نظرسنجی' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
+  const handleM056ReadReactions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readReactionsRaw) return
+    if (!m056ReadReactionsPeer.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه گفتگو برای خواندن واکنش‌ها الزامی است' })
+      return
+    }
+    setM056LoadingOp('readReactions')
+    setM056Status(null)
+    try {
+      await window.guidegram.readReactionsRaw(targetId, {
+        peerId: m056ReadReactionsPeer.trim(),
+        topMsgId: m056ReadReactionsTopMsgId.trim() ? Number(m056ReadReactionsTopMsgId.trim()) : undefined,
+      })
+      setM056Status({ type: 'success', message: 'واکنش‌ها و اموجی‌های دریافتی خوانده شدند (readReactions)' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در خواندن واکنش‌ها' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
+  const handleM056ReadSavedHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readSavedHistoryRaw) return
+    if (!m056ReadSavedParentPeer.trim() || !m056ReadSavedTopicPeer.trim()) {
+      setM056Status({ type: 'error', message: 'شناسه گروه والد مونوفروم و شناسه تاپیک الزامی است' })
+      return
+    }
+    setM056LoadingOp('readSavedHistory')
+    setM056Status(null)
+    try {
+      await window.guidegram.readSavedHistoryRaw(targetId, {
+        parentPeerId: m056ReadSavedParentPeer.trim(),
+        peerId: m056ReadSavedTopicPeer.trim(),
+        maxId: m056ReadSavedMaxId.trim() ? Number(m056ReadSavedMaxId.trim()) : 0,
+      })
+      setM056Status({ type: 'success', message: 'تاریخچه تاپیک ذخیره‌شده (Saved Monoforum) خوانده شد' })
+    } catch (err: any) {
+      setM056Status({ type: 'error', message: err?.message || 'خطا در خواندن تاریخچه ذخیره‌شده' })
+    } finally {
+      setM056LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -12354,6 +12543,285 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m055LoadingOp === 'readEncryptedHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن چت امن'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 056: Messages Domain Suite Part 24 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۵۶: علامت‌گذاری خوانده‌شدن تاریخچه، منشن‌ها، محتوا و واکنش‌ها (Messages Suite Part 24)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-violet-400/80 font-mono px-2 py-0.5 rounded-full bg-violet-400/10 border border-violet-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    ثبت خوانده‌شدن استیکرهای ویژه، تاریخچه پیام‌ها، منشن‌ها، محتوای رسانه، آرای نظرسنجی، اموجی‌های واکنش و تاریخچه ذخیره‌شده مونوفروم:
+                    <span className="text-gray-300 font-mono mr-1">
+                      readFeaturedStickers, readHistory, readMentions, readMessageContents, readPollVotes, readReactions, readSavedHistory
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m056Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m056Status.type === 'success'
+                            ? 'bg-violet-500/10 border-violet-500/20 text-violet-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m056Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m056Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM056Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.readFeaturedStickers */}
+                    <form
+                      onSubmit={handleM056ReadFeaturedStickers}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. خواندن استیکرهای ویژه (readFeaturedStickers)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m056StickerSetIds}
+                          onChange={(e) => setM056StickerSetIds(e.target.value)}
+                          placeholder="شناسه استیکرست‌ها (جداشده با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readFeaturedStickers'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readFeaturedStickers' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'علامت خوانده'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.readHistory */}
+                    <form
+                      onSubmit={handleM056ReadHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. خواندن تاریخچه گفتگو (readHistory)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m056ReadHistoryPeer}
+                          onChange={(e) => setM056ReadHistoryPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / کاربر"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m056ReadHistoryMaxId}
+                          onChange={(e) => setM056ReadHistoryMaxId(e.target.value)}
+                          placeholder="Max ID (اختیاری)"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readHistory'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت خوانده'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.readMentions */}
+                    <form
+                      onSubmit={handleM056ReadMentions}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. خواندن منشن‌های گفتگو (readMentions)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m056ReadMentionsPeer}
+                          onChange={(e) => setM056ReadMentionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m056ReadMentionsTopMsgId}
+                          onChange={(e) => setM056ReadMentionsTopMsgId(e.target.value)}
+                          placeholder="تاپیک فروم (اختیاری)"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readMentions'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readMentions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن منشن‌ها'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.readMessageContents */}
+                    <form
+                      onSubmit={handleM056ReadMessageContents}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. خواندن محتوای پیام‌ها/ویس (readMessageContents)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m056ReadContentsMsgIds}
+                          onChange={(e) => setM056ReadContentsMsgIds(e.target.value)}
+                          placeholder="شناسه پیام‌ها (Msg IDs با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readMessageContents'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readMessageContents' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن محتوا'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.readPollVotes */}
+                    <form
+                      onSubmit={handleM056ReadPollVotes}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. خواندن آرای نظرسنجی (readPollVotes)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m056ReadPollVotesPeer}
+                          onChange={(e) => setM056ReadPollVotesPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m056ReadPollVotesTopMsgId}
+                          onChange={(e) => setM056ReadPollVotesTopMsgId(e.target.value)}
+                          placeholder="تاپیک فروم (اختیاری)"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readPollVotes'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readPollVotes' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن آرا'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.readReactions */}
+                    <form
+                      onSubmit={handleM056ReadReactions}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. خواندن واکنش‌ها و اموجی‌ها (readReactions)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m056ReadReactionsPeer}
+                          onChange={(e) => setM056ReadReactionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m056ReadReactionsTopMsgId}
+                          onChange={(e) => setM056ReadReactionsTopMsgId(e.target.value)}
+                          placeholder="تاپیک فروم (اختیاری)"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readReactions'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readReactions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن واکنش‌ها'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.readSavedHistory */}
+                    <form
+                      onSubmit={handleM056ReadSavedHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. خواندن تاریخچه تاپیک ذخیره‌شده مونوفروم (readSavedHistory)</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                        <input
+                          type="text"
+                          value={m056ReadSavedParentPeer}
+                          onChange={(e) => setM056ReadSavedParentPeer(e.target.value)}
+                          placeholder="گروه مونوفروم (Parent Peer)"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m056ReadSavedTopicPeer}
+                          onChange={(e) => setM056ReadSavedTopicPeer(e.target.value)}
+                          placeholder="تاپیک گفتگو (Topic Peer)"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m056ReadSavedMaxId}
+                          onChange={(e) => setM056ReadSavedMaxId(e.target.value)}
+                          placeholder="Max ID (اختیاری)"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m056LoadingOp === 'readSavedHistory'}
+                          className="py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m056LoadingOp === 'readSavedHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن تاپیک ذخیره‌شده'}
                         </button>
                       </div>
                     </form>

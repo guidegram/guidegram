@@ -7434,6 +7434,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 056 IPC Handlers
+  ipcMain.handle('telegram:messages:read-featured-stickers', async (_event, { accountId, id }) => {
+    try {
+      return await accountManager.readFeaturedStickersRaw(accountId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] readFeaturedStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-history-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readHistoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] readHistoryRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-mentions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readMentionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] readMentionsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-message-contents-raw', async (_event, { accountId, id }) => {
+    try {
+      return await accountManager.readMessageContentsRaw(accountId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] readMessageContentsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-poll-votes-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readPollVotesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] readPollVotesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-reactions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readReactionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] readReactionsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-saved-history-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readSavedHistoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] readSavedHistoryRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -127,8 +127,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.readHistory',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'max_id': maxId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        maxId: Number(maxId || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readHistory error:', err)
@@ -584,11 +584,12 @@ export class MessagingService {
     }
   }
 
-  public async readMessageContents(holder: RpcClientHolder, id?: number): Promise<any> {
+  public async readMessageContents(holder: RpcClientHolder, id?: number[] | number): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id.map(Number) : (id !== undefined && id !== null ? [Number(id)] : [])
       return await holder.client.call({
         _: 'messages.readMessageContents',
-        'id': id,
+        id: ids,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readMessageContents error:', err)
@@ -1076,11 +1077,17 @@ export class MessagingService {
     }
   }
 
-  public async readFeaturedStickers(holder: RpcClientHolder, id?: bigint | number): Promise<any> {
+  public async readFeaturedStickers(holder: RpcClientHolder, id?: any): Promise<any> {
     try {
+      let ids: Long[] = []
+      if (Array.isArray(id)) {
+        ids = id.map((item) => Long.isLong(item) ? item : Long.fromValue(item as any))
+      } else if (id !== undefined && id !== null) {
+        ids = [Long.isLong(id) ? id : Long.fromValue(id as any)]
+      }
       return await holder.client.call({
         _: 'messages.readFeaturedStickers',
-        'id': id,
+        id: ids,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readFeaturedStickers error:', err)
@@ -1395,8 +1402,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.readMentions',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'top_msg_id': topMsgId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        topMsgId: topMsgId ? Number(topMsgId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readMentions error:', err)
@@ -2379,9 +2386,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.readReactions',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'top_msg_id': topMsgId,
-        'saved_peer_id': savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        topMsgId: topMsgId ? Number(topMsgId) : undefined,
+        savedPeerId: savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readReactions error:', err)
@@ -3357,9 +3364,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.readSavedHistory',
-        'parent_peer': parentPeerId ? await this.resolveInputPeer(accountId, parentPeerId) : undefined,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'max_id': maxId,
+        parentPeer: parentPeerId ? await this.resolveInputPeer(accountId, parentPeerId) : undefined,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        maxId: Number(maxId || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readSavedHistory error:', err)
@@ -3703,8 +3710,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.readPollVotes',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'top_msg_id': topMsgId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        topMsgId: topMsgId ? Number(topMsgId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readPollVotes error:', err)

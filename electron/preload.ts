@@ -2473,6 +2473,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:read-discussion', { accountId, ...params }),
   readEncryptedHistoryRaw: (accountId: string, params: { peer?: any; maxDate?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:read-encrypted-history', { accountId, ...params }),
+  readFeaturedStickersRaw: (accountId: string, id: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-featured-stickers', { accountId, id }),
+  readHistoryRaw: (accountId: string, params: { peerId: string; maxId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-history-raw', { accountId, ...params }),
+  readMentionsRaw: (accountId: string, params: { peerId: string; topMsgId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-mentions-raw', { accountId, ...params }),
+  readMessageContentsRaw: (accountId: string, id: number[] | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-message-contents-raw', { accountId, id }),
+  readPollVotesRaw: (accountId: string, params: { peerId: string; topMsgId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-poll-votes-raw', { accountId, ...params }),
+  readReactionsRaw: (accountId: string, params: { peerId: string; topMsgId?: number; savedPeerIdId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-reactions-raw', { accountId, ...params }),
+  readSavedHistoryRaw: (accountId: string, params: { parentPeerId: string; peerId: string; maxId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-saved-history-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

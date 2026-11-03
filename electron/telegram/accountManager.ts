@@ -19904,6 +19904,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.readEncryptedHistory(holder as any, params.peer, params.maxDate)
   }
+
+  // Layer 232 Messages Suite (Microphase 056)
+  public async readFeaturedStickersRaw(accountId: string, id: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readFeaturedStickers(holder as any, id)
+  }
+
+  public async readHistoryRaw(accountId: string, params: { peerId: string; maxId?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readHistory(holder as any, accountId, params.peerId, params.maxId)
+  }
+
+  public async readMentionsRaw(accountId: string, params: { peerId: string; topMsgId?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readMentions(holder as any, accountId, params.peerId, params.topMsgId)
+  }
+
+  public async readMessageContentsRaw(accountId: string, id: number[] | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readMessageContents(holder as any, id)
+  }
+
+  public async readPollVotesRaw(accountId: string, params: { peerId: string; topMsgId?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readPollVotes(holder as any, accountId, params.peerId, params.topMsgId)
+  }
+
+  public async readReactionsRaw(accountId: string, params: { peerId: string; topMsgId?: number; savedPeerIdId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readReactions(holder as any, accountId, params.peerId, params.topMsgId, params.savedPeerIdId)
+  }
+
+  public async readSavedHistoryRaw(accountId: string, params: { parentPeerId: string; peerId: string; maxId?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readSavedHistory(holder as any, accountId, params.parentPeerId, params.peerId, params.maxId)
+  }
 }
 
 
