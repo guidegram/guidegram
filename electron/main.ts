@@ -7118,6 +7118,69 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:messages:get-rich-message', async (_event, { accountId, peerId, id }) => {
+    try {
+      return await accountManager.getRichMessage(accountId, peerId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getRichMessage error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-saved-dialogs', async (_event, { accountId, excludePinned, parentPeerId, offsetDate, offsetId, offsetPeerId, limit, hash }) => {
+    try {
+      return await accountManager.getSavedDialogsRaw(accountId, excludePinned, parentPeerId, offsetDate, offsetId, offsetPeerId, limit, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSavedDialogs error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-saved-dialogs-by-id', async (_event, { accountId, parentPeerId, ids }) => {
+    try {
+      return await accountManager.getSavedDialogsByID(accountId, parentPeerId, ids)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSavedDialogsByID error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-saved-gifs', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getSavedGifsRaw(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSavedGifs error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-saved-history', async (_event, { accountId, parentPeerId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash }) => {
+    try {
+      return await accountManager.getSavedHistory(accountId, parentPeerId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSavedHistory error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-saved-reaction-tags', async (_event, { accountId, peerId, hash }) => {
+    try {
+      return await accountManager.getSavedReactionTagsRaw(accountId, peerId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSavedReactionTags error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-scheduled-history', async (_event, { accountId, peerId, hash }) => {
+    try {
+      return await accountManager.getScheduledHistory(accountId, peerId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getScheduledHistory error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

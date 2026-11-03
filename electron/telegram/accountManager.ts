@@ -19695,6 +19695,48 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getReplies(holder as any, accountId, peerId, msgId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
   }
+
+  public async getRichMessage(accountId: string, peerId?: string, id?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getRichMessage(holder as any, accountId, peerId, id)
+  }
+
+  public async getSavedDialogsRaw(accountId: string, excludePinned?: boolean, parentPeerId?: string, offsetDate?: number, offsetId?: number, offsetPeerId?: string, limit?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSavedDialogs(holder as any, accountId, excludePinned, parentPeerId, offsetDate, offsetId, offsetPeerId, limit, hash)
+  }
+
+  public async getSavedDialogsByID(accountId: string, parentPeerId?: string, ids?: string | string[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSavedDialogsByID(holder as any, accountId, parentPeerId, ids)
+  }
+
+  public async getSavedGifsRaw(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSavedGifs(holder as any, hash)
+  }
+
+  public async getSavedHistory(accountId: string, parentPeerId?: string, peerId?: string, offsetId?: number, offsetDate?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSavedHistory(holder as any, accountId, parentPeerId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+  }
+
+  public async getSavedReactionTagsRaw(accountId: string, peerId?: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSavedReactionTags(holder as any, accountId, peerId, hash)
+  }
+
+  public async getScheduledHistory(accountId: string, peerId?: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getScheduledHistory(holder as any, accountId, peerId, hash)
+  }
 }
 
 

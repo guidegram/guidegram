@@ -3294,12 +3294,18 @@ export class MessagingService {
     }
   }
 
-  public async getSavedDialogsByID(holder: RpcClientHolder, accountId: string, parentPeerId?: string, idsId?: string): Promise<any> {
+  public async getSavedDialogsByID(holder: RpcClientHolder, accountId: string, parentPeerId?: string, ids?: string | string[]): Promise<any> {
     try {
+      let resolvedIds: any[] = []
+      if (Array.isArray(ids)) {
+        resolvedIds = await Promise.all(ids.map(id => this.resolveInputPeer(accountId, id)))
+      } else if (ids) {
+        resolvedIds = [await this.resolveInputPeer(accountId, ids)]
+      }
       return await holder.client.call({
         _: 'messages.getSavedDialogsByID',
         'parent_peer': parentPeerId ? await this.resolveInputPeer(accountId, parentPeerId) : undefined,
-        'ids': idsId ? await this.resolveInputPeer(accountId, idsId) : undefined,
+        'ids': resolvedIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getSavedDialogsByID error:', err)

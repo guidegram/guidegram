@@ -3699,6 +3699,188 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 051: Saved Dialogs, GIFs, History, Reaction Tags & Scheduled History State
+  const [m051RichPeer, setM051RichPeer] = useState('')
+  const [m051RichId, setM051RichId] = useState('')
+  const [m051RichResult, setM051RichResult] = useState<string | null>(null)
+
+  const [m051SavedDialogsCount, setM051SavedDialogsCount] = useState<number | null>(null)
+
+  const [m051SavedDialogsByIdPeer, setM051SavedDialogsByIdPeer] = useState('')
+  const [m051SavedDialogsByIdIds, setM051SavedDialogsByIdIds] = useState('')
+  const [m051SavedDialogsByIdCount, setM051SavedDialogsByIdCount] = useState<number | null>(null)
+
+  const [m051SavedGifsCount, setM051SavedGifsCount] = useState<number | null>(null)
+
+  const [m051SavedHistoryPeer, setM051SavedHistoryPeer] = useState('')
+  const [m051SavedHistoryCount, setM051SavedHistoryCount] = useState<number | null>(null)
+
+  const [m051SavedReactionTagsPeer, setM051SavedReactionTagsPeer] = useState('')
+  const [m051SavedReactionTagsCount, setM051SavedReactionTagsCount] = useState<number | null>(null)
+
+  const [m051ScheduledHistoryPeer, setM051ScheduledHistoryPeer] = useState('')
+  const [m051ScheduledHistoryCount, setM051ScheduledHistoryCount] = useState<number | null>(null)
+
+  const [m051LoadingOp, setM051LoadingOp] = useState<string | null>(null)
+  const [m051Status, setM051Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM051GetRichMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getRichMessage) return
+    if (!m051RichPeer.trim() || !m051RichId.trim()) {
+      setM051Status({ type: 'error', message: 'شناسه مخاطب و شناسه پیام ریچ الزامی است' })
+      return
+    }
+    const msgIdNum = parseInt(m051RichId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM051Status({ type: 'error', message: 'شناسه پیام باید عدد باشد' })
+      return
+    }
+    setM051LoadingOp('getRichMessage')
+    setM051Status(null)
+    setM051RichResult(null)
+    try {
+      const res = await window.guidegram.getRichMessage(targetId, m051RichPeer.trim(), msgIdNum)
+      if (res) {
+        setM051RichResult(JSON.stringify(res).slice(0, 80) + '...')
+        setM051Status({ type: 'success', message: 'اطلاعات پیام غنی‌شده با موفقیت دریافت شد' })
+      } else {
+        setM051RichResult('پیامی یافت نشد')
+        setM051Status({ type: 'success', message: 'پیام ریچ در این چت ثبت نشده است' })
+      }
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در دریافت پیام ریچ' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
+  const handleM051GetSavedDialogs = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getSavedDialogsRaw || (window.guidegram as any)?.getSavedDialogs
+    if (!targetId || !fn) return
+    setM051LoadingOp('getSavedDialogs')
+    setM051Status(null)
+    try {
+      const res = await fn(targetId, { limit: 50 })
+      const count = Array.isArray(res?.dialogs) ? res.dialogs.length : (res?.count ?? 0)
+      setM051SavedDialogsCount(count)
+      setM051Status({ type: 'success', message: `تعداد ${count} گفتگوی ذخیره‌شده استعلام شد` })
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در دریافت گفتگوهای ذخیره‌شده' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
+  const handleM051GetSavedDialogsByID = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSavedDialogsByID) return
+    const ids = m051SavedDialogsByIdIds.split(',').map((s) => s.trim()).filter(Boolean)
+    if (ids.length === 0) {
+      setM051Status({ type: 'error', message: 'حداقل یک شناسه گفتگوی ذخیره‌شده وارد کنید' })
+      return
+    }
+    setM051LoadingOp('getSavedDialogsByID')
+    setM051Status(null)
+    try {
+      const res = await window.guidegram.getSavedDialogsByID(
+        targetId,
+        m051SavedDialogsByIdPeer.trim() || undefined,
+        ids
+      )
+      const count = Array.isArray(res?.dialogs) ? res.dialogs.length : (res?.count ?? (res ? 1 : 0))
+      setM051SavedDialogsByIdCount(count)
+      setM051Status({ type: 'success', message: `تعداد ${count} دیالوگ ذخیره‌شده بر اساس شناسه یافت شد` })
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در استعلام دیالوگ‌های ذخیره‌شده بر اساس شناسه' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
+  const handleM051GetSavedGifs = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getSavedGifsRaw || (window.guidegram as any)?.getSavedGifs
+    if (!targetId || !fn) return
+    setM051LoadingOp('getSavedGifs')
+    setM051Status(null)
+    try {
+      const res = await fn(targetId, 0)
+      const count = Array.isArray(res?.gifs) ? res.gifs.length : (Array.isArray(res) ? res.length : (res?.count ?? 0))
+      setM051SavedGifsCount(count)
+      setM051Status({ type: 'success', message: `تعداد ${count} گیف ذخیره‌شده استعلام شد` })
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در دریافت گیف‌های ذخیره‌شده' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
+  const handleM051GetSavedHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSavedHistory) return
+    setM051LoadingOp('getSavedHistory')
+    setM051Status(null)
+    try {
+      const res = await window.guidegram.getSavedHistory(targetId, {
+        peerId: m051SavedHistoryPeer.trim() || undefined,
+        limit: 50,
+      })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM051SavedHistoryCount(count)
+      setM051Status({ type: 'success', message: `تعداد ${count} پیام در تاریخچه ذخیره‌شده بازیابی شد` })
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در استعلام تاریخچه پیام‌های ذخیره‌شده' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
+  const handleM051GetSavedReactionTags = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getSavedReactionTagsRaw || (window.guidegram as any)?.getSavedReactionTags
+    if (!targetId || !fn) return
+    setM051LoadingOp('getSavedReactionTags')
+    setM051Status(null)
+    try {
+      const res = await fn(targetId, m051SavedReactionTagsPeer.trim() || undefined, 0)
+      const count = Array.isArray(res?.tags) ? res.tags.length : (Array.isArray(res) ? res.length : 0)
+      setM051SavedReactionTagsCount(count)
+      setM051Status({ type: 'success', message: `تعداد ${count} برچسب ری‌اکشن ذخیره‌شده استعلام شد` })
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در استعلام تگ‌های ری‌اکشن ذخیره‌شده' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
+  const handleM051GetScheduledHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getScheduledHistory) return
+    if (!m051ScheduledHistoryPeer.trim()) {
+      setM051Status({ type: 'error', message: 'شناسه مخاطب برای تاریخچه زمان‌بندی‌شده الزامی است' })
+      return
+    }
+    setM051LoadingOp('getScheduledHistory')
+    setM051Status(null)
+    try {
+      const res = await window.guidegram.getScheduledHistory(targetId, m051ScheduledHistoryPeer.trim(), 0)
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM051ScheduledHistoryCount(count)
+      setM051Status({ type: 'success', message: `تعداد ${count} پیام زمان‌بندی‌شده استعلام شد` })
+    } catch (err: any) {
+      setM051Status({ type: 'error', message: err?.message || 'خطا در استعلام پیام‌های زمان‌بندی‌شده' })
+    } finally {
+      setM051LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -10141,6 +10323,243 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m050RepliesCount !== null && (
                         <div className="text-[10px] text-fuchsia-400 font-mono">
                           ریپلای‌های استعلام‌شده: {m050RepliesCount} عدد
+                        </div>
+                      )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 051: Messages Domain Suite Part 19 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-emerald-400" />
+                        <span>میکروفاز ۰۵۱: پیام‌های غنی، گفتگوهای ذخیره‌شده، گیف‌ها، تاریخچه و پیام‌های زمان‌بندی‌شده (Messages Suite Part 19)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getRichMessage, getSavedDialogs, getSavedDialogsByID, getSavedGifs, getSavedHistory, getSavedReactionTags, getScheduledHistory
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m051Status && (
+                    <div
+                      className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                        m051Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      }`}
+                    >
+                      {m051Status.type === 'success' ? (
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      )}
+                      <span className="flex-1">{m051Status.message}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 pt-1">
+                    {/* 1. messages.getRichMessage */}
+                    <form
+                      onSubmit={handleM051GetRichMessage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. پیام غنی‌شده (getRichMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m051RichPeer}
+                          onChange={(e) => setM051RichPeer(e.target.value)}
+                          placeholder="شناسه مخاطب / چت"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m051RichId}
+                          onChange={(e) => setM051RichId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m051LoadingOp === 'getRichMessage'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m051LoadingOp === 'getRichMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m051RichResult && (
+                        <div className="text-[10px] text-emerald-400 font-mono truncate">
+                          نتیجه: {m051RichResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getSavedDialogs */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex items-center justify-between">
+                      <div className="text-xs text-gray-300 font-medium">
+                        <span>۲. گفتگوهای ذخیره‌شده (getSavedDialogs)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM051GetSavedDialogs}
+                        disabled={m051LoadingOp === 'getSavedDialogs'}
+                        className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m051LoadingOp === 'getSavedDialogs' ? 'در حال استعلام...' : `استعلام گفتگوها ${m051SavedDialogsCount !== null ? `(${m051SavedDialogsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 3. messages.getSavedDialogsByID */}
+                    <form
+                      onSubmit={handleM051GetSavedDialogsByID}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. گفتگوی ذخیره‌شده بر اساس شناسه (getSavedDialogsByID)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m051SavedDialogsByIdPeer}
+                          onChange={(e) => setM051SavedDialogsByIdPeer(e.target.value)}
+                          placeholder="Parent Peer (اختیاری)"
+                          className="w-36 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m051SavedDialogsByIdIds}
+                          onChange={(e) => setM051SavedDialogsByIdIds(e.target.value)}
+                          placeholder="شناسه‌ها (با ویرگول جدا کنید)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m051LoadingOp === 'getSavedDialogsByID'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m051LoadingOp === 'getSavedDialogsByID' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m051SavedDialogsByIdCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          دیالوگ‌های ذخیره‌شده: {m051SavedDialogsByIdCount} عدد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 4. messages.getSavedGifs */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex items-center justify-between">
+                      <div className="text-xs text-gray-300 font-medium">
+                        <span>۴. گیف‌های ذخیره‌شده (getSavedGifs)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM051GetSavedGifs}
+                        disabled={m051LoadingOp === 'getSavedGifs'}
+                        className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m051LoadingOp === 'getSavedGifs' ? 'در حال استعلام...' : `استعلام گیف‌ها ${m051SavedGifsCount !== null ? `(${m051SavedGifsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 5. messages.getSavedHistory */}
+                    <form
+                      onSubmit={handleM051GetSavedHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. تاریخچه ذخیره‌شده (getSavedHistory)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m051SavedHistoryPeer}
+                          onChange={(e) => setM051SavedHistoryPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / مخاطب (اختیاری)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m051LoadingOp === 'getSavedHistory'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m051LoadingOp === 'getSavedHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام تاریخچه'}
+                        </button>
+                      </div>
+                      {m051SavedHistoryCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          پیام‌های ذخیره‌شده: {m051SavedHistoryCount} عدد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.getSavedReactionTags */}
+                    <form
+                      onSubmit={handleM051GetSavedReactionTags}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. برچسب‌های ری‌اکشن ذخیره‌شده (getSavedReactionTags)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m051SavedReactionTagsPeer}
+                          onChange={(e) => setM051SavedReactionTagsPeer(e.target.value)}
+                          placeholder="شناسه چت / مخاطب (اختیاری)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m051LoadingOp === 'getSavedReactionTags'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m051LoadingOp === 'getSavedReactionTags' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام تگ‌ها'}
+                        </button>
+                      </div>
+                      {m051SavedReactionTagsCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          تگ‌های ری‌اکشن: {m051SavedReactionTagsCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 7. messages.getScheduledHistory */}
+                    <form
+                      onSubmit={handleM051GetScheduledHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. تاریخچه پیام‌های زمان‌بندی‌شده (getScheduledHistory)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m051ScheduledHistoryPeer}
+                          onChange={(e) => setM051ScheduledHistoryPeer(e.target.value)}
+                          placeholder="شناسه چت / مخاطب"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m051LoadingOp === 'getScheduledHistory'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m051LoadingOp === 'getScheduledHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام پیام‌های زمان‌بندی'}
+                        </button>
+                      </div>
+                      {m051ScheduledHistoryCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          پیام‌های زمان‌بندی‌شده: {m051ScheduledHistoryCount} عدد
                         </div>
                       )}
                     </form>

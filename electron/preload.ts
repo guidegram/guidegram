@@ -2399,6 +2399,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-recent-stickers', { accountId, attached, hash }),
   getReplies: (accountId: string, params?: { peerId?: string; msgId?: number; offsetId?: number; offsetDate?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-replies', { accountId, ...params }),
+  // Layer 232 Messages Suite (Microphase 051)
+  getRichMessage: (accountId: string, peerId?: string, id?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-rich-message', { accountId, peerId, id }),
+  getSavedDialogsRaw: (accountId: string, params?: { excludePinned?: boolean; parentPeerId?: string; offsetDate?: number; offsetId?: number; offsetPeerId?: string; limit?: number; hash?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-saved-dialogs', { accountId, ...params }),
+  getSavedDialogsByID: (accountId: string, parentPeerId?: string, ids?: string | string[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-saved-dialogs-by-id', { accountId, parentPeerId, ids }),
+  getSavedGifsRaw: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-saved-gifs', { accountId, hash }),
+  getSavedHistory: (accountId: string, params?: { parentPeerId?: string; peerId?: string; offsetId?: number; offsetDate?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-saved-history', { accountId, ...params }),
+  getSavedReactionTagsRaw: (accountId: string, peerId?: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-saved-reaction-tags', { accountId, peerId, hash }),
+  getScheduledHistory: (accountId: string, peerId?: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-scheduled-history', { accountId, peerId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
