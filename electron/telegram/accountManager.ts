@@ -16632,6 +16632,37 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.contactsService.editCloseFriends(holder as any, userIds)
   }
+
+  public async exportContactToken(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.exportContactToken(holder as any)
+  }
+
+  public async exportNoPaidMessagesToken(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.exportNoPaidMessagesToken(holder as any)
+  }
+
+  public async getContactIDs(accountId: string, hash: bigint | number = 0n): Promise<number[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getContactIDs(holder as any, hash ? BigInt(hash) : 0n)
+  }
+
+  public async getLocated(
+    accountId: string,
+    lat: number,
+    long: number,
+    background = false,
+    selfExpires?: number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.getLocated(holder as any, lat, long, undefined, background, selfExpires)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

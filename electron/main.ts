@@ -5906,6 +5906,45 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:export-contact-token', async (_event, { accountId }) => {
+    try {
+      return await accountManager.exportContactToken(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] exportContactToken error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:export-no-paid-messages-token', async (_event, { accountId }) => {
+    try {
+      return await accountManager.exportNoPaidMessagesToken(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] exportNoPaidMessagesToken error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:get-contact-ids', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getContactIDs(accountId, hash)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getContactIDs error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:get-located',
+    async (_event, { accountId, lat, long, background, selfExpires }) => {
+      try {
+        return await accountManager.getLocated(accountId, lat, long, background, selfExpires)
+      } catch (err: any) {
+        Logger.warn(`[IPC] getLocated error:`, err)
+        return null
+      }
+    }
+  )
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

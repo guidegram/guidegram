@@ -2131,6 +2131,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:delete-contacts', { accountId, userIds }),
   editCloseFriends: (accountId: string, userIds: (string | number)[]): Promise<boolean> =>
     ipcRenderer.invoke('telegram:edit-close-friends', { accountId, userIds }),
+  exportContactToken: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:export-contact-token', { accountId }),
+  exportNoPaidMessagesToken: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:export-no-paid-messages-token', { accountId }),
+  getContactIDs: (accountId: string, hash?: bigint | number): Promise<number[]> =>
+    ipcRenderer.invoke('telegram:get-contact-ids', { accountId, hash }),
+  getLocated: (
+    accountId: string,
+    lat: number,
+    long: number,
+    background?: boolean,
+    selfExpires?: number
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-located', { accountId, lat, long, background, selfExpires }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

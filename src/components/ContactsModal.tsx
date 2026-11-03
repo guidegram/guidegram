@@ -25,6 +25,13 @@ import {
   Wrench,
   AlertCircle,
   MessageSquare,
+  MapPin,
+  Compass,
+  Navigation,
+  KeyRound,
+  Link2,
+  Radio,
+  RefreshCw,
 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { ContactItem } from '../types/telegram'
@@ -39,7 +46,7 @@ interface ContactsModalProps {
   onSelectContact: (contactId: string) => void
 }
 
-type ContactTab = 'all' | 'close_friends' | 'top' | 'birthdays' | 'tools' | 'add'
+type ContactTab = 'all' | 'close_friends' | 'nearby' | 'top' | 'birthdays' | 'tools' | 'add'
 
 export const ContactsModal: React.FC<ContactsModalProps> = ({
   isOpen,
@@ -84,6 +91,28 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [replyReportSpam, setReplyReportSpam] = useState(false)
   const [isBlockingReplies, setIsBlockingReplies] = useState(false)
   const [blockRepliesSuccess, setBlockRepliesSuccess] = useState<string | null>(null)
+
+  // Layer 232 Contacts States (Microphase 029)
+  // Nearby / contacts.getLocated
+  const [nearbyUsers, setNearbyUsers] = useState<any[]>([])
+  const [nearbyChats, setNearbyChats] = useState<any[]>([])
+  const [nearbyLoading, setNearbyLoading] = useState(false)
+  const [nearbyError, setNearbyError] = useState<string | null>(null)
+  const [nearbyLat, setNearbyLat] = useState<number>(35.6892)
+  const [nearbyLong, setNearbyLong] = useState<number>(51.3890)
+  const [isLocatingCoords, setIsLocatingCoords] = useState(false)
+  const [nearbySearched, setNearbySearched] = useState(false)
+
+  // Tokens / contacts.exportContactToken & exportNoPaidMessagesToken
+  const [contactToken, setContactToken] = useState<{ url: string; expires: number } | null>(null)
+  const [isExportingContactToken, setIsExportingContactToken] = useState(false)
+  const [noPaidToken, setNoPaidToken] = useState<{ url: string; expires: number } | null>(null)
+  const [isExportingNoPaidToken, setIsExportingNoPaidToken] = useState(false)
+  const [tokenCopiedMessage, setTokenCopiedMessage] = useState<string | null>(null)
+
+  // Contact IDs / contacts.getContactIDs
+  const [cloudContactIDs, setCloudContactIDs] = useState<Array<string | number> | null>(null)
+  const [isLoadingContactIDs, setIsLoadingContactIDs] = useState(false)
 
   const loadAll = () => {
     if (!isOpen || !accountId) return
@@ -331,6 +360,101 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
     }
   }
 
+  // Microphase 029 Handlers
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setNearbyError('Geolocation is not supported by your environment.')
+      return
+    }
+    setIsLocatingCoords(true)
+    setNearbyError(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setNearbyLat(parseFloat(pos.coords.latitude.toFixed(6)))
+        setNearbyLong(parseFloat(pos.coords.longitude.toFixed(6)))
+        setIsLocatingCoords(false)
+      },
+      (err) => {
+        console.warn('Geolocation lookup failed:', err)
+        setNearbyError('Could not auto-detect GPS coordinates. Please specify manually.')
+        setIsLocatingCoords(false)
+      },
+      { timeout: 8000 }
+    )
+  }
+
+  const handleFetchNearby = async () => {
+    if (!accountId || !window.guidegram?.getLocated) return
+    setNearbyLoading(true)
+    setNearbyError(null)
+    setNearbySearched(true)
+    try {
+      const res = await window.guidegram.getLocated(accountId, nearbyLat, nearbyLong, false, 3600)
+      if (res) {
+        const users = res.users || []
+        const chats = res.chats || []
+        setNearbyUsers(Array.isArray(users) ? users : [])
+        setNearbyChats(Array.isArray(chats) ? chats : [])
+      }
+    } catch (err: any) {
+      console.error('Failed to get located peers:', err)
+      setNearbyError(err?.message || 'Failed to fetch nearby peers from Telegram')
+    } finally {
+      setNearbyLoading(false)
+    }
+  }
+
+  const handleExportContactToken = async () => {
+    if (!accountId || !window.guidegram?.exportContactToken) return
+    setIsExportingContactToken(true)
+    try {
+      const res = await window.guidegram.exportContactToken(accountId)
+      if (res?.url) {
+        setContactToken(res)
+      }
+    } catch (err: any) {
+      console.warn('Failed to export contact token:', err)
+    } finally {
+      setIsExportingContactToken(false)
+    }
+  }
+
+  const handleExportNoPaidMessagesToken = async () => {
+    if (!accountId || !window.guidegram?.exportNoPaidMessagesToken) return
+    setIsExportingNoPaidToken(true)
+    try {
+      const res = await window.guidegram.exportNoPaidMessagesToken(accountId)
+      if (res?.url) {
+        setNoPaidToken(res)
+      }
+    } catch (err: any) {
+      console.warn('Failed to export no-paid messages token:', err)
+    } finally {
+      setIsExportingNoPaidToken(false)
+    }
+  }
+
+  const handleFetchContactIDs = async () => {
+    if (!accountId || !window.guidegram?.getContactIDs) return
+    setIsLoadingContactIDs(true)
+    try {
+      const ids = await window.guidegram.getContactIDs(accountId)
+      if (Array.isArray(ids)) {
+        setCloudContactIDs(ids)
+      }
+    } catch (err: any) {
+      console.warn('Failed to fetch contact IDs:', err)
+    } finally {
+      setIsLoadingContactIDs(false)
+    }
+  }
+
+  const handleCopyToken = async (text: string, label: string) => {
+    await copyTextToClipboard(text)
+    setTokenCopiedMessage(`${label} copied to clipboard!`)
+    setTimeout(() => setTokenCopiedMessage(null), 3000)
+  }
+
   if (!isOpen) return null
 
   const filtered = contacts.filter((c) => {
@@ -374,6 +498,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
           {[
             { id: 'all' as const, label: `All (${contacts.length})`, icon: <Users className="w-3.5 h-3.5" /> },
             { id: 'close_friends' as const, label: `Close Friends (${closeFriends.length})`, icon: <Star className="w-3.5 h-3.5 text-emerald-400" /> },
+            { id: 'nearby' as const, label: 'Nearby', icon: <MapPin className="w-3.5 h-3.5 text-cyan-400" /> },
             { id: 'top' as const, label: 'Top', icon: <Sparkles className="w-3.5 h-3.5 text-amber-400" /> },
             { id: 'birthdays' as const, label: 'Birthdays', icon: <Cake className="w-3.5 h-3.5 text-rose-400" /> },
             { id: 'tools' as const, label: 'Tools', icon: <Wrench className="w-3.5 h-3.5 text-purple-400" /> },
@@ -568,6 +693,171 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                 })
             )}
           </div>
+        ) : activeTab === 'nearby' ? (
+          <div className="flex-1 overflow-y-auto flex flex-col p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+            {/* Coordinates / Radar Control */}
+            <div className="bg-dark-900/60 p-3.5 rounded-2xl border border-white/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                  <Compass className="w-4 h-4 text-accent-cyan" />
+                  <span>Geographic Radar (MTProto contacts.getLocated)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGetLocation}
+                  disabled={isLocatingCoords}
+                  title="Detect coordinates from device"
+                  className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  {isLocatingCoords ? <Loader2 className="w-3 h-3 animate-spin text-accent-cyan" /> : <Navigation className="w-3 h-3 text-accent-cyan" />}
+                  <span>GPS Auto-Detect</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-gray-400 block mb-1">Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={nearbyLat}
+                    onChange={(e) => setNearbyLat(parseFloat(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-dark-950 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-accent-cyan"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 block mb-1">Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={nearbyLong}
+                    onChange={(e) => setNearbyLong(parseFloat(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-dark-950 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-accent-cyan"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleFetchNearby}
+                disabled={nearbyLoading}
+                className="w-full py-2 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                {nearbyLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                <span>Scan for Nearby Peers & Groups</span>
+              </button>
+            </div>
+
+            {/* 4-State UI for Nearby */}
+            {nearbyLoading ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-3 text-center">
+                <Loader2 className="w-8 h-8 text-accent-cyan animate-spin" />
+                <div className="text-xs font-semibold text-gray-300">Scanning local MTProto frequencies...</div>
+                <div className="text-[11px] text-gray-500">Querying contacts.getLocated with Layer 232 peer Located specs.</div>
+              </div>
+            ) : nearbyError ? (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>Scan Failed</span>
+                </div>
+                <div className="text-[11px] text-rose-200/80">{nearbyError}</div>
+                <button
+                  type="button"
+                  onClick={handleFetchNearby}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-semibold transition-colors cursor-pointer"
+                >
+                  Retry Scan
+                </button>
+              </div>
+            ) : !nearbySearched ? (
+              <div className="p-8 text-center text-xs text-gray-400 space-y-2">
+                <MapPin className="w-8 h-8 text-cyan-400/40 mx-auto" />
+                <div className="font-semibold text-gray-300">Discover Nearby Telegram Users & Groups</div>
+                <div className="text-[11px] text-gray-500 max-w-xs mx-auto">
+                  Click scan to discover Telegram users and local community channels located around your coordinates.
+                </div>
+              </div>
+            ) : nearbyUsers.length === 0 && nearbyChats.length === 0 ? (
+              <div className="p-8 text-center text-xs text-gray-400 space-y-2">
+                <Compass className="w-8 h-8 text-gray-600 mx-auto" />
+                <div className="font-semibold text-gray-300">No Nearby Peers Detected</div>
+                <div className="text-[11px] text-gray-500">
+                  No public users or geo-located supergroups were found at coordinates ({nearbyLat}, {nearbyLong}).
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {nearbyUsers.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">
+                      Nearby People ({nearbyUsers.length})
+                    </div>
+                    <div className="divide-y divide-white/5 rounded-2xl bg-dark-900/40 border border-white/5 overflow-hidden">
+                      {nearbyUsers.map((u: any) => {
+                        const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Nearby User'
+                        return (
+                          <div
+                            key={u.id}
+                            onClick={() => {
+                              onSelectContact(u.id.toString())
+                              onClose()
+                            }}
+                            className="px-3.5 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Avatar accountId={accountId} peerId={u.id.toString()} title={name} initials={name.charAt(0)} size="sm" />
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-gray-200 truncate">{name}</div>
+                                {u.username && <div className="text-[10px] text-accent-cyan font-mono">@{u.username}</div>}
+                              </div>
+                            </div>
+                            <span className="text-[10px] bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded-full font-medium">
+                              Nearby
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {nearbyChats.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1">
+                      Nearby Channels & Groups ({nearbyChats.length})
+                    </div>
+                    <div className="divide-y divide-white/5 rounded-2xl bg-dark-900/40 border border-white/5 overflow-hidden">
+                      {nearbyChats.map((c: any) => {
+                        const title = c.title || 'Nearby Group'
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              onSelectContact(c.id.toString())
+                              onClose()
+                            }}
+                            className="px-3.5 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Avatar accountId={accountId} peerId={c.id.toString()} title={title} initials={title.charAt(0)} size="sm" />
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-gray-200 truncate">{title}</div>
+                                {c.username && <div className="text-[10px] text-accent-cyan font-mono">@{c.username}</div>}
+                              </div>
+                            </div>
+                            <span className="text-[10px] bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                              Local Group
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         ) : activeTab === 'tools' ? (
           <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
             {/* Delete By Phones Section (contacts.deleteByPhones) */}
@@ -664,6 +954,126 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                 <span>Block from Replies</span>
               </button>
             </form>
+
+            {/* Export Contact Tokens (contacts.exportContactToken & contacts.exportNoPaidMessagesToken) */}
+            <div className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                <KeyRound className="w-4 h-4 text-accent-cyan" />
+                <span>Contact Sharing & Free-Chat Tokens</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Generate temporary MTProto tokens to share your contact safely or allow peers to message you free of stars fee.
+              </p>
+
+              {tokenCopiedMessage && (
+                <div className="px-3 py-1.5 rounded-lg bg-accent-cyan/15 border border-accent-cyan/30 text-accent-cyan text-xs flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{tokenCopiedMessage}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportContactToken}
+                  disabled={isExportingContactToken}
+                  className="py-2 px-3 rounded-xl bg-accent-cyan/15 hover:bg-accent-cyan/25 border border-accent-cyan/30 text-accent-cyan font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {isExportingContactToken ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+                  <span>Export Contact Link</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportNoPaidMessagesToken}
+                  disabled={isExportingNoPaidToken}
+                  className="py-2 px-3 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {isExportingNoPaidToken ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span>No-Paid Pass Token</span>
+                </button>
+              </div>
+
+              {contactToken && (
+                <div className="p-3 rounded-xl bg-dark-950 border border-white/10 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-gray-400">
+                    <span className="font-semibold text-accent-cyan">Contact Token URL</span>
+                    <span>Expires in {Math.max(0, Math.round((contactToken.expires * 1000 - Date.now()) / 60000))}m</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={contactToken.url}
+                      className="w-full px-2 py-1 bg-transparent text-xs text-gray-200 font-mono truncate focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCopyToken(contactToken.url, 'Contact link')}
+                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {noPaidToken && (
+                <div className="p-3 rounded-xl bg-dark-950 border border-white/10 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-gray-400">
+                    <span className="font-semibold text-purple-300">Free Messages Pass Link</span>
+                    <span>Expires in {Math.max(0, Math.round((noPaidToken.expires * 1000 - Date.now()) / 60000))}m</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={noPaidToken.url}
+                      className="w-full px-2 py-1 bg-transparent text-xs text-gray-200 font-mono truncate focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleCopyToken(noPaidToken.url, 'No-paid pass')}
+                      className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cloud Contact IDs Telemetry (contacts.getContactIDs) */}
+            <div className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span>Cloud Contact IDs Telemetry</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchContactIDs}
+                  disabled={isLoadingContactIDs}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  {isLoadingContactIDs ? <Loader2 className="w-3 h-3 animate-spin text-emerald-400" /> : <RefreshCw className="w-3 h-3 text-emerald-400" />}
+                  <span>Query Cloud IDs</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Directly fetches the raw binary contact ID array stored on Telegram core data centers for this account.
+              </p>
+              {cloudContactIDs !== null && (
+                <div className="p-3 rounded-xl bg-dark-950 border border-white/10 space-y-1">
+                  <div className="text-[11px] text-emerald-300 font-semibold">
+                    Total Cloud Contacts: {cloudContactIDs.length} IDs
+                  </div>
+                  <div className="text-[10px] text-gray-500 font-mono truncate">
+                    IDs: {cloudContactIDs.slice(0, 10).join(', ')}{cloudContactIDs.length > 10 ? '...' : ''}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ) : activeTab === 'top' ? (
           <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
