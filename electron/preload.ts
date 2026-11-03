@@ -2230,6 +2230,19 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:delete-saved-history', { accountId, options }),
   deleteTopicHistory: (accountId: string, peerId: string, topMsgId: number): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:delete-topic-history', { accountId, peerId, topMsgId }),
+  // Layer 232 Messages Suite (Microphase 038)
+  editChatAbout: (accountId: string, peerId: string, about: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-about', { accountId, peerId, about }),
+  editChatAdmin: (accountId: string, chatId: bigint | number | string, userId: string, isAdmin: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-admin', { accountId, chatId, userId, isAdmin }),
+  editChatCreator: (accountId: string, peerId: string, userId: string, password?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-creator', { accountId, peerId, userId, password }),
+  editChatDefaultBannedRights: (accountId: string, peerId: string, bannedRights: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-default-banned-rights', { accountId, peerId, bannedRights }),
+  editChatParticipantRank: (accountId: string, peerId: string, participantId: string, rank: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-participant-rank', { accountId, peerId, participantId, rank }),
+  editChatPhoto: (accountId: string, chatId: bigint | number | string, photo?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-photo', { accountId, chatId, photo }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

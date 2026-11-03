@@ -19161,5 +19161,43 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.deleteTopicHistory(holder as any, accountId, peerId, topMsgId)
   }
+
+  // --- Layer 232 Messages Suite (Microphase 038) ---
+  public async editChatAbout(accountId: string, peerId: string, about: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editChatAbout(holder as any, accountId, peerId, about)
+  }
+
+  public async editChatAdmin(accountId: string, chatId: bigint | number | string, userId: string, isAdmin: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editChatAdmin(holder as any, accountId, typeof chatId === 'string' ? BigInt(chatId) : chatId, userId, isAdmin)
+  }
+
+  public async editChatCreator(accountId: string, peerId: string, userId: string, password?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editChatCreator(holder as any, accountId, peerId, userId, password)
+  }
+
+  public async editChatDefaultBannedRights(accountId: string, peerId: string, bannedRights: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editChatDefaultBannedRights(holder as any, accountId, peerId, bannedRights)
+  }
+
+  public async editChatParticipantRank(accountId: string, peerId: string, participantId: string, rank: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editChatParticipantRank(holder as any, accountId, peerId, participantId, rank)
+  }
+
+  public async editChatPhoto(accountId: string, chatId: bigint | number | string, photo?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const finalPhoto = photo || { _: 'inputChatPhotoEmpty' }
+    return this.messagingService.editChatPhoto(holder as any, typeof chatId === 'string' ? BigInt(chatId) : chatId, finalPhoto)
+  }
 }
 

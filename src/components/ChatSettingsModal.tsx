@@ -9,6 +9,13 @@ import {
   Settings,
   ShieldAlert,
   X,
+  UserCheck,
+  Shield,
+  KeyRound,
+  Image,
+  Lock,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { ChatDetails, ChatRestrictionsPayload, ChatSettingsInput } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -314,6 +321,211 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
     }
   }
 
+  // Layer 232 Chat Operations Suite (Microphase 038)
+  const [activeTab, setActiveTab] = useState<'general' | 'management'>('general')
+
+  // 1. messages.editChatAbout
+  const [customAbout, setCustomAbout] = useState('')
+  const [isEditingAbout, setIsEditingAbout] = useState(false)
+  const [aboutFeedback, setAboutFeedback] = useState<string | null>(null)
+
+  // 2. messages.editChatAdmin
+  const [adminUserId, setAdminUserId] = useState('')
+  const [adminIsPromote, setAdminIsPromote] = useState(true)
+  const [isEditingAdmin, setIsEditingAdmin] = useState(false)
+  const [adminFeedback, setAdminFeedback] = useState<string | null>(null)
+
+  // 3. messages.editChatParticipantRank
+  const [rankParticipantId, setRankParticipantId] = useState('')
+  const [participantRank, setParticipantRank] = useState('')
+  const [isEditingRank, setIsEditingRank] = useState(false)
+  const [rankFeedback, setRankFeedback] = useState<string | null>(null)
+
+  // 4. messages.editChatDefaultBannedRights
+  const [banSendMessages, setBanSendMessages] = useState(false)
+  const [banSendMedia, setBanSendMedia] = useState(false)
+  const [banSendStickers, setBanSendStickers] = useState(false)
+  const [banEmbedLinks, setBanEmbedLinks] = useState(false)
+  const [isUpdatingBannedRights, setIsUpdatingBannedRights] = useState(false)
+  const [bannedRightsFeedback, setBannedRightsFeedback] = useState<string | null>(null)
+
+  // 5. messages.editChatPhoto
+  const [isClearingChatPhoto, setIsClearingChatPhoto] = useState(false)
+  const [photoFeedback, setPhotoFeedback] = useState<string | null>(null)
+
+  // 6. messages.editChatCreator
+  const [newCreatorUserId, setNewCreatorUserId] = useState('')
+  const [isTransferringCreator, setIsTransferringCreator] = useState(false)
+  const [transferCreatorFeedback, setTransferCreatorFeedback] = useState<string | null>(null)
+
+  // 7. messages.discardEncryption
+  const [discardChatIdInput, setDiscardChatIdInput] = useState('')
+  const [isDiscardingEncryption, setIsDiscardingEncryption] = useState(false)
+  const [discardEncryptionFeedback, setDiscardEncryptionFeedback] = useState<string | null>(null)
+
+  const handleEditChatAbout = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.editChatAbout) return
+    setIsEditingAbout(true)
+    setAboutFeedback(null)
+    try {
+      const res = await window.guidegram.editChatAbout(accountId, chatId, customAbout.trim())
+      if (res) {
+        setAboutFeedback('Chat description updated successfully.')
+      } else {
+        setAboutFeedback('Failed to update chat description.')
+      }
+    } catch (err: any) {
+      setAboutFeedback(err?.message || 'Error updating chat description.')
+    } finally {
+      setIsEditingAbout(false)
+    }
+  }
+
+  const handleEditChatAdmin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!adminUserId.trim() || !window.guidegram?.editChatAdmin) return
+    setIsEditingAdmin(true)
+    setAdminFeedback(null)
+    try {
+      const res = await window.guidegram.editChatAdmin(accountId, chatId, adminUserId.trim(), adminIsPromote)
+      if (res) {
+        setAdminFeedback(`User ${adminUserId} ${adminIsPromote ? 'promoted to admin' : 'demoted'} successfully.`)
+        setAdminUserId('')
+      } else {
+        setAdminFeedback('Failed to modify admin privileges.')
+      }
+    } catch (err: any) {
+      setAdminFeedback(err?.message || 'Error modifying admin privileges.')
+    } finally {
+      setIsEditingAdmin(false)
+    }
+  }
+
+  const handleEditChatParticipantRank = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!rankParticipantId.trim() || !window.guidegram?.editChatParticipantRank) return
+    setIsEditingRank(true)
+    setRankFeedback(null)
+    try {
+      const res = await window.guidegram.editChatParticipantRank(accountId, chatId, rankParticipantId.trim(), participantRank.trim())
+      if (res) {
+        setRankFeedback(`Custom title "${participantRank.trim()}" assigned successfully.`)
+        setRankParticipantId('')
+        setParticipantRank('')
+      } else {
+        setRankFeedback('Failed to assign custom title.')
+      }
+    } catch (err: any) {
+      setRankFeedback(err?.message || 'Error assigning custom title.')
+    } finally {
+      setIsEditingRank(false)
+    }
+  }
+
+  const handleEditDefaultBannedRights = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.editChatDefaultBannedRights) return
+    setIsUpdatingBannedRights(true)
+    setBannedRightsFeedback(null)
+    try {
+      const bannedRights = {
+        _: 'chatBannedRights',
+        flags: 0,
+        view_messages: false,
+        send_messages: banSendMessages,
+        send_media: banSendMedia,
+        send_stickers: banSendStickers,
+        send_gifs: banSendStickers,
+        send_games: banSendStickers,
+        send_inline: banSendStickers,
+        embed_links: banEmbedLinks,
+        send_polls: false,
+        change_info: false,
+        invite_users: false,
+        pin_messages: false,
+        manage_topics: false,
+        send_photos: banSendMedia,
+        send_videos: banSendMedia,
+        send_roundvideos: banSendMedia,
+        send_audios: banSendMedia,
+        send_voices: banSendMedia,
+        send_docs: banSendMedia,
+        send_plain: banSendMessages,
+        until_date: 0,
+      }
+      const res = await window.guidegram.editChatDefaultBannedRights(accountId, chatId, bannedRights)
+      if (res) {
+        setBannedRightsFeedback('Default chat permissions and banned rights updated.')
+      } else {
+        setBannedRightsFeedback('Failed to update default banned rights.')
+      }
+    } catch (err: any) {
+      setBannedRightsFeedback(err?.message || 'Error updating default banned rights.')
+    } finally {
+      setIsUpdatingBannedRights(false)
+    }
+  }
+
+  const handleClearChatPhoto = async () => {
+    if (!window.guidegram?.editChatPhoto) return
+    setIsClearingChatPhoto(true)
+    setPhotoFeedback(null)
+    try {
+      const res = await window.guidegram.editChatPhoto(accountId, chatId, { _: 'inputChatPhotoEmpty' })
+      if (res) {
+        setPhotoFeedback('Chat photo removed successfully.')
+      } else {
+        setPhotoFeedback('Failed to remove chat photo.')
+      }
+    } catch (err: any) {
+      setPhotoFeedback(err?.message || 'Error removing chat photo.')
+    } finally {
+      setIsClearingChatPhoto(false)
+    }
+  }
+
+  const handleTransferChatCreator = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCreatorUserId.trim() || !window.guidegram?.editChatCreator) return
+    setIsTransferringCreator(true)
+    setTransferCreatorFeedback(null)
+    try {
+      const res = await window.guidegram.editChatCreator(accountId, chatId, newCreatorUserId.trim())
+      if (res) {
+        setTransferCreatorFeedback(`Chat ownership transferred to ${newCreatorUserId}.`)
+        setNewCreatorUserId('')
+      } else {
+        setTransferCreatorFeedback('Failed to transfer chat ownership. Ensure 2FA password is valid if required.')
+      }
+    } catch (err: any) {
+      setTransferCreatorFeedback(err?.message || 'Error transferring chat ownership.')
+    } finally {
+      setIsTransferringCreator(false)
+    }
+  }
+
+  const handleDiscardEncryption = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetChatId = Number(discardChatIdInput.trim() || chatId)
+    if (!targetChatId || !window.guidegram?.discardEncryption) return
+    setIsDiscardingEncryption(true)
+    setDiscardEncryptionFeedback(null)
+    try {
+      const res = await window.guidegram.discardEncryption(accountId, targetChatId, true)
+      if (res) {
+        setDiscardEncryptionFeedback(`Encrypted session for chat #${targetChatId} discarded.`)
+        setDiscardChatIdInput('')
+      } else {
+        setDiscardEncryptionFeedback('Failed to discard encrypted session.')
+      }
+    } catch (err: any) {
+      setDiscardEncryptionFeedback(err?.message || 'Error discarding encrypted session.')
+    } finally {
+      setIsDiscardingEncryption(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -366,7 +578,36 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-white/10 bg-dark-900/60 p-1.5 gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('general')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'general'
+                ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30 shadow-sm'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>General Settings</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('management')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'management'
+                ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30 shadow-sm'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Chat Management & Ops</span>
+          </button>
+        </div>
+
+        {activeTab === 'general' ? (
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {!details ? (
             <div className="min-h-[200px] flex flex-col items-center justify-center gap-3 text-gray-400 text-xs">
               <Loader2 className="w-6 h-6 animate-spin text-primary-400" />
@@ -714,6 +955,279 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
             </>
           )}
         </div>
+        ) : (
+          /* Management View (Microphase 038 Layer 232 Ops) */
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 custom-scrollbar text-xs">
+            {/* Section 1: Edit Chat Description (messages.editChatAbout) */}
+            <form onSubmit={handleEditChatAbout} className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-primary-400 font-bold">
+                <Settings className="w-4 h-4" />
+                <span>Chat Description (messages.editChatAbout)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Directly modify the public description/about text of this chat or channel.</p>
+              <textarea
+                value={customAbout}
+                onChange={(e) => setCustomAbout(e.target.value)}
+                placeholder="Enter new description / about..."
+                rows={2}
+                className="w-full px-3 py-2 bg-dark-950/70 border border-white/10 rounded-xl text-gray-200 text-xs focus:outline-none focus:border-primary-500 resize-none"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isEditingAbout}
+                  className="px-4 py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isEditingAbout && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Save Description</span>
+                </button>
+              </div>
+              {aboutFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-primary-400 shrink-0" />
+                  <span>{aboutFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 2: Edit Chat Admin (messages.editChatAdmin) */}
+            <form onSubmit={handleEditChatAdmin} className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-indigo-400 font-bold">
+                <Shield className="w-4 h-4" />
+                <span>Admin Privileges (messages.editChatAdmin)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Promote or demote an administrator in standard chats.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={adminUserId}
+                  onChange={(e) => setAdminUserId(e.target.value)}
+                  placeholder="User ID or @username"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-xl text-gray-200 text-xs focus:outline-none focus:border-indigo-400"
+                  required
+                />
+                <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={adminIsPromote}
+                    onChange={(e) => setAdminIsPromote(e.target.checked)}
+                    className="rounded text-indigo-500"
+                  />
+                  <span>Admin</span>
+                </label>
+                <button
+                  type="submit"
+                  disabled={isEditingAdmin}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isEditingAdmin && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Apply</span>
+                </button>
+              </div>
+              {adminFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span>{adminFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 3: Custom Title / Rank (messages.editChatParticipantRank) */}
+            <form onSubmit={handleEditChatParticipantRank} className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-amber-400 font-bold">
+                <UserCheck className="w-4 h-4" />
+                <span>Participant Custom Title (messages.editChatParticipantRank)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Assign a personalized custom title or badge rank to a member in this group.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={rankParticipantId}
+                  onChange={(e) => setRankParticipantId(e.target.value)}
+                  placeholder="Member User ID"
+                  className="px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-xl text-gray-200 text-xs focus:outline-none focus:border-amber-400"
+                  required
+                />
+                <input
+                  type="text"
+                  value={participantRank}
+                  onChange={(e) => setParticipantRank(e.target.value)}
+                  placeholder="Custom Title (e.g. Officer)"
+                  className="px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-xl text-gray-200 text-xs focus:outline-none focus:border-amber-400"
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isEditingRank}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isEditingRank && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Set Title</span>
+                </button>
+              </div>
+              {rankFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{rankFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 4: Chat Default Banned Rights (messages.editChatDefaultBannedRights) */}
+            <form onSubmit={handleEditDefaultBannedRights} className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-rose-400 font-bold">
+                <ShieldAlert className="w-4 h-4" />
+                <span>Chat-Wide Banned Rights (messages.editChatDefaultBannedRights)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Configure global restrictions enforced by default for non-admin members.</p>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <label className="flex items-center gap-2 p-2 rounded-lg bg-dark-900/50 border border-white/5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={banSendMessages}
+                    onChange={(e) => setBanSendMessages(e.target.checked)}
+                    className="rounded text-rose-500"
+                  />
+                  <span>Restrict Messages</span>
+                </label>
+                <label className="flex items-center gap-2 p-2 rounded-lg bg-dark-900/50 border border-white/5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={banSendMedia}
+                    onChange={(e) => setBanSendMedia(e.target.checked)}
+                    className="rounded text-rose-500"
+                  />
+                  <span>Restrict Media</span>
+                </label>
+                <label className="flex items-center gap-2 p-2 rounded-lg bg-dark-900/50 border border-white/5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={banSendStickers}
+                    onChange={(e) => setBanSendStickers(e.target.checked)}
+                    className="rounded text-rose-500"
+                  />
+                  <span>Restrict Stickers</span>
+                </label>
+                <label className="flex items-center gap-2 p-2 rounded-lg bg-dark-900/50 border border-white/5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={banEmbedLinks}
+                    onChange={(e) => setBanEmbedLinks(e.target.checked)}
+                    className="rounded text-rose-500"
+                  />
+                  <span>Restrict Link Previews</span>
+                </label>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isUpdatingBannedRights}
+                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isUpdatingBannedRights && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Save Rights</span>
+                </button>
+              </div>
+              {bannedRightsFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{bannedRightsFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 5: Remove Chat Photo (messages.editChatPhoto) */}
+            <div className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Image className="w-4 h-4" />
+                <span>Chat Photo Management (messages.editChatPhoto)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Purge and remove the current chat profile avatar.</p>
+              <button
+                type="button"
+                onClick={handleClearChatPhoto}
+                disabled={isClearingChatPhoto}
+                className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 disabled:opacity-50 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                {isClearingChatPhoto && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                <span>Remove Chat Avatar Photo</span>
+              </button>
+              {photoFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{photoFeedback}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Section 6: Transfer Chat Ownership (messages.editChatCreator) */}
+            <form onSubmit={handleTransferChatCreator} className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-purple-400 font-bold">
+                <KeyRound className="w-4 h-4" />
+                <span>Transfer Chat Ownership (messages.editChatCreator)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Transfer root ownership of this chat to another trusted administrator.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newCreatorUserId}
+                  onChange={(e) => setNewCreatorUserId(e.target.value)}
+                  placeholder="New Owner User ID"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-xl text-gray-200 text-xs focus:outline-none focus:border-purple-400"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isTransferringCreator}
+                  className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isTransferringCreator && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Transfer</span>
+                </button>
+              </div>
+              {transferCreatorFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>{transferCreatorFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 7: Discard Secret Chat Encryption (messages.discardEncryption) */}
+            <form onSubmit={handleDiscardEncryption} className="p-3.5 bg-dark-850/60 rounded-2xl border border-white/5 space-y-2.5">
+              <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                <Lock className="w-4 h-4" />
+                <span>Discard Encrypted Chat (messages.discardEncryption)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Permanently terminate and discard secret encrypted chat sessions.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={discardChatIdInput}
+                  onChange={(e) => setDiscardChatIdInput(e.target.value)}
+                  placeholder={`Secret Chat ID (default: ${chatId})`}
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-xl text-gray-200 text-xs focus:outline-none focus:border-cyan-400"
+                />
+                <button
+                  type="submit"
+                  disabled={isDiscardingEncryption}
+                  className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isDiscardingEncryption && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Discard</span>
+                </button>
+              </div>
+              {discardEncryptionFeedback && (
+                <div className="p-2.5 rounded-xl bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>{discardEncryptionFeedback}</span>
+                </div>
+              )}
+            </form>
+          </div>
+        )}
 
         <div className="px-5 py-3 bg-dark-850/90 border-t border-white/10 flex items-center justify-end gap-2 shrink-0">
           <button
@@ -724,19 +1238,21 @@ export const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({
           >
             {t('chat_settings.close')}
           </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={isSaving || !details || !canEditAnything}
-            className="px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center gap-2 transition-colors"
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {isSaving ? t('chat_settings.saving') : t('chat_settings.save')}
-          </button>
+          {activeTab === 'general' && (
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={isSaving || !details || !canEditAnything}
+              className="px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold flex items-center gap-2 transition-colors"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? t('chat_settings.saving') : t('chat_settings.save')}
+            </button>
+          )}
         </div>
       </motion.div>
     </div>

@@ -6313,6 +6313,61 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 038)
+  ipcMain.handle('telegram:messages:edit-chat-about', async (_event, { accountId, peerId, about }) => {
+    try {
+      return await accountManager.editChatAbout(accountId, peerId, about)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatAbout error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-chat-admin', async (_event, { accountId, chatId, userId, isAdmin }) => {
+    try {
+      return await accountManager.editChatAdmin(accountId, chatId, userId, isAdmin)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatAdmin error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-chat-creator', async (_event, { accountId, peerId, userId, password }) => {
+    try {
+      return await accountManager.editChatCreator(accountId, peerId, userId, password)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatCreator error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-chat-default-banned-rights', async (_event, { accountId, peerId, bannedRights }) => {
+    try {
+      return await accountManager.editChatDefaultBannedRights(accountId, peerId, bannedRights)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatDefaultBannedRights error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-chat-participant-rank', async (_event, { accountId, peerId, participantId, rank }) => {
+    try {
+      return await accountManager.editChatParticipantRank(accountId, peerId, participantId, rank)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatParticipantRank error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-chat-photo', async (_event, { accountId, chatId, photo }) => {
+    try {
+      return await accountManager.editChatPhoto(accountId, chatId, photo)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatPhoto error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
