@@ -8266,6 +8266,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 069 IPC Handlers
+  ipcMain.handle('telegram:messages:update-dialog-filter-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updateDialogFilterRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updateDialogFilterRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:update-dialog-filters-order-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updateDialogFiltersOrderRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updateDialogFiltersOrderRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:update-pinned-forum-topic-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updatePinnedForumTopicRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updatePinnedForumTopicRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:update-pinned-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updatePinnedMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updatePinnedMessageRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:update-saved-reaction-tag-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updateSavedReactionTagRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updateSavedReactionTagRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:upload-encrypted-file-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadEncryptedFileRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadEncryptedFileRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:upload-imported-media-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadImportedMediaRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadImportedMediaRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

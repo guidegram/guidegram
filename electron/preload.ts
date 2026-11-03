@@ -2655,6 +2655,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:uninstall-sticker-set-raw', { accountId, ...params }),
   unpinAllMessagesRaw: (accountId: string, params: { peerId: string; topMsgId?: number; savedPeerIdId?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:unpin-all-messages-raw', { accountId, ...params }),
+  updateDialogFilterRaw: (accountId: string, params: { id: number; filter?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:update-dialog-filter-raw', { accountId, ...params }),
+  updateDialogFiltersOrderRaw: (accountId: string, params: { order: number[] | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:update-dialog-filters-order-raw', { accountId, ...params }),
+  updatePinnedForumTopicRaw: (accountId: string, params: { peerId: string; topicId: number; pinned?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:update-pinned-forum-topic-raw', { accountId, ...params }),
+  updatePinnedMessageRaw: (accountId: string, params: { silent?: boolean; unpin?: boolean; pmOneside?: boolean; peerId: string; id: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:update-pinned-message-raw', { accountId, ...params }),
+  updateSavedReactionTagRaw: (accountId: string, params: { reaction?: any; title?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:update-saved-reaction-tag-raw', { accountId, ...params }),
+  uploadEncryptedFileRaw: (accountId: string, params: { peer?: any; file?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:upload-encrypted-file-raw', { accountId, ...params }),
+  uploadImportedMediaRaw: (accountId: string, params: { peerId: string; importId: bigint | number | string | any; fileName?: string; media?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:upload-imported-media-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

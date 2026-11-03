@@ -7187,6 +7187,159 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 069 State & Handlers (Messages Domain Part 37 - Layer 232)
+  const [m069Status, setM069Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m069LoadingOp, setM069LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.updatePinnedMessage
+  const [m069PinPeer, setM069PinPeer] = useState('')
+  const [m069PinMsgId, setM069PinMsgId] = useState('')
+  const [m069PinSilent, setM069PinSilent] = useState(false)
+  const [m069PinUnpin, setM069PinUnpin] = useState(false)
+  const [m069PinPmOneside, setM069PinPmOneside] = useState(false)
+
+  // 2. messages.updatePinnedForumTopic
+  const [m069TopicPeer, setM069TopicPeer] = useState('')
+  const [m069TopicId, setM069TopicId] = useState('')
+  const [m069TopicPinned, setM069TopicPinned] = useState(true)
+
+  // 3. messages.updateSavedReactionTag
+  const [m069ReactionEmoticon, setM069ReactionEmoticon] = useState('❤️')
+  const [m069ReactionTagTitle, setM069ReactionTagTitle] = useState('')
+
+  // 4. messages.updateDialogFiltersOrder
+  const [m069FolderOrderIds, setM069FolderOrderIds] = useState('')
+
+  // 5. messages.updateDialogFilter
+  const [m069FilterId, setM069FilterId] = useState('')
+  const [m069FilterTitle, setM069FilterTitle] = useState('')
+
+  const handleM069UpdatePinnedMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updatePinnedMessageRaw) return
+    if (!m069PinPeer.trim() || !m069PinMsgId.trim()) {
+      setM069Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام الزامی است' })
+      return
+    }
+    setM069LoadingOp('updatePinnedMessage')
+    setM069Status(null)
+    try {
+      const res = await window.guidegram.updatePinnedMessageRaw(targetId, {
+        peerId: m069PinPeer.trim(),
+        id: Number(m069PinMsgId.trim()),
+        silent: m069PinSilent,
+        unpin: m069PinUnpin,
+        pmOneside: m069PinPmOneside,
+      })
+      setM069Status({ type: 'success', message: `وضعیت پین پیام با موفقیت تغییر کرد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM069Status({ type: 'error', message: err?.message || 'خطا در ویرایش پین پیام' })
+    } finally {
+      setM069LoadingOp(null)
+    }
+  }
+
+  const handleM069UpdatePinnedForumTopic = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updatePinnedForumTopicRaw) return
+    if (!m069TopicPeer.trim() || !m069TopicId.trim()) {
+      setM069Status({ type: 'error', message: 'شناسه گروه و شناسه تاپیک الزامی است' })
+      return
+    }
+    setM069LoadingOp('updatePinnedForumTopic')
+    setM069Status(null)
+    try {
+      const res = await window.guidegram.updatePinnedForumTopicRaw(targetId, {
+        peerId: m069TopicPeer.trim(),
+        topicId: Number(m069TopicId.trim()),
+        pinned: m069TopicPinned,
+      })
+      setM069Status({ type: 'success', message: `وضعیت پین تاپیک تغییر کرد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM069Status({ type: 'error', message: err?.message || 'خطا در پین تاپیک' })
+    } finally {
+      setM069LoadingOp(null)
+    }
+  }
+
+  const handleM069UpdateSavedReactionTag = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updateSavedReactionTagRaw) return
+    if (!m069ReactionEmoticon.trim()) {
+      setM069Status({ type: 'error', message: 'ایموجی ری‌اکشن الزامی است' })
+      return
+    }
+    setM069LoadingOp('updateSavedReactionTag')
+    setM069Status(null)
+    try {
+      const res = await window.guidegram.updateSavedReactionTagRaw(targetId, {
+        reaction: m069ReactionEmoticon.trim(),
+        title: m069ReactionTagTitle.trim() || undefined,
+      })
+      setM069Status({ type: 'success', message: `عنوان تگ ری‌اکشن با موفقیت ثبت شد: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM069Status({ type: 'error', message: err?.message || 'خطا در ثبت عنوان تگ ری‌اکشن' })
+    } finally {
+      setM069LoadingOp(null)
+    }
+  }
+
+  const handleM069UpdateDialogFiltersOrder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updateDialogFiltersOrderRaw) return
+    if (!m069FolderOrderIds.trim()) {
+      setM069Status({ type: 'error', message: 'ترتیب شناسه‌های پوشه الزامی است' })
+      return
+    }
+    setM069LoadingOp('updateDialogFiltersOrder')
+    setM069Status(null)
+    try {
+      const ids = m069FolderOrderIds.split(',').map((s) => s.trim()).filter(Boolean).map(Number)
+      const res = await window.guidegram.updateDialogFiltersOrderRaw(targetId, {
+        order: ids,
+      })
+      setM069Status({ type: 'success', message: `ترتیب پوشه‌ها با موفقیت ذخیره شد: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM069Status({ type: 'error', message: err?.message || 'خطا در ذخیره ترتیب پوشه‌ها' })
+    } finally {
+      setM069LoadingOp(null)
+    }
+  }
+
+  const handleM069UpdateDialogFilter = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updateDialogFilterRaw) return
+    if (!m069FilterId.trim() || !m069FilterTitle.trim()) {
+      setM069Status({ type: 'error', message: 'شناسه و عنوان پوشه الزامی است' })
+      return
+    }
+    setM069LoadingOp('updateDialogFilter')
+    setM069Status(null)
+    try {
+      const res = await window.guidegram.updateDialogFilterRaw(targetId, {
+        id: Number(m069FilterId.trim()),
+        filter: {
+          _: 'dialogFilter',
+          id: Number(m069FilterId.trim()),
+          title: { _: 'textWithEntities', text: m069FilterTitle.trim(), entities: [] },
+          pinnedPeers: [],
+          includePeers: [],
+          excludePeers: [],
+        },
+      })
+      setM069Status({ type: 'success', message: `فیلتر پوشه با موفقیت به‌روزرسانی شد: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM069Status({ type: 'error', message: err?.message || 'خطا در به‌روزرسانی فیلتر پوشه' })
+    } finally {
+      setM069LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -18629,6 +18782,254 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m068LoadingOp === 'unpinAll' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'آن‌پین همه'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 069: Messages Domain Suite Part 37 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۹: پین پیام و تاپیک، برچسب ری‌اکشن، پوشه‌ها و ترتیب گفتگوها (Messages Suite Part 37)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-teal-400/80 font-mono px-2 py-0.5 rounded-full bg-teal-400/10 border border-teal-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    مدیریت سازمان‌دهی پیشرفته: پین و آن‌پین پیام‌ها و تاپیک‌های گروهی، نام‌گذاری برچسب ری‌اکشن‌های ذخیره‌شده، و ساختاردهی فیلترها و چینش پوشه‌های گفتگو:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m069Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m069Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m069Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m069Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM069Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.updatePinnedMessage */}
+                    <form
+                      onSubmit={handleM069UpdatePinnedMessage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. پین یا آن‌پین پیام (updatePinnedMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m069PinPeer}
+                          onChange={(e) => setM069PinPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m069PinMsgId}
+                          onChange={(e) => setM069PinMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-400">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m069PinSilent}
+                            onChange={(e) => setM069PinSilent(e.target.checked)}
+                            className="rounded border-white/10 text-teal-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>بی‌صدا</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m069PinUnpin}
+                            onChange={(e) => setM069PinUnpin(e.target.checked)}
+                            className="rounded border-white/10 text-rose-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>آن‌پین کردن</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m069PinPmOneside}
+                            onChange={(e) => setM069PinPmOneside(e.target.checked)}
+                            className="rounded border-white/10 text-teal-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>فقط برای من</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m069LoadingOp === 'updatePinnedMessage'}
+                          className="px-3 py-1 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m069LoadingOp === 'updatePinnedMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال پین'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.updatePinnedForumTopic */}
+                    <form
+                      onSubmit={handleM069UpdatePinnedForumTopic}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. پین تاپیک در گروه (updatePinnedForumTopic)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m069TopicPeer}
+                          onChange={(e) => setM069TopicPeer(e.target.value)}
+                          placeholder="شناسه سوپرگروه..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m069TopicId}
+                          onChange={(e) => setM069TopicId(e.target.value)}
+                          placeholder="شناسه تاپیک"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <label className="flex items-center gap-1 text-xs text-teal-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m069TopicPinned}
+                            onChange={(e) => setM069TopicPinned(e.target.checked)}
+                            className="rounded border-white/10 text-teal-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>پین</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m069LoadingOp === 'updatePinnedForumTopic'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m069LoadingOp === 'updatePinnedForumTopic' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت تاپیک'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.updateSavedReactionTag */}
+                    <form
+                      onSubmit={handleM069UpdateSavedReactionTag}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. برچسب ری‌اکشن ذخیره‌شده (updateSavedReactionTag)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m069ReactionEmoticon}
+                          onChange={(e) => setM069ReactionEmoticon(e.target.value)}
+                          placeholder="ایموجی (❤️)"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-center text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m069ReactionTagTitle}
+                          onChange={(e) => setM069ReactionTagTitle(e.target.value)}
+                          placeholder="عنوان تگ (مثلاً مهم، کاری)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m069LoadingOp === 'updateSavedReactionTag'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m069LoadingOp === 'updateSavedReactionTag' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت تگ'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.updateDialogFiltersOrder */}
+                    <form
+                      onSubmit={handleM069UpdateDialogFiltersOrder}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. ترتیب پوشه‌های چت (updateDialogFiltersOrder)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m069FolderOrderIds}
+                          onChange={(e) => setM069FolderOrderIds(e.target.value)}
+                          placeholder="شناسه‌ها با کاما (مثلاً 1, 2, 3)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m069LoadingOp === 'updateDialogFiltersOrder'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m069LoadingOp === 'updateDialogFiltersOrder' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره ترتیب'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.updateDialogFilter */}
+                    <form
+                      onSubmit={handleM069UpdateDialogFilter}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 col-span-1 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. ایجاد/به‌روزرسانی فیلتر گفتگو (updateDialogFilter)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m069FilterId}
+                          onChange={(e) => setM069FilterId(e.target.value)}
+                          placeholder="شناسه عددی فیلتر..."
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m069FilterTitle}
+                          onChange={(e) => setM069FilterTitle(e.target.value)}
+                          placeholder="نام جدید پوشه/فیلتر..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m069LoadingOp === 'updateDialogFilter'}
+                          className="px-4 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m069LoadingOp === 'updateDialogFilter' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره فیلتر'}
                         </button>
                       </div>
                     </form>

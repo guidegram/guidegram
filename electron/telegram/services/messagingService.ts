@@ -1584,8 +1584,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.uploadEncryptedFile',
-        'peer': peer,
-        'file': file,
+        peer: peer || { _: 'inputEncryptedChat', chatId: 0, accessHash: Long.ZERO },
+        file: file || { _: 'inputEncryptedFileEmpty' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.uploadEncryptedFile error:', err)
@@ -1674,11 +1674,11 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.updatePinnedMessage',
-        'silent': silent,
-        'unpin': unpin,
-        'pm_oneside': pmOneside,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        silent: Boolean(silent),
+        unpin: Boolean(unpin),
+        pmOneside: Boolean(pmOneside),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        id: Number(id || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.updatePinnedMessage error:', err)
@@ -1986,8 +1986,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.updateDialogFilter',
-        'id': id,
-        'filter': filter,
+        id: Number(id || 0),
+        filter: filter,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.updateDialogFilter error:', err)
@@ -1995,11 +1995,12 @@ export class MessagingService {
     }
   }
 
-  public async updateDialogFiltersOrder(holder: RpcClientHolder, order?: number): Promise<any> {
+  public async updateDialogFiltersOrder(holder: RpcClientHolder, order?: number[] | number): Promise<any> {
     try {
+      const orderList = Array.isArray(order) ? order.map(Number) : (order !== undefined ? [Number(order)] : [])
       return await holder.client.call({
         _: 'messages.updateDialogFiltersOrder',
-        'order': order,
+        order: orderList,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.updateDialogFiltersOrder error:', err)
@@ -2132,14 +2133,15 @@ export class MessagingService {
     }
   }
 
-  public async uploadImportedMedia(holder: RpcClientHolder, accountId: string, peerId?: string, importId?: bigint | number, fileName?: string, media?: any): Promise<any> {
+  public async uploadImportedMedia(holder: RpcClientHolder, accountId: string, peerId?: string, importId?: bigint | number | Long | string, fileName?: string, media?: any): Promise<any> {
     try {
+      const impId = importId ? (Long.isLong(importId) ? importId : Long.fromValue(importId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.uploadImportedMedia',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'import_id': importId,
-        'file_name': fileName,
-        'media': media,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        importId: impId,
+        fileName: fileName || '',
+        media: media || { _: 'inputMediaEmpty' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.uploadImportedMedia error:', err)
@@ -3173,10 +3175,13 @@ export class MessagingService {
 
   public async updateSavedReactionTag(holder: RpcClientHolder, reaction?: any, title?: string): Promise<any> {
     try {
+      const rObj = typeof reaction === 'string'
+        ? { _: 'reactionEmoji', emoticon: reaction }
+        : reaction
       return await holder.client.call({
         _: 'messages.updateSavedReactionTag',
-        'reaction': reaction,
-        'title': title,
+        reaction: rObj || { _: 'reactionEmpty' },
+        title: title || undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.updateSavedReactionTag error:', err)
@@ -3756,9 +3761,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.updatePinnedForumTopic',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'topic_id': topicId,
-        'pinned': pinned,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        topicId: Number(topicId || 0),
+        pinned: Boolean(pinned),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.updatePinnedForumTopic error:', err)

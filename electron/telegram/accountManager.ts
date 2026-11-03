@@ -20463,6 +20463,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.unpinAllMessages(holder as any, accountId, params.peerId, params.topMsgId, params.savedPeerIdId)
   }
+
+  // Layer 232 Messages Suite (Microphase 069)
+  public async updateDialogFilterRaw(accountId: string, params: { id: number; filter?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.updateDialogFilter(holder as any, params.id, params.filter)
+  }
+
+  public async updateDialogFiltersOrderRaw(accountId: string, params: { order: number[] | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.updateDialogFiltersOrder(holder as any, params.order)
+  }
+
+  public async updatePinnedForumTopicRaw(accountId: string, params: { peerId: string; topicId: number; pinned?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.updatePinnedForumTopic(holder as any, accountId, params.peerId, params.topicId, params.pinned)
+  }
+
+  public async updatePinnedMessageRaw(accountId: string, params: { silent?: boolean; unpin?: boolean; pmOneside?: boolean; peerId: string; id: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.updatePinnedMessage(holder as any, accountId, params.silent, params.unpin, params.pmOneside, params.peerId, params.id)
+  }
+
+  public async updateSavedReactionTagRaw(accountId: string, params: { reaction?: any; title?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.updateSavedReactionTag(holder as any, params.reaction, params.title)
+  }
+
+  public async uploadEncryptedFileRaw(accountId: string, params: { peer?: any; file?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.uploadEncryptedFile(holder as any, params.peer, params.file)
+  }
+
+  public async uploadImportedMediaRaw(accountId: string, params: { peerId: string; importId: bigint | number | Long | string; fileName?: string; media?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.uploadImportedMedia(holder as any, accountId, params.peerId, params.importId, params.fileName, params.media)
+  }
 }
 
 
