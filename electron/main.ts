@@ -5651,6 +5651,25 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:update-birthday', async (_event, { accountId, birthday }) => {
+    try {
+      return await accountManager.updateBirthday(accountId, birthday)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateBirthday error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-color', async (_event, { accountId, forProfile, color }) => {
+    try {
+      return await accountManager.updateAccountColor(accountId, forProfile, color)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateAccountColor error:`, err)
+      return false
+    }
+  })
+
+
 
 
   // Full Profile & Privacy Settings IPC

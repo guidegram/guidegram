@@ -767,6 +767,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleUpdateBirthday = async (day?: number, month?: number, year?: number) => {
+    if (!targetAccountId || !window.guidegram?.updateBirthday) return
+    try {
+      const birthday = day && month ? { _: 'birthday', day, month, year } : undefined
+      await window.guidegram.updateBirthday(targetAccountId, birthday)
+      showToast(isPersian ? 'تاریخ تولد با موفقیت به‌روزرسانی شد.' : 'Birthday updated successfully.')
+    } catch {
+      showToast(isPersian ? 'خطا در به‌روزرسانی تاریخ تولد' : 'Failed to update birthday.')
+    }
+  }
+
+
 
   const openPrivacyRule = (
     key: keyof PrivacySecuritySettings,
@@ -830,8 +842,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setSelectedAccentColor(id)
     localStorage.setItem('guidegram_accent_color', String(id))
     document.documentElement.style.setProperty('--primary-accent', hex)
+    if (targetAccountId && window.guidegram?.updateAccountColor) {
+      window.guidegram.updateAccountColor(targetAccountId, false, id).catch(() => {})
+    }
     showToast(`Accent color updated`)
   }
+
 
   const handleSelectWallpaper = (wallpaperValue: string, name: string) => {
     setCustomWallpaper(wallpaperValue)

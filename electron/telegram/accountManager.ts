@@ -16429,6 +16429,19 @@ export class AccountManager {
     return this.securityService.unregisterDevice(holder as any, tokenType, token, otherUids)
   }
 
+  public async updateBirthday(accountId: string, birthday?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateBirthday(holder as any, birthday)
+  }
+
+  public async updateAccountColor(accountId: string, forProfile?: boolean, color?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateColor(holder as any, forProfile, color)
+  }
+
+
 
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)

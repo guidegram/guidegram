@@ -2023,6 +2023,11 @@ const guidegramAPI = {
     }),
   unregisterDevice: (accountId: string, tokenType?: number, token?: string, otherUids?: bigint | number): Promise<any> =>
     ipcRenderer.invoke('telegram:unregister-device', { accountId, tokenType, token, otherUids }),
+  updateBirthday: (accountId: string, birthday?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-birthday', { accountId, birthday }),
+  updateAccountColor: (accountId: string, forProfile?: boolean, color?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-color', { accountId, forProfile, color }),
+
 
 
   setEmojiStatus: (
