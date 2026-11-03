@@ -19777,6 +19777,48 @@ export class AccountManager {
   public async getSponsoredMessagesRaw(accountId: string, peerId: string, msgId?: number): Promise<any> {
     return this.getSponsoredMessages(accountId, peerId, msgId)
   }
+
+  public async getStickersRaw(accountId: string, emoticon?: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getStickers(holder as any, emoticon, hash)
+  }
+
+  public async getStickerSetRaw(accountId: string, stickerset: any, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getStickerSet(holder as any, stickerset, hash)
+  }
+
+  public async getSuggestedDialogFiltersRaw(accountId: string, params?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSuggestedDialogFilters(holder as any, params)
+  }
+
+  public async getTopReactions(accountId: string, limit?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getTopReactions(holder as any, limit, hash)
+  }
+
+  public async getUnreadMentions(accountId: string, peerId?: string, topMsgId?: number, offsetId?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getUnreadMentions(holder as any, accountId, peerId, topMsgId, offsetId, addOffset, limit, maxId, minId)
+  }
+
+  public async getUnreadPollVotes(accountId: string, peerId?: string, topMsgId?: number, offsetId?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getUnreadPollVotes(holder as any, accountId, peerId, topMsgId, offsetId, addOffset, limit, maxId, minId)
+  }
+
+  public async getUnreadReactions(accountId: string, peerId?: string, topMsgId?: number, savedPeerIdId?: string, offsetId?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getUnreadReactions(holder as any, accountId, peerId, topMsgId, savedPeerIdId, offsetId, addOffset, limit, maxId, minId)
+  }
 }
 
 

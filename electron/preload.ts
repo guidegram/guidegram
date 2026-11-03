@@ -2429,6 +2429,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-split-ranges', { accountId, params }),
   getSponsoredMessagesRaw: (accountId: string, peerId: string, msgId?: number): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-sponsored-messages', { accountId, peerId, msgId }),
+  // Layer 232 Messages Suite (Microphase 053)
+  getStickersRaw: (accountId: string, emoticon?: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-stickers', { accountId, emoticon, hash }),
+  getStickerSetRaw: (accountId: string, stickerset: any, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-sticker-set', { accountId, stickerset, hash }),
+  getSuggestedDialogFiltersRaw: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-suggested-dialog-filters', { accountId, params }),
+  getTopReactions: (accountId: string, limit?: number, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-top-reactions', { accountId, limit, hash }),
+  getUnreadMentions: (accountId: string, params?: { peerId?: string; topMsgId?: number; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-unread-mentions', { accountId, ...params }),
+  getUnreadPollVotes: (accountId: string, params?: { peerId?: string; topMsgId?: number; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-unread-poll-votes', { accountId, ...params }),
+  getUnreadReactions: (accountId: string, params?: { peerId?: string; topMsgId?: number; savedPeerIdId?: string; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-unread-reactions', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

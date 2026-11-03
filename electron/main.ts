@@ -7244,6 +7244,69 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:messages:get-stickers', async (_event, { accountId, emoticon, hash }) => {
+    try {
+      return await accountManager.getStickersRaw(accountId, emoticon, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-sticker-set', async (_event, { accountId, stickerset, hash }) => {
+    try {
+      return await accountManager.getStickerSetRaw(accountId, stickerset, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getStickerSet error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-suggested-dialog-filters', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.getSuggestedDialogFiltersRaw(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSuggestedDialogFilters error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-top-reactions', async (_event, { accountId, limit, hash }) => {
+    try {
+      return await accountManager.getTopReactions(accountId, limit, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getTopReactions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-unread-mentions', async (_event, { accountId, peerId, topMsgId, offsetId, addOffset, limit, maxId, minId }) => {
+    try {
+      return await accountManager.getUnreadMentions(accountId, peerId, topMsgId, offsetId, addOffset, limit, maxId, minId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getUnreadMentions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-unread-poll-votes', async (_event, { accountId, peerId, topMsgId, offsetId, addOffset, limit, maxId, minId }) => {
+    try {
+      return await accountManager.getUnreadPollVotes(accountId, peerId, topMsgId, offsetId, addOffset, limit, maxId, minId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getUnreadPollVotes error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-unread-reactions', async (_event, { accountId, peerId, topMsgId, savedPeerIdId, offsetId, addOffset, limit, maxId, minId }) => {
+    try {
+      return await accountManager.getUnreadReactions(accountId, peerId, topMsgId, savedPeerIdId, offsetId, addOffset, limit, maxId, minId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getUnreadReactions error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

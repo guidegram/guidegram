@@ -583,10 +583,11 @@ export class MessagingService {
 
   public async getStickers(holder: RpcClientHolder, emoticon?: string, hash?: bigint | number): Promise<any> {
     try {
+      const resolvedHash = hash !== undefined ? (typeof hash === 'bigint' ? hash : BigInt(hash)) : BigInt(0)
       return await holder.client.call({
         _: 'messages.getStickers',
-        'emoticon': emoticon,
-        'hash': hash,
+        'emoticon': emoticon || '👍',
+        'hash': resolvedHash as any,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getStickers error:', err)
@@ -663,10 +664,14 @@ export class MessagingService {
 
   public async getStickerSet(holder: RpcClientHolder, stickerset?: any, hash?: number): Promise<any> {
     try {
+      let resolvedSet = stickerset
+      if (typeof stickerset === 'string') {
+        resolvedSet = { _: 'inputStickerSetShortName', shortName: stickerset }
+      }
       return await holder.client.call({
         _: 'messages.getStickerSet',
-        'stickerset': stickerset,
-        'hash': hash,
+        'stickerset': resolvedSet,
+        'hash': hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getStickerSet error:', err)

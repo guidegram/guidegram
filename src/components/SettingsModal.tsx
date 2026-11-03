@@ -4057,6 +4057,178 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 053: Stickers, StickerSet, Suggested Filters, Top Reactions, Unread Mentions, Poll Votes & Reactions State
+  const [m053StickersEmoticon, setM053StickersEmoticon] = useState('👍')
+  const [m053StickersCount, setM053StickersCount] = useState<number | null>(null)
+
+  const [m053StickerSetName, setM053StickerSetName] = useState('')
+  const [m053StickerSetTitle, setM053StickerSetTitle] = useState<string | null>(null)
+
+  const [m053SuggestedFiltersCount, setM053SuggestedFiltersCount] = useState<number | null>(null)
+  const [m053TopReactionsCount, setM053TopReactionsCount] = useState<number | null>(null)
+
+  const [m053MentionsPeer, setM053MentionsPeer] = useState('')
+  const [m053MentionsCount, setM053MentionsCount] = useState<number | null>(null)
+
+  const [m053PollVotesPeer, setM053PollVotesPeer] = useState('')
+  const [m053PollVotesCount, setM053PollVotesCount] = useState<number | null>(null)
+
+  const [m053UnreadReactionsPeer, setM053UnreadReactionsPeer] = useState('')
+  const [m053UnreadReactionsCount, setM053UnreadReactionsCount] = useState<number | null>(null)
+
+  const [m053LoadingOp, setM053LoadingOp] = useState<string | null>(null)
+  const [m053Status, setM053Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM053GetStickers = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getStickersRaw) return
+    setM053LoadingOp('getStickers')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getStickersRaw(targetId, m053StickersEmoticon.trim() || '👍')
+      const count = Array.isArray(res?.stickers) ? res.stickers.length : (res?.count ?? (res ? 1 : 0))
+      setM053StickersCount(count)
+      setM053Status({ type: 'success', message: `تعداد ${count} استیکر برای ایموجی بازیابی شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در استعلام استیکرها' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
+  const handleM053GetStickerSet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getStickerSetRaw) return
+    if (!m053StickerSetName.trim()) {
+      setM053Status({ type: 'error', message: 'نام یا شناسه پکیج استیکر الزامی است' })
+      return
+    }
+    setM053LoadingOp('getStickerSet')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getStickerSetRaw(targetId, m053StickerSetName.trim())
+      const title = res?.set?.title || res?.title || 'پکیج استیکر یافت شد'
+      const count = Array.isArray(res?.documents) ? res.documents.length : 0
+      setM053StickerSetTitle(`${title} (${count} استیکر)`)
+      setM053Status({ type: 'success', message: `اطلاعات پکیج "${title}" استعلام شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در دریافت پکیج استیکر' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
+  const handleM053GetSuggestedDialogFilters = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSuggestedDialogFiltersRaw) return
+    setM053LoadingOp('getSuggestedDialogFilters')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getSuggestedDialogFiltersRaw(targetId)
+      const count = Array.isArray(res) ? res.length : (res?.filters?.length ?? 0)
+      setM053SuggestedFiltersCount(count)
+      setM053Status({ type: 'success', message: `تعداد ${count} فیلتر پوشه پیشنهادی استعلام شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در دریافت فیلترهای پیشنهادی' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
+  const handleM053GetTopReactions = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getTopReactions) return
+    setM053LoadingOp('getTopReactions')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getTopReactions(targetId, 20)
+      const count = Array.isArray(res?.reactions) ? res.reactions.length : (res?.count ?? 0)
+      setM053TopReactionsCount(count)
+      setM053Status({ type: 'success', message: `تعداد ${count} ری‌اکشن برتر استعلام شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در دریافت ری‌اکشن‌های برتر' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
+  const handleM053GetUnreadMentions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getUnreadMentions) return
+    if (!m053MentionsPeer.trim()) {
+      setM053Status({ type: 'error', message: 'شناسه گفتگو برای منشن‌های خوانده‌نشده الزامی است' })
+      return
+    }
+    setM053LoadingOp('getUnreadMentions')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getUnreadMentions(targetId, {
+        peerId: m053MentionsPeer.trim(),
+        limit: 50,
+      })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM053MentionsCount(count)
+      setM053Status({ type: 'success', message: `تعداد ${count} منشن خوانده‌نشده استعلام شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در استعلام منشن‌های خوانده‌نشده' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
+  const handleM053GetUnreadPollVotes = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getUnreadPollVotes) return
+    if (!m053PollVotesPeer.trim()) {
+      setM053Status({ type: 'error', message: 'شناسه گفتگو برای آرای خوانده‌نشده نظرسنجی الزامی است' })
+      return
+    }
+    setM053LoadingOp('getUnreadPollVotes')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getUnreadPollVotes(targetId, {
+        peerId: m053PollVotesPeer.trim(),
+        limit: 50,
+      })
+      const count = Array.isArray(res?.votes) ? res.votes.length : (res?.count ?? 0)
+      setM053PollVotesCount(count)
+      setM053Status({ type: 'success', message: `تعداد ${count} رای خوانده‌نشده نظرسنجی استعلام شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در استعلام آرای خوانده‌نشده نظرسنجی' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
+  const handleM053GetUnreadReactions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getUnreadReactions) return
+    if (!m053UnreadReactionsPeer.trim()) {
+      setM053Status({ type: 'error', message: 'شناسه گفتگو برای ری‌اکشن‌های خوانده‌نشده الزامی است' })
+      return
+    }
+    setM053LoadingOp('getUnreadReactions')
+    setM053Status(null)
+    try {
+      const res = await window.guidegram.getUnreadReactions(targetId, {
+        peerId: m053UnreadReactionsPeer.trim(),
+        limit: 50,
+      })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM053UnreadReactionsCount(count)
+      setM053Status({ type: 'success', message: `تعداد ${count} ری‌اکشن خوانده‌نشده استعلام شد` })
+    } catch (err: any) {
+      setM053Status({ type: 'error', message: err?.message || 'خطا در استعلام ری‌اکشن‌های خوانده‌نشده' })
+    } finally {
+      setM053LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -10971,6 +11143,229 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m052SponsoredCount !== null && (
                         <div className="text-[10px] text-cyan-400 font-mono">
                           پیام‌های اسپانسر: {m052SponsoredCount} مورد
+                        </div>
+                      )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 053: Messages Domain Suite Part 21 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-pink-400" />
+                        <span>میکروفاز ۰۵۳: استیکرها، پکیج استیکر، فیلترهای پیشنهادی، ری‌اکشن‌های برتر، منشن‌ها، آرا و ری‌اکشن‌های خوانده‌نشده (Messages Suite Part 21)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getStickers, getStickerSet, getSuggestedDialogFilters, getTopReactions, getUnreadMentions, getUnreadPollVotes, getUnreadReactions
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m053Status && (
+                    <div
+                      className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                        m053Status.type === 'success'
+                          ? 'bg-pink-500/10 border-pink-500/30 text-pink-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      }`}
+                    >
+                      {m053Status.type === 'success' ? (
+                        <Check className="w-4 h-4 text-pink-400 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      )}
+                      <span className="flex-1">{m053Status.message}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 pt-1">
+                    {/* 1. messages.getStickers */}
+                    <form
+                      onSubmit={handleM053GetStickers}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. استیکرهای متناظر با ایموجی (getStickers)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m053StickersEmoticon}
+                          onChange={(e) => setM053StickersEmoticon(e.target.value)}
+                          placeholder="ایموجی (پیش‌فرض 👍)"
+                          className="w-36 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m053LoadingOp === 'getStickers'}
+                          className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m053LoadingOp === 'getStickers' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام استیکرها'}
+                        </button>
+                      </div>
+                      {m053StickersCount !== null && (
+                        <div className="text-[10px] text-pink-400 font-mono">
+                          استیکرهای بازیابی‌شده: {m053StickersCount} عدد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getStickerSet */}
+                    <form
+                      onSubmit={handleM053GetStickerSet}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. اطلاعات و اسناد پکیج استیکر (getStickerSet)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m053StickerSetName}
+                          onChange={(e) => setM053StickerSetName(e.target.value)}
+                          placeholder="نام کوتاه پکیج (مثال: Animals)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m053LoadingOp === 'getStickerSet'}
+                          className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m053LoadingOp === 'getStickerSet' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت پکیج'}
+                        </button>
+                      </div>
+                      {m053StickerSetTitle && (
+                        <div className="text-[10px] text-pink-400 font-mono truncate">
+                          نتیجه: {m053StickerSetTitle}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getSuggestedDialogFilters */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex items-center justify-between">
+                      <div className="text-xs text-gray-300 font-medium">
+                        <span>۳. پوشه‌ها و فیلترهای پیشنهادی (getSuggestedDialogFilters)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM053GetSuggestedDialogFilters}
+                        disabled={m053LoadingOp === 'getSuggestedDialogFilters'}
+                        className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m053LoadingOp === 'getSuggestedDialogFilters' ? 'در حال استعلام...' : `استعلام فیلترها ${m053SuggestedFiltersCount !== null ? `(${m053SuggestedFiltersCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 4. messages.getTopReactions */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex items-center justify-between">
+                      <div className="text-xs text-gray-300 font-medium">
+                        <span>۴. برترین واکنش‌های پرکاربرد (getTopReactions)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM053GetTopReactions}
+                        disabled={m053LoadingOp === 'getTopReactions'}
+                        className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m053LoadingOp === 'getTopReactions' ? 'در حال استعلام...' : `استعلام ری‌اکشن‌ها ${m053TopReactionsCount !== null ? `(${m053TopReactionsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 5. messages.getUnreadMentions */}
+                    <form
+                      onSubmit={handleM053GetUnreadMentions}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. منشن‌های خوانده‌نشده در گفتگو (getUnreadMentions)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m053MentionsPeer}
+                          onChange={(e) => setM053MentionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / گروه"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m053LoadingOp === 'getUnreadMentions'}
+                          className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m053LoadingOp === 'getUnreadMentions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام منشن‌ها'}
+                        </button>
+                      </div>
+                      {m053MentionsCount !== null && (
+                        <div className="text-[10px] text-pink-400 font-mono">
+                          منشن‌های خوانده‌نشده: {m053MentionsCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.getUnreadPollVotes */}
+                    <form
+                      onSubmit={handleM053GetUnreadPollVotes}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. آرای خوانده‌نشده نظرسنجی (getUnreadPollVotes)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m053PollVotesPeer}
+                          onChange={(e) => setM053PollVotesPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m053LoadingOp === 'getUnreadPollVotes'}
+                          className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m053LoadingOp === 'getUnreadPollVotes' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام آرا'}
+                        </button>
+                      </div>
+                      {m053PollVotesCount !== null && (
+                        <div className="text-[10px] text-pink-400 font-mono">
+                          آرای خوانده‌نشده: {m053PollVotesCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 7. messages.getUnreadReactions */}
+                    <form
+                      onSubmit={handleM053GetUnreadReactions}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. واکنش‌های خوانده‌نشده در گفتگو (getUnreadReactions)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m053UnreadReactionsPeer}
+                          onChange={(e) => setM053UnreadReactionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m053LoadingOp === 'getUnreadReactions'}
+                          className="px-4 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m053LoadingOp === 'getUnreadReactions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام واکنش‌ها'}
+                        </button>
+                      </div>
+                      {m053UnreadReactionsCount !== null && (
+                        <div className="text-[10px] text-pink-400 font-mono">
+                          ری‌اکشن‌های خوانده‌نشده: {m053UnreadReactionsCount} مورد
                         </div>
                       )}
                     </form>
