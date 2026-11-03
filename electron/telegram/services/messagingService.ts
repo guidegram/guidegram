@@ -978,11 +978,28 @@ export class MessagingService {
     }
   }
 
-  public async getPeerDialogs(holder: RpcClientHolder, peers?: any): Promise<any> {
+  public async getPeerDialogs(holder: RpcClientHolder, accountId: string, peers?: any): Promise<any> {
     try {
+      let resolvedPeers = peers
+      if (Array.isArray(peers)) {
+        resolvedPeers = await Promise.all(peers.map(async (p) => {
+          if (typeof p === 'string') {
+            const peer = await this.resolveInputPeer(accountId, p)
+            return { _: 'inputDialogPeer', peer }
+          }
+          if (p && !p._) {
+            const peer = await this.resolveInputPeer(accountId, p.peerId || p.id || p)
+            return { _: 'inputDialogPeer', peer }
+          }
+          return p
+        }))
+      } else if (typeof peers === 'string') {
+        const peer = await this.resolveInputPeer(accountId, peers)
+        resolvedPeers = [{ _: 'inputDialogPeer', peer }]
+      }
       return await holder.client.call({
         _: 'messages.getPeerDialogs',
-        'peers': peers,
+        'peers': resolvedPeers || [],
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getPeerDialogs error:', err)

@@ -6990,6 +6990,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 049)
+  ipcMain.handle('telegram:messages:get-peer-dialogs', async (_event, { accountId, peers }) => {
+    try {
+      return await accountManager.getPeerDialogs(accountId, peers)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPeerDialogs error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-peer-settings', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.getPeerSettings(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPeerSettings error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-personal-channel-history', async (_event, { accountId, userIdId, limit, maxId, minId, hash }) => {
+    try {
+      return await accountManager.getPersonalChannelHistory(accountId, userIdId, limit, maxId, minId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPersonalChannelHistory error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-pinned-dialogs', async (_event, { accountId, folderId }) => {
+    try {
+      return await accountManager.getPinnedDialogs(accountId, folderId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPinnedDialogs error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-pinned-saved-dialogs', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.getPinnedSavedDialogs(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPinnedSavedDialogs error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-poll-results', async (_event, { accountId, peerId, msgId, pollHash }) => {
+    try {
+      return await accountManager.getPollResults(accountId, peerId, msgId, pollHash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPollResults error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-poll-votes', async (_event, { accountId, peerId, id, option, offset, limit }) => {
+    try {
+      return await accountManager.getPollVotes(accountId, peerId, id, option, offset, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPollVotes error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

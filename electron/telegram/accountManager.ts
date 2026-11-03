@@ -19609,6 +19609,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getPaidReactionPrivacy(holder as any, params)
   }
+
+  // --- Microphase 049: Messages domain part 17 ---
+  public async getPeerDialogs(accountId: string, peers?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPeerDialogs(holder as any, accountId, peers)
+  }
+
+  public async getPeerSettings(accountId: string, peerId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPeerSettings(holder as any, accountId, peerId)
+  }
+
+  public async getPersonalChannelHistory(accountId: string, userIdId?: string, limit?: number, maxId?: number, minId?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPersonalChannelHistory(holder as any, accountId, userIdId, limit, maxId, minId, hash)
+  }
+
+  public async getPinnedDialogs(accountId: string, folderId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPinnedDialogs(holder as any, folderId)
+  }
+
+  public async getPinnedSavedDialogs(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPinnedSavedDialogs(holder as any, params)
+  }
+
+  public async getPollResults(accountId: string, peerId?: string, msgId?: number, pollHash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPollResults(holder as any, accountId, peerId, msgId, pollHash)
+  }
+
+  public async getPollVotes(accountId: string, peerId?: string, id?: number, option?: any, offset?: string, limit?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPollVotes(holder as any, accountId, peerId, id, option, offset, limit)
+  }
 }
 
 

@@ -2369,6 +2369,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-outbox-read-date', { accountId, peerId, msgId }),
   getPaidReactionPrivacy: (accountId: string, params?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-paid-reaction-privacy', { accountId, params }),
+  // Layer 232 Messages Suite (Microphase 049)
+  getPeerDialogs: (accountId: string, peers?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-peer-dialogs', { accountId, peers }),
+  getPeerSettings: (accountId: string, peerId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-peer-settings', { accountId, peerId }),
+  getPersonalChannelHistory: (accountId: string, params?: { userIdId?: string; limit?: number; maxId?: number; minId?: number; hash?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-personal-channel-history', { accountId, ...params }),
+  getPinnedDialogs: (accountId: string, folderId?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-pinned-dialogs', { accountId, folderId }),
+  getPinnedSavedDialogs: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-pinned-saved-dialogs', { accountId, params }),
+  getPollResults: (accountId: string, peerId?: string, msgId?: number, pollHash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-poll-results', { accountId, peerId, msgId, pollHash }),
+  getPollVotes: (accountId: string, params?: { peerId?: string; id?: number; option?: any; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-poll-votes', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

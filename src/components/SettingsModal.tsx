@@ -3333,6 +3333,195 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 049: Messages Domain Suite Part 17
+  const [m049PeerDialogsInput, setM049PeerDialogsInput] = useState('')
+  const [m049PeerDialogsCount, setM049PeerDialogsCount] = useState<number | null>(null)
+
+  const [m049PeerSettingsInput, setM049PeerSettingsInput] = useState('')
+  const [m049PeerSettingsResult, setM049PeerSettingsResult] = useState<string | null>(null)
+
+  const [m049PersonalChannelUser, setM049PersonalChannelUser] = useState('')
+  const [m049PersonalChannelCount, setM049PersonalChannelCount] = useState<number | null>(null)
+
+  const [m049PinnedFolderId, setM049PinnedFolderId] = useState('0')
+  const [m049PinnedDialogsCount, setM049PinnedDialogsCount] = useState<number | null>(null)
+
+  const [m049PinnedSavedCount, setM049PinnedSavedCount] = useState<number | null>(null)
+
+  const [m049PollPeer, setM049PollPeer] = useState('')
+  const [m049PollMsgId, setM049PollMsgId] = useState('')
+  const [m049PollResultsSummary, setM049PollResultsSummary] = useState<string | null>(null)
+
+  const [m049VotesPeer, setM049VotesPeer] = useState('')
+  const [m049VotesMsgId, setM049VotesMsgId] = useState('')
+  const [m049VotesCount, setM049VotesCount] = useState<number | null>(null)
+
+  const [m049LoadingOp, setM049LoadingOp] = useState<string | null>(null)
+  const [m049Status, setM049Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM049GetPeerDialogs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPeerDialogs) return
+    if (!m049PeerDialogsInput.trim()) {
+      setM049Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    setM049LoadingOp('getPeerDialogs')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPeerDialogs(targetId, [m049PeerDialogsInput.trim()])
+      const count = Array.isArray(res?.dialogs) ? res.dialogs.length : (Array.isArray(res) ? res.length : 1)
+      setM049PeerDialogsCount(count)
+      setM049Status({ type: 'success', message: `اطلاعات ${count} گفتگو استعلام شد` })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در استعلام گفتگوی مشخص' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
+  const handleM049GetPeerSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPeerSettings) return
+    if (!m049PeerSettingsInput.trim()) {
+      setM049Status({ type: 'error', message: 'لطفاً شناسه مخاطب یا گفتگو را وارد کنید' })
+      return
+    }
+    setM049LoadingOp('getPeerSettings')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPeerSettings(targetId, m049PeerSettingsInput.trim())
+      const summary = res?.settings ? 'تنظیمات همتا دریافت شد' : 'داده‌های تنظیمات همتا در دسترس است'
+      setM049PeerSettingsResult(summary)
+      setM049Status({ type: 'success', message: summary })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در دریافت تنظیمات همتا' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
+  const handleM049GetPersonalChannelHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPersonalChannelHistory) return
+    if (!m049PersonalChannelUser.trim()) {
+      setM049Status({ type: 'error', message: 'لطفاً شناسه کاربر را وارد کنید' })
+      return
+    }
+    setM049LoadingOp('getPersonalChannelHistory')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPersonalChannelHistory(targetId, {
+        userIdId: m049PersonalChannelUser.trim(),
+        limit: 20,
+      })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (Array.isArray(res) ? res.length : 0)
+      setM049PersonalChannelCount(count)
+      setM049Status({ type: 'success', message: `تعداد ${count} پیام از کانال شخصی کاربر دریافت شد` })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در دریافت تاریخچه کانال شخصی' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
+  const handleM049GetPinnedDialogs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPinnedDialogs) return
+    const folderNum = parseInt(m049PinnedFolderId.trim() || '0', 10)
+    setM049LoadingOp('getPinnedDialogs')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPinnedDialogs(targetId, isNaN(folderNum) ? 0 : folderNum)
+      const count = Array.isArray(res?.dialogs) ? res.dialogs.length : (Array.isArray(res) ? res.length : 0)
+      setM049PinnedDialogsCount(count)
+      setM049Status({ type: 'success', message: `تعداد ${count} گفتگوی سنجاق‌شده استعلام شد` })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در دریافت گفتگوهای سنجاق‌شده' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
+  const handleM049GetPinnedSavedDialogs = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPinnedSavedDialogs) return
+    setM049LoadingOp('getPinnedSavedDialogs')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPinnedSavedDialogs(targetId)
+      const count = Array.isArray(res?.dialogs) ? res.dialogs.length : (Array.isArray(res) ? res.length : 0)
+      setM049PinnedSavedCount(count)
+      setM049Status({ type: 'success', message: `تعداد ${count} گفتگوی سنجاق‌شده در پیام‌های ذخیره‌شده یافت شد` })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در استعلام گفتگوهای سنجاق‌شده پیام‌های ذخیره' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
+  const handleM049GetPollResults = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPollResults) return
+    if (!m049PollPeer.trim()) {
+      setM049Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m049PollMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM049Status({ type: 'error', message: 'شناسه پیام نظرسنجی باید عددی باشد' })
+      return
+    }
+    setM049LoadingOp('getPollResults')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPollResults(targetId, m049PollPeer.trim(), msgIdNum)
+      const summary = res?.updates ? 'نتایج نظرسنجی استعلام و بروزرسانی شد' : 'داده‌های نتایج نظرسنجی دریافت شد'
+      setM049PollResultsSummary(summary)
+      setM049Status({ type: 'success', message: summary })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در دریافت نتایج نظرسنجی' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
+  const handleM049GetPollVotes = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPollVotes) return
+    if (!m049VotesPeer.trim()) {
+      setM049Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m049VotesMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM049Status({ type: 'error', message: 'شناسه پیام نظرسنجی باید عددی باشد' })
+      return
+    }
+    setM049LoadingOp('getPollVotes')
+    setM049Status(null)
+    try {
+      const res = await window.guidegram.getPollVotes(targetId, {
+        peerId: m049VotesPeer.trim(),
+        id: msgIdNum,
+        limit: 50,
+      })
+      const count = Array.isArray(res?.votes) ? res.votes.length : (res?.count ?? 0)
+      setM049VotesCount(count)
+      setM049Status({ type: 'success', message: `تعداد ${count} رأی ثبت‌شده برای نظرسنجی استعلام شد` })
+    } catch (err: any) {
+      setM049Status({ type: 'error', message: err?.message || 'خطا در دریافت آرای نظرسنجی' })
+    } finally {
+      setM049LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -9295,6 +9484,255 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+
+                {/* Microphase 049: Messages Domain Suite Part 17 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Bookmark className="w-4 h-4 text-indigo-400" />
+                        <span>میکروفاز ۰۴۹: گفتگوهای همتا، کانال شخصی، پین‌ها و نظرسنجی‌ها (Messages Suite Part 17)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getPeerDialogs, getPeerSettings, getPersonalChannelHistory, getPinnedDialogs, getPinnedSavedDialogs, getPollResults, getPollVotes
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m049Status && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                        m049Status.type === 'success'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                          : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
+                      }`}
+                    >
+                      {m049Status.type === 'success' ? (
+                        <Check className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                      )}
+                      <span className="flex-1">{m049Status.message}</span>
+                      <button
+                        type="button"
+                        onClick={() => setM049Status(null)}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* 1. messages.getPeerDialogs */}
+                    <form onSubmit={handleM049GetPeerDialogs} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۱. استعلام گفتگوی همتا (getPeerDialogs)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m049PeerDialogsInput}
+                          onChange={(e) => setM049PeerDialogsInput(e.target.value)}
+                          placeholder="شناسه گفتگو یا کانال"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m049LoadingOp === 'getPeerDialogs'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m049LoadingOp === 'getPeerDialogs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m049PeerDialogsCount !== null && (
+                        <div className="text-[10px] text-indigo-400 font-mono">
+                          گفتگوهای استعلام‌شده: {m049PeerDialogsCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getPeerSettings */}
+                    <form onSubmit={handleM049GetPeerSettings} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Settings className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۲. تنظیمات اختصاصی همتا (getPeerSettings)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m049PeerSettingsInput}
+                          onChange={(e) => setM049PeerSettingsInput(e.target.value)}
+                          placeholder="شناسه کاربر یا گروه"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m049LoadingOp === 'getPeerSettings'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m049LoadingOp === 'getPeerSettings' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m049PeerSettingsResult && (
+                        <div className="text-[10px] text-indigo-400 font-mono truncate">
+                          {m049PeerSettingsResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getPersonalChannelHistory */}
+                    <form onSubmit={handleM049GetPersonalChannelHistory} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Megaphone className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۳. تاریخچه کانال شخصی کاربر (getPersonalChannelHistory)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m049PersonalChannelUser}
+                          onChange={(e) => setM049PersonalChannelUser(e.target.value)}
+                          placeholder="شناسه کاربر"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m049LoadingOp === 'getPersonalChannelHistory'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m049LoadingOp === 'getPersonalChannelHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m049PersonalChannelCount !== null && (
+                        <div className="text-[10px] text-indigo-400 font-mono">
+                          پیام‌های کانال شخصی: {m049PersonalChannelCount} عدد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 4. messages.getPinnedDialogs */}
+                    <form onSubmit={handleM049GetPinnedDialogs} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۴. گفتگوهای سنجاق‌شده پوشه (getPinnedDialogs)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m049PinnedFolderId}
+                          onChange={(e) => setM049PinnedFolderId(e.target.value)}
+                          placeholder="شناسه پوشه (۰ برای اصلی)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m049LoadingOp === 'getPinnedDialogs'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m049LoadingOp === 'getPinnedDialogs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m049PinnedDialogsCount !== null && (
+                        <div className="text-[10px] text-indigo-400 font-mono">
+                          گفتگوهای سنجاق‌شده: {m049PinnedDialogsCount} گفتگو
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 5. messages.getPinnedSavedDialogs */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۵. گفتگوهای سنجاق پیام‌های ذخیره (getPinnedSavedDialogs)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM049GetPinnedSavedDialogs}
+                        disabled={m049LoadingOp === 'getPinnedSavedDialogs'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m049LoadingOp === 'getPinnedSavedDialogs' ? 'در حال استعلام...' : `استعلام سنجاق‌ها ${m049PinnedSavedCount !== null ? `(${m049PinnedSavedCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 6. messages.getPollResults */}
+                    <form onSubmit={handleM049GetPollResults} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۶. نتایج زنده نظرسنجی (getPollResults)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m049PollPeer}
+                          onChange={(e) => setM049PollPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m049PollMsgId}
+                          onChange={(e) => setM049PollMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m049LoadingOp === 'getPollResults'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m049LoadingOp === 'getPollResults' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m049PollResultsSummary && (
+                        <div className="text-[10px] text-indigo-400 font-mono truncate">
+                          {m049PollResultsSummary}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 7. messages.getPollVotes */}
+                    <form onSubmit={handleM049GetPollVotes} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <CheckCheck className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۷. آرای ثبت‌شده کاربران در نظرسنجی (getPollVotes)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m049VotesPeer}
+                          onChange={(e) => setM049VotesPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m049VotesMsgId}
+                          onChange={(e) => setM049VotesMsgId(e.target.value)}
+                          placeholder="شناسه پیام نظرسنجی"
+                          className="w-36 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m049LoadingOp === 'getPollVotes'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m049LoadingOp === 'getPollVotes' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام آرا'}
+                        </button>
+                      </div>
+                      {m049VotesCount !== null && (
+                        <div className="text-[10px] text-indigo-400 font-mono">
+                          آرای استعلام‌شده: {m049VotesCount} رأی
+                        </div>
+                      )}
+                    </form>
                   </div>
                 </div>
               </div>
