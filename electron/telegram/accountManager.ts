@@ -16382,6 +16382,54 @@ export class AccountManager {
     return this.securityService.setPrivacy(holder as any, key, rules)
   }
 
+  public async setReactionsNotifySettings(accountId: string, settings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.securityService.setReactionsNotifySettings(holder as any, settings)
+  }
+
+  public async toggleConnectedBotPaused(accountId: string, peerId?: string, paused?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.toggleConnectedBotPaused(holder as any, accountId, peerId, paused)
+  }
+
+  public async toggleNoPaidMessagesException(
+    accountId: string,
+    refundCharged?: boolean,
+    requirePayment?: boolean,
+    parentPeerId?: string,
+    userIdId?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.toggleNoPaidMessagesException(holder as any, accountId, refundCharged, requirePayment, parentPeerId, userIdId)
+  }
+
+  public async toggleAccountUsername(accountId: string, username?: string, active?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.toggleUsername(holder as any, username, active)
+  }
+
+  public async toggleWebBrowserSettingsException(
+    accountId: string,
+    deleteException?: boolean,
+    openExternalBrowser?: boolean,
+    url?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.toggleWebBrowserSettingsException(holder as any, deleteException, openExternalBrowser, url)
+  }
+
+  public async unregisterDevice(accountId: string, tokenType?: number, token?: string, otherUids?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.unregisterDevice(holder as any, tokenType, token, otherUids)
+  }
+
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

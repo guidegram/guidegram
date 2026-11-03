@@ -5580,6 +5580,78 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:set-reactions-notify-settings', async (_event, { accountId, settings }) => {
+    try {
+      return await accountManager.setReactionsNotifySettings(accountId, settings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setReactionsNotifySettings error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:toggle-connected-bot-paused', async (_event, { accountId, peerId, paused }) => {
+    try {
+      return await accountManager.toggleConnectedBotPaused(accountId, peerId, paused)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleConnectedBotPaused error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:toggle-no-paid-messages-exception',
+    async (_event, { accountId, refundCharged, requirePayment, parentPeerId, userIdId }) => {
+      try {
+        return await accountManager.toggleNoPaidMessagesException(
+          accountId,
+          refundCharged,
+          requirePayment,
+          parentPeerId,
+          userIdId
+        )
+      } catch (err: any) {
+        Logger.warn(`[IPC] toggleNoPaidMessagesException error:`, err)
+        return false
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:toggle-account-username', async (_event, { accountId, username, active }) => {
+    try {
+      return await accountManager.toggleAccountUsername(accountId, username, active)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleAccountUsername error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:toggle-web-browser-settings-exception',
+    async (_event, { accountId, deleteException, openExternalBrowser, url }) => {
+      try {
+        return await accountManager.toggleWebBrowserSettingsException(
+          accountId,
+          deleteException,
+          openExternalBrowser,
+          url
+        )
+      } catch (err: any) {
+        Logger.warn(`[IPC] toggleWebBrowserSettingsException error:`, err)
+        return false
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:unregister-device', async (_event, { accountId, tokenType, token, otherUids }) => {
+    try {
+      return await accountManager.unregisterDevice(accountId, tokenType, token, otherUids)
+    } catch (err: any) {
+      Logger.warn(`[IPC] unregisterDevice error:`, err)
+      return false
+    }
+  })
+
+
 
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {

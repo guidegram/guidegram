@@ -1989,6 +1989,41 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:set-main-profile-tab', { accountId, tab }),
   setPrivacy: (accountId: string, key?: any, rules?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:set-privacy', { accountId, key, rules }),
+  setReactionsNotifySettings: (accountId: string, settings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:set-reactions-notify-settings', { accountId, settings }),
+  toggleConnectedBotPaused: (accountId: string, peerId?: string, paused?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:toggle-connected-bot-paused', { accountId, peerId, paused }),
+  toggleNoPaidMessagesException: (
+    accountId: string,
+    refundCharged?: boolean,
+    requirePayment?: boolean,
+    parentPeerId?: string,
+    userIdId?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:toggle-no-paid-messages-exception', {
+      accountId,
+      refundCharged,
+      requirePayment,
+      parentPeerId,
+      userIdId,
+    }),
+  toggleAccountUsername: (accountId: string, username?: string, active?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:toggle-account-username', { accountId, username, active }),
+  toggleWebBrowserSettingsException: (
+    accountId: string,
+    deleteException?: boolean,
+    openExternalBrowser?: boolean,
+    url?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:toggle-web-browser-settings-exception', {
+      accountId,
+      deleteException,
+      openExternalBrowser,
+      url,
+    }),
+  unregisterDevice: (accountId: string, tokenType?: number, token?: string, otherUids?: bigint | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:unregister-device', { accountId, tokenType, token, otherUids }),
+
 
   setEmojiStatus: (
     accountId: string,

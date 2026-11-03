@@ -697,6 +697,77 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleSetReactionsNotifySettings = async (settings: any) => {
+    if (!targetAccountId || !window.guidegram?.setReactionsNotifySettings) return
+    try {
+      await window.guidegram.setReactionsNotifySettings(targetAccountId, settings)
+      setReactionsNotifySettings(settings)
+      showToast(isPersian ? 'تنظیمات اعلان واکنش‌ها ذخیره شد.' : 'Reaction notification settings saved.')
+    } catch {
+      showToast(isPersian ? 'خطا در ذخیره اعلان واکنش‌ها' : 'Failed to save reaction notification settings.')
+    }
+  }
+
+  const handleToggleConnectedBotPaused = async (peerId: string, paused: boolean) => {
+    if (!targetAccountId || !window.guidegram?.toggleConnectedBotPaused) return
+    try {
+      await window.guidegram.toggleConnectedBotPaused(targetAccountId, peerId, paused)
+      showToast(isPersian ? (paused ? 'ربات متصل موقتاً متوقف شد.' : 'ربات متصل مجدداً فعال شد.') : (paused ? 'Connected bot paused.' : 'Connected bot resumed.'))
+    } catch {
+      showToast(isPersian ? 'خطا در تغییر وضعیت ربات متصل' : 'Failed to toggle connected bot.')
+    }
+  }
+
+  const handleToggleNoPaidMessagesException = async (
+    refundCharged?: boolean,
+    requirePayment?: boolean,
+    parentPeerId?: string,
+    userIdId?: string
+  ) => {
+    if (!targetAccountId || !window.guidegram?.toggleNoPaidMessagesException) return
+    try {
+      await window.guidegram.toggleNoPaidMessagesException(targetAccountId, refundCharged, requirePayment, parentPeerId, userIdId)
+      showToast(isPersian ? 'استثنای پیام‌های پولی به‌روزرسانی شد.' : 'Paid messages exception updated.')
+    } catch {
+      showToast(isPersian ? 'خطا در به‌روزرسانی استثنای پیام‌های پولی' : 'Failed to update paid messages exception.')
+    }
+  }
+
+  const handleToggleAccountUsername = async (username: string, active: boolean) => {
+    if (!targetAccountId || !window.guidegram?.toggleAccountUsername) return
+    try {
+      await window.guidegram.toggleAccountUsername(targetAccountId, username, active)
+      showToast(isPersian ? `نام کاربری @${username} ${active ? 'فعال' : 'غیرفعال'} شد.` : `Username @${username} ${active ? 'enabled' : 'disabled'}.`)
+    } catch {
+      showToast(isPersian ? 'خطا در تغییر وضعیت نام کاربری' : 'Failed to toggle username.')
+    }
+  }
+
+  const handleToggleWebBrowserSettingsException = async (
+    deleteException?: boolean,
+    openExternalBrowser?: boolean,
+    url?: string
+  ) => {
+    if (!targetAccountId || !window.guidegram?.toggleWebBrowserSettingsException) return
+    try {
+      await window.guidegram.toggleWebBrowserSettingsException(targetAccountId, deleteException, openExternalBrowser, url)
+      showToast(isPersian ? 'استثنای مرورگر وب ذخیره شد.' : 'Web browser exception updated.')
+    } catch {
+      showToast(isPersian ? 'خطا در تنظیم استثنای مرورگر' : 'Failed to toggle web browser exception.')
+    }
+  }
+
+  const handleUnregisterDevice = async (tokenType?: number, token?: string) => {
+    if (!targetAccountId || !window.guidegram?.unregisterDevice) return
+    try {
+      await window.guidegram.unregisterDevice(targetAccountId, tokenType, token)
+      showToast(isPersian ? 'دستگاه با موفقیت از سرور لغو ثبت شد.' : 'Device unregistered successfully.')
+    } catch {
+      showToast(isPersian ? 'خطا در لغو ثبت دستگاه' : 'Failed to unregister device.')
+    }
+  }
+
+
   const openPrivacyRule = (
     key: keyof PrivacySecuritySettings,
     title: string,
