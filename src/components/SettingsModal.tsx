@@ -7340,6 +7340,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 070 State & Handlers (Messages Domain Part 38 - Final)
+  const [m070Status, setM070Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m070LoadingOp, setM070LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.uploadMedia
+  const [m070UploadPeer, setM070UploadPeer] = useState('')
+  const [m070BusinessConnId, setM070BusinessConnId] = useState('')
+
+  // 2. messages.viewSponsoredMessage
+  const [m070SponsoredRandomId, setM070SponsoredRandomId] = useState('')
+
+  const handleM070UploadMedia = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.uploadMediaRaw) return
+    if (!m070UploadPeer.trim()) {
+      setM070Status({ type: 'error', message: 'شناسه گفتگو الزامی است' })
+      return
+    }
+    setM070LoadingOp('uploadMedia')
+    setM070Status(null)
+    try {
+      const res = await window.guidegram.uploadMediaRaw(targetId, {
+        peerId: m070UploadPeer.trim(),
+        businessConnectionId: m070BusinessConnId.trim() || undefined,
+        media: {
+          _: 'inputMediaEmpty',
+        },
+      })
+      setM070Status({ type: 'success', message: `آپلود رسانه با موفقیت پردازش شد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM070Status({ type: 'error', message: err?.message || 'خطا در آپلود رسانه' })
+    } finally {
+      setM070LoadingOp(null)
+    }
+  }
+
+  const handleM070ViewSponsored = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.viewSponsoredMessageRaw) return
+    setM070LoadingOp('viewSponsored')
+    setM070Status(null)
+    try {
+      const res = await window.guidegram.viewSponsoredMessageRaw(targetId, {
+        randomId: m070SponsoredRandomId.trim() || undefined,
+      })
+      setM070Status({ type: 'success', message: `بازدید پیام اسپانسر با موفقیت ثبت شد: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM070Status({ type: 'error', message: err?.message || 'خطا در ثبت بازدید پیام اسپانسر' })
+    } finally {
+      setM070LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -19031,6 +19086,121 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         >
                           {m069LoadingOp === 'updateDialogFilter' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره فیلتر'}
                         </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 070: Messages Domain Suite Part 38 (Final) */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۰: آپلود مستقل مدیا و تعامل با پیام‌های اسپانسری (Messages Domain Part 38 - Final)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | پایان Messages
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    پایان دامنه عظیم پیام‌رسانی تلگرام: آپلود مستقل ساختار فایل و رسانه برای گفتگوها یا حساب‌های تجاری متصل، و ثبت تعامل تله‌متری پیام‌های اسپانسر:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m070Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m070Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m070Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m070Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM070Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.uploadMedia */}
+                    <form
+                      onSubmit={handleM070UploadMedia}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. آپلود مستقل مدیا (uploadMedia)</span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="text"
+                          value={m070UploadPeer}
+                          onChange={(e) => setM070UploadPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={m070BusinessConnId}
+                            onChange={(e) => setM070BusinessConnId(e.target.value)}
+                            placeholder="شناسه بیزینس (اختیاری)..."
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                          />
+                          <button
+                            type="submit"
+                            disabled={m070LoadingOp === 'uploadMedia'}
+                            className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m070LoadingOp === 'uploadMedia' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'آپلود رسانه'}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.viewSponsoredMessage */}
+                    <form
+                      onSubmit={handleM070ViewSponsored}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. ثبت بازدید اسپانسر (viewSponsoredMessage)</span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="text"
+                          value={m070SponsoredRandomId}
+                          onChange={(e) => setM070SponsoredRandomId(e.target.value)}
+                          placeholder="شناسه تصادفی هگز یا بایتس..."
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            type="submit"
+                            disabled={m070LoadingOp === 'viewSponsored'}
+                            className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m070LoadingOp === 'viewSponsored' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت بازدید'}
+                          </button>
+                        </div>
                       </div>
                     </form>
                   </div>

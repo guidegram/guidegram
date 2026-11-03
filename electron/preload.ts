@@ -2669,6 +2669,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:upload-encrypted-file-raw', { accountId, ...params }),
   uploadImportedMediaRaw: (accountId: string, params: { peerId: string; importId: bigint | number | string | any; fileName?: string; media?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:upload-imported-media-raw', { accountId, ...params }),
+  uploadMediaRaw: (accountId: string, params: { businessConnectionId?: string; peerId?: string; media?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:upload-media-raw', { accountId, ...params }),
+  viewSponsoredMessageRaw: (accountId: string, params: { randomId?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:view-sponsored-message-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

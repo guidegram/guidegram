@@ -8330,6 +8330,25 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 070 IPC Handlers (Messages Domain Part 38 - Final)
+  ipcMain.handle('telegram:messages:upload-media-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadMediaRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadMediaRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:view-sponsored-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.viewSponsoredMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] viewSponsoredMessageRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

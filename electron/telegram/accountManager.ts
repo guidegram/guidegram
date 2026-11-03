@@ -20506,6 +20506,19 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.uploadImportedMedia(holder as any, accountId, params.peerId, params.importId, params.fileName, params.media)
   }
+
+  // Layer 232 Messages Suite (Microphase 070)
+  public async uploadMediaRaw(accountId: string, params: { businessConnectionId?: string; peerId?: string; media?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.uploadMedia(holder as any, accountId, params.businessConnectionId, params.peerId, params.media)
+  }
+
+  public async viewSponsoredMessageRaw(accountId: string, params: { randomId?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.viewSponsoredMessage(holder as any, params.randomId)
+  }
 }
 
 

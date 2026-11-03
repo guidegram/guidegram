@@ -1446,9 +1446,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.uploadMedia',
-        'business_connection_id': businessConnectionId,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'media': media,
+        businessConnectionId: businessConnectionId || undefined,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        media: media || { _: 'inputMediaEmpty' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.uploadMedia error:', err)
@@ -3496,11 +3496,19 @@ export class MessagingService {
     }
   }
 
-  public async viewSponsoredMessage(holder: RpcClientHolder, randomId?: any): Promise<any> {
+  public async viewSponsoredMessage(holder: RpcClientHolder, randomId?: Uint8Array | Buffer | string): Promise<any> {
     try {
+      let rBuf: Uint8Array
+      if (typeof randomId === 'string') {
+        rBuf = Buffer.from(randomId, 'hex')
+      } else if (randomId) {
+        rBuf = randomId as any
+      } else {
+        rBuf = new Uint8Array(16)
+      }
       return await holder.client.call({
         _: 'messages.viewSponsoredMessage',
-        'random_id': randomId,
+        randomId: rBuf,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.viewSponsoredMessage error:', err)
