@@ -1427,11 +1427,12 @@ export class MessagingService {
 
   public async sendScreenshotNotification(holder: RpcClientHolder, accountId: string, peerId?: string, replyTo?: any, randomId?: bigint | number): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
       return await holder.client.call({
         _: 'messages.sendScreenshotNotification',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'reply_to': replyTo,
-        'random_id': randomId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        replyTo: replyTo || { _: 'inputReplyToMessage', replyToMsgId: 0 },
+        randomId: rId,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendScreenshotNotification error:', err)
@@ -1654,13 +1655,21 @@ export class MessagingService {
     }
   }
 
-  public async sendVote(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, options?: any): Promise<any> {
+  public async sendVote(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, options?: (Uint8Array | string)[] | Uint8Array | string): Promise<any> {
     try {
+      let opts: Uint8Array[] = []
+      if (Array.isArray(options)) {
+        opts = options.map(opt => opt instanceof Uint8Array ? opt : Buffer.from(String(opt), 'utf-8'))
+      } else if (options instanceof Uint8Array) {
+        opts = [options]
+      } else if (typeof options === 'string') {
+        opts = [Buffer.from(options, 'utf-8')]
+      }
       return await holder.client.call({
         _: 'messages.sendVote',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'options': options,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
+        options: opts,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendVote error:', err)
@@ -1857,12 +1866,13 @@ export class MessagingService {
     }
   }
 
-  public async sendScheduledMessages(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number): Promise<any> {
+  public async sendScheduledMessages(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id.map(Number) : (id !== undefined ? [Number(id)] : [])
       return await holder.client.call({
         _: 'messages.sendScheduledMessages',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        id: ids,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendScheduledMessages error:', err)
@@ -2361,13 +2371,21 @@ export class MessagingService {
 
   public async sendReaction(holder: RpcClientHolder, accountId: string, big?: boolean, addToRecent?: boolean, peerId?: string, msgId?: number, reaction?: any): Promise<any> {
     try {
+      let reactionList: any[] = []
+      if (Array.isArray(reaction)) {
+        reactionList = reaction
+      } else if (typeof reaction === 'string') {
+        reactionList = [{ _: 'reactionEmoji', emoticon: reaction }]
+      } else if (reaction) {
+        reactionList = [reaction]
+      }
       return await holder.client.call({
         _: 'messages.sendReaction',
-        'big': big,
-        'add_to_recent': addToRecent,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'reaction': reaction,
+        big: Boolean(big),
+        addToRecent: Boolean(addToRecent),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
+        reaction: reactionList.length > 0 ? reactionList : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendReaction error:', err)
@@ -2629,12 +2647,13 @@ export class MessagingService {
 
   public async sendWebViewData(holder: RpcClientHolder, accountId: string, botId?: string, randomId?: bigint | number, buttonText?: string, data?: string): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
       return await holder.client.call({
         _: 'messages.sendWebViewData',
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'random_id': randomId,
-        'button_text': buttonText,
-        'data': data,
+        bot: botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserEmpty' },
+        randomId: rId,
+        buttonText: String(buttonText || ''),
+        data: String(data || ''),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendWebViewData error:', err)
@@ -3191,14 +3210,23 @@ export class MessagingService {
     }
   }
 
-  public async sendQuickReplyMessages(holder: RpcClientHolder, accountId: string, peerId?: string, shortcutId?: number, id?: number, randomId?: bigint | number): Promise<any> {
+  public async sendQuickReplyMessages(holder: RpcClientHolder, accountId: string, peerId?: string, shortcutId?: number, id?: number | number[], randomId?: (bigint | number)[] | bigint | number): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id.map(Number) : (id !== undefined ? [Number(id)] : [])
+      let rIds: Long[] = []
+      if (Array.isArray(randomId)) {
+        rIds = randomId.map(r => Long.isLong(r) ? r : Long.fromValue(r as any))
+      } else if (randomId) {
+        rIds = [Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)]
+      } else {
+        rIds = ids.map(() => Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF)))
+      }
       return await holder.client.call({
         _: 'messages.sendQuickReplyMessages',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'shortcut_id': shortcutId,
-        'id': id,
-        'random_id': randomId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        shortcutId: Number(shortcutId || 0),
+        id: ids,
+        randomId: rIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendQuickReplyMessages error:', err)
@@ -3333,13 +3361,21 @@ export class MessagingService {
 
   public async sendPaidReaction(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, count?: number, randomId?: bigint | number, isPrivate?: any): Promise<any> {
     try {
+      let rId: Long
+      if (randomId) {
+        rId = Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)
+      } else {
+        const unixtime = Math.floor(Date.now() / 1000)
+        const rand32 = Math.floor(Math.random() * 0xFFFFFFFF)
+        rId = Long.fromBits(rand32, unixtime)
+      }
       return await holder.client.call({
         _: 'messages.sendPaidReaction',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'count': count,
-        'random_id': randomId,
-        'private': isPrivate,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
+        count: Number(count || 1),
+        randomId: rId,
+        private: isPrivate,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendPaidReaction error:', err)

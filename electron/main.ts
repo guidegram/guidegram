@@ -7882,6 +7882,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 063 IPC Handlers
+  ipcMain.handle('telegram:messages:send-paid-reaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendPaidReactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendPaidReactionRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-quick-reply-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendQuickReplyMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendQuickReplyMessagesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-reaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendReactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendReactionRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-scheduled-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendScheduledMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendScheduledMessagesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-screenshot-notification-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendScreenshotNotificationRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendScreenshotNotificationRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-vote-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendVoteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendVoteRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-web-view-data-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendWebViewDataRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendWebViewDataRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

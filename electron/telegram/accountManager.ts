@@ -20205,6 +20205,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.sendMultiMedia(holder as any, accountId, params.silent, params.background, params.clearDraft, params.noforwards, params.updateStickersetsOrder, params.invertMedia, params.allowPaidFloodskip, params.peerId, params.replyTo, params.multiMedia, params.scheduleDate, params.sendAsId, params.quickReplyShortcut, params.effect, params.allowPaidStars)
   }
+
+  // Layer 232 Messages Suite (Microphase 063)
+  public async sendPaidReactionRaw(accountId: string, params: { peerId: string; msgId: number; count: number; randomId?: bigint | number; isPrivate?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendPaidReaction(holder as any, accountId, params.peerId, params.msgId, params.count, params.randomId, params.isPrivate)
+  }
+
+  public async sendQuickReplyMessagesRaw(accountId: string, params: { peerId: string; shortcutId: number; id?: number | number[]; randomId?: (bigint | number)[] | bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendQuickReplyMessages(holder as any, accountId, params.peerId, params.shortcutId, params.id, params.randomId)
+  }
+
+  public async sendReactionRaw(accountId: string, params: { big?: boolean; addToRecent?: boolean; peerId: string; msgId: number; reaction?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendReaction(holder as any, accountId, params.big, params.addToRecent, params.peerId, params.msgId, params.reaction)
+  }
+
+  public async sendScheduledMessagesRaw(accountId: string, params: { peerId: string; id: number | number[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendScheduledMessages(holder as any, accountId, params.peerId, params.id)
+  }
+
+  public async sendScreenshotNotificationRaw(accountId: string, params: { peerId: string; replyTo?: any; randomId?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendScreenshotNotification(holder as any, accountId, params.peerId, params.replyTo, params.randomId)
+  }
+
+  public async sendVoteRaw(accountId: string, params: { peerId: string; msgId: number; options: (Uint8Array | string)[] | Uint8Array | string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendVote(holder as any, accountId, params.peerId, params.msgId, params.options)
+  }
+
+  public async sendWebViewDataRaw(accountId: string, params: { botId: string; buttonText: string; data: string; randomId?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendWebViewData(holder as any, accountId, params.botId, params.randomId, params.buttonText, params.data)
+  }
 }
 
 

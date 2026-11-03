@@ -2571,6 +2571,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:send-message-raw', { accountId, ...params }),
   sendMultiMediaRaw: (accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; multiMedia?: any[]; scheduleDate?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:send-multi-media-raw', { accountId, ...params }),
+  sendPaidReactionRaw: (accountId: string, params: { peerId: string; msgId: number; count: number; randomId?: bigint | number; isPrivate?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-paid-reaction-raw', { accountId, ...params }),
+  sendQuickReplyMessagesRaw: (accountId: string, params: { peerId: string; shortcutId: number; id?: number | number[]; randomId?: (bigint | number)[] | bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-quick-reply-messages-raw', { accountId, ...params }),
+  sendReactionRaw: (accountId: string, params: { big?: boolean; addToRecent?: boolean; peerId: string; msgId: number; reaction?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-reaction-raw', { accountId, ...params }),
+  sendScheduledMessagesRaw: (accountId: string, params: { peerId: string; id: number | number[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-scheduled-messages-raw', { accountId, ...params }),
+  sendScreenshotNotificationRaw: (accountId: string, params: { peerId: string; replyTo?: any; randomId?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-screenshot-notification-raw', { accountId, ...params }),
+  sendVoteRaw: (accountId: string, params: { peerId: string; msgId: number; options: (Uint8Array | string)[] | Uint8Array | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-vote-raw', { accountId, ...params }),
+  sendWebViewDataRaw: (accountId: string, params: { botId: string; buttonText: string; data: string; randomId?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-web-view-data-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

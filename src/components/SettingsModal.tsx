@@ -6010,6 +6010,207 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 063 State & Handlers (Messages Domain Part 31 - Layer 232)
+  const [m063Status, setM063Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m063LoadingOp, setM063LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.sendPaidReaction
+  const [m063PaidPeer, setM063PaidPeer] = useState('')
+  const [m063PaidMsgId, setM063PaidMsgId] = useState('')
+  const [m063PaidStarsCount, setM063PaidStarsCount] = useState('1')
+
+  // 2. messages.sendQuickReplyMessages
+  const [m063QuickReplyPeer, setM063QuickReplyPeer] = useState('')
+  const [m063ShortcutId, setM063ShortcutId] = useState('')
+
+  // 3. messages.sendReaction
+  const [m063ReactionPeer, setM063ReactionPeer] = useState('')
+  const [m063ReactionMsgId, setM063ReactionMsgId] = useState('')
+  const [m063ReactionEmoji, setM063ReactionEmoji] = useState('🔥')
+
+  // 4. messages.sendScheduledMessages
+  const [m063SchedPeer, setM063SchedPeer] = useState('')
+  const [m063SchedMsgId, setM063SchedMsgId] = useState('')
+
+  // 5. messages.sendScreenshotNotification
+  const [m063ScreenshotPeer, setM063ScreenshotPeer] = useState('')
+
+  // 6. messages.sendVote
+  const [m063VotePeer, setM063VotePeer] = useState('')
+  const [m063VoteMsgId, setM063VoteMsgId] = useState('')
+  const [m063VoteOption, setM063VoteOption] = useState('0')
+
+  // 7. messages.sendWebViewData
+  const [m063WebviewBot, setM063WebviewBot] = useState('')
+  const [m063WebviewData, setM063WebviewData] = useState('')
+
+  const handleM063SendPaidReaction = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendPaidReactionRaw) return
+    if (!m063PaidPeer.trim() || !m063PaidMsgId.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام برای واکنش پولی الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendPaidReaction')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendPaidReactionRaw(targetId, {
+        peerId: m063PaidPeer.trim(),
+        msgId: Number(m063PaidMsgId.trim()),
+        count: Number(m063PaidStarsCount.trim()) || 1,
+      })
+      setM063Status({ type: 'success', message: `واکنش استارز با موفقیت ثبت شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ثبت واکنش پولی' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
+  const handleM063SendQuickReplyMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendQuickReplyMessagesRaw) return
+    if (!m063QuickReplyPeer.trim() || !m063ShortcutId.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه کاربر و شناسه میانبر پاسخ سریع الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendQuickReplyMessages')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendQuickReplyMessagesRaw(targetId, {
+        peerId: m063QuickReplyPeer.trim(),
+        shortcutId: Number(m063ShortcutId.trim()),
+      })
+      setM063Status({ type: 'success', message: `پیام‌های پاسخ سریع ارسال شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ارسال پیام‌های پاسخ سریع' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
+  const handleM063SendReaction = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendReactionRaw) return
+    if (!m063ReactionPeer.trim() || !m063ReactionMsgId.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendReaction')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendReactionRaw(targetId, {
+        peerId: m063ReactionPeer.trim(),
+        msgId: Number(m063ReactionMsgId.trim()),
+        reaction: [{ _: 'reactionEmoji', emoticon: m063ReactionEmoji.trim() || '👍' }],
+        big: true,
+        addToRecent: true,
+      })
+      setM063Status({ type: 'success', message: `واکنش ایموجی ارسال شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ارسال واکنش' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
+  const handleM063SendScheduledMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendScheduledMessagesRaw) return
+    if (!m063SchedPeer.trim() || !m063SchedMsgId.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام زمان‌بندی‌شده الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendScheduledMessages')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendScheduledMessagesRaw(targetId, {
+        peerId: m063SchedPeer.trim(),
+        id: [Number(m063SchedMsgId.trim())],
+      })
+      setM063Status({ type: 'success', message: `پیام زمان‌بندی‌شده در لحظه مخابره شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ارسال پیام زمان‌بندی‌شده' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
+  const handleM063SendScreenshotNotification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendScreenshotNotificationRaw) return
+    if (!m063ScreenshotPeer.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه کاربر مخاطب برای اعلان اسکرین‌شات الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendScreenshotNotification')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendScreenshotNotificationRaw(targetId, {
+        peerId: m063ScreenshotPeer.trim(),
+        replyTo: { _: 'inputReplyToMessage', replyToMsgId: 0 },
+      })
+      setM063Status({ type: 'success', message: `اعلان اسکرین‌شات ارسال شد: ${res?._ || 'ارسال شد'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ارسال اعلان اسکرین‌شات' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
+  const handleM063SendVote = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendVoteRaw) return
+    if (!m063VotePeer.trim() || !m063VoteMsgId.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام نظرسنجی الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendVote')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendVoteRaw(targetId, {
+        peerId: m063VotePeer.trim(),
+        msgId: Number(m063VoteMsgId.trim()),
+        options: [m063VoteOption.trim() || '0'],
+      })
+      setM063Status({ type: 'success', message: `رأی در نظرسنجی با موفقیت ثبت شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ثبت رأی نظرسنجی' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
+  const handleM063SendWebViewData = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendWebViewDataRaw) return
+    if (!m063WebviewBot.trim() || !m063WebviewData.trim()) {
+      setM063Status({ type: 'error', message: 'شناسه ربات و داده‌های وب‌اپلیکیشن الزامی است' })
+      return
+    }
+    setM063LoadingOp('sendWebViewData')
+    setM063Status(null)
+    try {
+      const res = await window.guidegram.sendWebViewDataRaw(targetId, {
+        botId: m063WebviewBot.trim(),
+        buttonText: 'Guidegram WebApp',
+        data: m063WebviewData.trim(),
+      })
+      setM063Status({ type: 'success', message: `داده‌های وب‌اپلیکیشن به ربات تحویل داده شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM063Status({ type: 'error', message: err?.message || 'خطا در ارسال داده به وب‌اپ ربات' })
+    } finally {
+      setM063LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -15730,6 +15931,306 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m062LoadingOp === 'sendMultiMedia' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال آلبوم'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 063: Messages Domain Suite Part 31 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۳: واکنش پولی استارز، پاسخ سریع، نظرسنجی، اعلان اسکرین‌شات و وب‌اپ (Messages Suite Part 31)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-400/80 font-mono px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    امکانات تعاملی پیشرفته: واکنش‌های پولی استارز (Stars)، پاسخ‌های سریع شرت‌کات، ری‌اکشن‌های بزرگ، ارسال آنی پیام‌های زمان‌بندی‌شده، اعلان اسکرین‌شات چت، رأی نظرسنجی و دیتای وب‌اپلیکیشن:
+                    <span className="text-gray-300 font-mono mr-1">
+                      sendPaidReaction, sendQuickReplyMessages, sendReaction, sendScheduledMessages, sendScreenshotNotification, sendVote, sendWebViewData
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m063Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m063Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m063Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m063Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM063Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.sendPaidReaction */}
+                    <form
+                      onSubmit={handleM063SendPaidReaction}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. واکنش پولی استارز (sendPaidReaction)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063PaidPeer}
+                          onChange={(e) => setM063PaidPeer(e.target.value)}
+                          placeholder="کانال / گروه"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m063PaidMsgId}
+                          onChange={(e) => setM063PaidMsgId(e.target.value)}
+                          placeholder="Msg ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m063PaidStarsCount}
+                          onChange={(e) => setM063PaidStarsCount(e.target.value)}
+                          placeholder="تعداد ستاره"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendPaidReaction'}
+                          className="px-4 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendPaidReaction' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال ستاره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.sendQuickReplyMessages */}
+                    <form
+                      onSubmit={handleM063SendQuickReplyMessages}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. ارسال دسته‌ای پاسخ سریع (sendQuickReplyMessages)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063QuickReplyPeer}
+                          onChange={(e) => setM063QuickReplyPeer(e.target.value)}
+                          placeholder="شناسه کاربر"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m063ShortcutId}
+                          onChange={(e) => setM063ShortcutId(e.target.value)}
+                          placeholder="Shortcut ID"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendQuickReplyMessages'}
+                          className="px-4 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendQuickReplyMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال میانبر'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.sendReaction */}
+                    <form
+                      onSubmit={handleM063SendReaction}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. ارسال واکنش ایموجی (sendReaction)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063ReactionPeer}
+                          onChange={(e) => setM063ReactionPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m063ReactionMsgId}
+                          onChange={(e) => setM063ReactionMsgId(e.target.value)}
+                          placeholder="Msg ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m063ReactionEmoji}
+                          onChange={(e) => setM063ReactionEmoji(e.target.value)}
+                          placeholder="ایموجی"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-center text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendReaction'}
+                          className="px-4 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendReaction' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکنش'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.sendScheduledMessages */}
+                    <form
+                      onSubmit={handleM063SendScheduledMessages}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. ارسال آنی پیام زمان‌بندی‌شده (sendScheduledMessages)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063SchedPeer}
+                          onChange={(e) => setM063SchedPeer(e.target.value)}
+                          placeholder="گفتگوی مقصد"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m063SchedMsgId}
+                          onChange={(e) => setM063SchedMsgId(e.target.value)}
+                          placeholder="Sched ID"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendScheduledMessages'}
+                          className="px-4 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendScheduledMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال آنی'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.sendScreenshotNotification */}
+                    <form
+                      onSubmit={handleM063SendScreenshotNotification}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. اعلان اسکرین‌شات به طرف مقابل (sendScreenshotNotification)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063ScreenshotPeer}
+                          onChange={(e) => setM063ScreenshotPeer(e.target.value)}
+                          placeholder="شناسه کاربر مخاطب"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendScreenshotNotification'}
+                          className="px-4 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendScreenshotNotification' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعلان اسکرین'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.sendVote */}
+                    <form
+                      onSubmit={handleM063SendVote}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. ثبت رأی در نظرسنجی (sendVote)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063VotePeer}
+                          onChange={(e) => setM063VotePeer(e.target.value)}
+                          placeholder="گفتگو"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m063VoteMsgId}
+                          onChange={(e) => setM063VoteMsgId(e.target.value)}
+                          placeholder="Poll Msg ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m063VoteOption}
+                          onChange={(e) => setM063VoteOption(e.target.value)}
+                          placeholder="گزینه (0, 1...)"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendVote'}
+                          className="px-4 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendVote' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت رأی'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.sendWebViewData */}
+                    <form
+                      onSubmit={handleM063SendWebViewData}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. مخابره داده‌های رویداد وب‌اپلیکیشن به ربات (sendWebViewData)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m063WebviewBot}
+                          onChange={(e) => setM063WebviewBot(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم ربات"
+                          className="w-48 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m063WebviewData}
+                          onChange={(e) => setM063WebviewData(e.target.value)}
+                          placeholder="داده ارسالی وب‌اپ (JSON یا رشته متنی)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m063LoadingOp === 'sendWebViewData'}
+                          className="px-5 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m063LoadingOp === 'sendWebViewData' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تحویل به ربات'}
                         </button>
                       </div>
                     </form>
