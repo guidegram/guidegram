@@ -20162,6 +20162,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.sendBotRequestedPeer(holder as any, accountId, params.peerId, params.buttonId, params.requestedPeers, params.msgId, params.webappReqId)
   }
+
+  // Layer 232 Messages Suite (Microphase 062)
+  public async sendEncryptedRaw(accountId: string, params: { silent?: boolean; peer?: any; randomId?: bigint | number; data?: Uint8Array | string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendEncrypted(holder as any, params.silent, params.peer, params.randomId, params.data)
+  }
+
+  public async sendEncryptedFileRaw(accountId: string, params: { silent?: boolean; peer?: any; randomId?: bigint | number; data?: Uint8Array | string; file?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendEncryptedFile(holder as any, params.silent, params.peer, params.randomId, params.data, params.file)
+  }
+
+  public async sendEncryptedServiceRaw(accountId: string, params: { peer?: any; randomId?: bigint | number; data?: Uint8Array | string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendEncryptedService(holder as any, params.peer, params.randomId, params.data)
+  }
+
+  public async sendInlineBotResultRaw(accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; hideVia?: boolean; peerId?: string; replyTo?: any; randomId?: bigint | number; queryId?: bigint | number; id?: string; scheduleDate?: number; sendAsId?: string; quickReplyShortcut?: any; allowPaidStars?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendInlineBotResult(holder as any, accountId, params.silent, params.background, params.clearDraft, params.hideVia, params.peerId, params.replyTo, params.randomId, params.queryId, params.id, params.scheduleDate, params.sendAsId, params.quickReplyShortcut, params.allowPaidStars)
+  }
+
+  public async sendMediaRaw(accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; media?: any; message?: string; randomId?: bigint | number; replyMarkup?: any; entities?: any; scheduleDate?: number; scheduleRepeatPeriod?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number; suggestedPost?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendMedia(holder as any, accountId, params.silent, params.background, params.clearDraft, params.noforwards, params.updateStickersetsOrder, params.invertMedia, params.allowPaidFloodskip, params.peerId, params.replyTo, params.media, params.message, params.randomId, params.replyMarkup, params.entities, params.scheduleDate, params.scheduleRepeatPeriod, params.sendAsId, params.quickReplyShortcut, params.effect, params.allowPaidStars, params.suggestedPost)
+  }
+
+  public async sendMessageRaw(accountId: string, params: { noWebpage?: boolean; silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; message?: string; randomId?: bigint | number; replyMarkup?: any; entities?: any; scheduleDate?: number; scheduleRepeatPeriod?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number; suggestedPost?: any; richMessage?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendMessage(holder as any, accountId, params.noWebpage, params.silent, params.background, params.clearDraft, params.noforwards, params.updateStickersetsOrder, params.invertMedia, params.allowPaidFloodskip, params.peerId, params.replyTo, params.message, params.randomId, params.replyMarkup, params.entities, params.scheduleDate, params.scheduleRepeatPeriod, params.sendAsId, params.quickReplyShortcut, params.effect, params.allowPaidStars, params.suggestedPost, params.richMessage)
+  }
+
+  public async sendMultiMediaRaw(accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; multiMedia?: any[]; scheduleDate?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendMultiMedia(holder as any, accountId, params.silent, params.background, params.clearDraft, params.noforwards, params.updateStickersetsOrder, params.invertMedia, params.allowPaidFloodskip, params.peerId, params.replyTo, params.multiMedia, params.scheduleDate, params.sendAsId, params.quickReplyShortcut, params.effect, params.allowPaidStars)
+  }
 }
 
 

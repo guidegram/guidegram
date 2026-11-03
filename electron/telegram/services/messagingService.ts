@@ -195,30 +195,31 @@ export class MessagingService {
 
   public async sendMessage(holder: RpcClientHolder, accountId: string, noWebpage?: boolean, silent?: boolean, background?: boolean, clearDraft?: boolean, noforwards?: boolean, updateStickersetsOrder?: boolean, invertMedia?: boolean, allowPaidFloodskip?: boolean, peerId?: string, replyTo?: any, message?: string, randomId?: bigint | number, replyMarkup?: any, entities?: any, scheduleDate?: number, scheduleRepeatPeriod?: number, sendAsId?: string, quickReplyShortcut?: any, effect?: bigint | number, allowPaidStars?: bigint | number, suggestedPost?: any, richMessage?: any): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
       return await holder.client.call({
         _: 'messages.sendMessage',
-        'no_webpage': noWebpage,
-        'silent': silent,
-        'background': background,
-        'clear_draft': clearDraft,
-        'noforwards': noforwards,
-        'update_stickersets_order': updateStickersetsOrder,
-        'invert_media': invertMedia,
-        'allow_paid_floodskip': allowPaidFloodskip,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'reply_to': replyTo,
-        'message': message,
-        'random_id': randomId,
-        'reply_markup': replyMarkup,
-        'entities': entities,
-        'schedule_date': scheduleDate,
-        'schedule_repeat_period': scheduleRepeatPeriod,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
-        'quick_reply_shortcut': quickReplyShortcut,
-        'effect': effect,
-        'allow_paid_stars': allowPaidStars,
-        'suggested_post': suggestedPost,
-        'rich_message': richMessage,
+        noWebpage: Boolean(noWebpage),
+        silent: Boolean(silent),
+        background: Boolean(background),
+        clearDraft: Boolean(clearDraft),
+        noforwards: Boolean(noforwards),
+        updateStickersetsOrder: Boolean(updateStickersetsOrder),
+        invertMedia: Boolean(invertMedia),
+        allowPaidFloodskip: Boolean(allowPaidFloodskip),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        replyTo: replyTo,
+        message: String(message || ''),
+        randomId: rId,
+        replyMarkup: replyMarkup,
+        entities: entities,
+        scheduleDate: scheduleDate !== undefined ? Number(scheduleDate) : undefined,
+        scheduleRepeatPeriod: scheduleRepeatPeriod !== undefined ? Number(scheduleRepeatPeriod) : undefined,
+        sendAs: sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        quickReplyShortcut: quickReplyShortcut,
+        effect: effect ? (Long.isLong(effect) ? effect : Long.fromValue(effect as any)) : undefined,
+        allowPaidStars: allowPaidStars ? (Long.isLong(allowPaidStars) ? allowPaidStars : Long.fromValue(allowPaidStars as any)) : undefined,
+        suggestedPost: suggestedPost,
+        richMessage: richMessage,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendMessage error:', err)
@@ -228,29 +229,30 @@ export class MessagingService {
 
   public async sendMedia(holder: RpcClientHolder, accountId: string, silent?: boolean, background?: boolean, clearDraft?: boolean, noforwards?: boolean, updateStickersetsOrder?: boolean, invertMedia?: boolean, allowPaidFloodskip?: boolean, peerId?: string, replyTo?: any, media?: any, message?: string, randomId?: bigint | number, replyMarkup?: any, entities?: any, scheduleDate?: number, scheduleRepeatPeriod?: number, sendAsId?: string, quickReplyShortcut?: any, effect?: bigint | number, allowPaidStars?: bigint | number, suggestedPost?: any): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
       return await holder.client.call({
         _: 'messages.sendMedia',
-        'silent': silent,
-        'background': background,
-        'clear_draft': clearDraft,
-        'noforwards': noforwards,
-        'update_stickersets_order': updateStickersetsOrder,
-        'invert_media': invertMedia,
-        'allow_paid_floodskip': allowPaidFloodskip,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'reply_to': replyTo,
-        'media': media,
-        'message': message,
-        'random_id': randomId,
-        'reply_markup': replyMarkup,
-        'entities': entities,
-        'schedule_date': scheduleDate,
-        'schedule_repeat_period': scheduleRepeatPeriod,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
-        'quick_reply_shortcut': quickReplyShortcut,
-        'effect': effect,
-        'allow_paid_stars': allowPaidStars,
-        'suggested_post': suggestedPost,
+        silent: Boolean(silent),
+        background: Boolean(background),
+        clearDraft: Boolean(clearDraft),
+        noforwards: Boolean(noforwards),
+        updateStickersetsOrder: Boolean(updateStickersetsOrder),
+        invertMedia: Boolean(invertMedia),
+        allowPaidFloodskip: Boolean(allowPaidFloodskip),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        replyTo: replyTo,
+        media: media || { _: 'inputMediaEmpty' },
+        message: String(message || ''),
+        randomId: rId,
+        replyMarkup: replyMarkup,
+        entities: entities,
+        scheduleDate: scheduleDate !== undefined ? Number(scheduleDate) : undefined,
+        scheduleRepeatPeriod: scheduleRepeatPeriod !== undefined ? Number(scheduleRepeatPeriod) : undefined,
+        sendAs: sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        quickReplyShortcut: quickReplyShortcut,
+        effect: effect ? (Long.isLong(effect) ? effect : Long.fromValue(effect as any)) : undefined,
+        allowPaidStars: allowPaidStars ? (Long.isLong(allowPaidStars) ? allowPaidStars : Long.fromValue(allowPaidStars as any)) : undefined,
+        suggestedPost: suggestedPost,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendMedia error:', err)
@@ -530,14 +532,21 @@ export class MessagingService {
     }
   }
 
-  public async sendEncrypted(holder: RpcClientHolder, silent?: boolean, peer?: any, randomId?: bigint | number, data?: any): Promise<any> {
+  public async sendEncrypted(holder: RpcClientHolder, silent?: boolean, peer?: any, randomId?: bigint | number, data?: Uint8Array | string): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
+      let bytes: Uint8Array = new Uint8Array()
+      if (data instanceof Uint8Array) {
+        bytes = data
+      } else if (typeof data === 'string') {
+        bytes = Buffer.from(data, 'utf-8')
+      }
       return await holder.client.call({
         _: 'messages.sendEncrypted',
-        'silent': silent,
-        'peer': peer,
-        'random_id': randomId,
-        'data': data,
+        silent: Boolean(silent),
+        peer: peer,
+        randomId: rId,
+        data: bytes,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendEncrypted error:', err)
@@ -545,15 +554,22 @@ export class MessagingService {
     }
   }
 
-  public async sendEncryptedFile(holder: RpcClientHolder, silent?: boolean, peer?: any, randomId?: bigint | number, data?: any, file?: any): Promise<any> {
+  public async sendEncryptedFile(holder: RpcClientHolder, silent?: boolean, peer?: any, randomId?: bigint | number, data?: Uint8Array | string, file?: any): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
+      let bytes: Uint8Array = new Uint8Array()
+      if (data instanceof Uint8Array) {
+        bytes = data
+      } else if (typeof data === 'string') {
+        bytes = Buffer.from(data, 'utf-8')
+      }
       return await holder.client.call({
         _: 'messages.sendEncryptedFile',
-        'silent': silent,
-        'peer': peer,
-        'random_id': randomId,
-        'data': data,
-        'file': file,
+        silent: Boolean(silent),
+        peer: peer,
+        randomId: rId,
+        data: bytes,
+        file: file,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendEncryptedFile error:', err)
@@ -561,13 +577,20 @@ export class MessagingService {
     }
   }
 
-  public async sendEncryptedService(holder: RpcClientHolder, peer?: any, randomId?: bigint | number, data?: any): Promise<any> {
+  public async sendEncryptedService(holder: RpcClientHolder, peer?: any, randomId?: bigint | number, data?: Uint8Array | string): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
+      let bytes: Uint8Array = new Uint8Array()
+      if (data instanceof Uint8Array) {
+        bytes = data
+      } else if (typeof data === 'string') {
+        bytes = Buffer.from(data, 'utf-8')
+      }
       return await holder.client.call({
         _: 'messages.sendEncryptedService',
-        'peer': peer,
-        'random_id': randomId,
-        'data': data,
+        peer: peer,
+        randomId: rId,
+        data: bytes,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendEncryptedService error:', err)
@@ -932,21 +955,23 @@ export class MessagingService {
 
   public async sendInlineBotResult(holder: RpcClientHolder, accountId: string, silent?: boolean, background?: boolean, clearDraft?: boolean, hideVia?: boolean, peerId?: string, replyTo?: any, randomId?: bigint | number, queryId?: bigint | number, id?: string, scheduleDate?: number, sendAsId?: string, quickReplyShortcut?: any, allowPaidStars?: bigint | number): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.sendInlineBotResult',
-        'silent': silent,
-        'background': background,
-        'clear_draft': clearDraft,
-        'hide_via': hideVia,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'reply_to': replyTo,
-        'random_id': randomId,
-        'query_id': queryId,
-        'id': id,
-        'schedule_date': scheduleDate,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
-        'quick_reply_shortcut': quickReplyShortcut,
-        'allow_paid_stars': allowPaidStars,
+        silent: Boolean(silent),
+        background: Boolean(background),
+        clearDraft: Boolean(clearDraft),
+        hideVia: Boolean(hideVia),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        replyTo: replyTo,
+        randomId: rId,
+        queryId: qId,
+        id: String(id || ''),
+        scheduleDate: scheduleDate !== undefined ? Number(scheduleDate) : undefined,
+        sendAs: sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        quickReplyShortcut: quickReplyShortcut,
+        allowPaidStars: allowPaidStars ? (Long.isLong(allowPaidStars) ? allowPaidStars : Long.fromValue(allowPaidStars as any)) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendInlineBotResult error:', err)
@@ -1484,25 +1509,38 @@ export class MessagingService {
     }
   }
 
-  public async sendMultiMedia(holder: RpcClientHolder, accountId: string, silent?: boolean, background?: boolean, clearDraft?: boolean, noforwards?: boolean, updateStickersetsOrder?: boolean, invertMedia?: boolean, allowPaidFloodskip?: boolean, peerId?: string, replyTo?: any, multiMedia?: any, scheduleDate?: number, sendAsId?: string, quickReplyShortcut?: any, effect?: bigint | number, allowPaidStars?: bigint | number): Promise<any> {
+  public async sendMultiMedia(holder: RpcClientHolder, accountId: string, silent?: boolean, background?: boolean, clearDraft?: boolean, noforwards?: boolean, updateStickersetsOrder?: boolean, invertMedia?: boolean, allowPaidFloodskip?: boolean, peerId?: string, replyTo?: any, multiMedia?: any[], scheduleDate?: number, sendAsId?: string, quickReplyShortcut?: any, effect?: bigint | number, allowPaidStars?: bigint | number): Promise<any> {
     try {
+      let album: any[] = []
+      if (Array.isArray(multiMedia)) {
+        album = multiMedia.map(m => {
+          const rId = m.randomId ? (Long.isLong(m.randomId) ? m.randomId : Long.fromValue(m.randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
+          return {
+            _: 'inputSingleMedia',
+            media: m.media || { _: 'inputMediaEmpty' },
+            randomId: rId,
+            message: String(m.message || ''),
+            entities: m.entities,
+          }
+        })
+      }
       return await holder.client.call({
         _: 'messages.sendMultiMedia',
-        'silent': silent,
-        'background': background,
-        'clear_draft': clearDraft,
-        'noforwards': noforwards,
-        'update_stickersets_order': updateStickersetsOrder,
-        'invert_media': invertMedia,
-        'allow_paid_floodskip': allowPaidFloodskip,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'reply_to': replyTo,
-        'multi_media': multiMedia,
-        'schedule_date': scheduleDate,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
-        'quick_reply_shortcut': quickReplyShortcut,
-        'effect': effect,
-        'allow_paid_stars': allowPaidStars,
+        silent: Boolean(silent),
+        background: Boolean(background),
+        clearDraft: Boolean(clearDraft),
+        noforwards: Boolean(noforwards),
+        updateStickersetsOrder: Boolean(updateStickersetsOrder),
+        invertMedia: Boolean(invertMedia),
+        allowPaidFloodskip: Boolean(allowPaidFloodskip),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        replyTo: replyTo,
+        multiMedia: album,
+        scheduleDate: scheduleDate !== undefined ? Number(scheduleDate) : undefined,
+        sendAs: sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        quickReplyShortcut: quickReplyShortcut,
+        effect: effect ? (Long.isLong(effect) ? effect : Long.fromValue(effect as any)) : undefined,
+        allowPaidStars: allowPaidStars ? (Long.isLong(allowPaidStars) ? allowPaidStars : Long.fromValue(allowPaidStars as any)) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendMultiMedia error:', err)

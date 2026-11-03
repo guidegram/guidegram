@@ -5795,6 +5795,221 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 062 State & Handlers (Messages Domain Part 30 - Layer 232)
+  const [m062Status, setM062Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m062LoadingOp, setM062LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.sendEncrypted
+  const [m062EncryptedChatId, setM062EncryptedChatId] = useState('')
+  const [m062EncryptedData, setM062EncryptedData] = useState('')
+
+  // 2. messages.sendEncryptedFile
+  const [m062EncryptedFileChatId, setM062EncryptedFileChatId] = useState('')
+  const [m062EncryptedFileId, setM062EncryptedFileId] = useState('')
+
+  // 3. messages.sendEncryptedService
+  const [m062ServiceChatId, setM062ServiceChatId] = useState('')
+
+  // 4. messages.sendInlineBotResult
+  const [m062InlinePeer, setM062InlinePeer] = useState('')
+  const [m062InlineQueryId, setM062InlineQueryId] = useState('')
+  const [m062InlineResultId, setM062InlineResultId] = useState('')
+
+  // 5. messages.sendMedia
+  const [m062MediaPeer, setM062MediaPeer] = useState('')
+  const [m062MediaCaption, setM062MediaCaption] = useState('')
+
+  // 6. messages.sendMessage
+  const [m062MessagePeer, setM062MessagePeer] = useState('')
+  const [m062MessageText, setM062MessageText] = useState('')
+
+  // 7. messages.sendMultiMedia
+  const [m062AlbumPeer, setM062AlbumPeer] = useState('')
+  const [m062AlbumCaption, setM062AlbumCaption] = useState('')
+
+  const handleM062SendEncrypted = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendEncryptedRaw) return
+    if (!m062EncryptedChatId.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه چت رمزنگاری‌شده (Secret Chat ID) الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendEncrypted')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendEncryptedRaw(targetId, {
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(m062EncryptedChatId.trim()),
+          accessHash: 0,
+        },
+        data: m062EncryptedData.trim() || 'Guidegram Encrypted Payload',
+      })
+      setM062Status({ type: 'success', message: `ارسال پیام رمزنگاری‌شده انجام شد: ${res?._ || 'ارسال شد'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال پیام رمزنگاری‌شده' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
+  const handleM062SendEncryptedFile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendEncryptedFileRaw) return
+    if (!m062EncryptedFileChatId.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه چت سکرت الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendEncryptedFile')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendEncryptedFileRaw(targetId, {
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(m062EncryptedFileChatId.trim()),
+          accessHash: 0,
+        },
+        file: {
+          _: 'inputEncryptedFileEmpty',
+        },
+        data: 'Secret File Metadata',
+      })
+      setM062Status({ type: 'success', message: `فایل رمزنگاری‌شده تحویل داده شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال فایل سکرت چت' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
+  const handleM062SendEncryptedService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendEncryptedServiceRaw) return
+    if (!m062ServiceChatId.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه چت سکرت الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendEncryptedService')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendEncryptedServiceRaw(targetId, {
+        peer: {
+          _: 'inputEncryptedChat',
+          chatId: Number(m062ServiceChatId.trim()),
+          accessHash: 0,
+        },
+        data: 'Service Action Signal',
+      })
+      setM062Status({ type: 'success', message: `پیام سرویس سکرت چت ثبت شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال پیام سرویس سکرت' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
+  const handleM062SendInlineBotResult = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendInlineBotResultRaw) return
+    if (!m062InlinePeer.trim() || !m062InlineResultId.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه گفتگو و شناسه نتیجه اینلاین (Result ID) الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendInlineBotResult')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendInlineBotResultRaw(targetId, {
+        peerId: m062InlinePeer.trim(),
+        queryId: m062InlineQueryId.trim() ? Number(m062InlineQueryId.trim()) : 0,
+        id: m062InlineResultId.trim(),
+      })
+      setM062Status({ type: 'success', message: `نتیجه اینلاین ربات ارسال شد: ${res?._ || 'ارسال شد'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال نتیجه اینلاین ربات' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
+  const handleM062SendMedia = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendMediaRaw) return
+    if (!m062MediaPeer.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه یا یوزرنیم مقصد الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendMedia')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendMediaRaw(targetId, {
+        peerId: m062MediaPeer.trim(),
+        message: m062MediaCaption.trim() || undefined,
+        media: { _: 'inputMediaEmpty' },
+      })
+      setM062Status({ type: 'success', message: `مدیای نیتیو ارسال شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال رسانه' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
+  const handleM062SendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendMessageRaw) return
+    if (!m062MessagePeer.trim() || !m062MessageText.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه گفتگو و متن پیام الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendMessage')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendMessageRaw(targetId, {
+        peerId: m062MessagePeer.trim(),
+        message: m062MessageText.trim(),
+      })
+      setM062Status({ type: 'success', message: `پیام نیتیو تلگرام با موفقیت مخابره شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال پیام متنی' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
+  const handleM062SendMultiMedia = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendMultiMediaRaw) return
+    if (!m062AlbumPeer.trim()) {
+      setM062Status({ type: 'error', message: 'شناسه گفتگو برای ارسال آلبوم الزامی است' })
+      return
+    }
+    setM062LoadingOp('sendMultiMedia')
+    setM062Status(null)
+    try {
+      const res = await window.guidegram.sendMultiMediaRaw(targetId, {
+        peerId: m062AlbumPeer.trim(),
+        multiMedia: [
+          {
+            media: { _: 'inputMediaEmpty' },
+            message: m062AlbumCaption.trim() || 'Guidegram Album Item 1',
+          },
+        ],
+      })
+      setM062Status({ type: 'success', message: `آلبوم چندرسانه‌ای تحویل داده شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM062Status({ type: 'error', message: err?.message || 'خطا در ارسال آلبوم' })
+    } finally {
+      setM062LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -15243,6 +15458,278 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m061LoadingOp === 'sendBotRequestedPeer' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تحویل به ربات'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 062: Messages Domain Suite Part 30 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۲: ارسال پیشرفته پیام، رسانه، چت سکرت و اینلاین ربات (Messages Suite Part 30)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    موتور اصلی ارسال پیام تلگرام: چت‌های رمزنگاری‌شده (سکرت چت)، نتایج اینلاین ربات، ارسال رسانه‌های مجزا، پیام‌های متنی و آلبوم چندرسانه‌ای:
+                    <span className="text-gray-300 font-mono mr-1">
+                      sendEncrypted, sendEncryptedFile, sendEncryptedService, sendInlineBotResult, sendMedia, sendMessage, sendMultiMedia
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m062Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m062Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m062Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m062Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM062Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.sendEncrypted */}
+                    <form
+                      onSubmit={handleM062SendEncrypted}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. ارسال پیام در گفتگوی رمزشده (sendEncrypted)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m062EncryptedChatId}
+                          onChange={(e) => setM062EncryptedChatId(e.target.value)}
+                          placeholder="Secret Chat ID"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m062EncryptedData}
+                          onChange={(e) => setM062EncryptedData(e.target.value)}
+                          placeholder="محتوا یا پی‌لود رمزشده"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendEncrypted'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendEncrypted' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.sendEncryptedFile */}
+                    <form
+                      onSubmit={handleM062SendEncryptedFile}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. ارسال فایل رمزشده سکرت چت (sendEncryptedFile)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m062EncryptedFileChatId}
+                          onChange={(e) => setM062EncryptedFileChatId(e.target.value)}
+                          placeholder="Secret Chat ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendEncryptedFile'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendEncryptedFile' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال فایل'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.sendEncryptedService */}
+                    <form
+                      onSubmit={handleM062SendEncryptedService}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. ارسال سرویس سکرت چت (sendEncryptedService)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m062ServiceChatId}
+                          onChange={(e) => setM062ServiceChatId(e.target.value)}
+                          placeholder="Secret Chat ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendEncryptedService'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendEncryptedService' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'سرویس'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.sendInlineBotResult */}
+                    <form
+                      onSubmit={handleM062SendInlineBotResult}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. ارسال نتیجه اینلاین ربات (sendInlineBotResult)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m062InlinePeer}
+                          onChange={(e) => setM062InlinePeer(e.target.value)}
+                          placeholder="گفتگوی مقصد"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m062InlineResultId}
+                          onChange={(e) => setM062InlineResultId(e.target.value)}
+                          placeholder="Result ID"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendInlineBotResult'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendInlineBotResult' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال نتیجه'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.sendMedia */}
+                    <form
+                      onSubmit={handleM062SendMedia}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. ارسال رسانه نیتیو (sendMedia)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m062MediaPeer}
+                          onChange={(e) => setM062MediaPeer(e.target.value)}
+                          placeholder="شناسه مقصد"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m062MediaCaption}
+                          onChange={(e) => setM062MediaCaption(e.target.value)}
+                          placeholder="کپشن اختیاری"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendMedia'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendMedia' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال مدیا'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.sendMessage */}
+                    <form
+                      onSubmit={handleM062SendMessage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. مخابره مستقیم پیام متنی (sendMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m062MessagePeer}
+                          onChange={(e) => setM062MessagePeer(e.target.value)}
+                          placeholder="شناسه / یوزرنیم"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m062MessageText}
+                          onChange={(e) => setM062MessageText(e.target.value)}
+                          placeholder="متن پیام تلگرام..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendMessage'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال متن'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.sendMultiMedia */}
+                    <form
+                      onSubmit={handleM062SendMultiMedia}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. ارسال آلبوم چندرسانه‌ای (sendMultiMedia)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m062AlbumPeer}
+                          onChange={(e) => setM062AlbumPeer(e.target.value)}
+                          placeholder="شناسه مقصد آلبوم"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m062AlbumCaption}
+                          onChange={(e) => setM062AlbumCaption(e.target.value)}
+                          placeholder="کپشن آیتم‌های آلبوم..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m062LoadingOp === 'sendMultiMedia'}
+                          className="px-5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m062LoadingOp === 'sendMultiMedia' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال آلبوم'}
                         </button>
                       </div>
                     </form>

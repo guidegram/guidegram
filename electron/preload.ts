@@ -2557,6 +2557,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:search-stickers-raw', { accountId, ...params }),
   sendBotRequestedPeerRaw: (accountId: string, params: { peerId: string; buttonId: number; requestedPeers: string[] | string; msgId?: number; webappReqId?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:send-bot-requested-peer-raw', { accountId, ...params }),
+  sendEncryptedRaw: (accountId: string, params: { silent?: boolean; peer?: any; randomId?: bigint | number; data?: Uint8Array | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-encrypted-raw', { accountId, ...params }),
+  sendEncryptedFileRaw: (accountId: string, params: { silent?: boolean; peer?: any; randomId?: bigint | number; data?: Uint8Array | string; file?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-encrypted-file-raw', { accountId, ...params }),
+  sendEncryptedServiceRaw: (accountId: string, params: { peer?: any; randomId?: bigint | number; data?: Uint8Array | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-encrypted-service-raw', { accountId, ...params }),
+  sendInlineBotResultRaw: (accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; hideVia?: boolean; peerId?: string; replyTo?: any; randomId?: bigint | number; queryId?: bigint | number; id?: string; scheduleDate?: number; sendAsId?: string; quickReplyShortcut?: any; allowPaidStars?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-inline-bot-result-raw', { accountId, ...params }),
+  sendMediaRaw: (accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; media?: any; message?: string; randomId?: bigint | number; replyMarkup?: any; entities?: any; scheduleDate?: number; scheduleRepeatPeriod?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number; suggestedPost?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-media-raw', { accountId, ...params }),
+  sendMessageRaw: (accountId: string, params: { noWebpage?: boolean; silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; message?: string; randomId?: bigint | number; replyMarkup?: any; entities?: any; scheduleDate?: number; scheduleRepeatPeriod?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number; suggestedPost?: any; richMessage?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-message-raw', { accountId, ...params }),
+  sendMultiMediaRaw: (accountId: string, params: { silent?: boolean; background?: boolean; clearDraft?: boolean; noforwards?: boolean; updateStickersetsOrder?: boolean; invertMedia?: boolean; allowPaidFloodskip?: boolean; peerId?: string; replyTo?: any; multiMedia?: any[]; scheduleDate?: number; sendAsId?: string; quickReplyShortcut?: any; effect?: bigint | number; allowPaidStars?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-multi-media-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

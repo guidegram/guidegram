@@ -7818,6 +7818,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 062 IPC Handlers
+  ipcMain.handle('telegram:messages:send-encrypted-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendEncryptedRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendEncryptedRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-encrypted-file-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendEncryptedFileRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendEncryptedFileRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-encrypted-service-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendEncryptedServiceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendEncryptedServiceRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-inline-bot-result-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendInlineBotResultRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendInlineBotResultRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-media-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendMediaRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendMediaRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendMessageRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-multi-media-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendMultiMediaRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendMultiMediaRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
