@@ -83,6 +83,7 @@ import {
   Signal,
   Edit3,
   Smile,
+  Star,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -2582,6 +2583,178 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setM044Status({ type: 'error', message: err?.message || 'خطا در استعلام استیکرهای ایموجی' })
     } finally {
       setM044LoadingOp(null)
+    }
+  }
+
+  // Microphase 045 State: Messages Domain Part 13 (Emoji URL, Chat Invites, Extended Media, Fact-Checks & Faved Stickers)
+  const [m045EmojiUrlLang, setM045EmojiUrlLang] = useState('en')
+  const [m045EmojiUrlResult, setM045EmojiUrlResult] = useState<string | null>(null)
+
+  const [m045ExportedInvitePeer, setM045ExportedInvitePeer] = useState('')
+  const [m045ExportedInviteLink, setM045ExportedInviteLink] = useState('')
+  const [m045ExportedInviteResult, setM045ExportedInviteResult] = useState<string | null>(null)
+
+  const [m045ExportedInvitesPeer, setM045ExportedInvitesPeer] = useState('')
+  const [m045ExportedInvitesRevoked, setM045ExportedInvitesRevoked] = useState(false)
+  const [m045ExportedInvitesCount, setM045ExportedInvitesCount] = useState<number | null>(null)
+
+  const [m045ExtendedMediaPeer, setM045ExtendedMediaPeer] = useState('')
+  const [m045ExtendedMediaMsgId, setM045ExtendedMediaMsgId] = useState('')
+  const [m045ExtendedMediaCount, setM045ExtendedMediaCount] = useState<number | null>(null)
+
+  const [m045FactCheckPeer, setM045FactCheckPeer] = useState('')
+  const [m045FactCheckMsgId, setM045FactCheckMsgId] = useState('')
+  const [m045FactCheckResult, setM045FactCheckResult] = useState<string | null>(null)
+
+  const [m045FavedStickersCount, setM045FavedStickersCount] = useState<number | null>(null)
+  const [m045FeaturedEmojiStickersCount, setM045FeaturedEmojiStickersCount] = useState<number | null>(null)
+
+  const [m045LoadingOp, setM045LoadingOp] = useState<string | null>(null)
+  const [m045Status, setM045Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM045GetEmojiURL = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiURL) return
+    setM045LoadingOp('getEmojiURL')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getEmojiURL(targetId, m045EmojiUrlLang.trim() || 'en')
+      const url = res?.url || (typeof res === 'string' ? res : JSON.stringify(res))
+      setM045EmojiUrlResult(url)
+      setM045Status({ type: 'success', message: `آدرس URL ایموجی با موفقیت دریافت شد: ${url}` })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در دریافت آدرس URL ایموجی' })
+    } finally {
+      setM045LoadingOp(null)
+    }
+  }
+
+  const handleM045GetExportedChatInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getExportedChatInvite) return
+    if (!m045ExportedInviteLink.trim() && !m045ExportedInvitePeer.trim()) {
+      setM045Status({ type: 'error', message: 'لطفاً شناسه گفتگو یا لینک دعوت را وارد کنید' })
+      return
+    }
+    setM045LoadingOp('getExportedChatInvite')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getExportedChatInvite(targetId, m045ExportedInvitePeer.trim() || undefined, m045ExportedInviteLink.trim() || undefined)
+      const linkTitle = res?.invite?.title || res?.link || 'لینک دعوت معتبر'
+      setM045ExportedInviteResult(linkTitle)
+      setM045Status({ type: 'success', message: `مشخصات لینک دعوت با موفقیت استعلام شد (${linkTitle})` })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در دریافت جزئیات لینک دعوت' })
+    } finally {
+      setM045LoadingOp(null)
+    }
+  }
+
+  const handleM045GetExportedChatInvites = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getExportedChatInvites) return
+    if (!m045ExportedInvitesPeer.trim()) {
+      setM045Status({ type: 'error', message: 'لطفاً شناسه گفتگو (Peer) را وارد کنید' })
+      return
+    }
+    setM045LoadingOp('getExportedChatInvites')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getExportedChatInvites(targetId, {
+        peerId: m045ExportedInvitesPeer.trim(),
+        revoked: m045ExportedInvitesRevoked,
+        limit: 50,
+      })
+      const count = Array.isArray(res?.invites) ? res.invites.length : (res?.count ?? 0)
+      setM045ExportedInvitesCount(count)
+      setM045Status({ type: 'success', message: `تعداد ${count} لینک دعوت صادر شده استعلام شد` })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در دریافت لینک‌های دعوت صادر شده' })
+    } finally {
+      setM045LoadingOp(null)
+    }
+  }
+
+  const handleM045GetExtendedMedia = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getExtendedMedia) return
+    if (!m045ExtendedMediaPeer.trim()) {
+      setM045Status({ type: 'error', message: 'لطفاً شناسه گفتگو (Peer) را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m045ExtendedMediaMsgId.trim(), 10)
+    setM045LoadingOp('getExtendedMedia')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getExtendedMedia(targetId, m045ExtendedMediaPeer.trim(), isNaN(msgIdNum) ? [] : [msgIdNum])
+      const count = Array.isArray(res?.updates) ? res.updates.length : 1
+      setM045ExtendedMediaCount(count)
+      setM045Status({ type: 'success', message: `رسانه‌های گسترده پیام با موفقیت استعلام شد` })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در دریافت رسانه‌های گسترده' })
+    } finally {
+      setM045LoadingOp(null)
+    }
+  }
+
+  const handleM045GetFactCheck = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getFactCheck) return
+    if (!m045FactCheckPeer.trim()) {
+      setM045Status({ type: 'error', message: 'لطفاً شناسه گفتگو (Peer) را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m045FactCheckMsgId.trim(), 10)
+    setM045LoadingOp('getFactCheck')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getFactCheck(targetId, m045FactCheckPeer.trim(), isNaN(msgIdNum) ? [] : [msgIdNum])
+      const text = Array.isArray(res) ? `تعداد ${res.length} فکت‌چک ثبت شده` : 'فکت‌چک استعلام شد'
+      setM045FactCheckResult(text)
+      setM045Status({ type: 'success', message: text })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در دریافت فکت‌چک پیام' })
+    } finally {
+      setM045LoadingOp(null)
+    }
+  }
+
+  const handleM045GetFavedStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getFavedStickers) return
+    setM045LoadingOp('getFavedStickers')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getFavedStickers(targetId, 0)
+      const count = Array.isArray(res?.stickers) ? res.stickers.length : (Array.isArray(res) ? res.length : 0)
+      setM045FavedStickersCount(count)
+      setM045Status({ type: 'success', message: `تعداد ${count} استیکر برگزیده (Faved) استعلام شد` })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در دریافت استیکرهای برگزیده' })
+    } finally {
+      setM045LoadingOp(null)
+    }
+  }
+
+  const handleM045GetFeaturedEmojiStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getFeaturedEmojiStickers) return
+    setM045LoadingOp('getFeaturedEmojiStickers')
+    setM045Status(null)
+    try {
+      const res = await window.guidegram.getFeaturedEmojiStickers(targetId, 0)
+      const count = Array.isArray(res?.sets) ? res.sets.length : (Array.isArray(res) ? res.length : 0)
+      setM045FeaturedEmojiStickersCount(count)
+      setM045Status({ type: 'success', message: `تعداد ${count} مجموعه استیکر ایموجی ویژه (Featured) دریافت شد` })
+    } catch (err: any) {
+      setM045Status({ type: 'error', message: err?.message || 'خطا در استعلام استیکرهای ایموجی ویژه' })
+    } finally {
+      setM045LoadingOp(null)
     }
   }
 
@@ -7509,6 +7682,262 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                       >
                         {m044LoadingOp === 'getEmojiStickers' ? 'در حال دریافت...' : `مجموعه‌ها ${m044StickersCount !== null ? `(${m044StickersCount})` : ''}`}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Microphase 045: Layer 232 Messages Domain Part 13 (Emoji URL, Chat Invites, Extended Media, Fact-Checks & Faved Stickers) */}
+                <div className="p-4 bg-dark-850/80 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <Link2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          مدیریت لینک‌های دعوت، رسانه‌های پیشرفته و فکت‌چک (Layer 232)
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          دسترسی به متدهای MTProto برای استعلام لینک‌های دعوت، فکت‌چک، رسانه‌های تعمیم‌یافته و استیکرهای برگزیده
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+                      Phase 045 • Layer 232
+                    </span>
+                  </div>
+
+                  {/* Operational Status Banner */}
+                  {m045Status && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        m045Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m045Status.type === 'success' ? (
+                          <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        )}
+                        <span className="leading-relaxed">{m045Status.message}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM045Status(null)}
+                        className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                        title="بستن"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* 1. messages.getEmojiURL */}
+                    <form onSubmit={handleM045GetEmojiURL} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Smile className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۱. آدرس وب ایموجی (getEmojiURL)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m045EmojiUrlLang}
+                          onChange={(e) => setM045EmojiUrlLang(e.target.value)}
+                          placeholder="کد زبان (مثلاً en یا fa)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m045LoadingOp === 'getEmojiURL'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m045LoadingOp === 'getEmojiURL' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m045EmojiUrlResult && (
+                        <div className="text-[10px] text-gray-400 truncate bg-dark-900/60 p-1.5 rounded-lg border border-white/5 font-mono dir-ltr text-left">
+                          {m045EmojiUrlResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getExportedChatInvite */}
+                    <form onSubmit={handleM045GetExportedChatInvite} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۲. جزئیات لینک دعوت (getExportedChatInvite)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={m045ExportedInvitePeer}
+                          onChange={(e) => setM045ExportedInvitePeer(e.target.value)}
+                          placeholder="شناسه گفتگو (Peer ID)"
+                          className="w-full bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m045ExportedInviteLink}
+                            onChange={(e) => setM045ExportedInviteLink(e.target.value)}
+                            placeholder="لینک دعوت (https://t.me/+...)"
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                          />
+                          <button
+                            type="submit"
+                            disabled={m045LoadingOp === 'getExportedChatInvite'}
+                            className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m045LoadingOp === 'getExportedChatInvite' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                          </button>
+                        </div>
+                      </div>
+                      {m045ExportedInviteResult && (
+                        <div className="text-[10px] text-gray-300 truncate bg-dark-900/60 p-1.5 rounded-lg border border-white/5">
+                          نتیجه: {m045ExportedInviteResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getExportedChatInvites */}
+                    <form onSubmit={handleM045GetExportedChatInvites} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۳. لیست لینک‌های دعوت صادر شده (getExportedChatInvites)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m045ExportedInvitesPeer}
+                          onChange={(e) => setM045ExportedInvitesPeer(e.target.value)}
+                          placeholder="شناسه گفتگو (Peer ID)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m045LoadingOp === 'getExportedChatInvites'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m045LoadingOp === 'getExportedChatInvites' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت'}
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-400">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m045ExportedInvitesRevoked}
+                            onChange={(e) => setM045ExportedInvitesRevoked(e.target.checked)}
+                            className="rounded bg-dark-900 border-white/10 text-indigo-500"
+                          />
+                          <span>فقط لینک‌های باطل‌شده (Revoked)</span>
+                        </label>
+                        {m045ExportedInvitesCount !== null && (
+                          <span className="text-indigo-400 font-mono">تعداد: {m045ExportedInvitesCount}</span>
+                        )}
+                      </div>
+                    </form>
+
+                    {/* 4. messages.getExtendedMedia */}
+                    <form onSubmit={handleM045GetExtendedMedia} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۴. رسانه‌های گسترده پیام (getExtendedMedia)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m045ExtendedMediaPeer}
+                          onChange={(e) => setM045ExtendedMediaPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m045ExtendedMediaMsgId}
+                          onChange={(e) => setM045ExtendedMediaMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m045LoadingOp === 'getExtendedMedia'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m045LoadingOp === 'getExtendedMedia' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.getFactCheck */}
+                    <form onSubmit={handleM045GetFactCheck} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۵. استعلام فکت‌چک پیام (getFactCheck)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m045FactCheckPeer}
+                          onChange={(e) => setM045FactCheckPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m045FactCheckMsgId}
+                          onChange={(e) => setM045FactCheckMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m045LoadingOp === 'getFactCheck'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m045LoadingOp === 'getFactCheck' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m045FactCheckResult && (
+                        <div className="text-[10px] text-gray-400 truncate bg-dark-900/60 p-1.5 rounded-lg border border-white/5">
+                          {m045FactCheckResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.getFavedStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Star className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۶. استیکرهای برگزیده (getFavedStickers)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM045GetFavedStickers}
+                        disabled={m045LoadingOp === 'getFavedStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m045LoadingOp === 'getFavedStickers' ? 'در حال استعلام...' : `استیکرهای برگزیده ${m045FavedStickersCount !== null ? `(${m045FavedStickersCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 7. messages.getFeaturedEmojiStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>۷. استیکرهای ایموجی ویژه و برتر (getFeaturedEmojiStickers)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM045GetFeaturedEmojiStickers}
+                        disabled={m045LoadingOp === 'getFeaturedEmojiStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m045LoadingOp === 'getFeaturedEmojiStickers' ? 'در حال دریافت...' : `مجموعه‌های ویژه ایموجی ${m045FeaturedEmojiStickersCount !== null ? `(${m045FeaturedEmojiStickersCount})` : ''}`}
                       </button>
                     </div>
                   </div>

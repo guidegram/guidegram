@@ -2309,6 +2309,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-emoji-sticker-groups', { accountId, hash }),
   getEmojiStickers: (accountId: string, hash?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-emoji-stickers', { accountId, hash }),
+  // Layer 232 Messages Suite (Microphase 045)
+  getEmojiURL: (accountId: string, langCode?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-url', { accountId, langCode }),
+  getExportedChatInvite: (accountId: string, peerId?: string, link?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-exported-chat-invite', { accountId, peerId, link }),
+  getExportedChatInvites: (accountId: string, params?: { revoked?: boolean; peerId?: string; adminIdId?: string; offsetDate?: number; offsetLink?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-exported-chat-invites', { accountId, ...params }),
+  getExtendedMedia: (accountId: string, peerId?: string, id?: number | number[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-extended-media', { accountId, peerId, id }),
+  getFactCheck: (accountId: string, peerId?: string, msgId?: number | number[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-fact-check', { accountId, peerId, msgId }),
+  getFavedStickers: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-faved-stickers', { accountId, hash }),
+  getFeaturedEmojiStickers: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-featured-emoji-stickers', { accountId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

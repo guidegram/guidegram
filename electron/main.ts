@@ -6734,6 +6734,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 045)
+  ipcMain.handle('telegram:messages:get-emoji-url', async (_event, { accountId, langCode }) => {
+    try {
+      return await accountManager.getEmojiURL(accountId, langCode)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiURL error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-exported-chat-invite', async (_event, { accountId, peerId, link }) => {
+    try {
+      return await accountManager.getExportedChatInvite(accountId, peerId, link)
+    } catch (err: any) {
+      Logger.warn('[IPC] getExportedChatInvite error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-exported-chat-invites', async (_event, { accountId, revoked, peerId, adminIdId, offsetDate, offsetLink, limit }) => {
+    try {
+      return await accountManager.getExportedChatInvitesRaw(accountId, revoked, peerId, adminIdId, offsetDate, offsetLink, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getExportedChatInvites error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-extended-media', async (_event, { accountId, peerId, id }) => {
+    try {
+      return await accountManager.getExtendedMedia(accountId, peerId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getExtendedMedia error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-fact-check', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.getFactCheck(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getFactCheck error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-faved-stickers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getFavedStickers(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getFavedStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-featured-emoji-stickers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getFeaturedEmojiStickers(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getFeaturedEmojiStickers error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -2578,12 +2578,13 @@ export class MessagingService {
     }
   }
 
-  public async getExtendedMedia(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number): Promise<any> {
+  public async getExtendedMedia(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id : (id !== undefined ? [id] : [])
       return await holder.client.call({
         _: 'messages.getExtendedMedia',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        'id': ids,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getExtendedMedia error:', err)
@@ -3078,12 +3079,13 @@ export class MessagingService {
     }
   }
 
-  public async getFactCheck(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number): Promise<any> {
+  public async getFactCheck(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number | number[]): Promise<any> {
     try {
+      const msgIds = Array.isArray(msgId) ? msgId : (msgId !== undefined ? [msgId] : [])
       return await holder.client.call({
         _: 'messages.getFactCheck',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
+        'msg_id': msgIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getFactCheck error:', err)

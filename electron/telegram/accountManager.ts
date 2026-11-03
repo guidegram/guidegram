@@ -19437,5 +19437,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getEmojiStickers(holder as any, hash)
   }
+
+  // --- Microphase 045: Messages domain part 13 ---
+  public async getEmojiURL(accountId: string, langCode?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiURL(holder as any, langCode)
+  }
+
+  public async getExportedChatInvite(accountId: string, peerId?: string, link?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getExportedChatInvite(holder as any, accountId, peerId, link)
+  }
+
+  public async getExportedChatInvitesRaw(accountId: string, revoked?: boolean, peerId?: string, adminIdId?: string, offsetDate?: number, offsetLink?: string, limit?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getExportedChatInvites(holder as any, accountId, revoked, peerId, adminIdId, offsetDate, offsetLink, limit)
+  }
+
+  public async getExtendedMedia(accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getExtendedMedia(holder as any, accountId, peerId, id)
+  }
+
+  public async getFactCheck(accountId: string, peerId?: string, msgId?: number | number[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getFactCheck(holder as any, accountId, peerId, msgId)
+  }
+
+  public async getFavedStickers(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getFavedStickers(holder as any, hash)
+  }
+
+  public async getFeaturedEmojiStickers(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getFeaturedEmojiStickers(holder as any, hash)
+  }
 }
+
 
