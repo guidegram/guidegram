@@ -2219,6 +2219,17 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:delete-participant-reactions', { accountId, peerId, participantId }),
   deletePhoneCallHistory: (accountId: string, revoke = true): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:delete-phone-call-history', { accountId, revoke }),
+  // Layer 232 Messages Suite (Microphase 037)
+  deletePollAnswer: (accountId: string, peerId: string, msgId: number, option?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-poll-answer', { accountId, peerId, msgId, option }),
+  deleteQuickReplyMessages: (accountId: string, shortcutId: number, id?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-quick-reply-messages', { accountId, shortcutId, id }),
+  deleteRevokedExportedChatInvites: (accountId: string, peerId: string, adminId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-revoked-exported-chat-invites', { accountId, peerId, adminId }),
+  deleteSavedHistory: (accountId: string, options: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-saved-history', { accountId, options }),
+  deleteTopicHistory: (accountId: string, peerId: string, topMsgId: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-topic-history', { accountId, peerId, topMsgId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

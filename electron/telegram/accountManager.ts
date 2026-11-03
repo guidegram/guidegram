@@ -19119,5 +19119,47 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.deletePhoneCallHistory(holder as any, revoke)
   }
+
+  // Layer 232 Messages Suite (Microphase 037)
+  public async deletePollAnswer(accountId: string, peerId: string, msgId: number, option?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deletePollAnswer(holder as any, accountId, peerId, msgId, option)
+  }
+
+  public async deleteQuickReplyMessages(accountId: string, shortcutId: number, id?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteQuickReplyMessages(holder as any, shortcutId, id)
+  }
+
+  public async deleteRevokedExportedChatInvites(accountId: string, peerId: string, adminId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteRevokedExportedChatInvites(holder as any, accountId, peerId, adminId)
+  }
+
+  public async deleteSavedHistory(
+    accountId: string,
+    options: { parentPeerId?: string; peerId?: string; maxId?: number; minDate?: number; maxDate?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteSavedHistory(
+      holder as any,
+      accountId,
+      options.parentPeerId,
+      options.peerId,
+      options.maxId,
+      options.minDate,
+      options.maxDate
+    )
+  }
+
+  public async deleteTopicHistory(accountId: string, peerId: string, topMsgId: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteTopicHistory(holder as any, accountId, peerId, topMsgId)
+  }
 }
 

@@ -9,6 +9,13 @@ import {
   Users,
   Check,
   RefreshCw,
+  Clock,
+  Bookmark,
+  Share2,
+  MessageSquare,
+  AlertCircle,
+  CheckCheck,
+  ShieldAlert,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { motion, AnimatePresence } from 'motion/react'
@@ -38,6 +45,163 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   const [explanation, setExplanation] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Layer 232 Poll & Messages Operations (Microphase 037)
+  const [activeModalTab, setActiveModalTab] = useState<'create' | 'maintenance'>('create')
+
+  // 1. messages.deletePollAnswer
+  const [retractPollMsgId, setRetractPollMsgId] = useState('')
+  const [isRetractingPollVote, setIsRetractingPollVote] = useState(false)
+  const [retractPollFeedback, setRetractPollFeedback] = useState<string | null>(null)
+
+  // 2. messages.deleteScheduledMessages
+  const [scheduledMsgId, setScheduledMsgId] = useState('')
+  const [isDeletingScheduled, setIsDeletingScheduled] = useState(false)
+  const [deleteScheduledFeedback, setDeleteScheduledFeedback] = useState<string | null>(null)
+
+  // 3. messages.deleteQuickReplyShortcut & deleteQuickReplyMessages
+  const [quickReplyShortcutId, setQuickReplyShortcutId] = useState('')
+  const [isDeletingQuickReply, setIsDeletingQuickReply] = useState(false)
+  const [deleteQuickReplyFeedback, setDeleteQuickReplyFeedback] = useState<string | null>(null)
+
+  // 4. messages.deleteRevokedExportedChatInvites
+  const [isDeletingRevokedInvites, setIsDeletingRevokedInvites] = useState(false)
+  const [deleteRevokedInvitesFeedback, setDeleteRevokedInvitesFeedback] = useState<string | null>(null)
+
+  // 5. messages.deleteSavedHistory
+  const [savedHistoryMaxId, setSavedHistoryMaxId] = useState('')
+  const [isDeletingSavedHistory, setIsDeletingSavedHistory] = useState(false)
+  const [deleteSavedHistoryFeedback, setDeleteSavedHistoryFeedback] = useState<string | null>(null)
+
+  // 6. messages.deleteTopicHistory
+  const [topicTopMsgId, setTopicTopMsgId] = useState('')
+  const [isDeletingTopicHistory, setIsDeletingTopicHistory] = useState(false)
+  const [deleteTopicHistoryFeedback, setDeleteTopicHistoryFeedback] = useState<string | null>(null)
+
+  const handleRetractPollVote = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const msgIdNum = Number(retractPollMsgId.trim())
+    if (!msgIdNum || !window.guidegram?.deletePollAnswer) return
+    setIsRetractingPollVote(true)
+    setRetractPollFeedback(null)
+    try {
+      const res = await window.guidegram.deletePollAnswer(accountId, chatId, msgIdNum)
+      if (res) {
+        setRetractPollFeedback(`Poll vote retracted on message #${msgIdNum}.`)
+        setRetractPollMsgId('')
+      } else {
+        setRetractPollFeedback('Failed to retract vote. Ensure poll allows vote retraction.')
+      }
+    } catch (err: any) {
+      setRetractPollFeedback(err?.message || 'Error retracting poll vote.')
+    } finally {
+      setIsRetractingPollVote(false)
+    }
+  }
+
+  const handleDeleteScheduledMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const msgIdNum = Number(scheduledMsgId.trim())
+    if (!msgIdNum || !window.guidegram?.deleteScheduledMessages) return
+    setIsDeletingScheduled(true)
+    setDeleteScheduledFeedback(null)
+    try {
+      const res = await window.guidegram.deleteScheduledMessages(accountId, chatId, [msgIdNum])
+      if (res) {
+        setDeleteScheduledFeedback(`Scheduled message #${msgIdNum} deleted.`)
+        setScheduledMsgId('')
+      } else {
+        setDeleteScheduledFeedback('Failed to delete scheduled message.')
+      }
+    } catch (err: any) {
+      setDeleteScheduledFeedback(err?.message || 'Error deleting scheduled message.')
+    } finally {
+      setIsDeletingScheduled(false)
+    }
+  }
+
+  const handleDeleteQuickReplyShortcut = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const shortcutNum = Number(quickReplyShortcutId.trim())
+    if (!shortcutNum || !window.guidegram?.deleteQuickReplyShortcut) return
+    setIsDeletingQuickReply(true)
+    setDeleteQuickReplyFeedback(null)
+    try {
+      const res = await window.guidegram.deleteQuickReplyShortcut(accountId, shortcutNum)
+      if (res) {
+        setDeleteQuickReplyFeedback(`Quick reply shortcut #${shortcutNum} deleted.`)
+        setQuickReplyShortcutId('')
+      } else {
+        setDeleteQuickReplyFeedback('Failed to delete quick reply shortcut.')
+      }
+    } catch (err: any) {
+      setDeleteQuickReplyFeedback(err?.message || 'Error deleting shortcut.')
+    } finally {
+      setIsDeletingQuickReply(false)
+    }
+  }
+
+  const handleDeleteRevokedInvites = async () => {
+    if (!window.guidegram?.deleteRevokedExportedChatInvites) return
+    setIsDeletingRevokedInvites(true)
+    setDeleteRevokedInvitesFeedback(null)
+    try {
+      const res = await window.guidegram.deleteRevokedExportedChatInvites(accountId, chatId)
+      if (res) {
+        setDeleteRevokedInvitesFeedback('All revoked invite links permanently removed.')
+      } else {
+        setDeleteRevokedInvitesFeedback('Failed to purge revoked invite links.')
+      }
+    } catch (err: any) {
+      setDeleteRevokedInvitesFeedback(err?.message || 'Error deleting revoked invites.')
+    } finally {
+      setIsDeletingRevokedInvites(false)
+    }
+  }
+
+  const handleDeleteSavedHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.deleteSavedHistory) return
+    setIsDeletingSavedHistory(true)
+    setDeleteSavedHistoryFeedback(null)
+    try {
+      const res = await window.guidegram.deleteSavedHistory(accountId, {
+        peerId: chatId,
+        maxId: Number(savedHistoryMaxId.trim()) || undefined,
+      })
+      if (res) {
+        setDeleteSavedHistoryFeedback('Saved history thread cleared successfully.')
+        setSavedHistoryMaxId('')
+      } else {
+        setDeleteSavedHistoryFeedback('Failed to clear saved history thread.')
+      }
+    } catch (err: any) {
+      setDeleteSavedHistoryFeedback(err?.message || 'Error clearing saved history.')
+    } finally {
+      setIsDeletingSavedHistory(false)
+    }
+  }
+
+  const handleDeleteTopicHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const topMsgIdNum = Number(topicTopMsgId.trim())
+    if (!topMsgIdNum || !window.guidegram?.deleteTopicHistory) return
+    setIsDeletingTopicHistory(true)
+    setDeleteTopicHistoryFeedback(null)
+    try {
+      const res = await window.guidegram.deleteTopicHistory(accountId, chatId, topMsgIdNum)
+      if (res) {
+        setDeleteTopicHistoryFeedback(`Topic #${topMsgIdNum} history cleared completely.`)
+        setTopicTopMsgId('')
+      } else {
+        setDeleteTopicHistoryFeedback('Failed to clear topic history.')
+      }
+    } catch (err: any) {
+      setDeleteTopicHistoryFeedback(err?.message || 'Error clearing topic history.')
+    } finally {
+      setIsDeletingTopicHistory(false)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -135,8 +299,37 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-white/10 bg-dark-900/60 p-1.5 gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveModalTab('create')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeModalTab === 'create'
+                ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30 shadow-sm'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+            }`}
+          >
+            <Vote className="w-3.5 h-3.5" />
+            <span>Create Poll</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveModalTab('maintenance')}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeModalTab === 'maintenance'
+                ? 'bg-primary-600/20 text-primary-400 border border-primary-500/30 shadow-sm'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+            }`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Poll & History Purge</span>
+          </button>
+        </div>
+
+        {activeModalTab === 'create' ? (
+          /* Form Body */
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {errorMsg && (
             <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300">
               {errorMsg}
@@ -318,6 +511,199 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
             </button>
           </div>
         </form>
+        ) : (
+          /* Maintenance View (Microphase 037 Layer 232 Ops) */
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar text-xs">
+            {/* Section 1: Retract Poll Vote */}
+            <form onSubmit={handleRetractPollVote} className="p-3 bg-dark-850/60 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center gap-2 text-primary-400 font-bold">
+                <Vote className="w-4 h-4" />
+                <span>Retract My Poll Vote (messages.deletePollAnswer)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Withdraw your recorded vote from an existing poll message in this chat.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={retractPollMsgId}
+                  onChange={(e) => setRetractPollMsgId(e.target.value)}
+                  placeholder="Poll Message ID"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-lg text-gray-200 text-xs focus:outline-none focus:border-primary-500"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isRetractingPollVote}
+                  className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isRetractingPollVote && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Retract</span>
+                </button>
+              </div>
+              {retractPollFeedback && (
+                <div className="p-2 rounded-lg bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-primary-400 shrink-0" />
+                  <span>{retractPollFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 2: Delete Scheduled Message */}
+            <form onSubmit={handleDeleteScheduledMessage} className="p-3 bg-dark-850/60 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center gap-2 text-amber-400 font-bold">
+                <Clock className="w-4 h-4" />
+                <span>Cancel Scheduled Message (messages.deleteScheduledMessages)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Cancel and remove a pending scheduled message before it gets delivered.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={scheduledMsgId}
+                  onChange={(e) => setScheduledMsgId(e.target.value)}
+                  placeholder="Scheduled Msg ID"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-lg text-gray-200 text-xs focus:outline-none focus:border-amber-400"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isDeletingScheduled}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isDeletingScheduled && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Cancel Msg</span>
+                </button>
+              </div>
+              {deleteScheduledFeedback && (
+                <div className="p-2 rounded-lg bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>{deleteScheduledFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 3: Delete Quick Reply Shortcut */}
+            <form onSubmit={handleDeleteQuickReplyShortcut} className="p-3 bg-dark-850/60 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center gap-2 text-indigo-400 font-bold">
+                <MessageSquare className="w-4 h-4" />
+                <span>Delete Quick Reply Shortcut (messages.deleteQuickReplyShortcut)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Permanently remove a quick reply shortcut and all associated template messages.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={quickReplyShortcutId}
+                  onChange={(e) => setQuickReplyShortcutId(e.target.value)}
+                  placeholder="Shortcut ID"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-lg text-gray-200 text-xs focus:outline-none focus:border-indigo-400"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isDeletingQuickReply}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isDeletingQuickReply && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Delete Shortcut</span>
+                </button>
+              </div>
+              {deleteQuickReplyFeedback && (
+                <div className="p-2 rounded-lg bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>{deleteQuickReplyFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 4: Purge Revoked Chat Invites */}
+            <div className="p-3 bg-dark-850/60 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Share2 className="w-4 h-4" />
+                <span>Purge Revoked Invites (messages.deleteRevokedExportedChatInvites)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Clear all revoked and expired invite links created by your account for this chat.</p>
+              <button
+                type="button"
+                onClick={handleDeleteRevokedInvites}
+                disabled={isDeletingRevokedInvites}
+                className="w-full py-2 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 disabled:opacity-50 text-emerald-200 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                {isDeletingRevokedInvites && <RefreshCw className="w-3 h-3 animate-spin" />}
+                <span>Purge All Revoked Invite Links</span>
+              </button>
+              {deleteRevokedInvitesFeedback && (
+                <div className="p-2 rounded-lg bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>{deleteRevokedInvitesFeedback}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Section 5: Delete Saved Messages History */}
+            <form onSubmit={handleDeleteSavedHistory} className="p-3 bg-dark-850/60 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center gap-2 text-rose-400 font-bold">
+                <Bookmark className="w-4 h-4" />
+                <span>Clear Saved History (messages.deleteSavedHistory)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Clear saved message history up to a specific maximum message ID.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={savedHistoryMaxId}
+                  onChange={(e) => setSavedHistoryMaxId(e.target.value)}
+                  placeholder="Max Msg ID (0 for all)"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-lg text-gray-200 text-xs focus:outline-none focus:border-rose-400"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isDeletingSavedHistory}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isDeletingSavedHistory && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Clear Saved</span>
+                </button>
+              </div>
+              {deleteSavedHistoryFeedback && (
+                <div className="p-2 rounded-lg bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>{deleteSavedHistoryFeedback}</span>
+                </div>
+              )}
+            </form>
+
+            {/* Section 6: Purge Forum Topic History */}
+            <form onSubmit={handleDeleteTopicHistory} className="p-3 bg-dark-850/60 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center gap-2 text-purple-400 font-bold">
+                <ShieldAlert className="w-4 h-4" />
+                <span>Purge Topic History (messages.deleteTopicHistory)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">Completely purge message history of a forum topic by its root message ID.</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={topicTopMsgId}
+                  onChange={(e) => setTopicTopMsgId(e.target.value)}
+                  placeholder="Topic Root Msg ID"
+                  className="flex-1 px-3 py-1.5 bg-dark-950/70 border border-white/10 rounded-lg text-gray-200 text-xs focus:outline-none focus:border-purple-400"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isDeletingTopicHistory}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {isDeletingTopicHistory && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Purge Topic</span>
+                </button>
+              </div>
+              {deleteTopicHistoryFeedback && (
+                <div className="p-2 rounded-lg bg-white/5 text-[11px] text-gray-300 border border-white/5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span>{deleteTopicHistoryFeedback}</span>
+                </div>
+              )}
+            </form>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )

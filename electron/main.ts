@@ -6267,6 +6267,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 037)
+  ipcMain.handle('telegram:messages:delete-poll-answer', async (_event, { accountId, peerId, msgId, option }) => {
+    try {
+      return await accountManager.deletePollAnswer(accountId, peerId, msgId, option)
+    } catch (err: any) {
+      Logger.warn('[IPC] deletePollAnswer error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-quick-reply-messages', async (_event, { accountId, shortcutId, id }) => {
+    try {
+      return await accountManager.deleteQuickReplyMessages(accountId, shortcutId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteQuickReplyMessages error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-revoked-exported-chat-invites', async (_event, { accountId, peerId, adminId }) => {
+    try {
+      return await accountManager.deleteRevokedExportedChatInvites(accountId, peerId, adminId)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteRevokedExportedChatInvites error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-saved-history', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.deleteSavedHistory(accountId, options)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteSavedHistory error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-topic-history', async (_event, { accountId, peerId, topMsgId }) => {
+    try {
+      return await accountManager.deleteTopicHistory(accountId, peerId, topMsgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteTopicHistory error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
