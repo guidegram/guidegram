@@ -2444,6 +2444,23 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-unread-poll-votes', { accountId, ...params }),
   getUnreadReactions: (accountId: string, params?: { peerId?: string; topMsgId?: number; savedPeerIdId?: string; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-unread-reactions', { accountId, ...params }),
+  // Layer 232 Messages Suite (Microphase 054)
+  getWebPageRaw: (accountId: string, url?: string, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-web-page', { accountId, url, hash }),
+  getWebPagePreviewRaw: (accountId: string, message?: string, entities?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-web-page-preview', { accountId, message, entities }),
+  hideAllChatJoinRequestsRaw: (accountId: string, params?: { approved?: boolean; peerId?: string; link?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:hide-all-chat-join-requests', { accountId, ...params }),
+  hideChatJoinRequestRaw: (accountId: string, params?: { approved?: boolean; peerId?: string; userIdId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:hide-chat-join-request', { accountId, ...params }),
+  importChatInvite: (accountId: string, hash: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:import-chat-invite', { accountId, hash }),
+  initHistoryImport: (accountId: string, params: { peerId: string; file: any; mediaCount: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:init-history-import', { accountId, ...params }),
+  installStickerSetRaw: (accountId: string, stickerset: any, archived?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:install-sticker-set', { accountId, stickerset, archived }),
+  hidePeerSettingsBar: (accountId: string, peerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:hide-peer-settings-bar', { accountId, peerId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

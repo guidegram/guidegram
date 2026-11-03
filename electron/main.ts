@@ -7307,6 +7307,78 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:messages:get-web-page', async (_event, { accountId, url, hash }) => {
+    try {
+      return await accountManager.getWebPageRaw(accountId, url, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getWebPage error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-web-page-preview', async (_event, { accountId, message, entities }) => {
+    try {
+      return await accountManager.getWebPagePreviewRaw(accountId, message, entities)
+    } catch (err: any) {
+      Logger.warn('[IPC] getWebPagePreview error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:hide-all-chat-join-requests', async (_event, { accountId, approved, peerId, link }) => {
+    try {
+      return await accountManager.hideAllChatJoinRequestsRaw(accountId, approved, peerId, link)
+    } catch (err: any) {
+      Logger.warn('[IPC] hideAllChatJoinRequests error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:hide-chat-join-request', async (_event, { accountId, approved, peerId, userIdId }) => {
+    try {
+      return await accountManager.hideChatJoinRequestRaw(accountId, approved, peerId, userIdId)
+    } catch (err: any) {
+      Logger.warn('[IPC] hideChatJoinRequest error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:import-chat-invite', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.importChatInvite(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] importChatInvite error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:init-history-import', async (_event, { accountId, peerId, file, mediaCount }) => {
+    try {
+      return await accountManager.initHistoryImport(accountId, peerId, file, mediaCount)
+    } catch (err: any) {
+      Logger.warn('[IPC] initHistoryImport error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:install-sticker-set', async (_event, { accountId, stickerset, archived }) => {
+    try {
+      return await accountManager.installStickerSetRaw(accountId, stickerset, archived)
+    } catch (err: any) {
+      Logger.warn('[IPC] installStickerSet error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:hide-peer-settings-bar', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.hidePeerSettingsBar(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] hidePeerSettingsBar error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

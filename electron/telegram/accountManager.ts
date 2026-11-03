@@ -19819,6 +19819,54 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getUnreadReactions(holder as any, accountId, peerId, topMsgId, savedPeerIdId, offsetId, addOffset, limit, maxId, minId)
   }
+
+  public async getWebPageRaw(accountId: string, url?: string, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getWebPage(holder as any, url, hash)
+  }
+
+  public async getWebPagePreviewRaw(accountId: string, message?: string, entities?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getWebPagePreview(holder as any, message, entities)
+  }
+
+  public async hideAllChatJoinRequestsRaw(accountId: string, approved?: boolean, peerId?: string, link?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.hideAllChatJoinRequests(holder as any, accountId, approved, peerId, link)
+  }
+
+  public async hideChatJoinRequestRaw(accountId: string, approved?: boolean, peerId?: string, userIdId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.hideChatJoinRequest(holder as any, accountId, approved, peerId, userIdId)
+  }
+
+  public async importChatInvite(accountId: string, hash: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.importChatInvite(holder as any, hash)
+  }
+
+  public async initHistoryImport(accountId: string, peerId: string, file: any, mediaCount: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.initHistoryImport(holder as any, accountId, peerId, file, mediaCount)
+  }
+
+  public async installStickerSetRaw(accountId: string, stickerset: any, archived?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.installStickerSet(holder as any, stickerset, archived)
+  }
+
+  public async hidePeerSettingsBar(accountId: string, peerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.hidePeerSettingsBar(holder as any, accountId, peerId)
+  }
 }
 
 

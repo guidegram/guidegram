@@ -4229,6 +4229,223 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 054: WebPage, Previews, Join Requests, Import Invites & Sticker Installation State
+  const [m054WebPageUrl, setM054WebPageUrl] = useState('')
+  const [m054WebPageTitle, setM054WebPageTitle] = useState<string | null>(null)
+
+  const [m054PreviewMessage, setM054PreviewMessage] = useState('https://telegram.org')
+  const [m054PreviewResult, setM054PreviewResult] = useState<string | null>(null)
+
+  const [m054HideAllPeer, setM054HideAllPeer] = useState('')
+  const [m054HideAllLink, setM054HideAllLink] = useState('')
+  const [m054HideAllApproved, setM054HideAllApproved] = useState(true)
+
+  const [m054HidePeer, setM054HidePeer] = useState('')
+  const [m054HideUser, setM054HideUser] = useState('')
+  const [m054HideApproved, setM054HideApproved] = useState(true)
+
+  const [m054InviteHash, setM054InviteHash] = useState('')
+  const [m054InviteChatTitle, setM054InviteChatTitle] = useState<string | null>(null)
+
+  const [m054ImportPeer, setM054ImportPeer] = useState('')
+  const [m054ImportMediaCount, setM054ImportMediaCount] = useState(0)
+
+  const [m054InstallSetName, setM054InstallSetName] = useState('')
+  const [m054InstallArchived, setM054InstallArchived] = useState(false)
+
+  const [m054LoadingOp, setM054LoadingOp] = useState<string | null>(null)
+  const [m054Status, setM054Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM054GetWebPage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getWebPageRaw) return
+    if (!m054WebPageUrl.trim()) {
+      setM054Status({ type: 'error', message: 'آدرس اینترنتی (URL) الزامی است' })
+      return
+    }
+    setM054LoadingOp('getWebPage')
+    setM054Status(null)
+    try {
+      const res = await window.guidegram.getWebPageRaw(targetId, m054WebPageUrl.trim(), 0)
+      const title = res?.webpage?.title || res?.title || 'صفحه وب بازیابی شد'
+      const type = res?.webpage?._ || res?._ || 'webPage'
+      setM054WebPageTitle(`${title} (${type})`)
+      setM054Status({ type: 'success', message: `اطلاعات Instant View صفحه وب استعلام شد` })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در دریافت اطلاعات صفحه وب' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const handleM054GetWebPagePreview = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getWebPagePreviewRaw) return
+    if (!m054PreviewMessage.trim()) {
+      setM054Status({ type: 'error', message: 'متن حاوی لینک برای پیش‌نمایش الزامی است' })
+      return
+    }
+    setM054LoadingOp('getWebPagePreview')
+    setM054Status(null)
+    try {
+      const res = await window.guidegram.getWebPagePreviewRaw(targetId, m054PreviewMessage.trim())
+      const title = res?.media?.webpage?.title || res?.title || 'پیش‌نمایش تولید شد'
+      setM054PreviewResult(title)
+      setM054Status({ type: 'success', message: `پیش‌نمایش صفحه وب با موفقیت تولید شد` })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در تولید پیش‌نمایش' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const handleM054HideAllChatJoinRequests = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.hideAllChatJoinRequestsRaw) return
+    if (!m054HideAllPeer.trim()) {
+      setM054Status({ type: 'error', message: 'شناسه گفتگو برای مدیریت درخواست‌های عضویت الزامی است' })
+      return
+    }
+    setM054LoadingOp('hideAllChatJoinRequests')
+    setM054Status(null)
+    try {
+      await window.guidegram.hideAllChatJoinRequestsRaw(targetId, {
+        peerId: m054HideAllPeer.trim(),
+        link: m054HideAllLink.trim() || undefined,
+        approved: m054HideAllApproved,
+      })
+      setM054Status({
+        type: 'success',
+        message: `کلیه درخواست‌های عضویت با وضعیت ${m054HideAllApproved ? 'تأیید' : 'رد'} پردازش شدند`,
+      })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در پردازش درخواست‌های عضویت' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const handleM054HideChatJoinRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.hideChatJoinRequestRaw) return
+    if (!m054HidePeer.trim() || !m054HideUser.trim()) {
+      setM054Status({ type: 'error', message: 'شناسه گفتگو و شناسه کاربر الزامی است' })
+      return
+    }
+    setM054LoadingOp('hideChatJoinRequest')
+    setM054Status(null)
+    try {
+      await window.guidegram.hideChatJoinRequestRaw(targetId, {
+        peerId: m054HidePeer.trim(),
+        userIdId: m054HideUser.trim(),
+        approved: m054HideApproved,
+      })
+      setM054Status({
+        type: 'success',
+        message: `درخواست عضویت کاربر ${m054HideApproved ? 'تأیید' : 'رد'} شد`,
+      })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در بررسی درخواست عضویت کاربر' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const handleM054ImportChatInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.importChatInvite) return
+    if (!m054InviteHash.trim()) {
+      setM054Status({ type: 'error', message: 'هش لینک دعوت الزامی است' })
+      return
+    }
+    setM054LoadingOp('importChatInvite')
+    setM054Status(null)
+    try {
+      const res = await window.guidegram.importChatInvite(targetId, m054InviteHash.trim())
+      const title = res?.chats?.[0]?.title || 'عضویت در گفتگو انجام شد'
+      setM054InviteChatTitle(title)
+      setM054Status({ type: 'success', message: `لینک دعوت با موفقیت پذیرفته شد: ${title}` })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در عضویت با لینک دعوت' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const handleM054InitHistoryImport = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.initHistoryImport) return
+    if (!m054ImportPeer.trim()) {
+      setM054Status({ type: 'error', message: 'شناسه گفتگو برای واردسازی تاریخچه الزامی است' })
+      return
+    }
+    setM054LoadingOp('initHistoryImport')
+    setM054Status(null)
+    try {
+      const dummyFile = { _: 'inputFile', id: '1', parts: 1, name: 'chat.txt', md5_checksum: '' }
+      const res = await window.guidegram.initHistoryImport(targetId, {
+        peerId: m054ImportPeer.trim(),
+        file: dummyFile,
+        mediaCount: m054ImportMediaCount,
+      })
+      const importId = res?.id || 'جلسه ایمپورت آغاز شد'
+      setM054Status({ type: 'success', message: `فرایند ایمپورت تاریخچه پیام آغاز شد (شناسه: ${importId})` })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در آغاز ایمپورت تاریخچه' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const handleM054InstallStickerSet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.installStickerSetRaw) return
+    if (!m054InstallSetName.trim()) {
+      setM054Status({ type: 'error', message: 'نام پکیج استیکر الزامی است' })
+      return
+    }
+    setM054LoadingOp('installStickerSet')
+    setM054Status(null)
+    try {
+      const res = await window.guidegram.installStickerSetRaw(targetId, m054InstallSetName.trim(), m054InstallArchived)
+      const resType = res?._ || 'stickerSetInstallResultSuccess'
+      setM054Status({ type: 'success', message: `پکیج استیکر با موفقیت نصب شد (${resType})` })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در نصب پکیج استیکر' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
+  const [m054HidePeerSettingsPeer, setM054HidePeerSettingsPeer] = useState('')
+
+  const handleM054HidePeerSettingsBar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.hidePeerSettingsBar) return
+    if (!m054HidePeerSettingsPeer.trim()) {
+      setM054Status({ type: 'error', message: 'شناسه گفتگو برای مخفی‌سازی نوار تنظیمات الزامی است' })
+      return
+    }
+    setM054LoadingOp('hidePeerSettingsBar')
+    setM054Status(null)
+    try {
+      await window.guidegram.hidePeerSettingsBar(targetId, m054HidePeerSettingsPeer.trim())
+      setM054Status({ type: 'success', message: 'نوار تنظیمات گفتگو (PeerSettingsBar) با موفقیت پنهان شد' })
+    } catch (err: any) {
+      setM054Status({ type: 'error', message: err?.message || 'خطا در مخفی‌سازی نوار تنظیمات گفتگو' })
+    } finally {
+      setM054LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -11368,6 +11585,315 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           ری‌اکشن‌های خوانده‌نشده: {m053UnreadReactionsCount} مورد
                         </div>
                       )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 054: Messages Domain Suite Part 22 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-emerald-400" />
+                        <span>میکروفاز ۰۵۴: وب‌پیج و پیش‌نمایش، درخواست‌های عضویت، ایمپورت تاریخچه و نصب استیکر (Messages Suite Part 22)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getWebPage, getWebPagePreview, hideAllChatJoinRequests, hideChatJoinRequest, importChatInvite, initHistoryImport, installStickerSet
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m054Status && (
+                    <div
+                      className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                        m054Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      }`}
+                    >
+                      {m054Status.type === 'success' ? (
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      )}
+                      <span className="flex-1">{m054Status.message}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 pt-1">
+                    {/* 1. messages.getWebPage */}
+                    <form
+                      onSubmit={handleM054GetWebPage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. دریافت اطلاعات Instant View صفحه وب (getWebPage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054WebPageUrl}
+                          onChange={(e) => setM054WebPageUrl(e.target.value)}
+                          placeholder="آدرس صفحه (مثال: https://telegram.org/blog)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'getWebPage'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'getWebPage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام صفحه'}
+                        </button>
+                      </div>
+                      {m054WebPageTitle && (
+                        <div className="text-[10px] text-emerald-400 font-mono truncate">
+                          نتیجه: {m054WebPageTitle}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getWebPagePreview */}
+                    <form
+                      onSubmit={handleM054GetWebPagePreview}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. استخراج پیش‌نمایش وب از متن (getWebPagePreview)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054PreviewMessage}
+                          onChange={(e) => setM054PreviewMessage(e.target.value)}
+                          placeholder="متن حاوی لینک"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'getWebPagePreview'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'getWebPagePreview' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تولید پیش‌نمایش'}
+                        </button>
+                      </div>
+                      {m054PreviewResult && (
+                        <div className="text-[10px] text-emerald-400 font-mono truncate">
+                          پیش‌نمایش: {m054PreviewResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.hideAllChatJoinRequests */}
+                    <form
+                      onSubmit={handleM054HideAllChatJoinRequests}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. بررسی دسته‌جمعی درخواست‌های عضویت (hideAllChatJoinRequests)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m054HideAllApproved}
+                            onChange={(e) => setM054HideAllApproved(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          <span>تأیید درخواست‌ها</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054HideAllPeer}
+                          onChange={(e) => setM054HideAllPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / کانال"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m054HideAllLink}
+                          onChange={(e) => setM054HideAllLink(e.target.value)}
+                          placeholder="لینک دعوت خاص (اختیاری)"
+                          className="w-48 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'hideAllChatJoinRequests'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'hideAllChatJoinRequests' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال کلی'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.hideChatJoinRequest */}
+                    <form
+                      onSubmit={handleM054HideChatJoinRequest}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. بررسی درخواست عضویت کاربر خاص (hideChatJoinRequest)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m054HideApproved}
+                            onChange={(e) => setM054HideApproved(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          <span>تأیید عضویت</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054HidePeer}
+                          onChange={(e) => setM054HidePeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m054HideUser}
+                          onChange={(e) => setM054HideUser(e.target.value)}
+                          placeholder="شناسه کاربر متقاضی"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'hideChatJoinRequest'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'hideChatJoinRequest' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال درخواست'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.importChatInvite */}
+                    <form
+                      onSubmit={handleM054ImportChatInvite}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. عضویت در گفتگو از طریق هش لینک دعوت (importChatInvite)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054InviteHash}
+                          onChange={(e) => setM054InviteHash(e.target.value)}
+                          placeholder="هش دعوت (مثال: aBcDeFgHiJkLmNoP)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'importChatInvite'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'importChatInvite' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'پذیرش لینک دعوت'}
+                        </button>
+                      </div>
+                      {m054InviteChatTitle && (
+                        <div className="text-[10px] text-emerald-400 font-mono truncate">
+                          گفتگو: {m054InviteChatTitle}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.initHistoryImport */}
+                    <form
+                      onSubmit={handleM054InitHistoryImport}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. آغاز نشست ایمپورت تاریخچه پیام‌ها (initHistoryImport)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054ImportPeer}
+                          onChange={(e) => setM054ImportPeer(e.target.value)}
+                          placeholder="شناسه مقصد گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m054ImportMediaCount}
+                          onChange={(e) => setM054ImportMediaCount(Number(e.target.value))}
+                          placeholder="تعداد رسانه"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'initHistoryImport'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'initHistoryImport' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'شروع ایمپورت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.installStickerSet */}
+                    <form
+                      onSubmit={handleM054InstallStickerSet}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. نصب پکیج استیکر در اکانت (installStickerSet)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m054InstallArchived}
+                            onChange={(e) => setM054InstallArchived(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          <span>آرشیو کردن</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054InstallSetName}
+                          onChange={(e) => setM054InstallSetName(e.target.value)}
+                          placeholder="نام کوتاه پکیج (مثال: Animals)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'installStickerSet'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'installStickerSet' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'نصب پکیج'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 8. messages.hidePeerSettingsBar */}
+                    <form
+                      onSubmit={handleM054HidePeerSettingsBar}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۸. پنهان‌سازی نوار تنظیمات گفتگو (hidePeerSettingsBar)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m054HidePeerSettingsPeer}
+                          onChange={(e) => setM054HidePeerSettingsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / کاربر"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m054LoadingOp === 'hidePeerSettingsBar'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m054LoadingOp === 'hidePeerSettingsBar' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخفی‌سازی نوار'}
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </div>

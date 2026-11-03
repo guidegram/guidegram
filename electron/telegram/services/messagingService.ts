@@ -681,10 +681,14 @@ export class MessagingService {
 
   public async installStickerSet(holder: RpcClientHolder, stickerset?: any, archived?: boolean): Promise<any> {
     try {
+      let resolvedSet = stickerset
+      if (typeof stickerset === 'string') {
+        resolvedSet = { _: 'inputStickerSetShortName', shortName: stickerset }
+      }
       return await holder.client.call({
         _: 'messages.installStickerSet',
-        'stickerset': stickerset,
-        'archived': archived,
+        'stickerset': resolvedSet,
+        'archived': !!archived,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.installStickerSet error:', err)
@@ -1225,8 +1229,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.getWebPage',
-        'url': url,
-        'hash': hash,
+        'url': url || '',
+        'hash': hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getWebPage error:', err)
