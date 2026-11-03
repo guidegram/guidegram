@@ -6926,6 +6926,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 048)
+  ipcMain.handle('telegram:messages:get-messages-reactions', async (_event, { accountId, peerId, id }) => {
+    try {
+      return await accountManager.getMessagesReactions(accountId, peerId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMessagesReactions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-messages-views', async (_event, { accountId, peerId, id, increment }) => {
+    try {
+      return await accountManager.getMessagesViews(accountId, peerId, id, increment)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMessagesViews error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-my-stickers', async (_event, { accountId, offsetId, limit }) => {
+    try {
+      return await accountManager.getMyStickers(accountId, offsetId, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMyStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-old-featured-stickers', async (_event, { accountId, offset, limit, hash }) => {
+    try {
+      return await accountManager.getOldFeaturedStickers(accountId, offset, limit, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getOldFeaturedStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-onlines', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.getOnlines(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getOnlines error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-outbox-read-date', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.getOutboxReadDate(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getOutboxReadDate error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-paid-reaction-privacy', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.getPaidReactionPrivacy(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] getPaidReactionPrivacy error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -714,13 +714,14 @@ export class MessagingService {
     }
   }
 
-  public async getMessagesViews(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number, increment?: boolean): Promise<any> {
+  public async getMessagesViews(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number | number[], increment?: boolean): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id : (id !== undefined ? [id] : [])
       return await holder.client.call({
         _: 'messages.getMessagesViews',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'increment': increment,
+        'id': ids,
+        'increment': increment ?? false,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getMessagesViews error:', err)
@@ -2215,12 +2216,13 @@ export class MessagingService {
     }
   }
 
-  public async getMessagesReactions(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number): Promise<any> {
+  public async getMessagesReactions(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id : (id !== undefined ? [id] : [])
       return await holder.client.call({
         _: 'messages.getMessagesReactions',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        'id': ids,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getMessagesReactions error:', err)

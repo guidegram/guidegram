@@ -19566,6 +19566,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getMessages(holder as any, id)
   }
+
+  // --- Microphase 048: Messages domain part 16 ---
+  public async getMessagesReactions(accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMessagesReactions(holder as any, accountId, peerId, id)
+  }
+
+  public async getMessagesViews(accountId: string, peerId?: string, id?: number | number[], increment?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMessagesViews(holder as any, accountId, peerId, id, increment)
+  }
+
+  public async getMyStickers(accountId: string, offsetId?: bigint | number, limit?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMyStickers(holder as any, offsetId, limit)
+  }
+
+  public async getOldFeaturedStickers(accountId: string, offset?: number, limit?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getOldFeaturedStickers(holder as any, offset, limit, hash)
+  }
+
+  public async getOnlines(accountId: string, peerId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getOnlines(holder as any, accountId, peerId)
+  }
+
+  public async getOutboxReadDate(accountId: string, peerId?: string, msgId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getOutboxReadDate(holder as any, accountId, peerId, msgId)
+  }
+
+  public async getPaidReactionPrivacy(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getPaidReactionPrivacy(holder as any, params)
+  }
 }
 
 

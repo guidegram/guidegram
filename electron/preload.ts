@@ -2354,6 +2354,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-message-read-participants', { accountId, peerId, msgId }),
   getMessagesRaw: (accountId: string, id?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-messages', { accountId, id }),
+  // Layer 232 Messages Suite (Microphase 048)
+  getMessagesReactions: (accountId: string, peerId?: string, id?: number | number[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-messages-reactions', { accountId, peerId, id }),
+  getMessagesViews: (accountId: string, peerId?: string, id?: number | number[], increment?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-messages-views', { accountId, peerId, id, increment }),
+  getMyStickers: (accountId: string, offsetId?: any, limit?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-my-stickers', { accountId, offsetId, limit }),
+  getOldFeaturedStickers: (accountId: string, offset?: number, limit?: number, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-old-featured-stickers', { accountId, offset, limit, hash }),
+  getOnlines: (accountId: string, peerId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-onlines', { accountId, peerId }),
+  getOutboxReadDate: (accountId: string, peerId?: string, msgId?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-outbox-read-date', { accountId, peerId, msgId }),
+  getPaidReactionPrivacy: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-paid-reaction-privacy', { accountId, params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

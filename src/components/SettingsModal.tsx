@@ -3154,6 +3154,185 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 048: Messages Domain Suite Part 16
+  const [m048MsgReactionsPeer, setM048MsgReactionsPeer] = useState('')
+  const [m048MsgReactionsIds, setM048MsgReactionsIds] = useState('')
+  const [m048MsgReactionsCount, setM048MsgReactionsCount] = useState<number | null>(null)
+
+  const [m048ViewsPeer, setM048ViewsPeer] = useState('')
+  const [m048ViewsIds, setM048ViewsIds] = useState('')
+  const [m048ViewsIncrement, setM048ViewsIncrement] = useState(false)
+  const [m048ViewsCount, setM048ViewsCount] = useState<number | null>(null)
+
+  const [m048MyStickersCount, setM048MyStickersCount] = useState<number | null>(null)
+  const [m048OldFeaturedCount, setM048OldFeaturedCount] = useState<number | null>(null)
+
+  const [m048OnlinesPeer, setM048OnlinesPeer] = useState('')
+  const [m048OnlinesCount, setM048OnlinesCount] = useState<number | null>(null)
+
+  const [m048OutboxPeer, setM048OutboxPeer] = useState('')
+  const [m048OutboxMsgId, setM048OutboxMsgId] = useState('')
+  const [m048OutboxDate, setM048OutboxDate] = useState<string | null>(null)
+
+  const [m048PaidPrivacyResult, setM048PaidPrivacyResult] = useState<string | null>(null)
+
+  const [m048LoadingOp, setM048LoadingOp] = useState<string | null>(null)
+  const [m048Status, setM048Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM048GetMessagesReactions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getMessagesReactions) return
+    if (!m048MsgReactionsPeer.trim()) {
+      setM048Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const ids = m048MsgReactionsIds.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    if (ids.length === 0) {
+      setM048Status({ type: 'error', message: 'لطفاً حداقل یک شناسه عددی پیام وارد کنید' })
+      return
+    }
+    setM048LoadingOp('getMessagesReactions')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getMessagesReactions(targetId, m048MsgReactionsPeer.trim(), ids)
+      const count = Array.isArray(res?.updates) ? res.updates.length : (Array.isArray(res) ? res.length : 1)
+      setM048MsgReactionsCount(count)
+      setM048Status({ type: 'success', message: `ری‌اکشن‌های ${ids.length} پیام با موفقیت دریافت شد` })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در دریافت ری‌اکشن‌های پیام‌ها' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
+  const handleM048GetMessagesViews = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getMessagesViews) return
+    if (!m048ViewsPeer.trim()) {
+      setM048Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const ids = m048ViewsIds.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    if (ids.length === 0) {
+      setM048Status({ type: 'error', message: 'لطفاً حداقل یک شناسه عددی پیام وارد کنید' })
+      return
+    }
+    setM048LoadingOp('getMessagesViews')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getMessagesViews(targetId, m048ViewsPeer.trim(), ids, m048ViewsIncrement)
+      const count = Array.isArray(res?.views) ? res.views.length : (Array.isArray(res) ? res.length : ids.length)
+      setM048ViewsCount(count)
+      setM048Status({ type: 'success', message: `آمار بازدید ${count} پیام استعلام شد` })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در دریافت آمار بازدید پیام‌ها' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
+  const handleM048GetMyStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getMyStickers) return
+    setM048LoadingOp('getMyStickers')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getMyStickers(targetId, 0, 50)
+      const count = Array.isArray(res?.sets) ? res.sets.length : (Array.isArray(res) ? res.length : 0)
+      setM048MyStickersCount(count)
+      setM048Status({ type: 'success', message: `تعداد ${count} بسته استیکر اختصاصی شما (My Stickers) دریافت شد` })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در دریافت استیکرهای اختصاصی کاربر' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
+  const handleM048GetOldFeaturedStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getOldFeaturedStickers) return
+    setM048LoadingOp('getOldFeaturedStickers')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getOldFeaturedStickers(targetId, 0, 50, 0)
+      const count = Array.isArray(res?.sets) ? res.sets.length : (Array.isArray(res) ? res.length : 0)
+      setM048OldFeaturedCount(count)
+      setM048Status({ type: 'success', message: `تعداد ${count} بسته استیکر ویژه پیشین استعلام شد` })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در دریافت استیکرهای ویژه پیشین' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
+  const handleM048GetOnlines = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getOnlines) return
+    if (!m048OnlinesPeer.trim()) {
+      setM048Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    setM048LoadingOp('getOnlines')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getOnlines(targetId, m048OnlinesPeer.trim())
+      const onlines = typeof res?.onlines === 'number' ? res.onlines : (typeof res === 'number' ? res : 0)
+      setM048OnlinesCount(onlines)
+      setM048Status({ type: 'success', message: `تعداد افراد آنلاین در این گفتگو: ${onlines} نفر` })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در استعلام افراد آنلاین گفتگو' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
+  const handleM048GetOutboxReadDate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getOutboxReadDate) return
+    if (!m048OutboxPeer.trim()) {
+      setM048Status({ type: 'error', message: 'لطفاً شناسه کاربر را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m048OutboxMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM048Status({ type: 'error', message: 'شناسه پیام باید عدد باشد' })
+      return
+    }
+    setM048LoadingOp('getOutboxReadDate')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getOutboxReadDate(targetId, m048OutboxPeer.trim(), msgIdNum)
+      const readDate = res?.date ? new Date(res.date * 1000).toLocaleTimeString('fa-IR') : 'خوانده شده یا در دسترس نیست'
+      setM048OutboxDate(readDate)
+      setM048Status({ type: 'success', message: `زمان مشاهده پیام توسط مخاطب: ${readDate}` })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در استعلام زمان مشاهده پیام ارسالی' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
+  const handleM048GetPaidReactionPrivacy = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getPaidReactionPrivacy) return
+    setM048LoadingOp('getPaidReactionPrivacy')
+    setM048Status(null)
+    try {
+      const res = await window.guidegram.getPaidReactionPrivacy(targetId)
+      const privacy = res?._ ? `وضعیت: ${res._}` : 'حریم خصوصی ری‌اکشن پولی دریافت شد'
+      setM048PaidPrivacyResult(privacy)
+      setM048Status({ type: 'success', message: privacy })
+    } catch (err: any) {
+      setM048Status({ type: 'error', message: err?.message || 'خطا در استعلام حریم خصوصی ری‌اکشن پولی' })
+    } finally {
+      setM048LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -8868,6 +9047,254 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                       )}
                     </form>
+                  </div>
+                </div>
+
+                {/* Microphase 048: Messages Domain Suite Part 16 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Heart className="w-4 h-4 text-cyan-400" />
+                        <span>میکروفاز ۰۴۸: ری‌اکشن‌ها، بازدیدها، استیکرهای من و وضعیت آنلاین (Messages Suite Part 16)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getMessagesReactions, getMessagesViews, getMyStickers, getOldFeaturedStickers, getOnlines, getOutboxReadDate, getPaidReactionPrivacy
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m048Status && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                        m048Status.type === 'success'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                          : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
+                      }`}
+                    >
+                      {m048Status.type === 'success' ? (
+                        <Check className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                      )}
+                      <span className="flex-1">{m048Status.message}</span>
+                      <button
+                        type="button"
+                        onClick={() => setM048Status(null)}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* 1. messages.getMessagesReactions */}
+                    <form onSubmit={handleM048GetMessagesReactions} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Heart className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۱. دریافت ری‌اکشن‌های چندگانه پیام‌ها (getMessagesReactions)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={m048MsgReactionsPeer}
+                          onChange={(e) => setM048MsgReactionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m048MsgReactionsIds}
+                            onChange={(e) => setM048MsgReactionsIds(e.target.value)}
+                            placeholder="شناسه‌های پیام (جداشده با کاما: مثلاً 10, 11)"
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                          />
+                          <button
+                            type="submit"
+                            disabled={m048LoadingOp === 'getMessagesReactions'}
+                            className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m048LoadingOp === 'getMessagesReactions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                          </button>
+                        </div>
+                      </div>
+                      {m048MsgReactionsCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          نتایج ری‌اکشن: {m048MsgReactionsCount} بروزرسانی
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getMessagesViews */}
+                    <form onSubmit={handleM048GetMessagesViews} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۲. آمار بازدید پیام‌ها (getMessagesViews)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={m048ViewsPeer}
+                          onChange={(e) => setM048ViewsPeer(e.target.value)}
+                          placeholder="شناسه کانال یا سوپرگروه"
+                          className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m048ViewsIds}
+                            onChange={(e) => setM048ViewsIds(e.target.value)}
+                            placeholder="شناسه‌ها (100, 101)"
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                          />
+                          <button
+                            type="submit"
+                            disabled={m048LoadingOp === 'getMessagesViews'}
+                            className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m048LoadingOp === 'getMessagesViews' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                          </button>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer text-[11px] text-gray-400">
+                          <input
+                            type="checkbox"
+                            checked={m048ViewsIncrement}
+                            onChange={(e) => setM048ViewsIncrement(e.target.checked)}
+                            className="rounded border-white/10 bg-dark-900 text-cyan-500 focus:ring-0"
+                          />
+                          <span>ثبت بازدید جدید (Increment)</span>
+                        </label>
+                      </div>
+                      {m048ViewsCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          آمار بازدید: {m048ViewsCount} پیام
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getMyStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Smile className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۳. بسته‌های استیکر اختصاصی من (getMyStickers)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM048GetMyStickers}
+                        disabled={m048LoadingOp === 'getMyStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m048LoadingOp === 'getMyStickers' ? 'در حال استعلام...' : `بسته‌های من ${m048MyStickersCount !== null ? `(${m048MyStickersCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 4. messages.getOldFeaturedStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۴. استیکرهای ویژه پیشین (getOldFeaturedStickers)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM048GetOldFeaturedStickers}
+                        disabled={m048LoadingOp === 'getOldFeaturedStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m048LoadingOp === 'getOldFeaturedStickers' ? 'در حال استعلام...' : `استیکرهای ویژه آرشیو ${m048OldFeaturedCount !== null ? `(${m048OldFeaturedCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 5. messages.getOnlines */}
+                    <form onSubmit={handleM048GetOnlines} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۵. تعداد کاربران آنلاین گفتگو (getOnlines)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m048OnlinesPeer}
+                          onChange={(e) => setM048OnlinesPeer(e.target.value)}
+                          placeholder="شناسه گروه یا کانال"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m048LoadingOp === 'getOnlines'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m048LoadingOp === 'getOnlines' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m048OnlinesCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          افراد آنلاین: {m048OnlinesCount} نفر
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.getOutboxReadDate */}
+                    <form onSubmit={handleM048GetOutboxReadDate} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۶. زمان دقیق خوانده شدن پیام توسط مخاطب (getOutboxReadDate)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m048OutboxPeer}
+                          onChange={(e) => setM048OutboxPeer(e.target.value)}
+                          placeholder="شناسه کاربر مخاطب"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m048OutboxMsgId}
+                          onChange={(e) => setM048OutboxMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m048LoadingOp === 'getOutboxReadDate'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m048LoadingOp === 'getOutboxReadDate' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m048OutboxDate && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          زمان مشاهده: {m048OutboxDate}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 7. messages.getPaidReactionPrivacy */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>۷. حریم خصوصی ری‌اکشن پولی (getPaidReactionPrivacy)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM048GetPaidReactionPrivacy}
+                        disabled={m048LoadingOp === 'getPaidReactionPrivacy'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m048LoadingOp === 'getPaidReactionPrivacy' ? 'در حال استعلام...' : 'استعلام وضعیت حریم خصوصی ری‌اکشن پولی'}
+                      </button>
+                      {m048PaidPrivacyResult && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          {m048PaidPrivacyResult}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
