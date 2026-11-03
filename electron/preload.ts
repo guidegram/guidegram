@@ -2077,6 +2077,11 @@ const guidegramAPI = {
     settings?: any
   ): Promise<any> =>
     ipcRenderer.invoke('telegram:upload-wallpaper', { accountId, forChat, file, mimeType, settings }),
+  verifyEmail: (accountId: string, purpose?: any, verification?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:verify-email', { accountId, purpose, verification }),
+  verifyPhone: (accountId: string, phoneNumber?: string, phoneCodeHash?: string, phoneCode?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:verify-phone', { accountId, phoneNumber, phoneCodeHash, phoneCode }),
+
 
 
 

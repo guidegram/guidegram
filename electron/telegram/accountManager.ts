@@ -16531,6 +16531,19 @@ export class AccountManager {
     return this.securityService.uploadWallPaper(holder as any, forChat, file, mimeType, settings)
   }
 
+  public async verifyEmail(accountId: string, purpose?: any, verification?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.verifyEmail(holder as any, purpose, verification)
+  }
+
+  public async verifyPhone(accountId: string, phoneNumber?: string, phoneCodeHash?: string, phoneCode?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.verifyPhone(holder as any, phoneNumber, phoneCodeHash, phoneCode)
+  }
+
+
 
 
 

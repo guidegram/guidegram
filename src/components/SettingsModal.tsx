@@ -860,6 +860,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleVerifyEmail = async (code: string, purpose?: any) => {
+    if (!targetAccountId || !window.guidegram?.verifyEmail) return null
+    try {
+      const verification = { _: 'emailVerificationCode', code }
+      const res = await window.guidegram.verifyEmail(targetAccountId, purpose || { _: 'emailVerifyPurposeLoginSetup' }, verification)
+      showToast(isPersian ? 'ایمیل با موفقیت تأیید شد.' : 'Email verified successfully.')
+      return res
+    } catch {
+      showToast(isPersian ? 'خطا در اعتبارسنجی ایمیل' : 'Failed to verify email.')
+      return null
+    }
+  }
+
+  const handleVerifyPhone = async (phoneNumber: string, phoneCodeHash: string, phoneCode: string) => {
+    if (!targetAccountId || !window.guidegram?.verifyPhone) return false
+    try {
+      const res = await window.guidegram.verifyPhone(targetAccountId, phoneNumber, phoneCodeHash, phoneCode)
+      showToast(isPersian ? 'شماره تلفن با موفقیت تأیید شد.' : 'Phone number verified successfully.')
+      return res
+    } catch {
+      showToast(isPersian ? 'خطا در اعتبارسنجی شماره تلفن' : 'Failed to verify phone number.')
+      return false
+    }
+  }
+
+
 
 
 

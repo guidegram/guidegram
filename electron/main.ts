@@ -5771,6 +5771,25 @@ function setupIpcHandlers() {
     }
   )
 
+  ipcMain.handle('telegram:verify-email', async (_event, { accountId, purpose, verification }) => {
+    try {
+      return await accountManager.verifyEmail(accountId, purpose, verification)
+    } catch (err: any) {
+      Logger.warn(`[IPC] verifyEmail error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:verify-phone', async (_event, { accountId, phoneNumber, phoneCodeHash, phoneCode }) => {
+    try {
+      return await accountManager.verifyPhone(accountId, phoneNumber, phoneCodeHash, phoneCode)
+    } catch (err: any) {
+      Logger.warn(`[IPC] verifyPhone error:`, err)
+      return false
+    }
+  })
+
+
 
 
 
