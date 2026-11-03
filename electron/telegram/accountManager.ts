@@ -19276,5 +19276,53 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getAllStickers(holder as any, hash)
   }
+
+  // Layer 232 Messages Suite (Microphase 041)
+  public async getAttachMenuBot(accountId: string, botId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getAttachMenuBot(holder as any, accountId, botId)
+  }
+
+  public async getAttachMenuBots(accountId: string, hash?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getAttachMenuBots(holder as any, hash)
+  }
+
+  public async getAttachedStickers(accountId: string, media?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getAttachedStickers(holder as any, media)
+  }
+
+  public async getAvailableEffects(accountId: string, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getAvailableEffects(holder as any, hash)
+  }
+
+  public async getBotApp(accountId: string, app?: any, hash?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getBotApp(holder as any, app, hash)
+  }
+
+  public async getBotCallbackAnswerDirect(
+    accountId: string,
+    options: { game?: boolean; peerId?: string; msgId?: number; data?: any; password?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getBotCallbackAnswer(
+      holder as any,
+      accountId,
+      options?.game,
+      options?.peerId,
+      options?.msgId,
+      options?.data,
+      options?.password
+    )
+  }
 }
 

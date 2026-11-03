@@ -2319,6 +2319,120 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 041: Layer 232 Bot Apps, Effects & Reactions State
+  const [m041AttachBotId, setM041AttachBotId] = useState('')
+  const [m041AttachBotsCount, setM041AttachBotsCount] = useState<number | null>(null)
+  const [m041EffectsCount, setM041EffectsCount] = useState<number | null>(null)
+  const [m041ReactionsCount, setM041ReactionsCount] = useState<number | null>(null)
+  const [m041BotAppShortName, setM041BotAppShortName] = useState('')
+  const [m041CallbackMsgId, setM041CallbackMsgId] = useState('')
+  const [m041CallbackData, setM041CallbackData] = useState('')
+
+  const [m041LoadingOp, setM041LoadingOp] = useState<string | null>(null)
+  const [m041Status, setM041Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM041GetAttachMenuBot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getAttachMenuBot || !m041AttachBotId.trim()) return
+    setM041LoadingOp('getAttachMenuBot')
+    setM041Status(null)
+    try {
+      const res = await window.guidegram.getAttachMenuBot(targetId, m041AttachBotId.trim())
+      setM041Status({ type: 'success', message: res?.bot ? 'اطلاعات ربات منوی پیوست دریافت شد' : 'ربات منوی پیوست یافت نشد' })
+    } catch (err: any) {
+      setM041Status({ type: 'error', message: err?.message || 'خطا در دریافت اطلاعات ربات منوی پیوست' })
+    } finally {
+      setM041LoadingOp(null)
+    }
+  }
+
+  const handleM041GetAttachMenuBots = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getAttachMenuBots) return
+    setM041LoadingOp('getAttachMenuBots')
+    setM041Status(null)
+    try {
+      const res = await window.guidegram.getAttachMenuBots(targetId)
+      const count = Array.isArray(res?.bots) ? res.bots.length : 0
+      setM041AttachBotsCount(count)
+      setM041Status({ type: 'success', message: `تعداد ${count} ربات منوی پیوست استعلام شد` })
+    } catch (err: any) {
+      setM041Status({ type: 'error', message: err?.message || 'خطا در استعلام ربات‌های منوی پیوست' })
+    } finally {
+      setM041LoadingOp(null)
+    }
+  }
+
+  const handleM041GetAvailableEffects = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getAvailableEffects) return
+    setM041LoadingOp('getAvailableEffects')
+    setM041Status(null)
+    try {
+      const res = await window.guidegram.getAvailableEffects(targetId)
+      const count = Array.isArray(res?.effects) ? res.effects.length : 0
+      setM041EffectsCount(count)
+      setM041Status({ type: 'success', message: `تعداد ${count} افکت ارسال پیام در دسترس است` })
+    } catch (err: any) {
+      setM041Status({ type: 'error', message: err?.message || 'خطا در استعلام افکت‌های پیام' })
+    } finally {
+      setM041LoadingOp(null)
+    }
+  }
+
+  const handleM041GetAvailableReactions = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getAvailableReactions) return
+    setM041LoadingOp('getAvailableReactions')
+    setM041Status(null)
+    try {
+      const res = await window.guidegram.getAvailableReactions(targetId)
+      const count = Array.isArray(res?.reactions) ? res.reactions.length : 0
+      setM041ReactionsCount(count)
+      setM041Status({ type: 'success', message: `تعداد ${count} واکنش (Reaction) عمومی فعال است` })
+    } catch (err: any) {
+      setM041Status({ type: 'error', message: err?.message || 'خطا در دریافت ری‌اکشن‌ها' })
+    } finally {
+      setM041LoadingOp(null)
+    }
+  }
+
+  const handleM041GetBotApp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getBotApp || !m041BotAppShortName.trim()) return
+    setM041LoadingOp('getBotApp')
+    setM041Status(null)
+    try {
+      const res = await window.guidegram.getBotApp(targetId, { _: 'inputBotAppShortName', botId: targetId, shortName: m041BotAppShortName.trim() })
+      setM041Status({ type: 'success', message: res?.app ? 'اطلاعات مینی‌اپ ربات با موفقیت استعلام شد' : 'مینی‌اپ یافت نشد' })
+    } catch (err: any) {
+      setM041Status({ type: 'error', message: err?.message || 'خطا در استعلام مینی‌اپ ربات' })
+    } finally {
+      setM041LoadingOp(null)
+    }
+  }
+
+  const handleM041GetBotCallbackAnswer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getBotCallbackAnswerDirect || !m041CallbackMsgId.trim()) return
+    setM041LoadingOp('getBotCallbackAnswer')
+    setM041Status(null)
+    try {
+      const res = await window.guidegram.getBotCallbackAnswerDirect(targetId, {
+        msgId: parseInt(m041CallbackMsgId, 10),
+        data: m041CallbackData.trim() ? Buffer.from(m041CallbackData.trim()) : undefined,
+      })
+      setM041Status({ type: 'success', message: res?.message || 'پاسخ کال‌بک اینلاین با موفقیت دریافت شد' })
+    } catch (err: any) {
+      setM041Status({ type: 'error', message: err?.message || 'خطا در فراخوانی کال‌بک ربات' })
+    } finally {
+      setM041LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -6865,6 +6979,188 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
                     >
                       {m039LoadingOp === 'editQuickReplyShortcut' ? 'در حال ویرایش میانبر...' : 'به‌روزرسانی میانبر'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Microphase 041: Layer 232 Bot Apps, Effects & Reactions Suite */}
+                <div className="p-4 bg-dark-850/80 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          مینی‌اپ‌ها، ربات‌ها و افکت‌های تعاملی
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          مجموعه ۷ متد MTProto Layer 232 برای ربات‌های منوی پیوست، افکت‌های پیام و واکنش‌ها
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">
+                      Phase 041 • Layer 232
+                    </span>
+                  </div>
+
+                  {/* Operational Status Banner */}
+                  {m041Status && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        m041Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m041Status.type === 'success' ? (
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span>{m041Status.message}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM041Status(null)}
+                        className="text-[10px] hover:underline shrink-0 opacity-75"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 1. messages.getAttachMenuBot */}
+                  <form onSubmit={handleM041GetAttachMenuBot} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۱. دریافت ربات منوی پیوست (getAttachMenuBot)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.getAttachMenuBot</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={m041AttachBotId}
+                        onChange={(e) => setM041AttachBotId(e.target.value)}
+                        placeholder="شناسه یا یوزرنیم ربات..."
+                        className="flex-1 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-500/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m041LoadingOp === 'getAttachMenuBot' || !m041AttachBotId.trim()}
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer"
+                      >
+                        {m041LoadingOp === 'getAttachMenuBot' ? 'در حال دریافت...' : 'استعلام ربات'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* 2, 4, 5 Inspector Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {/* 2. messages.getAttachMenuBots */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۲. ربات‌های پیوست (getAttachMenuBots)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM041GetAttachMenuBots}
+                        disabled={m041LoadingOp === 'getAttachMenuBots'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m041LoadingOp === 'getAttachMenuBots' ? 'در حال بارگذاری...' : `ربات‌ها ${m041AttachBotsCount !== null ? `(${m041AttachBotsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 4. messages.getAvailableEffects */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۴. افکت‌های پیام (getAvailableEffects)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM041GetAvailableEffects}
+                        disabled={m041LoadingOp === 'getAvailableEffects'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m041LoadingOp === 'getAvailableEffects' ? 'در حال دریافت...' : `افکت‌ها ${m041EffectsCount !== null ? `(${m041EffectsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 5. messages.getAvailableReactions */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۵. واکنش‌های مجاز (getAvailableReactions)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM041GetAvailableReactions}
+                        disabled={m041LoadingOp === 'getAvailableReactions'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m041LoadingOp === 'getAvailableReactions' ? 'در حال دریافت...' : `ری‌اکشن‌ها ${m041ReactionsCount !== null ? `(${m041ReactionsCount})` : ''}`}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 6. messages.getBotApp */}
+                  <form onSubmit={handleM041GetBotApp} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۶. متادیتای مینی‌اپ تلگرام (getBotApp)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.getBotApp</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={m041BotAppShortName}
+                        onChange={(e) => setM041BotAppShortName(e.target.value)}
+                        placeholder="نام کوتاه مینی‌اپ (app short name)..."
+                        className="flex-1 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-500/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m041LoadingOp === 'getBotApp' || !m041BotAppShortName.trim()}
+                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer"
+                      >
+                        {m041LoadingOp === 'getBotApp' ? 'در حال دریافت...' : 'دریافت مینی‌اپ'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* 7. messages.getBotCallbackAnswer */}
+                  <form onSubmit={handleM041GetBotCallbackAnswer} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۷. پاسخ دکمه کال‌بک ربات (getBotCallbackAnswer)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.getBotCallbackAnswer</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={m041CallbackMsgId}
+                        onChange={(e) => setM041CallbackMsgId(e.target.value)}
+                        placeholder="شناسه پیام (Msg ID)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m041CallbackData}
+                        onChange={(e) => setM041CallbackData(e.target.value)}
+                        placeholder="دیتای کال‌بک (اختیاری)..."
+                        className="sm:col-span-2 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m041LoadingOp === 'getBotCallbackAnswer' || !m041CallbackMsgId.trim()}
+                      className="w-full py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m041LoadingOp === 'getBotCallbackAnswer' ? 'در حال ارسال کال‌بک...' : 'دریافت پاسخ کال‌بک'}
                     </button>
                   </form>
                 </div>

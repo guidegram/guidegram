@@ -2261,6 +2261,19 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-archived-stickers', { accountId, options }),
   getAllStickers: (accountId: string, hash?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-all-stickers', { accountId, hash }),
+  // Layer 232 Messages Suite (Microphase 041)
+  getAttachMenuBot: (accountId: string, botId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-attach-menu-bot', { accountId, botId }),
+  getAttachMenuBots: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-attach-menu-bots', { accountId, hash }),
+  getAttachedStickers: (accountId: string, media?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-attached-stickers', { accountId, media }),
+  getAvailableEffects: (accountId: string, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-available-effects', { accountId, hash }),
+  getBotApp: (accountId: string, app?: any, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-bot-app', { accountId, app, hash }),
+  getBotCallbackAnswerDirect: (accountId: string, options: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-bot-callback-answer', { accountId, options }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

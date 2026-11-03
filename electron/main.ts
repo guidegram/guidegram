@@ -6496,6 +6496,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 041)
+  ipcMain.handle('telegram:messages:get-attach-menu-bot', async (_event, { accountId, botId }) => {
+    try {
+      return await accountManager.getAttachMenuBot(accountId, botId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAttachMenuBot error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-attach-menu-bots', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getAttachMenuBots(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAttachMenuBots error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-attached-stickers', async (_event, { accountId, media }) => {
+    try {
+      return await accountManager.getAttachedStickers(accountId, media)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAttachedStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-available-effects', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getAvailableEffects(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAvailableEffects error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-available-reactions', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getAvailableReactions(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAvailableReactions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-bot-app', async (_event, { accountId, app, hash }) => {
+    try {
+      return await accountManager.getBotApp(accountId, app, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getBotApp error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-bot-callback-answer', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.getBotCallbackAnswerDirect(accountId, options || {})
+    } catch (err: any) {
+      Logger.warn('[IPC] getBotCallbackAnswer error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
