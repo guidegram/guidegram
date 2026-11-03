@@ -6614,6 +6614,209 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 066 State & Handlers (Messages Domain Part 34 - Layer 232)
+  const [m066Status, setM066Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m066LoadingOp, setM066LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.setInlineGameScore
+  const [m066InlineGameId, setM066InlineGameId] = useState('')
+  const [m066InlineGameUserId, setM066InlineGameUserId] = useState('')
+  const [m066InlineGameScore, setM066InlineGameScore] = useState('100')
+
+  // 2. messages.setShareTheme
+  const [m066ShareThemePeer, setM066ShareThemePeer] = useState('')
+  const [m066ShareThemeName, setM066ShareThemeName] = useState('night')
+
+  // 3. messages.setTyping
+  const [m066TypingPeer, setM066TypingPeer] = useState('')
+  const [m066TypingAction, setM066TypingAction] = useState('sendMessageTypingAction')
+
+  // 4. messages.startBot
+  const [m066StartBotId, setM066StartBotId] = useState('')
+  const [m066StartParam, setM066StartParam] = useState('')
+
+  // 5. messages.startHistoryImport
+  const [m066ImportPeer, setM066ImportPeer] = useState('')
+  const [m066ImportId, setM066ImportId] = useState('')
+
+  // 6. messages.summarizeText
+  const [m066SumPeer, setM066SumPeer] = useState('')
+  const [m066SumMsgId, setM066SumMsgId] = useState('')
+  const [m066SumLang, setM066SumLang] = useState('fa')
+  const [m066SummaryResult, setM066SummaryResult] = useState<string | null>(null)
+
+  // 7. messages.toggleBotInAttachMenu
+  const [m066AttachBotId, setM066AttachBotId] = useState('')
+  const [m066AttachEnabled, setM066AttachEnabled] = useState(true)
+
+  const handleM066SetInlineGameScore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setInlineGameScoreRaw) return
+    if (!m066InlineGameId.trim() || !m066InlineGameUserId.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه پیام اینلاین و شناسه کاربر الزامی است' })
+      return
+    }
+    setM066LoadingOp('setInlineGameScore')
+    setM066Status(null)
+    try {
+      const res = await window.guidegram.setInlineGameScoreRaw(targetId, {
+        id: m066InlineGameId.trim(),
+        userIdId: m066InlineGameUserId.trim(),
+        score: Number(m066InlineGameScore) || 0,
+        editMessage: true,
+      })
+      setM066Status({ type: 'success', message: `امتیاز بازی اینلاین با موفقیت ثبت شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در ثبت امتیاز بازی اینلاین' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
+  const handleM066SetShareTheme = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setShareThemeRaw) return
+    if (!m066ShareThemePeer.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه گفتگو برای تم اشتراکی الزامی است' })
+      return
+    }
+    setM066LoadingOp('setShareTheme')
+    setM066Status(null)
+    try {
+      const res = await window.guidegram.setShareThemeRaw(targetId, {
+        peerId: m066ShareThemePeer.trim(),
+        theme: { _: 'shareTheme', theme: m066ShareThemeName.trim() || 'default' },
+      })
+      setM066Status({ type: 'success', message: `تم اشتراکی با موفقیت تنظیم شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در تنظیم تم اشتراکی' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
+  const handleM066SetTyping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setTypingRaw) return
+    if (!m066TypingPeer.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه گفتگو برای مخابره تایپینگ الزامی است' })
+      return
+    }
+    setM066LoadingOp('setTyping')
+    setM066Status(null)
+    try {
+      const res = await window.guidegram.setTypingRaw(targetId, {
+        peerId: m066TypingPeer.trim(),
+        action: { _: m066TypingAction },
+      })
+      setM066Status({ type: 'success', message: `وضعیت فعالیت در گفتگو مخابره شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در ارسال وضعیت تایپینگ' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
+  const handleM066StartBot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.startBotRaw) return
+    if (!m066StartBotId.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه یا یوزرنیم ربات الزامی است' })
+      return
+    }
+    setM066LoadingOp('startBot')
+    setM066Status(null)
+    try {
+      const res = await window.guidegram.startBotRaw(targetId, {
+        botId: m066StartBotId.trim(),
+        startParam: m066StartParam.trim(),
+      })
+      setM066Status({ type: 'success', message: `ربات با پارامتر شروع اجرا شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در راه‌اندازی ربات' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
+  const handleM066StartHistoryImport = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.startHistoryImportRaw) return
+    if (!m066ImportPeer.trim() || !m066ImportId.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه گفتگو و شناسه ایمپورت تاریخچه الزامی است' })
+      return
+    }
+    setM066LoadingOp('startHistoryImport')
+    setM066Status(null)
+    try {
+      const res = await window.guidegram.startHistoryImportRaw(targetId, {
+        peerId: m066ImportPeer.trim(),
+        importId: m066ImportId.trim(),
+      })
+      setM066Status({ type: 'success', message: `ایمپورت تاریخچه چت آغاز شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در آغاز ایمپورت تاریخچه' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
+  const handleM066SummarizeText = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.summarizeTextRaw) return
+    if (!m066SumPeer.trim() || !m066SumMsgId.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام برای خلاصه‌سازی الزامی است' })
+      return
+    }
+    setM066LoadingOp('summarizeText')
+    setM066Status(null)
+    setM066SummaryResult(null)
+    try {
+      const res = await window.guidegram.summarizeTextRaw(targetId, {
+        peerId: m066SumPeer.trim(),
+        id: Number(m066SumMsgId.trim()),
+        toLang: m066SumLang.trim() || undefined,
+      })
+      const text = res?.text || JSON.stringify(res)
+      setM066SummaryResult(text)
+      setM066Status({ type: 'success', message: 'خلاصه‌سازی متن پیام با موفقیت انجام شد' })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در خلاصه‌سازی هوشمند پیام' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
+  const handleM066ToggleBotInAttachMenu = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleBotInAttachMenuRaw) return
+    if (!m066AttachBotId.trim()) {
+      setM066Status({ type: 'error', message: 'شناسه ربات الزامی است' })
+      return
+    }
+    setM066LoadingOp('toggleBotInAttachMenu')
+    setM066Status(null)
+    try {
+      const res = await window.guidegram.toggleBotInAttachMenuRaw(targetId, {
+        botId: m066AttachBotId.trim(),
+        enabled: m066AttachEnabled,
+        writeAllowed: true,
+      })
+      setM066Status({ type: 'success', message: `وضعیت ربات در منوی پیوست تغییر یافت: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM066Status({ type: 'error', message: err?.message || 'خطا در فعال‌سازی منوی پیوست ربات' })
+    } finally {
+      setM066LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -17190,6 +17393,314 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           {m065LoadingOp === 'setInlineBotResults' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال نتایج اینلاین'}
                         </button>
                       </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 066: Messages Domain Suite Part 34 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۶: امتیاز بازی اینلاین، تم اشتراکی، وضعیت تایپینگ، راه‌اندازی ربات، ایمپورت تاریخچه، خلاصه‌سازی هوشمند و منوی پیوست (Messages Suite Part 34)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-purple-400/80 font-mono px-2 py-0.5 rounded-full bg-purple-400/10 border border-purple-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    عملیات‌های تعاملی و هوش مصنوعی تلگرام: ثبت رکوردهای گیم اینلاین، اشتراک‌گذاری تم‌های سفارشی، ارسال وضعیت‌های تایپ و ضبط، دیپ‌لینک استارت ربات‌ها، مهاجرت داده و تاریخچه، خلاصه‌سازی عصبی متون و مدیریت ادغام ربات‌ها در منوی گیره:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m066Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m066Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m066Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m066Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM066Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.setInlineGameScore */}
+                    <form
+                      onSubmit={handleM066SetInlineGameScore}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. امتیاز بازی اینلاین (setInlineGameScore)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066InlineGameId}
+                          onChange={(e) => setM066InlineGameId(e.target.value)}
+                          placeholder="شناسه پیام اینلاین"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066InlineGameUserId}
+                          onChange={(e) => setM066InlineGameUserId(e.target.value)}
+                          placeholder="کاربر"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066InlineGameScore}
+                          onChange={(e) => setM066InlineGameScore(e.target.value)}
+                          placeholder="امتیاز"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'setInlineGameScore'}
+                          className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'setInlineGameScore' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.setShareTheme */}
+                    <form
+                      onSubmit={handleM066SetShareTheme}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. تنظیم تم اشتراکی (setShareTheme)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066ShareThemePeer}
+                          onChange={(e) => setM066ShareThemePeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066ShareThemeName}
+                          onChange={(e) => setM066ShareThemeName(e.target.value)}
+                          placeholder="نام تم (مانند night)"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'setShareTheme'}
+                          className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'setShareTheme' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.setTyping */}
+                    <form
+                      onSubmit={handleM066SetTyping}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. ارسال وضعیت فعالیت (setTyping)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066TypingPeer}
+                          onChange={(e) => setM066TypingPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <select
+                          value={m066TypingAction}
+                          onChange={(e) => setM066TypingAction(e.target.value)}
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        >
+                          <option value="sendMessageTypingAction">در حال نوشتن...</option>
+                          <option value="sendMessageRecordAudioAction">ضبط صدا...</option>
+                          <option value="sendMessageUploadPhotoAction">ارسال عکس...</option>
+                          <option value="sendMessageChooseStickerAction">انتخاب استیکر...</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'setTyping'}
+                          className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'setTyping' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخابره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.startBot */}
+                    <form
+                      onSubmit={handleM066StartBot}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. راه‌اندازی ربات با دیپ‌لینک (startBot)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066StartBotId}
+                          onChange={(e) => setM066StartBotId(e.target.value)}
+                          placeholder="یوزرنیم یا شناسه ربات"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066StartParam}
+                          onChange={(e) => setM066StartParam(e.target.value)}
+                          placeholder="start_param اختیاری"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'startBot'}
+                          className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'startBot' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استارت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.startHistoryImport */}
+                    <form
+                      onSubmit={handleM066StartHistoryImport}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. آغاز ایمپورت تاریخچه (startHistoryImport)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066ImportPeer}
+                          onChange={(e) => setM066ImportPeer(e.target.value)}
+                          placeholder="شناسه گفتگو مقصد"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066ImportId}
+                          onChange={(e) => setM066ImportId(e.target.value)}
+                          placeholder="شناسه importId"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'startHistoryImport'}
+                          className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'startHistoryImport' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'شروع'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.toggleBotInAttachMenu */}
+                    <form
+                      onSubmit={handleM066ToggleBotInAttachMenu}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. وضعیت ربات در منوی پیوست (toggleBotInAttachMenu)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066AttachBotId}
+                          onChange={(e) => setM066AttachBotId(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم ربات..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m066AttachEnabled}
+                            onChange={(e) => setM066AttachEnabled(e.target.checked)}
+                            className="rounded border-white/10 text-purple-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>فعال</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'toggleBotInAttachMenu'}
+                          className="px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'toggleBotInAttachMenu' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تغییر وضعیت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.summarizeText */}
+                    <form
+                      onSubmit={handleM066SummarizeText}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. خلاصه‌سازی هوشمند متن پیام (summarizeText)</span>
+                        <span className="text-[10px] text-purple-400">هوش مصنوعی تلگرام</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m066SumPeer}
+                          onChange={(e) => setM066SumPeer(e.target.value)}
+                          placeholder="شناسه چت..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066SumMsgId}
+                          onChange={(e) => setM066SumMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m066SumLang}
+                          onChange={(e) => setM066SumLang(e.target.value)}
+                          placeholder="زبان (fa)"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m066LoadingOp === 'summarizeText'}
+                          className="px-5 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m066LoadingOp === 'summarizeText' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خلاصه‌سازی پیام'}
+                        </button>
+                      </div>
+                      {m066SummaryResult && (
+                        <div className="mt-2 p-2.5 rounded-xl bg-purple-950/20 border border-purple-500/20 text-xs text-purple-200 leading-relaxed">
+                          {m066SummaryResult}
+                        </div>
+                      )}
                     </form>
                   </div>
                 </div>

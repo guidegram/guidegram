@@ -2613,6 +2613,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:set-history-ttl-raw', { accountId, ...params }),
   setInlineBotResultsRaw: (accountId: string, params: { gallery?: boolean; isPrivate?: boolean; queryId: bigint | number | any; results?: any[]; cacheTime?: number; nextOffset?: string; switchPm?: any; switchWebview?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:set-inline-bot-results-raw', { accountId, ...params }),
+  setInlineGameScoreRaw: (accountId: string, params: { editMessage?: boolean; force?: boolean; id: any; userIdId: string; score: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-inline-game-score-raw', { accountId, ...params }),
+  setShareThemeRaw: (accountId: string, params: { peerId: string; theme?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-share-theme-raw', { accountId, ...params }),
+  setTypingRaw: (accountId: string, params: { peerId: string; topMsgId?: number; action?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-typing-raw', { accountId, ...params }),
+  startBotRaw: (accountId: string, params: { botId: string; peerId?: string; randomId?: bigint | number | any; startParam?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:start-bot-raw', { accountId, ...params }),
+  startHistoryImportRaw: (accountId: string, params: { peerId: string; importId: bigint | number | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:start-history-import-raw', { accountId, ...params }),
+  summarizeTextRaw: (accountId: string, params: { peerId: string; id: number; toLang?: string; tone?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:summarize-text-raw', { accountId, ...params }),
+  toggleBotInAttachMenuRaw: (accountId: string, params: { writeAllowed?: boolean; botId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-bot-in-attach-menu-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

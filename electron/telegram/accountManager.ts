@@ -20334,6 +20334,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.setInlineBotResults(holder as any, params.gallery, params.isPrivate, params.queryId, params.results, params.cacheTime, params.nextOffset, params.switchPm, params.switchWebview)
   }
+
+  // Layer 232 Messages Suite (Microphase 066)
+  public async setInlineGameScoreRaw(accountId: string, params: { editMessage?: boolean; force?: boolean; id: any; userIdId: string; score: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setInlineGameScore(holder as any, accountId, params.editMessage, params.force, params.id, params.userIdId, params.score)
+  }
+
+  public async setShareThemeRaw(accountId: string, params: { peerId: string; theme?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setShareTheme(holder as any, accountId, params.peerId, params.theme)
+  }
+
+  public async setTypingRaw(accountId: string, params: { peerId: string; topMsgId?: number; action?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setTyping(holder as any, accountId, params.peerId, params.topMsgId, params.action)
+  }
+
+  public async startBotRaw(accountId: string, params: { botId: string; peerId?: string; randomId?: bigint | number | Long | string; startParam?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.startBot(holder as any, accountId, params.botId, params.peerId, params.randomId, params.startParam)
+  }
+
+  public async startHistoryImportRaw(accountId: string, params: { peerId: string; importId: bigint | number | Long | string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.startHistoryImport(holder as any, accountId, params.peerId, params.importId)
+  }
+
+  public async summarizeTextRaw(accountId: string, params: { peerId: string; id: number; toLang?: string; tone?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.summarizeText(holder as any, accountId, params.peerId, params.id, params.toLang, params.tone)
+  }
+
+  public async toggleBotInAttachMenuRaw(accountId: string, params: { writeAllowed?: boolean; botId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleBotInAttachMenu(holder as any, accountId, params.writeAllowed, params.botId, params.enabled)
+  }
 }
 
 

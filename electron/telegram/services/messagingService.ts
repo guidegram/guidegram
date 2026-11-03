@@ -181,11 +181,15 @@ export class MessagingService {
 
   public async setTyping(holder: RpcClientHolder, accountId: string, peerId?: string, topMsgId?: number, action?: any): Promise<any> {
     try {
+      let actObj = action
+      if (!actObj || typeof actObj === 'string') {
+        actObj = { _: 'sendMessageTypingAction' }
+      }
       return await holder.client.call({
         _: 'messages.setTyping',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'top_msg_id': topMsgId,
-        'action': action,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        topMsgId: topMsgId !== undefined ? Number(topMsgId) : undefined,
+        action: actObj,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setTyping error:', err)
@@ -778,14 +782,15 @@ export class MessagingService {
     }
   }
 
-  public async startBot(holder: RpcClientHolder, accountId: string, botId?: string, peerId?: string, randomId?: bigint | number, startParam?: string): Promise<any> {
+  public async startBot(holder: RpcClientHolder, accountId: string, botId?: string, peerId?: string, randomId?: bigint | number | Long | string, startParam?: string): Promise<any> {
     try {
+      const rId = randomId ? (Long.isLong(randomId) ? randomId : Long.fromValue(randomId as any)) : Long.fromBits(Math.floor(Math.random() * 0xFFFFFFFF), Math.floor(Math.random() * 0xFFFFFFFF))
       return await holder.client.call({
         _: 'messages.startBot',
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'random_id': randomId,
-        'start_param': startParam,
+        bot: botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserSelf' },
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : (botId ? await this.resolveInputPeer(accountId, botId) : { _: 'inputPeerEmpty' }),
+        randomId: rId,
+        startParam: String(startParam || ''),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.startBot error:', err)
@@ -1273,13 +1278,17 @@ export class MessagingService {
 
   public async setInlineGameScore(holder: RpcClientHolder, accountId: string, editMessage?: boolean, force?: boolean, id?: any, userIdId?: string, score?: number): Promise<any> {
     try {
+      let inlineId = id
+      if (typeof id === 'string' && id) {
+        inlineId = { _: 'inputBotInlineMessageID64', dcId: 1, id: Long.fromValue(id as any), accessHash: Long.ZERO }
+      }
       return await holder.client.call({
         _: 'messages.setInlineGameScore',
-        'edit_message': editMessage,
-        'force': force,
-        'id': id,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'score': score,
+        editMessage: Boolean(editMessage),
+        force: Boolean(force),
+        id: inlineId,
+        userId: userIdId ? await this.toInputUser(accountId, userIdId) : { _: 'inputUserSelf' },
+        score: Number(score || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setInlineGameScore error:', err)
@@ -2125,12 +2134,13 @@ export class MessagingService {
     }
   }
 
-  public async startHistoryImport(holder: RpcClientHolder, accountId: string, peerId?: string, importId?: bigint | number): Promise<any> {
+  public async startHistoryImport(holder: RpcClientHolder, accountId: string, peerId?: string, importId?: bigint | number | Long | string): Promise<any> {
     try {
+      const impId = importId ? (Long.isLong(importId) ? importId : Long.fromValue(importId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.startHistoryImport',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'import_id': importId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        importId: impId,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.startHistoryImport error:', err)
@@ -2590,9 +2600,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.toggleBotInAttachMenu',
-        'write_allowed': writeAllowed,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'enabled': enabled,
+        writeAllowed: Boolean(writeAllowed),
+        bot: botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserSelf' },
+        enabled: Boolean(enabled),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleBotInAttachMenu error:', err)
@@ -3790,10 +3800,10 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.summarizeText',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'to_lang': toLang,
-        'tone': tone,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        id: Number(id || 0),
+        toLang: toLang ? String(toLang) : undefined,
+        tone: tone ? String(tone) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.summarizeText error:', err)
@@ -4117,11 +4127,12 @@ export class MessagingService {
     }
   }
 
-  public async setShareTheme(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async setShareTheme(holder: RpcClientHolder, accountId: string, peerId?: string, theme?: any): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.setShareTheme',
-        ...params,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        theme: theme || { _: 'shareTheme', theme: 'default' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setShareTheme error:', err)

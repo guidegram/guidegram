@@ -8074,6 +8074,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 066 IPC Handlers
+  ipcMain.handle('telegram:messages:set-inline-game-score-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setInlineGameScoreRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setInlineGameScoreRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-share-theme-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setShareThemeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setShareThemeRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-typing-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setTypingRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setTypingRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:start-bot-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.startBotRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] startBotRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:start-history-import-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.startHistoryImportRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] startHistoryImportRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:summarize-text-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.summarizeTextRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] summarizeTextRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-bot-in-attach-menu-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleBotInAttachMenuRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleBotInAttachMenuRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
