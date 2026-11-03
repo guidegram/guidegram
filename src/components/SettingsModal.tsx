@@ -84,6 +84,7 @@ import {
   Edit3,
   Smile,
   Star,
+  Trophy,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -2755,6 +2756,197 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setM045Status({ type: 'error', message: err?.message || 'خطا در استعلام استیکرهای ایموجی ویژه' })
     } finally {
       setM045LoadingOp(null)
+    }
+  }
+
+  // Microphase 046 State: Messages Domain Part 14 (Featured Stickers, Forum Topics, Full Chat, Future Creator, Game Scores & History)
+  const [m046FeaturedStickersCount, setM046FeaturedStickersCount] = useState<number | null>(null)
+
+  const [m046ForumTopicsPeer, setM046ForumTopicsPeer] = useState('')
+  const [m046ForumTopicsQ, setM046ForumTopicsQ] = useState('')
+  const [m046ForumTopicsCount, setM046ForumTopicsCount] = useState<number | null>(null)
+
+  const [m046ForumTopicsByIdPeer, setM046ForumTopicsByIdPeer] = useState('')
+  const [m046ForumTopicsByIdTopic, setM046ForumTopicsByIdTopic] = useState('')
+  const [m046ForumTopicsByIdCount, setM046ForumTopicsByIdCount] = useState<number | null>(null)
+
+  const [m046FullChatId, setM046FullChatId] = useState('')
+  const [m046FullChatResult, setM046FullChatResult] = useState<string | null>(null)
+
+  const [m046FutureCreatorPeer, setM046FutureCreatorPeer] = useState('')
+  const [m046FutureCreatorResult, setM046FutureCreatorResult] = useState<string | null>(null)
+
+  const [m046GameScoresPeer, setM046GameScoresPeer] = useState('')
+  const [m046GameScoresMsgId, setM046GameScoresMsgId] = useState('')
+  const [m046GameScoresCount, setM046GameScoresCount] = useState<number | null>(null)
+
+  const [m046HistoryPeer, setM046HistoryPeer] = useState('')
+  const [m046HistoryCount, setM046HistoryCount] = useState<number | null>(null)
+
+  const [m046LoadingOp, setM046LoadingOp] = useState<string | null>(null)
+  const [m046Status, setM046Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM046GetFeaturedStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getFeaturedStickers) return
+    setM046LoadingOp('getFeaturedStickers')
+    setM046Status(null)
+    try {
+      const res = await window.guidegram.getFeaturedStickers(targetId, 0)
+      const count = Array.isArray(res?.sets) ? res.sets.length : (Array.isArray(res) ? res.length : 0)
+      setM046FeaturedStickersCount(count)
+      setM046Status({ type: 'success', message: `تعداد ${count} بسته استیکر ویژه (Featured) دریافت شد` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در دریافت استیکرهای ویژه' })
+    } finally {
+      setM046LoadingOp(null)
+    }
+  }
+
+  const handleM046GetForumTopics = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getForumTopicsRaw) return
+    if (!m046ForumTopicsPeer.trim()) {
+      setM046Status({ type: 'error', message: 'لطفاً شناسه گروه یا سوپرگروه را وارد کنید' })
+      return
+    }
+    setM046LoadingOp('getForumTopics')
+    setM046Status(null)
+    try {
+      const res = await window.guidegram.getForumTopicsRaw(targetId, {
+        peerId: m046ForumTopicsPeer.trim(),
+        q: m046ForumTopicsQ.trim() || undefined,
+        limit: 50,
+      })
+      const count = Array.isArray(res?.topics) ? res.topics.length : (res?.count ?? 0)
+      setM046ForumTopicsCount(count)
+      setM046Status({ type: 'success', message: `تعداد ${count} تاپیک انجمن (Forum Topic) استعلام شد` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در دریافت تاپیک‌های انجمن' })
+    } finally {
+      setM046LoadingOp(null)
+    }
+  }
+
+  const handleM046GetForumTopicsByID = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getForumTopicsByID) return
+    if (!m046ForumTopicsByIdPeer.trim()) {
+      setM046Status({ type: 'error', message: 'لطفاً شناسه گروه را وارد کنید' })
+      return
+    }
+    const topicIdNum = parseInt(m046ForumTopicsByIdTopic.trim(), 10)
+    setM046LoadingOp('getForumTopicsByID')
+    setM046Status(null)
+    try {
+      const res = await window.guidegram.getForumTopicsByID(targetId, m046ForumTopicsByIdPeer.trim(), isNaN(topicIdNum) ? [] : [topicIdNum])
+      const count = Array.isArray(res?.topics) ? res.topics.length : 1
+      setM046ForumTopicsByIdCount(count)
+      setM046Status({ type: 'success', message: `مشخصات تاپیک با موفقیت دریافت شد` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در دریافت اطلاعات تاپیک با شناسه' })
+    } finally {
+      setM046LoadingOp(null)
+    }
+  }
+
+  const handleM046GetFullChat = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getFullChat) return
+    const chatIdNum = parseInt(m046FullChatId.trim(), 10)
+    if (isNaN(chatIdNum)) {
+      setM046Status({ type: 'error', message: 'لطفاً یک شناسه عددی معتبر چت (Chat ID) وارد کنید' })
+      return
+    }
+    setM046LoadingOp('getFullChat')
+    setM046Status(null)
+    try {
+      const res = await window.guidegram.getFullChat(targetId, chatIdNum)
+      const title = res?.fullChat?.about || res?.chats?.[0]?.title || 'اطلاعات کامل چت دریافت شد'
+      setM046FullChatResult(title)
+      setM046Status({ type: 'success', message: `پروفایل کامل چت با موفقیت استعلام شد` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در دریافت پروفایل کامل گروه' })
+    } finally {
+      setM046LoadingOp(null)
+    }
+  }
+
+  const handleM046GetFutureChatCreatorAfterLeave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getFutureChatCreatorAfterLeave) return
+    if (!m046FutureCreatorPeer.trim()) {
+      setM046Status({ type: 'error', message: 'لطفاً شناسه گروه یا کانال را وارد کنید' })
+      return
+    }
+    setM046LoadingOp('getFutureChatCreatorAfterLeave')
+    setM046Status(null)
+    try {
+      const res = await window.guidegram.getFutureChatCreatorAfterLeave(targetId, m046FutureCreatorPeer.trim())
+      const name = res?.firstName || res?.username || (res?.id ? `کاربر #${res.id}` : 'جانشین سازنده احراز شد')
+      setM046FutureCreatorResult(name)
+      setM046Status({ type: 'success', message: `مالک آتی چت پس از ترک: ${name}` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در استعلام مالک آتی گروه' })
+    } finally {
+      setM046LoadingOp(null)
+    }
+  }
+
+  const handleM046GetGameHighScores = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getGameHighScoresRaw || window.guidegram?.getGameHighScores
+    if (!targetId || !fn) return
+    if (!m046GameScoresPeer.trim()) {
+      setM046Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m046GameScoresMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM046Status({ type: 'error', message: 'لطفاً شناسه عددی پیام بازی را وارد کنید' })
+      return
+    }
+    setM046LoadingOp('getGameHighScores')
+    setM046Status(null)
+    try {
+      const res = await fn(targetId, m046GameScoresPeer.trim(), msgIdNum)
+      const count = Array.isArray(res?.scores) ? res.scores.length : (Array.isArray(res) ? res.length : 0)
+      setM046GameScoresCount(count)
+      setM046Status({ type: 'success', message: `تعداد ${count} رکورد برتر بازی استعلام شد` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در دریافت جدول رکوردهای برتر بازی' })
+    } finally {
+      setM046LoadingOp(null)
+    }
+  }
+
+  const handleM046GetHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getHistoryRaw) return
+    if (!m046HistoryPeer.trim()) {
+      setM046Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    setM046LoadingOp('getHistory')
+    setM046Status(null)
+    try {
+      const res = await window.guidegram.getHistoryRaw(targetId, {
+        peerId: m046HistoryPeer.trim(),
+        limit: 20,
+      })
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM046HistoryCount(count)
+      setM046Status({ type: 'success', message: `تعداد ${count} پیام تاریخچه گفتگو دریافت شد` })
+    } catch (err: any) {
+      setM046Status({ type: 'error', message: err?.message || 'خطا در دریافت تاریخچه پیام‌ها' })
+    } finally {
+      setM046LoadingOp(null)
     }
   }
 
@@ -7940,6 +8132,266 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m045LoadingOp === 'getFeaturedEmojiStickers' ? 'در حال دریافت...' : `مجموعه‌های ویژه ایموجی ${m045FeaturedEmojiStickersCount !== null ? `(${m045FeaturedEmojiStickersCount})` : ''}`}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Microphase 046: Layer 232 Messages Domain Part 14 (Featured Stickers, Forum Topics, Full Chat, Future Creator, Game Scores & History) */}
+                <div className="p-4 bg-dark-850/80 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          انجمن‌ها، پروفایل کامل چت، تاریخچه و بازی‌ها (Layer 232)
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          مدیریت تاپیک‌های انجمن، استعلام پروفایل کامل چت، رکوردهای برتر بازی و تاریخچه پیام‌ها
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                      Phase 046 • Layer 232
+                    </span>
+                  </div>
+
+                  {/* Operational Status Banner */}
+                  {m046Status && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        m046Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m046Status.type === 'success' ? (
+                          <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        )}
+                        <span className="leading-relaxed">{m046Status.message}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM046Status(null)}
+                        className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                        title="بستن"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* 1. messages.getFeaturedStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Star className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۱. استیکرهای ویژه رسمی (getFeaturedStickers)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM046GetFeaturedStickers}
+                        disabled={m046LoadingOp === 'getFeaturedStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m046LoadingOp === 'getFeaturedStickers' ? 'در حال استعلام...' : `بسته‌های استیکر ویژه ${m046FeaturedStickersCount !== null ? `(${m046FeaturedStickersCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 2. messages.getForumTopics */}
+                    <form onSubmit={handleM046GetForumTopics} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Hash className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۲. تاپیک‌های انجمن (getForumTopics)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={m046ForumTopicsPeer}
+                          onChange={(e) => setM046ForumTopicsPeer(e.target.value)}
+                          placeholder="شناسه سوپرگروه (Peer ID)"
+                          className="w-full bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m046ForumTopicsQ}
+                            onChange={(e) => setM046ForumTopicsQ(e.target.value)}
+                            placeholder="جستجوی موضوعی (اختیاری)"
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                          />
+                          <button
+                            type="submit"
+                            disabled={m046LoadingOp === 'getForumTopics'}
+                            className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m046LoadingOp === 'getForumTopics' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                          </button>
+                        </div>
+                      </div>
+                      {m046ForumTopicsCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          تعداد تاپیک‌ها: {m046ForumTopicsCount}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getForumTopicsByID */}
+                    <form onSubmit={handleM046GetForumTopicsByID} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Hash className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۳. تاپیک با شناسه اختصاصی (getForumTopicsByID)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m046ForumTopicsByIdPeer}
+                          onChange={(e) => setM046ForumTopicsByIdPeer(e.target.value)}
+                          placeholder="شناسه سوپرگروه"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m046ForumTopicsByIdTopic}
+                          onChange={(e) => setM046ForumTopicsByIdTopic(e.target.value)}
+                          placeholder="شناسه تاپیک"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m046LoadingOp === 'getForumTopicsByID'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m046LoadingOp === 'getForumTopicsByID' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.getFullChat */}
+                    <form onSubmit={handleM046GetFullChat} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۴. اطلاعات کامل چت (getFullChat)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m046FullChatId}
+                          onChange={(e) => setM046FullChatId(e.target.value)}
+                          placeholder="شناسه عددی چت (Chat ID)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m046LoadingOp === 'getFullChat'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m046LoadingOp === 'getFullChat' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m046FullChatResult && (
+                        <div className="text-[10px] text-gray-300 truncate bg-dark-900/60 p-1.5 rounded-lg border border-white/5">
+                          {m046FullChatResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 5. messages.getFutureChatCreatorAfterLeave */}
+                    <form onSubmit={handleM046GetFutureChatCreatorAfterLeave} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۵. مالک بعدی پس از خروج (getFutureChatCreatorAfterLeave)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m046FutureCreatorPeer}
+                          onChange={(e) => setM046FutureCreatorPeer(e.target.value)}
+                          placeholder="شناسه گروه یا کانال"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m046LoadingOp === 'getFutureChatCreatorAfterLeave'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m046LoadingOp === 'getFutureChatCreatorAfterLeave' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m046FutureCreatorResult && (
+                        <div className="text-[10px] text-emerald-400 truncate bg-dark-900/60 p-1.5 rounded-lg border border-white/5">
+                          جانشین: {m046FutureCreatorResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.getGameHighScores */}
+                    <form onSubmit={handleM046GetGameHighScores} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Trophy className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۶. رکوردهای برتر بازی (getGameHighScores)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m046GameScoresPeer}
+                          onChange={(e) => setM046GameScoresPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m046GameScoresMsgId}
+                          onChange={(e) => setM046GameScoresMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m046LoadingOp === 'getGameHighScores'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m046LoadingOp === 'getGameHighScores' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m046GameScoresCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          تعداد رکوردها: {m046GameScoresCount}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 7. messages.getHistory */}
+                    <form onSubmit={handleM046GetHistory} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <History className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>۷. تاریخچه پیام‌های گفتگو (getHistory)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m046HistoryPeer}
+                          onChange={(e) => setM046HistoryPeer(e.target.value)}
+                          placeholder="شناسه گفتگو (Peer ID)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m046LoadingOp === 'getHistory'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m046LoadingOp === 'getHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام پیام‌ها'}
+                        </button>
+                      </div>
+                      {m046HistoryCount !== null && (
+                        <div className="text-[10px] text-emerald-400 font-mono">
+                          پیام‌های دریافتی: {m046HistoryCount} عدد
+                        </div>
+                      )}
+                    </form>
                   </div>
                 </div>
               </div>

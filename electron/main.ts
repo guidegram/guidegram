@@ -6798,6 +6798,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 046)
+  ipcMain.handle('telegram:messages:get-featured-stickers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getFeaturedStickers(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getFeaturedStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-forum-topics', async (_event, { accountId, peerId, q, offsetDate, offsetId, offsetTopic, limit }) => {
+    try {
+      return await accountManager.getForumTopicsRaw(accountId, peerId, q, offsetDate, offsetId, offsetTopic, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getForumTopics error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-forum-topics-by-id', async (_event, { accountId, peerId, topics }) => {
+    try {
+      return await accountManager.getForumTopicsByID(accountId, peerId, topics)
+    } catch (err: any) {
+      Logger.warn('[IPC] getForumTopicsByID error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-full-chat', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.getFullChat(accountId, chatId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getFullChat error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-future-chat-creator-after-leave', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.getFutureChatCreatorAfterLeave(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getFutureChatCreatorAfterLeave error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-game-high-scores', async (_event, { accountId, peerId, id, userIdId }) => {
+    try {
+      return await accountManager.getGameHighScoresRaw(accountId, peerId, id, userIdId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getGameHighScores error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-history', async (_event, { accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash }) => {
+    try {
+      return await accountManager.getHistoryRaw(accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getHistory error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

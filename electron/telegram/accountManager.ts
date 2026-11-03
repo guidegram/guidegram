@@ -19480,6 +19480,50 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getFeaturedEmojiStickers(holder as any, hash)
   }
+
+  // --- Microphase 046: Messages domain part 14 ---
+  public async getFeaturedStickers(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getFeaturedStickers(holder as any, hash)
+  }
+
+  public async getForumTopicsRaw(accountId: string, peerId?: string, q?: string, offsetDate?: number, offsetId?: number, offsetTopic?: number, limit?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getForumTopics(holder as any, accountId, peerId, q, offsetDate, offsetId, offsetTopic, limit)
+  }
+
+  public async getForumTopicsByID(accountId: string, peerId?: string, topics?: number | number[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getForumTopicsByID(holder as any, accountId, peerId, topics)
+  }
+
+  public async getFullChat(accountId: string, chatId?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getFullChat(holder as any, chatId)
+  }
+
+  public async getFutureChatCreatorAfterLeave(accountId: string, peerId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getFutureChatCreatorAfterLeave(holder as any, accountId, peerId)
+  }
+
+  public async getGameHighScoresRaw(accountId: string, peerId?: string, id?: number, userIdId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getGameHighScores(holder as any, accountId, peerId, id, userIdId)
+  }
+
+  public async getHistoryRaw(accountId: string, peerId?: string, offsetId?: number, offsetDate?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getHistory(holder as any, accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
+  }
 }
+
 
 

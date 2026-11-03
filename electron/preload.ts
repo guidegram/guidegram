@@ -2324,6 +2324,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-faved-stickers', { accountId, hash }),
   getFeaturedEmojiStickers: (accountId: string, hash?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-featured-emoji-stickers', { accountId, hash }),
+  // Layer 232 Messages Suite (Microphase 046)
+  getFeaturedStickers: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-featured-stickers', { accountId, hash }),
+  getForumTopicsRaw: (accountId: string, params?: { peerId?: string; q?: string; offsetDate?: number; offsetId?: number; offsetTopic?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-forum-topics', { accountId, ...params }),
+  getForumTopicsByID: (accountId: string, peerId?: string, topics?: number | number[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-forum-topics-by-id', { accountId, peerId, topics }),
+  getFullChat: (accountId: string, chatId?: bigint | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-full-chat', { accountId, chatId }),
+  getFutureChatCreatorAfterLeave: (accountId: string, peerId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-future-chat-creator-after-leave', { accountId, peerId }),
+  getGameHighScoresRaw: (accountId: string, peerId?: string, id?: number, userIdId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-game-high-scores', { accountId, peerId, id, userIdId }),
+  getHistoryRaw: (accountId: string, params?: { peerId?: string; offsetId?: number; offsetDate?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-history', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -3353,12 +3353,13 @@ export class MessagingService {
     }
   }
 
-  public async getForumTopicsByID(holder: RpcClientHolder, accountId: string, peerId?: string, topics?: number): Promise<any> {
+  public async getForumTopicsByID(holder: RpcClientHolder, accountId: string, peerId?: string, topics?: number | number[]): Promise<any> {
     try {
+      const topicIds = Array.isArray(topics) ? topics : (topics !== undefined ? [topics] : [])
       return await holder.client.call({
         _: 'messages.getForumTopicsByID',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'topics': topics,
+        'topics': topicIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getForumTopicsByID error:', err)
