@@ -513,6 +513,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isDeletingChat, setIsDeletingChat] = useState(false)
   const [deleteChatFeedback, setDeleteChatFeedback] = useState<string | null>(null)
 
+  // Layer 232 Messages Suite State (Microphase 035)
+  // messages.composeMessageWithAI & composeRichMessageWithAI
+  const [aiComposerText, setAiComposerText] = useState('')
+  const [aiComposerProofread, setAiComposerProofread] = useState(true)
+  const [aiComposerEmojify, setAiComposerEmojify] = useState(false)
+  const [aiComposerTone, setAiComposerTone] = useState<'neutral' | 'formal' | 'casual' | 'persuasive'>('neutral')
+  const [aiComposerLang, setAiComposerLang] = useState('')
+  const [isComposingAI, setIsComposingAI] = useState(false)
+  const [aiComposerResult, setAiComposerResult] = useState<any | null>(null)
+  const [aiComposerError, setAiComposerError] = useState<string | null>(null)
+
+  // messages.declineUrlAuth
+  const [declineUrlInput, setDeclineUrlInput] = useState('')
+  const [isDecliningUrlAuth, setIsDecliningUrlAuth] = useState(false)
+  const [declineUrlAuthFeedback, setDeclineUrlAuthFeedback] = useState<string | null>(null)
+
+  // messages.deleteChatUser
+  const [kickChatId, setKickChatId] = useState('')
+  const [kickUserId, setKickUserId] = useState('')
+  const [kickRevokeHistory, setKickRevokeHistory] = useState(false)
+  const [isKickingUser, setIsKickingUser] = useState(false)
+  const [kickFeedback, setKickFeedback] = useState<string | null>(null)
+
+  // messages.createForumTopic
+  const [forumTopicChatId, setForumTopicChatId] = useState('')
+  const [forumTopicTitle, setForumTopicTitle] = useState('')
+  const [isCreatingForumTopic, setIsCreatingForumTopic] = useState(false)
+  const [forumTopicFeedback, setForumTopicFeedback] = useState<string | null>(null)
+
   // Chat Theme & Appearance Settings (Official Telegram Parity - Screenshot 5)
   const [activeTheme, setActiveTheme] = useState<'classic' | 'day' | 'tinted' | 'night'>('tinted')
   const [selectedAccentColor, setSelectedAccentColor] = useState<number>(8) // Tinted teal
@@ -1277,6 +1306,113 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setDeleteChatFeedback(err?.message || 'Failed to delete chat.')
     } finally {
       setIsDeletingChat(false)
+    }
+  }
+
+  // Layer 232 Messages Handlers (Microphase 035)
+  const handleComposeWithAI = async (isRich = false) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !aiComposerText.trim()) return
+    setIsComposingAI(true)
+    setAiComposerResult(null)
+    setAiComposerError(null)
+    try {
+      const options = {
+        proofread: aiComposerProofread,
+        emojify: aiComposerEmojify,
+        tone: aiComposerTone ? { _: 'aiComposerTone' + aiComposerTone.charAt(0).toUpperCase() + aiComposerTone.slice(1) } : undefined,
+        translateToLang: aiComposerLang.trim() || undefined,
+        text: isRich ? { _: 'richTextPlain', text: aiComposerText } : { _: 'textWithEntities', text: aiComposerText, entities: [] }
+      }
+      const res = isRich
+        ? await (window.guidegram as any)?.composeRichMessageWithAI?.(targetId, options)
+        : await (window.guidegram as any)?.composeMessageWithAI?.(targetId, options)
+      if (res) {
+        setAiComposerResult(res)
+        showToast('AI composition generated.')
+      } else {
+        setAiComposerError('AI generation returned empty response. Check account permissions.')
+      }
+    } catch (err: any) {
+      setAiComposerError(err?.message || 'Error executing AI message composition.')
+    } finally {
+      setIsComposingAI(false)
+    }
+  }
+
+  const handleDeclineUrlAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !declineUrlInput.trim()) return
+    setIsDecliningUrlAuth(true)
+    setDeclineUrlAuthFeedback(null)
+    try {
+      const res = await (window.guidegram as any)?.declineUrlAuth?.(targetId, declineUrlInput.trim())
+      if (res !== null && res !== undefined) {
+        setDeclineUrlAuthFeedback('Web session authorization declined successfully.')
+        showToast('Web auth declined.')
+        setDeclineUrlInput('')
+      } else {
+        setDeclineUrlAuthFeedback('Failed to decline web session. Verify the URL token.')
+      }
+    } catch (err: any) {
+      setDeclineUrlAuthFeedback(err?.message || 'Error declining web auth.')
+    } finally {
+      setIsDecliningUrlAuth(false)
+    }
+  }
+
+  const handleDeleteChatUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !kickChatId.trim() || !kickUserId.trim()) return
+    setIsKickingUser(true)
+    setKickFeedback(null)
+    try {
+      const rawChatId = kickChatId.trim().replace(/^-/, '')
+      const res = await (window.guidegram as any)?.deleteChatUser?.(
+        targetId,
+        BigInt(rawChatId),
+        kickUserId.trim(),
+        kickRevokeHistory
+      )
+      if (res) {
+        setKickFeedback(`User ${kickUserId.trim()} expelled from chat #${rawChatId}.`)
+        showToast('User expelled.')
+        setKickUserId('')
+      } else {
+        setKickFeedback('Failed to expel user. Ensure administrator privileges.')
+      }
+    } catch (err: any) {
+      setKickFeedback(err?.message || 'Failed to expel chat user.')
+    } finally {
+      setIsKickingUser(false)
+    }
+  }
+
+  const handleCreateForumTopicQuick = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !forumTopicChatId.trim() || !forumTopicTitle.trim()) return
+    setIsCreatingForumTopic(true)
+    setForumTopicFeedback(null)
+    try {
+      const res = await (window.guidegram as any)?.createForumTopic?.(
+        targetId,
+        forumTopicChatId.trim(),
+        forumTopicTitle.trim()
+      )
+      if (res) {
+        setForumTopicFeedback(`Forum topic "${forumTopicTitle.trim()}" created successfully!`)
+        showToast('Forum topic created.')
+        setForumTopicTitle('')
+      } else {
+        setForumTopicFeedback('Could not create forum topic. Ensure group has topics enabled.')
+      }
+    } catch (err: any) {
+      setForumTopicFeedback(err?.message || 'Failed to create forum topic.')
+    } finally {
+      setIsCreatingForumTopic(false)
     }
   }
 
@@ -4766,6 +4902,225 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           {deleteChatFeedback && <div className="text-[11px] text-rose-300">{deleteChatFeedback}</div>}
                         </form>
                       </div>
+
+                      {/* Layer 232 Messages Suite (Microphase 035): AI Message Composer, Web Auth Decline, Chat User Eviction & Forum Topics */}
+                      {/* 5. Telegram AI Message Composer (messages.composeMessageWithAI & messages.composeRichMessageWithAI) */}
+                      <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                            <Sparkles className="w-4 h-4 text-purple-400" />
+                            <span>Native Telegram AI Message Composer (composeMessageWithAI)</span>
+                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            Layer 232 AI Suite
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-400">
+                          Proofread, rewrite, emojify, and translate messages using Telegram's server-side cloud AI engine.
+                        </p>
+
+                        <textarea
+                          rows={3}
+                          value={aiComposerText}
+                          onChange={(e) => setAiComposerText(e.target.value)}
+                          placeholder="Type or paste draft message here..."
+                          className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 resize-none font-mono"
+                        />
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/5 text-[11px] text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={aiComposerProofread}
+                              onChange={(e) => setAiComposerProofread(e.target.checked)}
+                              className="rounded border-white/20 text-purple-500 focus:ring-0"
+                            />
+                            <span>Proofread</span>
+                          </label>
+                          <label className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/5 text-[11px] text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={aiComposerEmojify}
+                              onChange={(e) => setAiComposerEmojify(e.target.checked)}
+                              className="rounded border-white/20 text-purple-500 focus:ring-0"
+                            />
+                            <span>Emojify</span>
+                          </label>
+                          <select
+                            value={aiComposerTone}
+                            onChange={(e) => setAiComposerTone(e.target.value as any)}
+                            className="px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/5 text-[11px] text-gray-300 focus:outline-none focus:border-purple-400"
+                          >
+                            <option value="neutral">Neutral Tone</option>
+                            <option value="formal">Formal Tone</option>
+                            <option value="casual">Casual Tone</option>
+                            <option value="persuasive">Persuasive Tone</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={aiComposerLang}
+                            onChange={(e) => setAiComposerLang(e.target.value)}
+                            placeholder="Translate Lang (e.g. en, fa)"
+                            className="px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/5 text-[11px] text-gray-300 focus:outline-none focus:border-purple-400"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleComposeWithAI(false)}
+                            disabled={isComposingAI || !aiComposerText.trim()}
+                            className="flex-1 py-2 px-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isComposingAI ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5" />}
+                            <span>AI Rephrase (Standard)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleComposeWithAI(true)}
+                            disabled={isComposingAI || !aiComposerText.trim()}
+                            className="flex-1 py-2 px-3 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isComposingAI ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            <span>AI Compose (RichText)</span>
+                          </button>
+                        </div>
+
+                        {aiComposerResult && (
+                          <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/30 space-y-1.5">
+                            <div className="text-[10px] uppercase font-bold text-purple-400 flex items-center gap-1">
+                              <CheckCheck className="w-3.5 h-3.5" />
+                              <span>AI Generated Message ({aiComposerResult._})</span>
+                            </div>
+                            <div className="text-xs text-gray-100 font-mono select-all whitespace-pre-wrap">
+                              {typeof aiComposerResult.text === 'string'
+                                ? aiComposerResult.text
+                                : JSON.stringify(aiComposerResult.text || aiComposerResult, null, 2)}
+                            </div>
+                          </div>
+                        )}
+                        {aiComposerError && (
+                          <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{aiComposerError}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 6. Decline URL Auth & Expel Chat User */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Decline Web Auth */}
+                        <form onSubmit={handleDeclineUrlAuth} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                          <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                            <LogOut className="w-4 h-4 text-amber-400" />
+                            <span>Decline Web Authorization (declineUrlAuth)</span>
+                          </div>
+                          <p className="text-[11px] text-gray-400">
+                            Explicitly cancels and declines pending browser login auth sessions.
+                          </p>
+                          <input
+                            type="text"
+                            required
+                            value={declineUrlInput}
+                            onChange={(e) => setDeclineUrlInput(e.target.value)}
+                            placeholder="Authorization URL / Token"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isDecliningUrlAuth || !declineUrlInput.trim()}
+                            className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isDecliningUrlAuth ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
+                            <span>Decline Web Session</span>
+                          </button>
+                          {declineUrlAuthFeedback && <div className="text-[11px] text-amber-300">{declineUrlAuthFeedback}</div>}
+                        </form>
+
+                        {/* Expel Chat Participant */}
+                        <form onSubmit={handleDeleteChatUser} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                          <div className="flex items-center gap-2 text-xs font-bold text-rose-400">
+                            <Trash2 className="w-4 h-4 text-rose-400" />
+                            <span>Expel Chat Participant (deleteChatUser)</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              required
+                              value={kickChatId}
+                              onChange={(e) => setKickChatId(e.target.value)}
+                              placeholder="Chat ID"
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-rose-400"
+                            />
+                            <input
+                              type="text"
+                              required
+                              value={kickUserId}
+                              onChange={(e) => setKickUserId(e.target.value)}
+                              placeholder="User ID / Username"
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-rose-400"
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={kickRevokeHistory}
+                              onChange={(e) => setKickRevokeHistory(e.target.checked)}
+                              className="rounded border-white/20 text-rose-500 focus:ring-0"
+                            />
+                            <span>Revoke all message history for user</span>
+                          </label>
+                          <button
+                            type="submit"
+                            disabled={isKickingUser || !kickChatId.trim() || !kickUserId.trim()}
+                            className="w-full py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isKickingUser ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            <span>Expel Participant</span>
+                          </button>
+                          {kickFeedback && <div className="text-[11px] text-rose-300">{kickFeedback}</div>}
+                        </form>
+                      </div>
+
+                      {/* 7. Supergroup Forum Topic Quick Creator (messages.createForumTopic) */}
+                      <form onSubmit={handleCreateForumTopicQuick} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-sky-400">
+                            <MessageSquare className="w-4 h-4 text-sky-400" />
+                            <span>Create Forum Topic (createForumTopic)</span>
+                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                            Topics Supergroup
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            required
+                            value={forumTopicChatId}
+                            onChange={(e) => setForumTopicChatId(e.target.value)}
+                            placeholder="Supergroup ID / Username"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-sky-400"
+                          />
+                          <input
+                            type="text"
+                            required
+                            value={forumTopicTitle}
+                            onChange={(e) => setForumTopicTitle(e.target.value)}
+                            placeholder="Topic Title"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white focus:outline-none focus:border-sky-400"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isCreatingForumTopic || !forumTopicChatId.trim() || !forumTopicTitle.trim()}
+                          className="w-full py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                        >
+                          {isCreatingForumTopic ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                          <span>Create Forum Topic</span>
+                        </button>
+                        {forumTopicFeedback && <div className="text-[11px] text-sky-300">{forumTopicFeedback}</div>}
+                      </form>
                     </div>
                   </div>
                 </div>

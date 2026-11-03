@@ -2199,6 +2199,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:delete-chat', { accountId, chatId }),
   checkUrlAuthMatchCode: (accountId: string, url: string, matchCode: string): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:check-url-auth-match-code', { accountId, url, matchCode }),
+  // Layer 232 Messages Suite (Microphase 035)
+  composeMessageWithAI: (accountId: string, options: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:compose-message-with-ai', { accountId, options }),
+  composeRichMessageWithAI: (accountId: string, options: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:compose-rich-message-with-ai', { accountId, options }),
+  declineUrlAuth: (accountId: string, url: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:decline-url-auth', { accountId, url }),
+  deleteChatUser: (accountId: string, chatId: bigint | number, userId: string, revokeHistory?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-chat-user', { accountId, chatId, userId, revokeHistory }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

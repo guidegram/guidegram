@@ -6184,6 +6184,43 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 035)
+  ipcMain.handle('telegram:messages:compose-message-with-ai', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.composeMessageWithAI(accountId, options)
+    } catch (err: any) {
+      Logger.warn('[IPC] composeMessageWithAI error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:compose-rich-message-with-ai', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.composeRichMessageWithAI(accountId, options)
+    } catch (err: any) {
+      Logger.warn('[IPC] composeRichMessageWithAI error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:decline-url-auth', async (_event, { accountId, url }) => {
+    try {
+      return await accountManager.declineUrlAuth(accountId, url)
+    } catch (err: any) {
+      Logger.warn('[IPC] declineUrlAuth error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-chat-user', async (_event, { accountId, chatId, userId, revokeHistory }) => {
+    try {
+      return await accountManager.deleteChatUser(accountId, chatId, userId, revokeHistory)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteChatUser error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

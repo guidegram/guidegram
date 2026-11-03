@@ -19038,5 +19038,55 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.checkUrlAuthMatchCode(holder as any, url, matchCode)
   }
+
+  // Layer 232 Messages Suite (Microphase 035)
+  public async composeMessageWithAI(
+    accountId: string,
+    options: { proofread?: boolean; emojify?: boolean; text?: any; translateToLang?: string; tone?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.composeMessageWithAI(
+      holder as any,
+      options.proofread,
+      options.emojify,
+      options.text,
+      options.translateToLang,
+      options.tone
+    )
+  }
+
+  public async composeRichMessageWithAI(
+    accountId: string,
+    options: { proofread?: boolean; emojify?: boolean; text?: any; translateToLang?: string; tone?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.composeRichMessageWithAI(
+      holder as any,
+      options.proofread,
+      options.emojify,
+      options.text,
+      options.translateToLang,
+      options.tone
+    )
+  }
+
+  public async declineUrlAuth(accountId: string, url: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.declineUrlAuth(holder as any, url)
+  }
+
+  public async deleteChatUser(
+    accountId: string,
+    chatId: bigint | number,
+    userId: string,
+    revokeHistory = false
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteChatUser(holder as any, accountId, revokeHistory, chatId, userId)
+  }
 }
 
