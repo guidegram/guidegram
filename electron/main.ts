@@ -5945,6 +5945,54 @@ function setupIpcHandlers() {
     }
   )
 
+  ipcMain.handle('telegram:get-saved-contacts', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getSavedContacts(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSavedContacts error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-sponsored-peers', async (_event, { accountId, query }) => {
+    try {
+      return await accountManager.getSponsoredPeers(accountId, query)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getSponsoredPeers error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:get-contact-statuses', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getContactStatuses(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getContactStatuses error:`, err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:import-contact-token', async (_event, { accountId, token }) => {
+    try {
+      return await accountManager.importContactToken(accountId, token)
+    } catch (err: any) {
+      Logger.warn(`[IPC] importContactToken error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:import-no-paid-messages-token',
+    async (_event, { accountId, userId, token }) => {
+      try {
+        return await accountManager.importNoPaidMessagesToken(accountId, userId, token)
+      } catch (err: any) {
+        Logger.warn(`[IPC] importNoPaidMessagesToken error:`, err)
+        return null
+      }
+    }
+  )
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

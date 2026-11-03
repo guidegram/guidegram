@@ -16663,6 +16663,36 @@ export class AccountManager {
     return this.contactsService.getLocated(holder as any, lat, long, undefined, background, selfExpires)
   }
 
+  public async getSavedContacts(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getSaved(holder as any)
+  }
+
+  public async getSponsoredPeers(accountId: string, query = ''): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getSponsoredPeers(holder as any, query)
+  }
+
+  public async getContactStatuses(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getStatuses(holder as any)
+  }
+
+  public async importContactToken(accountId: string, token: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.importContactToken(holder as any, token)
+  }
+
+  public async importNoPaidMessagesToken(accountId: string, userId: any, token: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.importNoPaidMessagesToken(holder as any, accountId, String(userId), token)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

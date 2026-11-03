@@ -2145,6 +2145,16 @@ const guidegramAPI = {
     selfExpires?: number
   ): Promise<any> =>
     ipcRenderer.invoke('telegram:get-located', { accountId, lat, long, background, selfExpires }),
+  getSavedContacts: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-saved-contacts', { accountId }),
+  getSponsoredPeers: (accountId: string, query?: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-sponsored-peers', { accountId, query }),
+  getContactStatuses: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-contact-statuses', { accountId }),
+  importContactToken: (accountId: string, token: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:import-contact-token', { accountId, token }),
+  importNoPaidMessagesToken: (accountId: string, userId: any, token: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:import-no-paid-messages-token', { accountId, userId, token }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

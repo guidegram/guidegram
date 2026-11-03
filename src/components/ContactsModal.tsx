@@ -114,6 +114,33 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [cloudContactIDs, setCloudContactIDs] = useState<Array<string | number> | null>(null)
   const [isLoadingContactIDs, setIsLoadingContactIDs] = useState(false)
 
+  // Layer 232 Contacts States (Microphase 030)
+  // contacts.getStatuses
+  const [contactStatuses, setContactStatuses] = useState<Map<string, any>>(new Map())
+
+  // contacts.getSaved
+  const [savedContactsList, setSavedContactsList] = useState<any[]>([])
+  const [isLoadingSavedContacts, setIsLoadingSavedContacts] = useState(false)
+
+  // contacts.getSponsoredPeers
+  const [sponsoredPeers, setSponsoredPeers] = useState<any[]>([])
+  const [sponsoredQuery, setSponsoredQuery] = useState('')
+  const [isLoadingSponsored, setIsLoadingSponsored] = useState(false)
+  const [sponsoredSearched, setSponsoredSearched] = useState(false)
+
+  // contacts.importContactToken
+  const [importTokenInput, setImportTokenInput] = useState('')
+  const [isImportingToken, setIsImportingToken] = useState(false)
+  const [importTokenResult, setImportTokenResult] = useState<string | null>(null)
+  const [importTokenError, setImportTokenError] = useState<string | null>(null)
+
+  // contacts.importNoPaidMessagesToken
+  const [noPaidUserIdInput, setNoPaidUserIdInput] = useState('')
+  const [noPaidTokenInput, setNoPaidTokenInput] = useState('')
+  const [isImportingNoPaidToken, setIsImportingNoPaidToken] = useState(false)
+  const [importNoPaidResult, setImportNoPaidResult] = useState<string | null>(null)
+  const [importNoPaidError, setImportNoPaidError] = useState<string | null>(null)
+
   const loadAll = () => {
     if (!isOpen || !accountId) return
     setLoading(true)
@@ -121,12 +148,20 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
     const pContacts = window.guidegram?.getContacts ? window.guidegram.getContacts(accountId) : Promise.resolve([])
     const pTop = window.guidegram?.getTopPeers ? window.guidegram.getTopPeers(accountId, { correspondents: true }) : Promise.resolve(null)
     const pBirthdays = window.guidegram?.getBirthdays ? window.guidegram.getBirthdays(accountId) : Promise.resolve([])
+    const pStatuses = window.guidegram?.getContactStatuses ? window.guidegram.getContactStatuses(accountId) : Promise.resolve([])
 
-    Promise.all([pContacts, pTop, pBirthdays])
-      .then(([list, top, bdays]) => {
+    Promise.all([pContacts, pTop, pBirthdays, pStatuses])
+      .then(([list, top, bdays, statuses]) => {
         if (Array.isArray(list)) setContacts(list)
         if (top?.users && Array.isArray(top.users)) setTopPeers(top.users)
         if (Array.isArray(bdays)) setBirthdays(bdays)
+        if (Array.isArray(statuses)) {
+          const sMap = new Map<string, any>()
+          for (const s of statuses) {
+            if (s.userId) sMap.set(s.userId.toString(), s)
+          }
+          setContactStatuses(sMap)
+        }
       })
       .finally(() => {
         setLoading(false)
@@ -455,6 +490,87 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
     setTimeout(() => setTokenCopiedMessage(null), 3000)
   }
 
+  // Microphase 030 Handlers
+  const handleImportContactToken = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!accountId || !importTokenInput.trim() || !window.guidegram?.importContactToken) return
+    setIsImportingToken(true)
+    setImportTokenResult(null)
+    setImportTokenError(null)
+    try {
+      const cleanToken = importTokenInput.trim().replace(/^https:\/\/t\.me\/contact\//, '')
+      const res = await window.guidegram.importContactToken(accountId, cleanToken)
+      if (res) {
+        setImportTokenResult('Contact imported successfully via MTProto token!')
+        setImportTokenInput('')
+        loadAll()
+        setTimeout(() => setImportTokenResult(null), 4000)
+      } else {
+        setImportTokenError('Invalid or expired contact token.')
+      }
+    } catch (err: any) {
+      console.warn('Failed to import contact token:', err)
+      setImportTokenError(err?.message || 'Failed to import contact token')
+    } finally {
+      setIsImportingToken(false)
+    }
+  }
+
+  const handleImportNoPaidMessagesToken = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!accountId || !noPaidUserIdInput.trim() || !noPaidTokenInput.trim() || !window.guidegram?.importNoPaidMessagesToken) return
+    setIsImportingNoPaidToken(true)
+    setImportNoPaidResult(null)
+    setImportNoPaidError(null)
+    try {
+      const res = await window.guidegram.importNoPaidMessagesToken(
+        accountId,
+        noPaidUserIdInput.trim(),
+        noPaidTokenInput.trim()
+      )
+      if (res) {
+        setImportNoPaidResult('Free messaging pass applied! You can now send free messages to this user.')
+        setNoPaidUserIdInput('')
+        setNoPaidTokenInput('')
+        setTimeout(() => setImportNoPaidResult(null), 4000)
+      } else {
+        setImportNoPaidError('Could not apply token. Check user ID and token validity.')
+      }
+    } catch (err: any) {
+      console.warn('Failed to import no-paid messages token:', err)
+      setImportNoPaidError(err?.message || 'Failed to import free-messaging pass token')
+    } finally {
+      setIsImportingNoPaidToken(false)
+    }
+  }
+
+  const handleFetchSponsoredPeers = async () => {
+    if (!accountId || !window.guidegram?.getSponsoredPeers) return
+    setIsLoadingSponsored(true)
+    setSponsoredSearched(true)
+    try {
+      const peers = await window.guidegram.getSponsoredPeers(accountId, sponsoredQuery.trim())
+      setSponsoredPeers(Array.isArray(peers) ? peers : [])
+    } catch (err: any) {
+      console.warn('Failed to get sponsored peers:', err)
+    } finally {
+      setIsLoadingSponsored(false)
+    }
+  }
+
+  const handleFetchSavedContacts = async () => {
+    if (!accountId || !window.guidegram?.getSavedContacts) return
+    setIsLoadingSavedContacts(true)
+    try {
+      const list = await window.guidegram.getSavedContacts(accountId)
+      setSavedContactsList(Array.isArray(list) ? list : [])
+    } catch (err: any) {
+      console.warn('Failed to fetch saved contacts:', err)
+    } finally {
+      setIsLoadingSavedContacts(false)
+    }
+  }
+
   if (!isOpen) return null
 
   const filtered = contacts.filter((c) => {
@@ -638,6 +754,47 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                 </>
               )}
             </button>
+
+            {/* Import via Temporary Contact Token (contacts.importContactToken) */}
+            <div className="pt-4 border-t border-white/5 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-200 uppercase tracking-wider">
+                <Link2 className="w-3.5 h-3.5 text-accent-cyan" />
+                <span>Or Add via Contact Token / Link</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Paste a temporary contact link (https://t.me/contact/...) or token to add someone without needing their phone number.
+              </p>
+              {importTokenResult && (
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{importTokenResult}</span>
+                </div>
+              )}
+              {importTokenError && (
+                <div className="px-3 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{importTokenError}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={importTokenInput}
+                  onChange={(e) => setImportTokenInput(e.target.value)}
+                  placeholder="https://t.me/contact/... or raw token"
+                  className="flex-1 px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-accent-cyan"
+                />
+                <button
+                  type="button"
+                  onClick={handleImportContactToken}
+                  disabled={isImportingToken || !importTokenInput.trim()}
+                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+                >
+                  {isImportingToken ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-accent-cyan" />}
+                  <span>Import</span>
+                </button>
+              </div>
+            </div>
           </form>
         ) : activeTab === 'close_friends' ? (
           <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
@@ -1074,6 +1231,145 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Redeem Free-Chat Pass Token (contacts.importNoPaidMessagesToken) */}
+            <form onSubmit={handleImportNoPaidMessagesToken} className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span>Redeem Free-Messaging Pass Token</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Apply a received No-Paid token to bypass stars fee when starting a conversation with a specific contact.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  required
+                  value={noPaidUserIdInput}
+                  onChange={(e) => setNoPaidUserIdInput(e.target.value)}
+                  placeholder="Target User ID or Phone"
+                  className="px-2.5 py-1.5 rounded-xl bg-dark-950 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-purple-400"
+                />
+                <input
+                  type="text"
+                  required
+                  value={noPaidTokenInput}
+                  onChange={(e) => setNoPaidTokenInput(e.target.value)}
+                  placeholder="Paste Token / URL"
+                  className="px-2.5 py-1.5 rounded-xl bg-dark-950 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-purple-400"
+                />
+              </div>
+              {importNoPaidResult && (
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{importNoPaidResult}</span>
+                </div>
+              )}
+              {importNoPaidError && (
+                <div className="px-3 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{importNoPaidError}</span>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={isImportingNoPaidToken || !noPaidUserIdInput.trim() || !noPaidTokenInput.trim()}
+                className="w-full py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                {isImportingNoPaidToken ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                <span>Apply Free Pass Token</span>
+              </button>
+            </form>
+
+            {/* Sponsored Peers / Channels Discovery (contacts.getSponsoredPeers) */}
+            <div className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                  <AtSign className="w-4 h-4 text-accent-cyan" />
+                  <span>Sponsored Channels Discovery</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchSponsoredPeers}
+                  disabled={isLoadingSponsored}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  {isLoadingSponsored ? <Loader2 className="w-3 h-3 animate-spin text-accent-cyan" /> : <RefreshCw className="w-3 h-3 text-accent-cyan" />}
+                  <span>Discover</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Queries official sponsored telegram peers and channels recommended for contacts directory.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={sponsoredQuery}
+                  onChange={(e) => setSponsoredQuery(e.target.value)}
+                  placeholder="Optional search keyword (e.g. news, crypto)"
+                  className="flex-1 px-2.5 py-1.5 rounded-xl bg-dark-950 border border-white/10 text-xs text-white focus:outline-none focus:border-accent-cyan"
+                />
+              </div>
+              {isLoadingSponsored ? (
+                <div className="p-4 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent-cyan" />
+                  <span>Querying sponsored channels...</span>
+                </div>
+              ) : sponsoredSearched && sponsoredPeers.length === 0 ? (
+                <div className="p-3 text-center text-xs text-gray-500 bg-dark-950/50 rounded-xl">
+                  No sponsored peers found for this query.
+                </div>
+              ) : sponsoredPeers.length > 0 ? (
+                <div className="divide-y divide-white/5 rounded-xl bg-dark-950 border border-white/5 overflow-hidden max-h-40 overflow-y-auto">
+                  {sponsoredPeers.map((p: any, idx) => {
+                    const title = p.title || p.username || `Sponsored #${idx}`
+                    return (
+                      <div key={idx} className="px-3 py-2 flex items-center justify-between hover:bg-white/5 transition-colors">
+                        <div className="text-xs text-gray-200 truncate">{title}</div>
+                        <span className="text-[9px] bg-accent-cyan/15 text-accent-cyan px-1.5 py-0.5 rounded font-bold">
+                          SPONSORED
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Cloud Saved Contacts Cache (contacts.getSaved) */}
+            <div className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                  <UserCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Cloud Saved Contacts Cache</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchSavedContacts}
+                  disabled={isLoadingSavedContacts}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  {isLoadingSavedContacts ? <Loader2 className="w-3 h-3 animate-spin text-emerald-400" /> : <RefreshCw className="w-3 h-3 text-emerald-400" />}
+                  <span>Inspect Saved</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Audits the raw list of saved address book entries stored in your account's cloud cache.
+              </p>
+              {savedContactsList.length > 0 && (
+                <div className="p-3 rounded-xl bg-dark-950 border border-white/10 space-y-1 max-h-36 overflow-y-auto">
+                  <div className="text-[11px] text-emerald-300 font-semibold mb-1">
+                    Cached Entries ({savedContactsList.length}):
+                  </div>
+                  {savedContactsList.map((sc: any, idx) => (
+                    <div key={idx} className="text-[10px] text-gray-300 flex items-center justify-between py-0.5">
+                      <span className="font-mono">{sc.phone || `#${idx}`}</span>
+                      <span className="text-gray-400">{sc.firstName} {sc.lastName || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : activeTab === 'top' ? (
           <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
@@ -1174,6 +1470,16 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                                 <Star className="w-3 h-3 fill-emerald-400" />
                               </span>
                             )}
+                            {(() => {
+                              const st = contactStatuses.get(c.id)
+                              const isOnline = st?.status?._ === 'userStatusOnline' || st?._ === 'userStatusOnline'
+                              return isOnline ? (
+                                <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/10">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span>online</span>
+                                </span>
+                              ) : null
+                            })()}
                           </div>
                           <div className="text-[11px] text-gray-400 flex items-center gap-2 mt-0.5 font-mono">
                             {c.phone && <span>{c.phone}</span>}
