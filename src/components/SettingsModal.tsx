@@ -7008,6 +7008,185 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 068 State & Handlers (Messages Domain Part 36 - Layer 232)
+  const [m068Status, setM068Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m068LoadingOp, setM068LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.toggleSuggestedPostApproval
+  const [m068SuggPeer, setM068SuggPeer] = useState('')
+  const [m068SuggMsgId, setM068SuggMsgId] = useState('')
+  const [m068SuggReject, setM068SuggReject] = useState(false)
+  const [m068SuggComment, setM068SuggComment] = useState('')
+
+  // 2. messages.toggleTodoCompleted
+  const [m068TodoPeer, setM068TodoPeer] = useState('')
+  const [m068TodoMsgId, setM068TodoMsgId] = useState('')
+  const [m068TodoCompletedIds, setM068TodoCompletedIds] = useState('')
+
+  // 3. messages.transcribeAudio
+  const [m068AudioPeer, setM068AudioPeer] = useState('')
+  const [m068AudioMsgId, setM068AudioMsgId] = useState('')
+  const [m068TranscribeResult, setM068TranscribeResult] = useState<string | null>(null)
+
+  // 4. messages.translateText & 5. translateRichMessage
+  const [m068TransText, setM068TransText] = useState('')
+  const [m068TransToLang, setM068TransToLang] = useState('fa')
+  const [m068TransTone, setM068TransTone] = useState('')
+  const [m068TranslationOutput, setM068TranslationOutput] = useState<string | null>(null)
+
+  // 6. messages.uninstallStickerSet
+  const [m068UninstallStickerName, setM068UninstallStickerName] = useState('')
+
+  // 7. messages.unpinAllMessages
+  const [m068UnpinPeer, setM068UnpinPeer] = useState('')
+
+  const handleM068ToggleSuggestedPost = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleSuggestedPostApprovalRaw) return
+    if (!m068SuggPeer.trim() || !m068SuggMsgId.trim()) {
+      setM068Status({ type: 'error', message: 'شناسه کانال و شناسه پیام الزامی است' })
+      return
+    }
+    setM068LoadingOp('toggleSuggestedPost')
+    setM068Status(null)
+    try {
+      const res = await window.guidegram.toggleSuggestedPostApprovalRaw(targetId, {
+        peerId: m068SuggPeer.trim(),
+        msgId: Number(m068SuggMsgId.trim()),
+        reject: m068SuggReject,
+        rejectComment: m068SuggComment.trim() || undefined,
+      })
+      setM068Status({ type: 'success', message: `وضعیت پست پیشنهادی با موفقیت ثبت شد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM068Status({ type: 'error', message: err?.message || 'خطا در تایید/رد پست پیشنهادی' })
+    } finally {
+      setM068LoadingOp(null)
+    }
+  }
+
+  const handleM068ToggleTodo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleTodoCompletedRaw) return
+    if (!m068TodoPeer.trim() || !m068TodoMsgId.trim()) {
+      setM068Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام الزامی است' })
+      return
+    }
+    setM068LoadingOp('toggleTodo')
+    setM068Status(null)
+    try {
+      const ids = m068TodoCompletedIds.split(',').map((s) => s.trim()).filter(Boolean).map(Number)
+      const res = await window.guidegram.toggleTodoCompletedRaw(targetId, {
+        peerId: m068TodoPeer.trim(),
+        msgId: Number(m068TodoMsgId.trim()),
+        completed: ids,
+      })
+      setM068Status({ type: 'success', message: `وضعیت تودو ثبت شد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM068Status({ type: 'error', message: err?.message || 'خطا در ثبت وضعیت تودو' })
+    } finally {
+      setM068LoadingOp(null)
+    }
+  }
+
+  const handleM068TranscribeAudio = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.transcribeAudioRaw) return
+    if (!m068AudioPeer.trim() || !m068AudioMsgId.trim()) {
+      setM068Status({ type: 'error', message: 'شناسه گفتگو و پیام وویس الزامی است' })
+      return
+    }
+    setM068LoadingOp('transcribeAudio')
+    setM068Status(null)
+    setM068TranscribeResult(null)
+    try {
+      const res = await window.guidegram.transcribeAudioRaw(targetId, {
+        peerId: m068AudioPeer.trim(),
+        msgId: Number(m068AudioMsgId.trim()),
+      })
+      const text = res?.text || (res?.pending ? 'در حال پردازش صوت...' : JSON.stringify(res))
+      setM068TranscribeResult(text)
+      setM068Status({ type: 'success', message: 'تبدیل وویس به متن با موفقیت فراخوانی شد' })
+    } catch (err: any) {
+      setM068Status({ type: 'error', message: err?.message || 'خطا در تبدیل وویس به متن' })
+    } finally {
+      setM068LoadingOp(null)
+    }
+  }
+
+  const handleM068TranslateText = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.translateTextRaw) return
+    if (!m068TransText.trim()) {
+      setM068Status({ type: 'error', message: 'متن برای ترجمه الزامی است' })
+      return
+    }
+    setM068LoadingOp('translateText')
+    setM068Status(null)
+    setM068TranslationOutput(null)
+    try {
+      const res = await window.guidegram.translateTextRaw(targetId, {
+        text: m068TransText.trim(),
+        toLang: m068TransToLang.trim() || 'fa',
+        tone: m068TransTone.trim() || undefined,
+      })
+      const out = res?.result?.[0]?.text || JSON.stringify(res)
+      setM068TranslationOutput(out)
+      setM068Status({ type: 'success', message: 'ترجمه متن با موفقیت دریافت شد' })
+    } catch (err: any) {
+      setM068Status({ type: 'error', message: err?.message || 'خطا در ترجمه متن' })
+    } finally {
+      setM068LoadingOp(null)
+    }
+  }
+
+  const handleM068UninstallSticker = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.uninstallStickerSetRaw) return
+    if (!m068UninstallStickerName.trim()) {
+      setM068Status({ type: 'error', message: 'نام بسته استیکر الزامی است' })
+      return
+    }
+    setM068LoadingOp('uninstallSticker')
+    setM068Status(null)
+    try {
+      const res = await window.guidegram.uninstallStickerSetRaw(targetId, {
+        stickerset: m068UninstallStickerName.trim(),
+      })
+      setM068Status({ type: 'success', message: `بسته استیکر با موفقیت حذف نصب شد: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM068Status({ type: 'error', message: err?.message || 'خطا در حذف نصب استیکر' })
+    } finally {
+      setM068LoadingOp(null)
+    }
+  }
+
+  const handleM068UnpinAll = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.unpinAllMessagesRaw) return
+    if (!m068UnpinPeer.trim()) {
+      setM068Status({ type: 'error', message: 'شناسه گفتگو برای حذف پین‌ها الزامی است' })
+      return
+    }
+    setM068LoadingOp('unpinAll')
+    setM068Status(null)
+    try {
+      const res = await window.guidegram.unpinAllMessagesRaw(targetId, {
+        peerId: m068UnpinPeer.trim(),
+      })
+      setM068Status({ type: 'success', message: `تمامی پیام‌های پین‌شده گفتگو حذف شدند: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM068Status({ type: 'error', message: err?.message || 'خطا در حذف تمام پیام‌های پین‌شده' })
+    } finally {
+      setM068LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -18188,6 +18367,268 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m067LoadingOp === 'toggleStickerSets' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال روی استیکر'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 068: Messages Domain Suite Part 36 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۸: پست‌های پیشنهادی، چک‌لیست کارها (Todo)، وویس به متن، ترجمه غنی، حذف استیکر و آن‌پین همگانی (Messages Suite Part 36)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-sky-400/80 font-mono px-2 py-0.5 rounded-full bg-sky-400/10 border border-sky-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    مدیریت هوشمند محتوا و رسانه: تایید/رد پست‌های پیشنهادی در کانال، تغییر وضعیت آیتم‌های چک‌لیست (Todo)، رونویسی هوش مصنوعی صوت به متن، موتور ترجمه زنده متون با تنظیم لحن، حذف نصب سریع بسته‌های استیکر و آن‌پین دسته‌جمعی پیام‌ها:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m068Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m068Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m068Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m068Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM068Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.transcribeAudio */}
+                    <form
+                      onSubmit={handleM068TranscribeAudio}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. تبدیل وویس و صوت به متن (transcribeAudio)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m068AudioPeer}
+                          onChange={(e) => setM068AudioPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m068AudioMsgId}
+                          onChange={(e) => setM068AudioMsgId(e.target.value)}
+                          placeholder="شناسه پیام وویس"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m068LoadingOp === 'transcribeAudio'}
+                          className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m068LoadingOp === 'transcribeAudio' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تبدیل به متن'}
+                        </button>
+                      </div>
+                      {m068TranscribeResult && (
+                        <div className="mt-1 p-2 rounded-xl bg-sky-950/20 border border-sky-500/20 text-xs text-sky-200 leading-relaxed font-mono">
+                          {m068TranscribeResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.translateText */}
+                    <form
+                      onSubmit={handleM068TranslateText}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. ترجمه متن و پیام (translateText)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m068TransText}
+                          onChange={(e) => setM068TransText(e.target.value)}
+                          placeholder="متن دلخواه برای ترجمه..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m068TransToLang}
+                          onChange={(e) => setM068TransToLang(e.target.value)}
+                          placeholder="زبان (fa)"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m068LoadingOp === 'translateText'}
+                          className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m068LoadingOp === 'translateText' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ترجمه'}
+                        </button>
+                      </div>
+                      {m068TranslationOutput && (
+                        <div className="mt-1 p-2 rounded-xl bg-sky-950/20 border border-sky-500/20 text-xs text-sky-200 leading-relaxed">
+                          {m068TranslationOutput}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.toggleSuggestedPostApproval */}
+                    <form
+                      onSubmit={handleM068ToggleSuggestedPost}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. مدیریت پست‌های پیشنهادی (toggleSuggestedPostApproval)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m068SuggPeer}
+                          onChange={(e) => setM068SuggPeer(e.target.value)}
+                          placeholder="شناسه کانال..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m068SuggMsgId}
+                          onChange={(e) => setM068SuggMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <label className="flex items-center gap-1 text-xs text-rose-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m068SuggReject}
+                            onChange={(e) => setM068SuggReject(e.target.checked)}
+                            className="rounded border-white/10 text-rose-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>رد پست</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m068LoadingOp === 'toggleSuggestedPost'}
+                          className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m068LoadingOp === 'toggleSuggestedPost' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.toggleTodoCompleted */}
+                    <form
+                      onSubmit={handleM068ToggleTodo}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. وضعیت چک‌لیست کارها (toggleTodoCompleted)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m068TodoPeer}
+                          onChange={(e) => setM068TodoPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m068TodoMsgId}
+                          onChange={(e) => setM068TodoMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m068TodoCompletedIds}
+                          onChange={(e) => setM068TodoCompletedIds(e.target.value)}
+                          placeholder="شناسه آیتم‌ها (1,2)"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m068LoadingOp === 'toggleTodo'}
+                          className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m068LoadingOp === 'toggleTodo' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.uninstallStickerSet */}
+                    <form
+                      onSubmit={handleM068UninstallSticker}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. حذف نصب بسته استیکر (uninstallStickerSet)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m068UninstallStickerName}
+                          onChange={(e) => setM068UninstallStickerName(e.target.value)}
+                          placeholder="نام کوتاه پکیج استیکر (shortName)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m068LoadingOp === 'uninstallSticker'}
+                          className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m068LoadingOp === 'uninstallSticker' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف نصب'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.unpinAllMessages */}
+                    <form
+                      onSubmit={handleM068UnpinAll}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. آن‌پین کردن کلیه پیام‌ها (unpinAllMessages)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m068UnpinPeer}
+                          onChange={(e) => setM068UnpinPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m068LoadingOp === 'unpinAll'}
+                          className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m068LoadingOp === 'unpinAll' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'آن‌پین همه'}
                         </button>
                       </div>
                     </form>

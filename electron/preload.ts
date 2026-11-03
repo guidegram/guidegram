@@ -2641,6 +2641,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:toggle-saved-dialog-pin-raw', { accountId, ...params }),
   toggleStickerSetsRaw: (accountId: string, params: { uninstall?: boolean; archive?: boolean; unarchive?: boolean; stickersets?: any[] }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:toggle-sticker-sets-raw', { accountId, ...params }),
+  toggleSuggestedPostApprovalRaw: (accountId: string, params: { reject?: boolean; peerId: string; msgId: number; scheduleDate?: number; rejectComment?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-suggested-post-approval-raw', { accountId, ...params }),
+  toggleTodoCompletedRaw: (accountId: string, params: { peerId: string; msgId: number; completed?: number[] | number; incompleted?: number[] | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-todo-completed-raw', { accountId, ...params }),
+  transcribeAudioRaw: (accountId: string, params: { peerId: string; msgId: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:transcribe-audio-raw', { accountId, ...params }),
+  translateRichMessageRaw: (accountId: string, params: { peerId?: string; id?: number[] | number; text?: any; toLang?: string; tone?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:translate-rich-message-raw', { accountId, ...params }),
+  translateTextRaw: (accountId: string, params: { peerId?: string; id?: number[] | number; text?: any; toLang?: string; tone?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:translate-text-raw', { accountId, ...params }),
+  uninstallStickerSetRaw: (accountId: string, params: { stickerset: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:uninstall-sticker-set-raw', { accountId, ...params }),
+  unpinAllMessagesRaw: (accountId: string, params: { peerId: string; topMsgId?: number; savedPeerIdId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:unpin-all-messages-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

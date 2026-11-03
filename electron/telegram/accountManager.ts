@@ -20420,6 +20420,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.toggleStickerSets(holder as any, params.uninstall, params.archive, params.unarchive, params.stickersets)
   }
+
+  // Layer 232 Messages Suite (Microphase 068)
+  public async toggleSuggestedPostApprovalRaw(accountId: string, params: { reject?: boolean; peerId: string; msgId: number; scheduleDate?: number; rejectComment?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleSuggestedPostApproval(holder as any, accountId, params.reject, params.peerId, params.msgId, params.scheduleDate, params.rejectComment)
+  }
+
+  public async toggleTodoCompletedRaw(accountId: string, params: { peerId: string; msgId: number; completed?: number[] | number; incompleted?: number[] | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleTodoCompleted(holder as any, accountId, params.peerId, params.msgId, params.completed, params.incompleted)
+  }
+
+  public async transcribeAudioRaw(accountId: string, params: { peerId: string; msgId: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.transcribeAudio(holder as any, accountId, params.peerId, params.msgId)
+  }
+
+  public async translateRichMessageRaw(accountId: string, params: { peerId?: string; id?: number[] | number; text?: any; toLang?: string; tone?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.translateRichMessage(holder as any, accountId, params.peerId, params.id, params.text, params.toLang, params.tone)
+  }
+
+  public async translateTextRaw(accountId: string, params: { peerId?: string; id?: number[] | number; text?: any; toLang?: string; tone?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.translateText(holder as any, accountId, params.peerId, params.id, params.text, params.toLang, params.tone)
+  }
+
+  public async uninstallStickerSetRaw(accountId: string, params: { stickerset: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.uninstallStickerSet(holder as any, params.stickerset)
+  }
+
+  public async unpinAllMessagesRaw(accountId: string, params: { peerId: string; topMsgId?: number; savedPeerIdId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.unpinAllMessages(holder as any, accountId, params.peerId, params.topMsgId, params.savedPeerIdId)
+  }
 }
 
 

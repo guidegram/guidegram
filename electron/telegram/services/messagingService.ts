@@ -772,9 +772,12 @@ export class MessagingService {
 
   public async uninstallStickerSet(holder: RpcClientHolder, stickerset?: any): Promise<any> {
     try {
+      const inputSet = typeof stickerset === 'string'
+        ? { _: 'inputStickerSetShortName', shortName: stickerset }
+        : stickerset
       return await holder.client.call({
         _: 'messages.uninstallStickerSet',
-        'stickerset': stickerset,
+        stickerset: inputSet || { _: 'inputStickerSetEmpty' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.uninstallStickerSet error:', err)
@@ -2069,9 +2072,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.unpinAllMessages',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'top_msg_id': topMsgId,
-        'saved_peer_id': savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        topMsgId: topMsgId !== undefined ? Number(topMsgId) : undefined,
+        savedPeerId: savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.unpinAllMessages error:', err)
@@ -2519,15 +2522,15 @@ export class MessagingService {
     }
   }
 
-  public async translateText(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number, text?: any, toLang?: string, tone?: string): Promise<any> {
+  public async translateText(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number[] | number, text?: any, toLang?: string, tone?: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.translateText',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'text': text,
-        'to_lang': toLang,
-        'tone': tone,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        id: id ? (Array.isArray(id) ? id.map(Number) : [Number(id)]) : undefined,
+        text: text ? (Array.isArray(text) ? text.map((t: any) => typeof t === 'string' ? { _: 'textWithEntities', text: t, entities: [] } : t) : (typeof text === 'string' ? [{ _: 'textWithEntities', text, entities: [] }] : [text])) : undefined,
+        toLang: toLang || 'en',
+        tone: tone,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.translateText error:', err)
@@ -2731,8 +2734,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.transcribeAudio',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.transcribeAudio error:', err)
@@ -3654,14 +3657,16 @@ export class MessagingService {
     }
   }
 
-  public async toggleTodoCompleted(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, completed?: number, incompleted?: number): Promise<any> {
+  public async toggleTodoCompleted(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, completed?: number[] | number, incompleted?: number[] | number): Promise<any> {
     try {
+      const comp = Array.isArray(completed) ? completed.map(Number) : (completed !== undefined ? [Number(completed)] : [])
+      const incomp = Array.isArray(incompleted) ? incompleted.map(Number) : (incompleted !== undefined ? [Number(incompleted)] : [])
       return await holder.client.call({
         _: 'messages.toggleTodoCompleted',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'completed': completed,
-        'incompleted': incompleted,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
+        completed: comp,
+        incompleted: incomp,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleTodoCompleted error:', err)
@@ -3687,11 +3692,11 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.toggleSuggestedPostApproval',
-        'reject': reject,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'schedule_date': scheduleDate,
-        'reject_comment': rejectComment,
+        reject: Boolean(reject),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
+        scheduleDate: scheduleDate !== undefined ? Number(scheduleDate) : undefined,
+        rejectComment: rejectComment,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleSuggestedPostApproval error:', err)
@@ -4099,15 +4104,15 @@ export class MessagingService {
     }
   }
 
-  public async translateRichMessage(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number, text?: any, toLang?: string, tone?: string): Promise<any> {
+  public async translateRichMessage(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number[] | number, text?: any, toLang?: string, tone?: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.translateRichMessage',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'text': text,
-        'to_lang': toLang,
-        'tone': tone,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        id: id ? (Array.isArray(id) ? id.map(Number) : [Number(id)]) : undefined,
+        text: text ? (Array.isArray(text) ? text : [text]) : undefined,
+        toLang: toLang || 'en',
+        tone: tone,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.translateRichMessage error:', err)

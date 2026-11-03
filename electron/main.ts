@@ -8202,6 +8202,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 068 IPC Handlers
+  ipcMain.handle('telegram:messages:toggle-suggested-post-approval-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleSuggestedPostApprovalRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleSuggestedPostApprovalRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-todo-completed-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleTodoCompletedRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleTodoCompletedRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:transcribe-audio-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.transcribeAudioRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] transcribeAudioRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:translate-rich-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.translateRichMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] translateRichMessageRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:translate-text-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.translateTextRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] translateTextRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:uninstall-sticker-set-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uninstallStickerSetRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uninstallStickerSetRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:unpin-all-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.unpinAllMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] unpinAllMessagesRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
