@@ -441,13 +441,20 @@ export class MessagingService {
     }
   }
 
-  public async requestEncryption(holder: RpcClientHolder, accountId: string, userIdId?: string, randomId?: number, gA?: any): Promise<any> {
+  public async requestEncryption(holder: RpcClientHolder, accountId: string, userId: string, randomId?: number, gA?: any): Promise<any> {
     try {
+      let gABytes: Uint8Array = new Uint8Array(256)
+      if (gA instanceof Uint8Array) {
+        gABytes = gA
+      } else if (typeof gA === 'string') {
+        gABytes = Buffer.from(gA, 'hex')
+      }
+      const rId = randomId !== undefined ? Number(randomId) : Math.floor(Math.random() * 0x7fffffff)
       return await holder.client.call({
         _: 'messages.requestEncryption',
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'random_id': randomId,
-        'g_a': gA,
+        userId: await this.toInputUser(accountId, userId),
+        randomId: rId,
+        gA: gABytes,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestEncryption error:', err)
@@ -1725,11 +1732,10 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.requestUrlAuth',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'button_id': buttonId,
-        'url': url,
-        'in_app_origin': inAppOrigin,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        msgId: msgId !== undefined ? Number(msgId) : undefined,
+        buttonId: buttonId !== undefined ? Number(buttonId) : undefined,
+        url: url,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestUrlAuth error:', err)
@@ -2525,17 +2531,21 @@ export class MessagingService {
 
   public async requestSimpleWebView(holder: RpcClientHolder, accountId: string, fromSwitchWebview?: boolean, fromSideMenu?: boolean, compact?: boolean, fullscreen?: boolean, botId?: string, url?: string, startParam?: string, themeParams?: any, platform?: string): Promise<any> {
     try {
+      let theme: any = undefined
+      if (themeParams) {
+        theme = typeof themeParams === 'string' ? { _: 'dataJSON', data: themeParams } : themeParams
+      }
       return await holder.client.call({
         _: 'messages.requestSimpleWebView',
-        'from_switch_webview': fromSwitchWebview,
-        'from_side_menu': fromSideMenu,
-        'compact': compact,
-        'fullscreen': fullscreen,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'url': url,
-        'start_param': startParam,
-        'theme_params': themeParams,
-        'platform': platform,
+        fromSwitchWebview: Boolean(fromSwitchWebview),
+        fromSideMenu: Boolean(fromSideMenu),
+        compact: Boolean(compact),
+        fullscreen: Boolean(fullscreen),
+        bot: botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserEmpty' },
+        url: url,
+        startParam: startParam,
+        themeParams: theme,
+        platform: String(platform || 'tdesktop'),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestSimpleWebView error:', err)
@@ -2819,16 +2829,28 @@ export class MessagingService {
 
   public async requestAppWebView(holder: RpcClientHolder, accountId: string, writeAllowed?: boolean, compact?: boolean, fullscreen?: boolean, peerId?: string, app?: any, startParam?: string, themeParams?: any, platform?: string): Promise<any> {
     try {
+      let botApp: any = app
+      if (app && typeof app === 'object' && app.id && app.accessHash) {
+        botApp = {
+          _: 'inputBotAppID',
+          id: Long.isLong(app.id) ? app.id : Long.fromValue(app.id),
+          accessHash: Long.isLong(app.accessHash) ? app.accessHash : Long.fromValue(app.accessHash),
+        }
+      }
+      let theme: any = undefined
+      if (themeParams) {
+        theme = typeof themeParams === 'string' ? { _: 'dataJSON', data: themeParams } : themeParams
+      }
       return await holder.client.call({
         _: 'messages.requestAppWebView',
-        'write_allowed': writeAllowed,
-        'compact': compact,
-        'fullscreen': fullscreen,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'app': app,
-        'start_param': startParam,
-        'theme_params': themeParams,
-        'platform': platform,
+        writeAllowed: Boolean(writeAllowed),
+        compact: Boolean(compact),
+        fullscreen: Boolean(fullscreen),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        app: botApp,
+        startParam: startParam,
+        themeParams: theme,
+        platform: String(platform || 'tdesktop'),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestAppWebView error:', err)
@@ -3220,15 +3242,19 @@ export class MessagingService {
 
   public async requestMainWebView(holder: RpcClientHolder, accountId: string, compact?: boolean, fullscreen?: boolean, peerId?: string, botId?: string, startParam?: string, themeParams?: any, platform?: string): Promise<any> {
     try {
+      let theme: any = undefined
+      if (themeParams) {
+        theme = typeof themeParams === 'string' ? { _: 'dataJSON', data: themeParams } : themeParams
+      }
       return await holder.client.call({
         _: 'messages.requestMainWebView',
-        'compact': compact,
-        'fullscreen': fullscreen,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'start_param': startParam,
-        'theme_params': themeParams,
-        'platform': platform,
+        compact: Boolean(compact),
+        fullscreen: Boolean(fullscreen),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        bot: botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserEmpty' },
+        startParam: startParam,
+        themeParams: theme,
+        platform: String(platform || 'tdesktop'),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestMainWebView error:', err)
@@ -3304,12 +3330,26 @@ export class MessagingService {
     }
   }
 
-  public async reportSponsoredMessage(holder: RpcClientHolder, randomId?: any, option?: any): Promise<any> {
+  public async reportSponsoredMessage(holder: RpcClientHolder, randomId: any, option?: any): Promise<any> {
     try {
+      let rId: Uint8Array
+      if (randomId instanceof Uint8Array) {
+        rId = randomId
+      } else if (typeof randomId === 'string') {
+        rId = Buffer.from(randomId, 'hex')
+      } else {
+        rId = new Uint8Array(0)
+      }
+      let optBytes: Uint8Array = new Uint8Array(0)
+      if (option instanceof Uint8Array) {
+        optBytes = option
+      } else if (typeof option === 'string') {
+        optBytes = Buffer.from(option)
+      }
       return await holder.client.call({
         _: 'messages.reportSponsoredMessage',
-        'random_id': randomId,
-        'option': option,
+        randomId: rId,
+        option: optBytes,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportSponsoredMessage error:', err)
@@ -3890,13 +3930,18 @@ export class MessagingService {
     }
   }
 
-  public async requestChatJoinWebView(holder: RpcClientHolder, queryId?: bigint | number, themeParams?: any, platform?: string): Promise<any> {
+  public async requestChatJoinWebView(holder: RpcClientHolder, queryId: bigint | number | Long | string, themeParams?: any, platform?: string): Promise<any> {
     try {
+      const qId = Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)
+      let theme: any = undefined
+      if (themeParams) {
+        theme = typeof themeParams === 'string' ? { _: 'dataJSON', data: themeParams } : themeParams
+      }
       return await holder.client.call({
         _: 'messages.requestChatJoinWebView',
-        'query_id': queryId,
-        'theme_params': themeParams,
-        'platform': platform,
+        queryId: qId,
+        themeParams: theme,
+        platform: String(platform || 'tdesktop'),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestChatJoinWebView error:', err)

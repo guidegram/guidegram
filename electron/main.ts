@@ -7626,6 +7626,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 059 IPC Handlers
+  ipcMain.handle('telegram:messages:report-sponsored-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reportSponsoredMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportSponsoredMessageRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:request-app-web-view-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestAppWebViewRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestAppWebViewRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:request-chat-join-web-view-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestChatJoinWebViewRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestChatJoinWebViewRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:request-encryption-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestEncryptionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestEncryptionRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:request-main-web-view-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestMainWebViewRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestMainWebViewRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:request-simple-web-view-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestSimpleWebViewRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestSimpleWebViewRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:request-url-auth-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestUrlAuthRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestUrlAuthRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

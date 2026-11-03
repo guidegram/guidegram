@@ -2515,6 +2515,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:report-read-metrics-raw', { accountId, ...params }),
   reportSpamRaw: (accountId: string, peerId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:report-spam-raw', { accountId, peerId }),
+  reportSponsoredMessageRaw: (accountId: string, params: { randomId: any; option?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-sponsored-message-raw', { accountId, ...params }),
+  requestAppWebViewRaw: (accountId: string, params: { writeAllowed?: boolean; compact?: boolean; fullscreen?: boolean; peerId?: string; app?: any; startParam?: string; themeParams?: any; platform?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-app-web-view-raw', { accountId, ...params }),
+  requestChatJoinWebViewRaw: (accountId: string, params: { queryId: bigint | number | string | any; themeParams?: any; platform?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-chat-join-web-view-raw', { accountId, ...params }),
+  requestEncryptionRaw: (accountId: string, params: { userId: string; randomId?: number; gA?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-encryption-raw', { accountId, ...params }),
+  requestMainWebViewRaw: (accountId: string, params: { compact?: boolean; fullscreen?: boolean; peerId?: string; botId?: string; startParam?: string; themeParams?: any; platform?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-main-web-view-raw', { accountId, ...params }),
+  requestSimpleWebViewRaw: (accountId: string, params: { fromSwitchWebview?: boolean; fromSideMenu?: boolean; compact?: boolean; fullscreen?: boolean; botId?: string; url?: string; startParam?: string; themeParams?: any; platform?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-simple-web-view-raw', { accountId, ...params }),
+  requestUrlAuthRaw: (accountId: string, params: { peerId?: string; msgId?: number; buttonId?: number; url?: string; inAppOrigin?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-url-auth-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

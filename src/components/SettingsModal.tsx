@@ -5201,6 +5201,205 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 059 State & Handlers (Messages Domain Part 27 - Layer 232)
+  const [m059Status, setM059Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m059LoadingOp, setM059LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.reportSponsoredMessage
+  const [m059SponsoredRandomId, setM059SponsoredRandomId] = useState('')
+  const [m059SponsoredOption, setM059SponsoredOption] = useState('')
+
+  // 2. messages.requestAppWebView
+  const [m059AppPeer, setM059AppPeer] = useState('')
+  const [m059AppId, setM059AppId] = useState('')
+  const [m059AppAccessHash, setM059AppAccessHash] = useState('')
+  const [m059AppStartParam, setM059AppStartParam] = useState('')
+
+  // 3. messages.requestChatJoinWebView
+  const [m059ChatJoinQueryId, setM059ChatJoinQueryId] = useState('')
+
+  // 4. messages.requestEncryption
+  const [m059EncUserId, setM059EncUserId] = useState('')
+
+  // 5. messages.requestMainWebView
+  const [m059MainBotId, setM059MainBotId] = useState('')
+  const [m059MainStartParam, setM059MainStartParam] = useState('')
+
+  // 6. messages.requestSimpleWebView
+  const [m059SimpleBotId, setM059SimpleBotId] = useState('')
+  const [m059SimpleUrl, setM059SimpleUrl] = useState('')
+
+  // 7. messages.requestUrlAuth
+  const [m059UrlAuthPeer, setM059UrlAuthPeer] = useState('')
+  const [m059UrlAuthMsgId, setM059UrlAuthMsgId] = useState('')
+  const [m059UrlAuthButtonId, setM059UrlAuthButtonId] = useState('')
+  const [m059UrlAuthUrl, setM059UrlAuthUrl] = useState('')
+
+  const handleM059ReportSponsoredMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportSponsoredMessageRaw) return
+    if (!m059SponsoredRandomId.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه رندوم پیام تبلیغاتی الزامی است' })
+      return
+    }
+    setM059LoadingOp('reportSponsoredMessage')
+    setM059Status(null)
+    try {
+      await window.guidegram.reportSponsoredMessageRaw(targetId, {
+        randomId: m059SponsoredRandomId.trim(),
+        option: m059SponsoredOption.trim() || undefined,
+      })
+      setM059Status({ type: 'success', message: 'گزارش تخلف تبلیغ اسپانسرشده با موفقیت ثبت شد' })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در گزارش پیام اسپانسر' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
+  const handleM059RequestAppWebView = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestAppWebViewRaw) return
+    if (!m059AppId.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه مینی‌اپلیکیشن (Bot App ID) الزامی است' })
+      return
+    }
+    setM059LoadingOp('requestAppWebView')
+    setM059Status(null)
+    try {
+      const res = await window.guidegram.requestAppWebViewRaw(targetId, {
+        peerId: m059AppPeer.trim() || undefined,
+        app: {
+          id: m059AppId.trim(),
+          accessHash: m059AppAccessHash.trim() || '0',
+        },
+        startParam: m059AppStartParam.trim() || undefined,
+      })
+      setM059Status({ type: 'success', message: `لینک مینی‌اپ دریافت شد: ${res?.url ? 'URL دریافت شد' : 'موفق'}` })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در درخواست وب‌ویو اپلیکیشن' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
+  const handleM059RequestChatJoinWebView = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestChatJoinWebViewRaw) return
+    if (!m059ChatJoinQueryId.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه کوئری عضویت (Query ID) الزامی است' })
+      return
+    }
+    setM059LoadingOp('requestChatJoinWebView')
+    setM059Status(null)
+    try {
+      await window.guidegram.requestChatJoinWebViewRaw(targetId, {
+        queryId: m059ChatJoinQueryId.trim(),
+      })
+      setM059Status({ type: 'success', message: 'وب‌ویو احراز صلاحیت عضویت کانال دریافت شد' })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در وب‌ویو عضویت چت' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
+  const handleM059RequestEncryption = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestEncryptionRaw) return
+    if (!m059EncUserId.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه کاربر مخاطب سکرت‌چت الزامی است' })
+      return
+    }
+    setM059LoadingOp('requestEncryption')
+    setM059Status(null)
+    try {
+      await window.guidegram.requestEncryptionRaw(targetId, {
+        userId: m059EncUserId.trim(),
+      })
+      setM059Status({ type: 'success', message: 'درخواست ایجاد سکرت‌چت رمزگذاری‌شده مبادله شد' })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در ایجاد چت رمزنگاری‌شده' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
+  const handleM059RequestMainWebView = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestMainWebViewRaw) return
+    if (!m059MainBotId.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه ربات مالک مینی‌اپ الزامی است' })
+      return
+    }
+    setM059LoadingOp('requestMainWebView')
+    setM059Status(null)
+    try {
+      await window.guidegram.requestMainWebViewRaw(targetId, {
+        botId: m059MainBotId.trim(),
+        startParam: m059MainStartParam.trim() || undefined,
+      })
+      setM059Status({ type: 'success', message: 'آدرس Main Mini App وب‌ویو با موفقیت استخراج شد' })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در استخراج وب‌ویو اصلی ربات' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
+  const handleM059RequestSimpleWebView = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestSimpleWebViewRaw) return
+    if (!m059SimpleBotId.trim() || !m059SimpleUrl.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه ربات و آدرس اینترنتی وب‌اپ الزامی است' })
+      return
+    }
+    setM059LoadingOp('requestSimpleWebView')
+    setM059Status(null)
+    try {
+      await window.guidegram.requestSimpleWebViewRaw(targetId, {
+        botId: m059SimpleBotId.trim(),
+        url: m059SimpleUrl.trim(),
+      })
+      setM059Status({ type: 'success', message: 'مجوز Simple WebView با موفقیت صادر شد' })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در درخواست Simple WebView' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
+  const handleM059RequestUrlAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestUrlAuthRaw) return
+    if (!m059UrlAuthPeer.trim() && !m059UrlAuthUrl.trim()) {
+      setM059Status({ type: 'error', message: 'شناسه گفتگو یا آدرس URL الزامی است' })
+      return
+    }
+    setM059LoadingOp('requestUrlAuth')
+    setM059Status(null)
+    try {
+      await window.guidegram.requestUrlAuthRaw(targetId, {
+        peerId: m059UrlAuthPeer.trim() || undefined,
+        msgId: m059UrlAuthMsgId.trim() ? Number(m059UrlAuthMsgId.trim()) : undefined,
+        buttonId: m059UrlAuthButtonId.trim() ? Number(m059UrlAuthButtonId.trim()) : undefined,
+        url: m059UrlAuthUrl.trim() || undefined,
+      })
+      setM059Status({ type: 'success', message: 'احراز هویت پیوند و دکمه وب‌سایت با موفقیت دریافت شد' })
+    } catch (err: any) {
+      setM059Status({ type: 'error', message: err?.message || 'خطا در اعتبارسنجی پیوند دکمه' })
+    } finally {
+      setM059LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -13826,6 +14025,285 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m058LoadingOp === 'reportSpam' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'گزارش اسپم'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 059: Messages Domain Suite Part 27 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۵۹: وب‌ویوهای تلگرام، احراز هویت URL و رمزنگاری سکرت‌چت (Messages Suite Part 27)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    درخواست اجرای مینی‌اپ‌ها، تبادل کلید DH سکرت‌چت، احراز پیوند وب‌سایت‌ها و گزارش پیام تبلیغاتی:
+                    <span className="text-gray-300 font-mono mr-1">
+                      reportSponsoredMessage, requestAppWebView, requestChatJoinWebView, requestEncryption, requestMainWebView, requestSimpleWebView, requestUrlAuth
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m059Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m059Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m059Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m059Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM059Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.reportSponsoredMessage */}
+                    <form
+                      onSubmit={handleM059ReportSponsoredMessage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. گزارش پیام اسپانسرشده (reportSponsoredMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059SponsoredRandomId}
+                          onChange={(e) => setM059SponsoredRandomId(e.target.value)}
+                          placeholder="Random ID (Hex یا رشته)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'reportSponsoredMessage'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'reportSponsoredMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'گزارش تبلیغ'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.requestAppWebView */}
+                    <form
+                      onSubmit={handleM059RequestAppWebView}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. وب‌ویو مستقیم مینی‌اپ (requestAppWebView)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059AppId}
+                          onChange={(e) => setM059AppId(e.target.value)}
+                          placeholder="Bot App ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m059AppAccessHash}
+                          onChange={(e) => setM059AppAccessHash(e.target.value)}
+                          placeholder="Access Hash"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'requestAppWebView'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'requestAppWebView' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اجرا'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.requestChatJoinWebView */}
+                    <form
+                      onSubmit={handleM059RequestChatJoinWebView}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. وب‌ویو صلاحیت عضویت چت (requestChatJoinWebView)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059ChatJoinQueryId}
+                          onChange={(e) => setM059ChatJoinQueryId(e.target.value)}
+                          placeholder="Chat Join Query ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'requestChatJoinWebView'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'requestChatJoinWebView' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت فرم'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.requestEncryption */}
+                    <form
+                      onSubmit={handleM059RequestEncryption}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. درخواست سکرت‌چت رمزنگاری‌شده (requestEncryption)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059EncUserId}
+                          onChange={(e) => setM059EncUserId(e.target.value)}
+                          placeholder="User ID مخاطب"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'requestEncryption'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'requestEncryption' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ایجاد سکرت‌چت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.requestMainWebView */}
+                    <form
+                      onSubmit={handleM059RequestMainWebView}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. بازکردن وب‌ویو اصلی ربات (requestMainWebView)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059MainBotId}
+                          onChange={(e) => setM059MainBotId(e.target.value)}
+                          placeholder="Bot Username / ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m059MainStartParam}
+                          onChange={(e) => setM059MainStartParam(e.target.value)}
+                          placeholder="startapp param"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'requestMainWebView'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'requestMainWebView' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اجرای Main'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.requestSimpleWebView */}
+                    <form
+                      onSubmit={handleM059RequestSimpleWebView}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. وب‌ویو ساده URL ربات (requestSimpleWebView)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059SimpleBotId}
+                          onChange={(e) => setM059SimpleBotId(e.target.value)}
+                          placeholder="Bot ID"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m059SimpleUrl}
+                          onChange={(e) => setM059SimpleUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'requestSimpleWebView'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'requestSimpleWebView' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اجرا'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.requestUrlAuth */}
+                    <form
+                      onSubmit={handleM059RequestUrlAuth}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. احراز هویت لینک و دکمه ورود (requestUrlAuth)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m059UrlAuthPeer}
+                          onChange={(e) => setM059UrlAuthPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m059UrlAuthMsgId}
+                          onChange={(e) => setM059UrlAuthMsgId(e.target.value)}
+                          placeholder="Msg ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m059UrlAuthButtonId}
+                          onChange={(e) => setM059UrlAuthButtonId(e.target.value)}
+                          placeholder="Btn ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m059UrlAuthUrl}
+                          onChange={(e) => setM059UrlAuthUrl(e.target.value)}
+                          placeholder="URL پیوند وب‌سایت"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m059LoadingOp === 'requestUrlAuth'}
+                          className="px-5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m059LoadingOp === 'requestUrlAuth' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'احراز URL'}
                         </button>
                       </div>
                     </form>

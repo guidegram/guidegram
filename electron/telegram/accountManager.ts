@@ -20033,6 +20033,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.reportSpam(holder as any, accountId, peerId)
   }
+
+  // Layer 232 Messages Suite (Microphase 059)
+  public async reportSponsoredMessageRaw(accountId: string, params: { randomId: any; option?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportSponsoredMessage(holder as any, params.randomId, params.option)
+  }
+
+  public async requestAppWebViewRaw(accountId: string, params: { writeAllowed?: boolean; compact?: boolean; fullscreen?: boolean; peerId?: string; app?: any; startParam?: string; themeParams?: any; platform?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestAppWebView(holder as any, accountId, params.writeAllowed, params.compact, params.fullscreen, params.peerId, params.app, params.startParam, params.themeParams, params.platform)
+  }
+
+  public async requestChatJoinWebViewRaw(accountId: string, params: { queryId: bigint | number | Long | string; themeParams?: any; platform?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestChatJoinWebView(holder as any, params.queryId, params.themeParams, params.platform)
+  }
+
+  public async requestEncryptionRaw(accountId: string, params: { userId: string; randomId?: number; gA?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestEncryption(holder as any, accountId, params.userId, params.randomId, params.gA)
+  }
+
+  public async requestMainWebViewRaw(accountId: string, params: { compact?: boolean; fullscreen?: boolean; peerId?: string; botId?: string; startParam?: string; themeParams?: any; platform?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestMainWebView(holder as any, accountId, params.compact, params.fullscreen, params.peerId, params.botId, params.startParam, params.themeParams, params.platform)
+  }
+
+  public async requestSimpleWebViewRaw(accountId: string, params: { fromSwitchWebview?: boolean; fromSideMenu?: boolean; compact?: boolean; fullscreen?: boolean; botId?: string; url?: string; startParam?: string; themeParams?: any; platform?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestSimpleWebView(holder as any, accountId, params.fromSwitchWebview, params.fromSideMenu, params.compact, params.fullscreen, params.botId, params.url, params.startParam, params.themeParams, params.platform)
+  }
+
+  public async requestUrlAuthRaw(accountId: string, params: { peerId?: string; msgId?: number; buttonId?: number; url?: string; inAppOrigin?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestUrlAuth(holder as any, accountId, params.peerId, params.msgId, params.buttonId, params.url, params.inAppOrigin)
+  }
 }
 
 
