@@ -8010,6 +8010,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 065 IPC Handlers
+  ipcMain.handle('telegram:messages:set-chat-wall-paper-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setChatWallPaperRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setChatWallPaperRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-default-history-ttl-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setDefaultHistoryTTLRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setDefaultHistoryTTLRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-default-reaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setDefaultReactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setDefaultReactionRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-encrypted-typing-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setEncryptedTypingRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setEncryptedTypingRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-game-score-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setGameScoreRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setGameScoreRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-history-ttl-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setHistoryTTLRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setHistoryTTLRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-inline-bot-results-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setInlineBotResultsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setInlineBotResultsRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

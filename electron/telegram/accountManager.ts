@@ -20291,6 +20291,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.setChatTheme(holder as any, accountId, params.peerId, params.theme)
   }
+
+  // Layer 232 Messages Suite (Microphase 065)
+  public async setChatWallPaperRaw(accountId: string, params: { forBoth?: boolean; revert?: boolean; peerId: string; wallpaper?: any; settings?: any; id?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setChatWallPaper(holder as any, accountId, params.forBoth, params.revert, params.peerId, params.wallpaper, params.settings, params.id)
+  }
+
+  public async setDefaultHistoryTTLRaw(accountId: string, params: { period: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setDefaultHistoryTTL(holder as any, params.period)
+  }
+
+  public async setDefaultReactionRaw(accountId: string, params: { reaction: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setDefaultReaction(holder as any, params.reaction)
+  }
+
+  public async setEncryptedTypingRaw(accountId: string, params: { peer: any; typing?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setEncryptedTyping(holder as any, params.peer, params.typing)
+  }
+
+  public async setGameScoreRaw(accountId: string, params: { editMessage?: boolean; force?: boolean; peerId: string; id: number; userIdId: string; score: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setGameScore(holder as any, accountId, params.editMessage, params.force, params.peerId, params.id, params.userIdId, params.score)
+  }
+
+  public async setHistoryTTLRaw(accountId: string, params: { peerId: string; period: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setHistoryTTL(holder as any, accountId, params.peerId, params.period)
+  }
+
+  public async setInlineBotResultsRaw(accountId: string, params: { gallery?: boolean; isPrivate?: boolean; queryId: bigint | number | Long | string; results?: any[]; cacheTime?: number; nextOffset?: string; switchPm?: any; switchWebview?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setInlineBotResults(holder as any, params.gallery, params.isPrivate, params.queryId, params.results, params.cacheTime, params.nextOffset, params.switchPm, params.switchWebview)
+  }
 }
 
 

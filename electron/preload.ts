@@ -2599,6 +2599,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:set-chat-available-reactions-raw', { accountId, ...params }),
   setChatThemeRaw: (accountId: string, params: { peerId: string; theme?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:set-chat-theme-raw', { accountId, ...params }),
+  setChatWallPaperRaw: (accountId: string, params: { forBoth?: boolean; revert?: boolean; peerId: string; wallpaper?: any; settings?: any; id?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-chat-wall-paper-raw', { accountId, ...params }),
+  setDefaultHistoryTTLRaw: (accountId: string, params: { period: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-default-history-ttl-raw', { accountId, ...params }),
+  setDefaultReactionRaw: (accountId: string, params: { reaction: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-default-reaction-raw', { accountId, ...params }),
+  setEncryptedTypingRaw: (accountId: string, params: { peer: any; typing?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-encrypted-typing-raw', { accountId, ...params }),
+  setGameScoreRaw: (accountId: string, params: { editMessage?: boolean; force?: boolean; peerId: string; id: number; userIdId: string; score: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-game-score-raw', { accountId, ...params }),
+  setHistoryTTLRaw: (accountId: string, params: { peerId: string; period: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-history-ttl-raw', { accountId, ...params }),
+  setInlineBotResultsRaw: (accountId: string, params: { gallery?: boolean; isPrivate?: boolean; queryId: bigint | number | any; results?: any[]; cacheTime?: number; nextOffset?: string; switchPm?: any; switchWebview?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-inline-bot-results-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

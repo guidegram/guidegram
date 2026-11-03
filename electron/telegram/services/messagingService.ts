@@ -494,10 +494,18 @@ export class MessagingService {
 
   public async setEncryptedTyping(holder: RpcClientHolder, peer?: any, typing?: boolean): Promise<any> {
     try {
+      let inputEncryptedChat = peer
+      if (typeof peer === 'number' || typeof peer === 'string') {
+        inputEncryptedChat = {
+          _: 'inputEncryptedChat',
+          chatId: Number(peer),
+          accessHash: Long.ZERO,
+        }
+      }
       return await holder.client.call({
         _: 'messages.setEncryptedTyping',
-        'peer': peer,
-        'typing': typing,
+        peer: inputEncryptedChat,
+        typing: Boolean(typing),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setEncryptedTyping error:', err)
@@ -934,18 +942,19 @@ export class MessagingService {
     }
   }
 
-  public async setInlineBotResults(holder: RpcClientHolder, gallery?: boolean, isPrivate?: boolean, queryId?: bigint | number, results?: any, cacheTime?: number, nextOffset?: string, switchPm?: any, switchWebview?: any): Promise<any> {
+  public async setInlineBotResults(holder: RpcClientHolder, gallery?: boolean, isPrivate?: boolean, queryId?: bigint | number | Long | string, results?: any[], cacheTime?: number, nextOffset?: string, switchPm?: any, switchWebview?: any): Promise<any> {
     try {
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.setInlineBotResults',
-        'gallery': gallery,
-        'private': isPrivate,
-        'query_id': queryId,
-        'results': results,
-        'cache_time': cacheTime,
-        'next_offset': nextOffset,
-        'switch_pm': switchPm,
-        'switch_webview': switchWebview,
+        gallery: Boolean(gallery),
+        private: Boolean(isPrivate),
+        queryId: qId,
+        results: Array.isArray(results) ? results : [],
+        cacheTime: cacheTime !== undefined ? Number(cacheTime) : 0,
+        nextOffset: nextOffset ? String(nextOffset) : undefined,
+        switchPm: switchPm,
+        switchWebview: switchWebview,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setInlineBotResults error:', err)
@@ -1249,12 +1258,12 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.setGameScore',
-        'edit_message': editMessage,
-        'force': force,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'score': score,
+        editMessage: Boolean(editMessage),
+        force: Boolean(force),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        id: Number(id || 0),
+        userId: userIdId ? await this.toInputUser(accountId, userIdId) : { _: 'inputUserSelf' },
+        score: Number(score || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setGameScore error:', err)
@@ -2238,8 +2247,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.setHistoryTTL',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'period': period,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        period: Number(period || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setHistoryTTL error:', err)
@@ -2474,9 +2483,15 @@ export class MessagingService {
 
   public async setDefaultReaction(holder: RpcClientHolder, reaction?: any): Promise<any> {
     try {
+      let reactObj: any = { _: 'reactionEmpty' }
+      if (typeof reaction === 'string') {
+        reactObj = reaction ? { _: 'reactionEmoji', emoticon: reaction } : { _: 'reactionEmpty' }
+      } else if (reaction && typeof reaction === 'object' && reaction._) {
+        reactObj = reaction
+      }
       return await holder.client.call({
         _: 'messages.setDefaultReaction',
-        'reaction': reaction,
+        reaction: reactObj,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setDefaultReaction error:', err)
@@ -2827,7 +2842,7 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.setDefaultHistoryTTL',
-        'period': period,
+        period: Number(period || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setDefaultHistoryTTL error:', err)
@@ -2980,12 +2995,12 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.setChatWallPaper',
-        'for_both': forBoth,
-        'revert': revert,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'wallpaper': wallpaper,
-        'settings': settings,
-        'id': id,
+        forBoth: Boolean(forBoth),
+        revert: Boolean(revert),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        wallpaper: wallpaper,
+        settings: settings,
+        id: id !== undefined ? Number(id) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setChatWallPaper error:', err)

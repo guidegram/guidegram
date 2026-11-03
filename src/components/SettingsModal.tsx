@@ -6417,6 +6417,203 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 065 State & Handlers (Messages Domain Part 33 - Layer 232)
+  const [m065Status, setM065Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m065LoadingOp, setM065LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.setChatWallPaper
+  const [m065WpPeer, setM065WpPeer] = useState('')
+  const [m065WpForBoth, setM065WpForBoth] = useState(false)
+
+  // 2. messages.setDefaultHistoryTTL
+  const [m065DefaultTTL, setM065DefaultTTL] = useState('86400')
+
+  // 3. messages.setDefaultReaction
+  const [m065DefaultReaction, setM065DefaultReaction] = useState('❤️')
+
+  // 4. messages.setEncryptedTyping
+  const [m065EncPeer, setM065EncPeer] = useState('')
+  const [m065EncTyping, setM065EncTyping] = useState(true)
+
+  // 5. messages.setGameScore
+  const [m065GamePeer, setM065GamePeer] = useState('')
+  const [m065GameMsgId, setM065GameMsgId] = useState('')
+  const [m065GameUserId, setM065GameUserId] = useState('')
+  const [m065GameScore, setM065GameScore] = useState('100')
+
+  // 6. messages.setHistoryTTL
+  const [m065TtlPeer, setM065TtlPeer] = useState('')
+  const [m065TtlPeriod, setM065TtlPeriod] = useState('86400')
+
+  // 7. messages.setInlineBotResults
+  const [m065InlineQueryId, setM065InlineQueryId] = useState('')
+  const [m065InlineTitle, setM065InlineTitle] = useState('')
+
+  const handleM065SetChatWallPaper = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setChatWallPaperRaw) return
+    if (!m065WpPeer.trim()) {
+      setM065Status({ type: 'error', message: 'شناسه گفتگو برای والپیپر الزامی است' })
+      return
+    }
+    setM065LoadingOp('setChatWallPaper')
+    setM065Status(null)
+    try {
+      const res = await window.guidegram.setChatWallPaperRaw(targetId, {
+        peerId: m065WpPeer.trim(),
+        forBoth: m065WpForBoth,
+      })
+      setM065Status({ type: 'success', message: `والپیپر چت با موفقیت اعمال شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در تنظیم والپیپر چت' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
+  const handleM065SetDefaultHistoryTTL = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setDefaultHistoryTTLRaw) return
+    setM065LoadingOp('setDefaultHistoryTTL')
+    setM065Status(null)
+    try {
+      const res = await window.guidegram.setDefaultHistoryTTLRaw(targetId, {
+        period: Number(m065DefaultTTL) || 86400,
+      })
+      setM065Status({ type: 'success', message: `مدت زمان پیش‌فرض خودحذفی پیام‌ها ذخیره شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در تنظیم TTL پیش‌فرض' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
+  const handleM065SetDefaultReaction = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setDefaultReactionRaw) return
+    setM065LoadingOp('setDefaultReaction')
+    setM065Status(null)
+    try {
+      const res = await window.guidegram.setDefaultReactionRaw(targetId, {
+        reaction: m065DefaultReaction.trim() || '❤️',
+      })
+      setM065Status({ type: 'success', message: `واکنش پیش‌فرض دوکلیک تنظیم شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در ثبت واکنش پیش‌فرض' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
+  const handleM065SetEncryptedTyping = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setEncryptedTypingRaw) return
+    if (!m065EncPeer.trim()) {
+      setM065Status({ type: 'error', message: 'شناسه چت محرمانه (Secret Chat ID) الزامی است' })
+      return
+    }
+    setM065LoadingOp('setEncryptedTyping')
+    setM065Status(null)
+    try {
+      const res = await window.guidegram.setEncryptedTypingRaw(targetId, {
+        peer: Number(m065EncPeer.trim()) || m065EncPeer.trim(),
+        typing: m065EncTyping,
+      })
+      setM065Status({ type: 'success', message: `وضعیت تایپینگ چت محرمانه مخابره شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در ارسال وضعیت تایپینگ رمزنگاری‌شده' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
+  const handleM065SetGameScore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setGameScoreRaw) return
+    if (!m065GamePeer.trim() || !m065GameMsgId.trim() || !m065GameUserId.trim()) {
+      setM065Status({ type: 'error', message: 'شناسه گفتگو، شناسه پیام بازی و کاربر الزامی است' })
+      return
+    }
+    setM065LoadingOp('setGameScore')
+    setM065Status(null)
+    try {
+      const res = await window.guidegram.setGameScoreRaw(targetId, {
+        peerId: m065GamePeer.trim(),
+        id: Number(m065GameMsgId.trim()),
+        userIdId: m065GameUserId.trim(),
+        score: Number(m065GameScore) || 0,
+        editMessage: true,
+      })
+      setM065Status({ type: 'success', message: `امتیاز بازی با موفقیت ثبت شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در ثبت امتیاز بازی' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
+  const handleM065SetHistoryTTL = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setHistoryTTLRaw) return
+    if (!m065TtlPeer.trim()) {
+      setM065Status({ type: 'error', message: 'شناسه گفتگو برای تنظیم TTL الزامی است' })
+      return
+    }
+    setM065LoadingOp('setHistoryTTL')
+    setM065Status(null)
+    try {
+      const res = await window.guidegram.setHistoryTTLRaw(targetId, {
+        peerId: m065TtlPeer.trim(),
+        period: Number(m065TtlPeriod) || 86400,
+      })
+      setM065Status({ type: 'success', message: `مدت خودحذفی این گفتگو تنظیم شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در تنظیم TTL گفتگو' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
+  const handleM065SetInlineBotResults = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setInlineBotResultsRaw) return
+    if (!m065InlineQueryId.trim()) {
+      setM065Status({ type: 'error', message: 'شناسه کوئری اینلاین ربات الزامی است' })
+      return
+    }
+    setM065LoadingOp('setInlineBotResults')
+    setM065Status(null)
+    try {
+      const inlineItem: any = {
+        _: 'inputBotInlineResult',
+        id: '1',
+        type: 'article',
+        title: m065InlineTitle.trim() || 'Result',
+        sendMessage: {
+          _: 'inputBotInlineMessageText',
+          message: m065InlineTitle.trim() || 'Result message',
+        },
+      }
+      const res = await window.guidegram.setInlineBotResultsRaw(targetId, {
+        queryId: m065InlineQueryId.trim(),
+        results: [inlineItem],
+        cacheTime: 300,
+      })
+      setM065Status({ type: 'success', message: `نتایج اینلاین ربات ارسال شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM065Status({ type: 'error', message: err?.message || 'خطا در ارسال نتایج اینلاین ربات' })
+    } finally {
+      setM065LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -16716,6 +16913,281 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m064LoadingOp === 'setChatTheme' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تغییر پوسته چت'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 065: Messages Domain Suite Part 33 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۵: والپیپر گفتگو، انقضای پیش‌فرض پیام‌ها، واکنش پیش‌فرض، تایپینگ محرمانه، امتیاز بازی و ربات اینلاین (Messages Suite Part 33)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    کنترل‌های حریم خصوصی و رسانه‌ای پیشرفته تلگرام: شخصی‌سازی والپیپر دوطرفه، تایمر خودحذفی سراسری، واکنش پیش‌فرض دوکلیک، شبیه‌سازی تایپینگ در چت محرمانه، لیدربورد بازی‌های تعاملی و ثبت پاسخ‌های اینلاین ربات‌ها:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m065Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m065Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m065Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m065Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM065Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.setChatWallPaper */}
+                    <form
+                      onSubmit={handleM065SetChatWallPaper}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. تنظیم والپیپر گفتگو (setChatWallPaper)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m065WpPeer}
+                          onChange={(e) => setM065WpPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setChatWallPaper'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setChatWallPaper' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال پس‌زمینه'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.setDefaultHistoryTTL */}
+                    <form
+                      onSubmit={handleM065SetDefaultHistoryTTL}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. خودحذفی پیش‌فرض پیام‌ها (setDefaultHistoryTTL)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={m065DefaultTTL}
+                          onChange={(e) => setM065DefaultTTL(e.target.value)}
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        >
+                          <option value="0">غیرفعال (همیشگی)</option>
+                          <option value="86400">۱ روز (۲۴ ساعت)</option>
+                          <option value="604800">۱ هفته (۷ روز)</option>
+                          <option value="2678400">۱ ماه (۳۱ روز)</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setDefaultHistoryTTL'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setDefaultHistoryTTL' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم سراسری'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.setDefaultReaction */}
+                    <form
+                      onSubmit={handleM065SetDefaultReaction}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. واکنش پیش‌فرض دوکلیک (setDefaultReaction)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m065DefaultReaction}
+                          onChange={(e) => setM065DefaultReaction(e.target.value)}
+                          placeholder="ایموجی (مانند ❤️، 👍، 🔥)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setDefaultReaction'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setDefaultReaction' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.setEncryptedTyping */}
+                    <form
+                      onSubmit={handleM065SetEncryptedTyping}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. وضعیت تایپینگ چت محرمانه (setEncryptedTyping)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m065EncPeer}
+                          onChange={(e) => setM065EncPeer(e.target.value)}
+                          placeholder="شناسه چت محرمانه (Secret Chat ID)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setEncryptedTyping'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setEncryptedTyping' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخابره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.setGameScore */}
+                    <form
+                      onSubmit={handleM065SetGameScore}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. ثبت امتیاز بازی تلگرام (setGameScore)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m065GamePeer}
+                          onChange={(e) => setM065GamePeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m065GameMsgId}
+                          onChange={(e) => setM065GameMsgId(e.target.value)}
+                          placeholder="پیام"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m065GameUserId}
+                          onChange={(e) => setM065GameUserId(e.target.value)}
+                          placeholder="شناسه کاربر"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m065GameScore}
+                          onChange={(e) => setM065GameScore(e.target.value)}
+                          placeholder="امتیاز"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setGameScore'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setGameScore' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.setHistoryTTL */}
+                    <form
+                      onSubmit={handleM065SetHistoryTTL}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. تنظیم خودحذفی این گفتگو (setHistoryTTL)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m065TtlPeer}
+                          onChange={(e) => setM065TtlPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <select
+                          value={m065TtlPeriod}
+                          onChange={(e) => setM065TtlPeriod(e.target.value)}
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        >
+                          <option value="0">غیرفعال</option>
+                          <option value="86400">۱ روز</option>
+                          <option value="604800">۱ هفته</option>
+                          <option value="2678400">۱ ماه</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setHistoryTTL'}
+                          className="px-3 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setHistoryTTL' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.setInlineBotResults */}
+                    <form
+                      onSubmit={handleM065SetInlineBotResults}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. پاسخ به جستجوی اینلاین ربات (setInlineBotResults)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m065InlineQueryId}
+                          onChange={(e) => setM065InlineQueryId(e.target.value)}
+                          placeholder="شناسه کوئری اینلاین (queryId)"
+                          className="w-48 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m065InlineTitle}
+                          onChange={(e) => setM065InlineTitle(e.target.value)}
+                          placeholder="عنوان نتیجه آزمایشی..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m065LoadingOp === 'setInlineBotResults'}
+                          className="px-5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m065LoadingOp === 'setInlineBotResults' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال نتایج اینلاین'}
                         </button>
                       </div>
                     </form>
