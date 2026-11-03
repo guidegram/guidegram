@@ -2107,6 +2107,30 @@ const guidegramAPI = {
     year?: number
   ): Promise<boolean> =>
     ipcRenderer.invoke('telegram:suggest-birthday', { accountId, userId, day, month, year }),
+  acceptContact: (accountId: string, userId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:accept-contact', { accountId, userId }),
+  blockContact: (accountId: string, peerId: string, myStoriesFrom?: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:block-contact', { accountId, peerId, myStoriesFrom }),
+  blockFromReplies: (
+    accountId: string,
+    msgId: number,
+    deleteMessage?: boolean,
+    deleteHistory?: boolean,
+    reportSpam?: boolean
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:block-from-replies', {
+      accountId,
+      msgId,
+      deleteMessage,
+      deleteHistory,
+      reportSpam,
+    }),
+  deleteByPhones: (accountId: string, phones: string[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-by-phones', { accountId, phones }),
+  deleteContacts: (accountId: string, userIds: string[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:delete-contacts', { accountId, userIds }),
+  editCloseFriends: (accountId: string, userIds: (string | number)[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:edit-close-friends', { accountId, userIds }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -16584,13 +16584,54 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.contactsService.suggestBirthday(holder as any, accountId, userId, day, month, year)
   }
+  
+  public async acceptContact(accountId: string, userId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.acceptContact(holder as any, accountId, userId)
+  }
 
+  public async blockContact(accountId: string, peerId: string, myStoriesFrom = false): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.block(holder as any, accountId, peerId, myStoriesFrom)
+  }
 
+  public async blockFromReplies(
+    accountId: string,
+    msgId: number,
+    deleteMessage = false,
+    deleteHistory = false,
+    reportSpam = false
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.blockFromReplies(
+      holder as any,
+      msgId,
+      deleteMessage,
+      deleteHistory,
+      reportSpam
+    )
+  }
 
+  public async deleteByPhones(accountId: string, phones: string[]): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.deleteByPhones(holder as any, phones)
+  }
 
+  public async deleteContacts(accountId: string, userIds: string[]): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.deleteContacts(holder as any, accountId, userIds)
+  }
 
-
-
+  public async editCloseFriends(accountId: string, userIds: (string | number)[]): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.editCloseFriends(holder as any, userIds)
+  }
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

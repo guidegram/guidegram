@@ -18,6 +18,13 @@ import {
   Upload,
   Sparkles,
   Share2,
+  Trash2,
+  UserCheck,
+  Shield,
+  Loader2,
+  Wrench,
+  AlertCircle,
+  MessageSquare,
 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { ContactItem } from '../types/telegram'
@@ -32,7 +39,7 @@ interface ContactsModalProps {
   onSelectContact: (contactId: string) => void
 }
 
-type ContactTab = 'all' | 'top' | 'birthdays' | 'add'
+type ContactTab = 'all' | 'close_friends' | 'top' | 'birthdays' | 'tools' | 'add'
 
 export const ContactsModal: React.FC<ContactsModalProps> = ({
   isOpen,
@@ -58,9 +65,25 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [newLastName, setNewLastName] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [newNote, setNewNote] = useState('')
+  const [addPhonePrivacyException, setAddPhonePrivacyException] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [addSuccess, setAddSuccess] = useState(false)
   const [importNotification, setImportNotification] = useState<string | null>(null)
+
+  // Layer 232 Contacts States (Microphase 028)
+  const [closeFriends, setCloseFriends] = useState<string[]>([])
+  const [isUpdatingCloseFriends, setIsUpdatingCloseFriends] = useState(false)
+
+  const [phonesToDelete, setPhonesToDelete] = useState('')
+  const [isDeletingPhones, setIsDeletingPhones] = useState(false)
+  const [deletePhonesSuccess, setDeletePhonesSuccess] = useState<string | null>(null)
+
+  const [replyMsgId, setReplyMsgId] = useState('')
+  const [replyDeleteMessage, setReplyDeleteMessage] = useState(true)
+  const [replyDeleteHistory, setReplyDeleteHistory] = useState(false)
+  const [replyReportSpam, setReplyReportSpam] = useState(false)
+  const [isBlockingReplies, setIsBlockingReplies] = useState(false)
+  const [blockRepliesSuccess, setBlockRepliesSuccess] = useState<string | null>(null)
 
   const loadAll = () => {
     if (!isOpen || !accountId) return
@@ -184,7 +207,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
           newFirstName.trim(),
           newLastName.trim(),
           newPhone.trim(),
-          false,
+          addPhonePrivacyException,
           newNote.trim() || undefined
         )
       }
@@ -195,6 +218,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
         setNewLastName('')
         setNewPhone('')
         setNewNote('')
+        setAddPhonePrivacyException(false)
         setActiveTab('all')
         loadAll()
       }, 1200)
@@ -202,6 +226,108 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
       console.error('Failed to add contact:', err)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleCloseFriend = async (userId: string) => {
+    if (!accountId || !window.guidegram?.editCloseFriends) return
+    const nextList = closeFriends.includes(userId)
+      ? closeFriends.filter((id) => id !== userId)
+      : [...closeFriends, userId]
+
+    setIsUpdatingCloseFriends(true)
+    try {
+      const ok = await window.guidegram.editCloseFriends(accountId, nextList)
+      if (ok) {
+        setCloseFriends(nextList)
+      }
+    } catch (err) {
+      console.warn('Failed to edit close friends:', err)
+    } finally {
+      setIsUpdatingCloseFriends(false)
+    }
+  }
+
+  const handleAcceptContact = async (userId: string) => {
+    if (!accountId || !window.guidegram?.acceptContact) return
+    try {
+      await window.guidegram.acceptContact(accountId, userId)
+      loadAll()
+    } catch (err) {
+      console.warn('Failed to accept contact:', err)
+    }
+  }
+
+  const handleDeleteContact = async (userId: string) => {
+    if (!accountId || !window.guidegram?.deleteContacts) return
+    try {
+      const ok = await window.guidegram.deleteContacts(accountId, [userId])
+      if (ok) {
+        setContacts((prev) => prev.filter((c) => c.id !== userId))
+      }
+    } catch (err) {
+      console.warn('Failed to delete contact:', err)
+    }
+  }
+
+  const handleBlockContact = async (userId: string, myStoriesFrom = false) => {
+    if (!accountId || !window.guidegram?.blockContact) return
+    try {
+      await window.guidegram.blockContact(accountId, userId, myStoriesFrom)
+      loadAll()
+    } catch (err) {
+      console.warn('Failed to block contact:', err)
+    }
+  }
+
+  const handleDeleteByPhones = async () => {
+    if (!accountId || !phonesToDelete.trim() || !window.guidegram?.deleteByPhones) return
+    const phoneList = phonesToDelete
+      .split(/[\n,]+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    if (phoneList.length === 0) return
+
+    setIsDeletingPhones(true)
+    try {
+      const ok = await window.guidegram.deleteByPhones(accountId, phoneList)
+      if (ok) {
+        setDeletePhonesSuccess(`Deleted ${phoneList.length} phone numbers from cloud.`)
+        setPhonesToDelete('')
+        loadAll()
+        setTimeout(() => setDeletePhonesSuccess(null), 3000)
+      }
+    } catch (err) {
+      console.warn('Failed to delete contacts by phones:', err)
+    } finally {
+      setIsDeletingPhones(false)
+    }
+  }
+
+  const handleBlockFromReplies = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!accountId || !replyMsgId.trim() || !window.guidegram?.blockFromReplies) return
+    const msgIdNum = parseInt(replyMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) return
+
+    setIsBlockingReplies(true)
+    try {
+      const res = await window.guidegram.blockFromReplies(
+        accountId,
+        msgIdNum,
+        replyDeleteMessage,
+        replyDeleteHistory,
+        replyReportSpam
+      )
+      if (res) {
+        setBlockRepliesSuccess(`User blocked from replies for msg #${msgIdNum}`)
+        setReplyMsgId('')
+        setTimeout(() => setBlockRepliesSuccess(null), 3500)
+      }
+    } catch (err) {
+      console.warn('Failed to block from replies:', err)
+    } finally {
+      setIsBlockingReplies(false)
     }
   }
 
@@ -244,11 +370,13 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center border-b border-white/5 px-3 py-2 gap-1 bg-dark-900/50">
+        <div className="flex items-center border-b border-white/5 px-3 py-2 gap-1 bg-dark-900/50 overflow-x-auto scrollbar-none">
           {[
             { id: 'all' as const, label: `All (${contacts.length})`, icon: <Users className="w-3.5 h-3.5" /> },
-            { id: 'top' as const, label: 'Top Peers', icon: <Star className="w-3.5 h-3.5 text-amber-400" /> },
+            { id: 'close_friends' as const, label: `Close Friends (${closeFriends.length})`, icon: <Star className="w-3.5 h-3.5 text-emerald-400" /> },
+            { id: 'top' as const, label: 'Top', icon: <Sparkles className="w-3.5 h-3.5 text-amber-400" /> },
             { id: 'birthdays' as const, label: 'Birthdays', icon: <Cake className="w-3.5 h-3.5 text-rose-400" /> },
+            { id: 'tools' as const, label: 'Tools', icon: <Wrench className="w-3.5 h-3.5 text-purple-400" /> },
           ].map((tab) => {
             const isActive = activeTab === tab.id
             return (
@@ -256,7 +384,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                className={`relative px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
                   isActive ? 'text-accent-cyan font-bold' : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
@@ -277,7 +405,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('add')}
-            className={`ml-auto relative px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
+            className={`ml-auto relative px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer shrink-0 ${
               activeTab === 'add' ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'text-gray-400 hover:text-emerald-400'
             }`}
           >
@@ -353,6 +481,19 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
               />
             </div>
 
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="phonePrivacyException"
+                checked={addPhonePrivacyException}
+                onChange={(e) => setAddPhonePrivacyException(e.target.checked)}
+                className="w-4 h-4 rounded bg-dark-900 border border-white/20 text-accent-cyan focus:ring-0 cursor-pointer"
+              />
+              <label htmlFor="phonePrivacyException" className="text-[11px] text-gray-300 cursor-pointer select-none">
+                Share My Phone with Contact (Privacy Exception)
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={isSubmitting || addSuccess}
@@ -373,6 +514,157 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
               )}
             </button>
           </form>
+        ) : activeTab === 'close_friends' ? (
+          <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
+            {contacts.filter((c) => closeFriends.includes(c.id)).length === 0 ? (
+              <div className="p-8 text-center text-xs text-gray-400 space-y-2">
+                <Star className="w-8 h-8 text-emerald-400/50 mx-auto" />
+                <div className="font-semibold text-gray-300">No Close Friends Added Yet</div>
+                <div className="text-[11px] text-gray-500">
+                  Star contacts in the "All" tab to manage your close friends list for stories & privacy.
+                </div>
+              </div>
+            ) : (
+              contacts
+                .filter((c) => closeFriends.includes(c.id))
+                .map((c) => {
+                  const fullName = `${c.firstName} ${c.lastName || ''}`.trim() || 'Contact'
+                  return (
+                    <div
+                      key={`close-${c.id}`}
+                      className="px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar
+                          accountId={accountId}
+                          peerId={c.id}
+                          title={fullName}
+                          initials={fullName.charAt(0)}
+                          avatarUrl={c.avatarUrl}
+                          size="md"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-100 truncate flex items-center gap-1.5">
+                            <span>{fullName}</span>
+                            <span className="p-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                              <Star className="w-3 h-3 fill-emerald-400" />
+                            </span>
+                          </div>
+                          {c.username && <div className="text-[11px] text-accent-cyan font-mono">@{c.username}</div>}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCloseFriend(c.id)}
+                        disabled={isUpdatingCloseFriends}
+                        title="Remove from Close Friends"
+                        className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  )
+                })
+            )}
+          </div>
+        ) : activeTab === 'tools' ? (
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+            {/* Delete By Phones Section (contacts.deleteByPhones) */}
+            <div className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                <span>Bulk Delete by Phone Numbers</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Remove contacts from your Telegram account in bulk by entering phone numbers.
+              </p>
+              <textarea
+                value={phonesToDelete}
+                onChange={(e) => setPhonesToDelete(e.target.value)}
+                placeholder="+1234567890, +989123456789 (comma or line separated)"
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-rose-400 resize-none"
+              />
+              {deletePhonesSuccess && (
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{deletePhonesSuccess}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleDeleteByPhones}
+                disabled={isDeletingPhones || !phonesToDelete.trim()}
+                className="w-full py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                {isDeletingPhones ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Delete Numbers from Cloud</span>
+              </button>
+            </div>
+
+            {/* Block from Replies Section (contacts.blockFromReplies) */}
+            <form onSubmit={handleBlockFromReplies} className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                <Shield className="w-4 h-4 text-amber-400" />
+                <span>Block Sender from Replies</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Block a spammer from comment sections and replies by their discussion Message ID.
+              </p>
+              <input
+                type="number"
+                required
+                value={replyMsgId}
+                onChange={(e) => setReplyMsgId(e.target.value)}
+                placeholder="Discussion Message ID (e.g. 10452)"
+                className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+              />
+              <div className="space-y-1.5 pt-1">
+                <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={replyDeleteMessage}
+                    onChange={(e) => setReplyDeleteMessage(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded bg-dark-900 border border-white/20"
+                  />
+                  <span>Delete message</span>
+                </label>
+                <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={replyDeleteHistory}
+                    onChange={(e) => setReplyDeleteHistory(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded bg-dark-900 border border-white/20"
+                  />
+                  <span>Delete all user messages</span>
+                </label>
+                <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={replyReportSpam}
+                    onChange={(e) => setReplyReportSpam(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded bg-dark-900 border border-white/20"
+                  />
+                  <span>Report spam to Telegram</span>
+                </label>
+              </div>
+              {blockRepliesSuccess && (
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{blockRepliesSuccess}</span>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={isBlockingReplies || !replyMsgId.trim()}
+                className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                {isBlockingReplies ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
+                <span>Block from Replies</span>
+              </button>
+            </form>
+          </div>
         ) : activeTab === 'top' ? (
           <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
             {topPeers.length === 0 ? (
@@ -445,6 +737,7 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
               ) : (
                 filtered.map((c) => {
                   const fullName = `${c.firstName} ${c.lastName || ''}`.trim() || 'Contact'
+                  const isClose = closeFriends.includes(c.id)
                   return (
                     <div
                       key={c.id}
@@ -464,8 +757,13 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                           size="md"
                         />
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-100 truncate group-hover:text-accent-cyan transition-colors">
-                            {fullName}
+                          <div className="text-sm font-semibold text-gray-100 truncate group-hover:text-accent-cyan transition-colors flex items-center gap-1.5">
+                            <span>{fullName}</span>
+                            {isClose && (
+                              <span className="p-0.5 rounded-full bg-emerald-500/20 text-emerald-400" title="Close Friend">
+                                <Star className="w-3 h-3 fill-emerald-400" />
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-gray-400 flex items-center gap-2 mt-0.5 font-mono">
                             {c.phone && <span>{c.phone}</span>}
@@ -474,8 +772,58 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Action buttons: QR code & vCard */}
-                      <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                      {/* Action buttons: Close friend toggle, Accept, Block, Delete, QR code */}
+                      <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          title={isClose ? 'Remove from Close Friends' : 'Add to Close Friends'}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleCloseFriend(c.id)
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            isClose ? 'text-emerald-400 bg-emerald-500/15' : 'text-gray-400 hover:text-emerald-400 hover:bg-white/5'
+                          }`}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${isClose ? 'fill-emerald-400' : ''}`} />
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Accept Contact"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleAcceptContact(c.id)
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-accent-cyan hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Block Contact"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleBlockContact(c.id, true)
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-amber-400 hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <Shield className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Delete Contact"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteContact(c.id)
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
                         <button
                           type="button"
                           title="Share Contact QR & vCard"
@@ -483,9 +831,9 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                             e.stopPropagation()
                             setSelectedQrContact(c)
                           }}
-                          className="p-2 rounded-xl text-gray-400 hover:text-accent-cyan hover:bg-white/5 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-accent-cyan hover:bg-white/5 transition-colors cursor-pointer"
                         >
-                          <QrCode className="w-4 h-4" />
+                          <QrCode className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>

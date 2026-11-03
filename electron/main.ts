@@ -5841,7 +5841,72 @@ function setupIpcHandlers() {
         return false
       }
     }
-  )  // Full Profile & Privacy Settings IPC
+  )
+
+  ipcMain.handle('telegram:accept-contact', async (_event, { accountId, userId }) => {
+    try {
+      return await accountManager.acceptContact(accountId, userId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] acceptContact error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:block-contact', async (_event, { accountId, peerId, myStoriesFrom }) => {
+    try {
+      return await accountManager.blockContact(accountId, peerId, myStoriesFrom)
+    } catch (err: any) {
+      Logger.warn(`[IPC] blockContact error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:block-from-replies',
+    async (_event, { accountId, msgId, deleteMessage, deleteHistory, reportSpam }) => {
+      try {
+        return await accountManager.blockFromReplies(
+          accountId,
+          msgId,
+          deleteMessage,
+          deleteHistory,
+          reportSpam
+        )
+      } catch (err: any) {
+        Logger.warn(`[IPC] blockFromReplies error:`, err)
+        return null
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:delete-by-phones', async (_event, { accountId, phones }) => {
+    try {
+      return await accountManager.deleteByPhones(accountId, phones)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteByPhones error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:delete-contacts', async (_event, { accountId, userIds }) => {
+    try {
+      return await accountManager.deleteContacts(accountId, userIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] deleteContacts error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:edit-close-friends', async (_event, { accountId, userIds }) => {
+    try {
+      return await accountManager.editCloseFriends(accountId, userIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] editCloseFriends error:`, err)
+      return false
+    }
+  })
+
+  // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
       return await accountManager.getMyFullProfile(accountId)
