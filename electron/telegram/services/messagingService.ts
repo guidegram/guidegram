@@ -807,19 +807,19 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.searchGlobal',
-        'broadcasts_only': broadcastsOnly,
-        'groups_only': groupsOnly,
-        'users_only': usersOnly,
-        'folder_id': folderId,
-        'community': community,
-        'q': q,
-        'filter': filter,
-        'min_date': minDate,
-        'max_date': maxDate,
-        'offset_rate': offsetRate,
-        'offset_peer': offsetPeerId ? await this.resolveInputPeer(accountId, offsetPeerId) : undefined,
-        'offset_id': offsetId,
-        'limit': limit,
+        broadcastsOnly: Boolean(broadcastsOnly),
+        groupsOnly: Boolean(groupsOnly),
+        usersOnly: Boolean(usersOnly),
+        folderId: folderId !== undefined ? Number(folderId) : undefined,
+        community: community,
+        q: String(q || ''),
+        filter: filter || { _: 'inputMessagesFilterEmpty' },
+        minDate: minDate !== undefined ? Number(minDate) : 0,
+        maxDate: maxDate !== undefined ? Number(maxDate) : 0,
+        offsetRate: offsetRate !== undefined ? Number(offsetRate) : 0,
+        offsetPeer: offsetPeerId ? await this.resolveInputPeer(accountId, offsetPeerId) : { _: 'inputPeerEmpty' },
+        offsetId: offsetId !== undefined ? Number(offsetId) : 0,
+        limit: limit !== undefined ? Number(limit) : 20,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.searchGlobal error:', err)
@@ -1525,11 +1525,12 @@ export class MessagingService {
 
   public async searchStickerSets(holder: RpcClientHolder, excludeFeatured?: boolean, q?: string, hash?: bigint | number): Promise<any> {
     try {
+      const hVal = hash ? (Long.isLong(hash) ? hash : Long.fromValue(hash as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.searchStickerSets',
-        'exclude_featured': excludeFeatured,
-        'q': q,
-        'hash': hash,
+        excludeFeatured: Boolean(excludeFeatured),
+        q: String(q || ''),
+        hash: hVal,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.searchStickerSets error:', err)
@@ -2458,9 +2459,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.searchSentMedia',
-        'q': q,
-        'filter': filter,
-        'limit': limit,
+        q: String(q || ''),
+        filter: filter || { _: 'inputMessagesFilterEmpty' },
+        limit: limit !== undefined ? Number(limit) : 20,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.searchSentMedia error:', err)
@@ -2758,15 +2759,21 @@ export class MessagingService {
     }
   }
 
-  public async sendBotRequestedPeer(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, webappReqId?: string, buttonId?: number, requestedPeersId?: string): Promise<any> {
+  public async sendBotRequestedPeer(holder: RpcClientHolder, accountId: string, peerId: string, buttonId: number, requestedPeers: string[] | string, msgId?: number, webappReqId?: string): Promise<any> {
     try {
+      let peers: any[] = []
+      if (Array.isArray(requestedPeers)) {
+        peers = await Promise.all(requestedPeers.map(p => this.resolveInputPeer(accountId, p)))
+      } else if (requestedPeers) {
+        peers = [await this.resolveInputPeer(accountId, requestedPeers)]
+      }
       return await holder.client.call({
         _: 'messages.sendBotRequestedPeer',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'webapp_req_id': webappReqId,
-        'button_id': buttonId,
-        'requested_peers': requestedPeersId ? await this.resolveInputPeer(accountId, requestedPeersId) : undefined,
+        peer: await this.resolveInputPeer(accountId, peerId),
+        msgId: msgId !== undefined ? Number(msgId) : undefined,
+        webappReqId: webappReqId,
+        buttonId: Number(buttonId),
+        requestedPeers: peers,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendBotRequestedPeer error:', err)
@@ -2810,12 +2817,13 @@ export class MessagingService {
     }
   }
 
-  public async searchCustomEmoji(holder: RpcClientHolder, emoticon?: string, hash?: bigint | number): Promise<any> {
+  public async searchCustomEmoji(holder: RpcClientHolder, emoticon: string, hash?: bigint | number): Promise<any> {
     try {
+      const hVal = hash ? (Long.isLong(hash) ? hash : Long.fromValue(hash as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.searchCustomEmoji',
-        'emoticon': emoticon,
-        'hash': hash,
+        emoticon: String(emoticon || ''),
+        hash: hVal,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.searchCustomEmoji error:', err)
@@ -2899,11 +2907,12 @@ export class MessagingService {
 
   public async searchEmojiStickerSets(holder: RpcClientHolder, excludeFeatured?: boolean, q?: string, hash?: bigint | number): Promise<any> {
     try {
+      const hVal = hash ? (Long.isLong(hash) ? hash : Long.fromValue(hash as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.searchEmojiStickerSets',
-        'exclude_featured': excludeFeatured,
-        'q': q,
-        'hash': hash,
+        excludeFeatured: Boolean(excludeFeatured),
+        q: String(q || ''),
+        hash: hVal,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.searchEmojiStickerSets error:', err)
@@ -3419,17 +3428,24 @@ export class MessagingService {
     }
   }
 
-  public async searchStickers(holder: RpcClientHolder, emojis?: boolean, q?: string, emoticon?: string, langCode?: string, offset?: number, limit?: number, hash?: bigint | number): Promise<any> {
+  public async searchStickers(holder: RpcClientHolder, emojis?: boolean, q?: string, emoticon?: string, langCode?: string[] | string, offset?: number, limit?: number, hash?: bigint | number): Promise<any> {
     try {
+      const hVal = hash ? (Long.isLong(hash) ? hash : Long.fromValue(hash as any)) : Long.ZERO
+      let codes: string[] = []
+      if (Array.isArray(langCode)) {
+        codes = langCode
+      } else if (langCode) {
+        codes = [langCode]
+      }
       return await holder.client.call({
         _: 'messages.searchStickers',
-        'emojis': emojis,
-        'q': q,
-        'emoticon': emoticon,
-        'lang_code': langCode,
-        'offset': offset,
-        'limit': limit,
-        'hash': hash,
+        emojis: Boolean(emojis),
+        q: String(q || ''),
+        emoticon: String(emoticon || ''),
+        langCode: codes,
+        offset: offset !== undefined ? Number(offset) : 0,
+        limit: limit !== undefined ? Number(limit) : 20,
+        hash: hVal,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.searchStickers error:', err)

@@ -20119,6 +20119,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.search(holder as any, accountId, params.peerId, params.q, params.fromId, params.savedPeerId, params.savedReaction, params.topMsgId, params.filter, params.minDate, params.maxDate, params.offsetId, params.addOffset, params.limit, params.maxId, params.minId, params.hash)
   }
+
+  // Layer 232 Messages Suite (Microphase 061)
+  public async searchCustomEmojiRaw(accountId: string, params: { emoticon: string; hash?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchCustomEmoji(holder as any, params.emoticon, params.hash)
+  }
+
+  public async searchEmojiStickerSetsRaw(accountId: string, params: { excludeFeatured?: boolean; q?: string; hash?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchEmojiStickerSets(holder as any, params.excludeFeatured, params.q, params.hash)
+  }
+
+  public async searchGlobalRaw(accountId: string, params: { broadcastsOnly?: boolean; groupsOnly?: boolean; usersOnly?: boolean; folderId?: number; community?: any; q?: string; filter?: any; minDate?: number; maxDate?: number; offsetRate?: number; offsetPeerId?: string; offsetId?: number; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchGlobal(holder as any, accountId, params.broadcastsOnly, params.groupsOnly, params.usersOnly, params.folderId, params.community, params.q, params.filter, params.minDate, params.maxDate, params.offsetRate, params.offsetPeerId, params.offsetId, params.limit)
+  }
+
+  public async searchSentMediaRaw(accountId: string, params: { q?: string; filter?: any; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchSentMedia(holder as any, params.q, params.filter, params.limit)
+  }
+
+  public async searchStickerSetsRaw(accountId: string, params: { excludeFeatured?: boolean; q?: string; hash?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchStickerSets(holder as any, params.excludeFeatured, params.q, params.hash)
+  }
+
+  public async searchStickersRaw(accountId: string, params: { emojis?: boolean; q?: string; emoticon?: string; langCode?: string[] | string; offset?: number; limit?: number; hash?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.searchStickers(holder as any, params.emojis, params.q, params.emoticon, params.langCode, params.offset, params.limit, params.hash)
+  }
+
+  public async sendBotRequestedPeerRaw(accountId: string, params: { peerId: string; buttonId: number; requestedPeers: string[] | string; msgId?: number; webappReqId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendBotRequestedPeer(holder as any, accountId, params.peerId, params.buttonId, params.requestedPeers, params.msgId, params.webappReqId)
+  }
 }
 
 

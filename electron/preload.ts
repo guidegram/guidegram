@@ -2543,6 +2543,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:save-recent-sticker-raw', { accountId, ...params }),
   searchMessagesRaw: (accountId: string, params: { peerId?: string; q?: string; fromId?: string; savedPeerId?: string; savedReaction?: any; topMsgId?: number; filter?: any; minDate?: number; maxDate?: number; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: bigint | number }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:search-messages-raw', { accountId, ...params }),
+  searchCustomEmojiRaw: (accountId: string, params: { emoticon: string; hash?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-custom-emoji-raw', { accountId, ...params }),
+  searchEmojiStickerSetsRaw: (accountId: string, params: { excludeFeatured?: boolean; q?: string; hash?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-emoji-sticker-sets-raw', { accountId, ...params }),
+  searchGlobalRaw: (accountId: string, params: { broadcastsOnly?: boolean; groupsOnly?: boolean; usersOnly?: boolean; folderId?: number; community?: any; q?: string; filter?: any; minDate?: number; maxDate?: number; offsetRate?: number; offsetPeerId?: string; offsetId?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-global-raw', { accountId, ...params }),
+  searchSentMediaRaw: (accountId: string, params: { q?: string; filter?: any; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-sent-media-raw', { accountId, ...params }),
+  searchStickerSetsRaw: (accountId: string, params: { excludeFeatured?: boolean; q?: string; hash?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-sticker-sets-raw', { accountId, ...params }),
+  searchStickersRaw: (accountId: string, params: { emojis?: boolean; q?: string; emoticon?: string; langCode?: string[] | string; offset?: number; limit?: number; hash?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-stickers-raw', { accountId, ...params }),
+  sendBotRequestedPeerRaw: (accountId: string, params: { peerId: string; buttonId: number; requestedPeers: string[] | string; msgId?: number; webappReqId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-bot-requested-peer-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

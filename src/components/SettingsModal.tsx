@@ -5608,6 +5608,193 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 061 State & Handlers (Messages Domain Part 29 - Layer 232)
+  const [m061Status, setM061Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m061LoadingOp, setM061LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.searchCustomEmoji
+  const [m061CustomEmojiChar, setM061CustomEmojiChar] = useState('')
+
+  // 2. messages.searchEmojiStickerSets
+  const [m061EmojiSetQuery, setM061EmojiSetQuery] = useState('')
+
+  // 3. messages.searchGlobal
+  const [m061GlobalQuery, setM061GlobalQuery] = useState('')
+
+  // 4. messages.searchSentMedia
+  const [m061SentMediaQuery, setM061SentMediaQuery] = useState('')
+
+  // 5. messages.searchStickerSets
+  const [m061StickerSetQuery, setM061StickerSetQuery] = useState('')
+
+  // 6. messages.searchStickers
+  const [m061StickersQuery, setM061StickersQuery] = useState('')
+  const [m061StickersEmoticon, setM061StickersEmoticon] = useState('')
+
+  // 7. messages.sendBotRequestedPeer
+  const [m061BotPeer, setM061BotPeer] = useState('')
+  const [m061ButtonId, setM061ButtonId] = useState('')
+  const [m061RequestedPeers, setM061RequestedPeers] = useState('')
+
+  const handleM061SearchCustomEmoji = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchCustomEmojiRaw) return
+    if (!m061CustomEmojiChar.trim()) {
+      setM061Status({ type: 'error', message: 'ایموجی پایه (مانند 👍) الزامی است' })
+      return
+    }
+    setM061LoadingOp('searchCustomEmoji')
+    setM061Status(null)
+    try {
+      const res = await window.guidegram.searchCustomEmojiRaw(targetId, {
+        emoticon: m061CustomEmojiChar.trim(),
+      })
+      const count = res?.documentId?.length || (Array.isArray(res) ? res.length : 0)
+      setM061Status({ type: 'success', message: `ایموجی‌های سفارشی یافت شدند (${count} مورد)` })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در جستجوی ایموجی سفارشی' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
+  const handleM061SearchEmojiStickerSets = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchEmojiStickerSetsRaw) return
+    if (!m061EmojiSetQuery.trim()) {
+      setM061Status({ type: 'error', message: 'عبارت جستجوی پک ایموجی الزامی است' })
+      return
+    }
+    setM061LoadingOp('searchEmojiStickerSets')
+    setM061Status(null)
+    try {
+      const res = await window.guidegram.searchEmojiStickerSetsRaw(targetId, {
+        q: m061EmojiSetQuery.trim(),
+      })
+      const count = res?.sets?.length || 0
+      setM061Status({ type: 'success', message: `پک‌های استیکر ایموجی دریافت شدند (${count} پک)` })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در جستجوی پک ایموجی' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
+  const handleM061SearchGlobal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchGlobalRaw) return
+    if (!m061GlobalQuery.trim()) {
+      setM061Status({ type: 'error', message: 'کلمه کلیدی جستجوی سراسری الزامی است' })
+      return
+    }
+    setM061LoadingOp('searchGlobal')
+    setM061Status(null)
+    try {
+      const res = await window.guidegram.searchGlobalRaw(targetId, {
+        q: m061GlobalQuery.trim(),
+        limit: 15,
+      })
+      const count = res?.messages?.length || res?.count || 0
+      setM061Status({ type: 'success', message: `جستجوی سراسری تلگرام انجام شد: ${count} پیام یافت شد` })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در جستجوی سراسری' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
+  const handleM061SearchSentMedia = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchSentMediaRaw) return
+    setM061LoadingOp('searchSentMedia')
+    setM061Status(null)
+    try {
+      const res = await window.guidegram.searchSentMediaRaw(targetId, {
+        q: m061SentMediaQuery.trim() || undefined,
+        limit: 15,
+      })
+      const count = res?.messages?.length || res?.count || 0
+      setM061Status({ type: 'success', message: `رسانه‌های ارسالی پیدا شدند: ${count} مورد` })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در جستجوی رسانه‌های ارسالی' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
+  const handleM061SearchStickerSets = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchStickerSetsRaw) return
+    if (!m061StickerSetQuery.trim()) {
+      setM061Status({ type: 'error', message: 'نام یا کلیدواژه پک استیکر الزامی است' })
+      return
+    }
+    setM061LoadingOp('searchStickerSets')
+    setM061Status(null)
+    try {
+      const res = await window.guidegram.searchStickerSetsRaw(targetId, {
+        q: m061StickerSetQuery.trim(),
+      })
+      const count = res?.sets?.length || 0
+      setM061Status({ type: 'success', message: `پک‌های استیکر همگانی دریافت شدند (${count} پک)` })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در سرچ پک‌های استیکر' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
+  const handleM061SearchStickers = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchStickersRaw) return
+    setM061LoadingOp('searchStickers')
+    setM061Status(null)
+    try {
+      const res = await window.guidegram.searchStickersRaw(targetId, {
+        q: m061StickersQuery.trim() || undefined,
+        emoticon: m061StickersEmoticon.trim() || undefined,
+        limit: 20,
+      })
+      const count = res?.stickers?.length || 0
+      setM061Status({ type: 'success', message: `استیکرهای مستقل با موفقیت سرچ شدند (${count} استیکر)` })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در جستجوی استیکرها' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
+  const handleM061SendBotRequestedPeer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendBotRequestedPeerRaw) return
+    if (!m061BotPeer.trim() || !m061ButtonId.trim() || !m061RequestedPeers.trim()) {
+      setM061Status({ type: 'error', message: 'شناسه ربات، شناسه دکمه (Button ID) و شناسه کاربر/گروه انتخابی الزامی است' })
+      return
+    }
+    setM061LoadingOp('sendBotRequestedPeer')
+    setM061Status(null)
+    try {
+      const peers = m061RequestedPeers.split(',').map(s => s.trim()).filter(Boolean)
+      await window.guidegram.sendBotRequestedPeerRaw(targetId, {
+        peerId: m061BotPeer.trim(),
+        buttonId: Number(m061ButtonId.trim()),
+        requestedPeers: peers,
+      })
+      setM061Status({ type: 'success', message: 'گفتگوی درخواستی ربات با موفقیت به ربات تحویل داده شد' })
+    } catch (err: any) {
+      setM061Status({ type: 'error', message: err?.message || 'خطا در ارسال گفتگوی درخواستی به ربات' })
+    } finally {
+      setM061LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -14798,6 +14985,264 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m060LoadingOp === 'search' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'جستجو'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 061: Messages Domain Suite Part 29 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۱: جستجوی پیشرفته استیکر، ایموجی و تحویل گفتگوی ربات (Messages Suite Part 29)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-violet-400/80 font-mono px-2 py-0.5 rounded-full bg-violet-400/10 border border-violet-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    سرچ سراسری، ایموجی سفارشی، پک‌های استیکر، مدیاهای ارسالی و دکمه انتخاب چت ربات:
+                    <span className="text-gray-300 font-mono mr-1">
+                      searchCustomEmoji, searchEmojiStickerSets, searchGlobal, searchSentMedia, searchStickerSets, searchStickers, sendBotRequestedPeer
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m061Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m061Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m061Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m061Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM061Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.searchCustomEmoji */}
+                    <form
+                      onSubmit={handleM061SearchCustomEmoji}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. سرچ ایموجی سفارشی با کاراکتر (searchCustomEmoji)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061CustomEmojiChar}
+                          onChange={(e) => setM061CustomEmojiChar(e.target.value)}
+                          placeholder="کاراکتر ایموجی (مثل 👍 یا ❤️)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'searchCustomEmoji'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'searchCustomEmoji' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'جستجو'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.searchEmojiStickerSets */}
+                    <form
+                      onSubmit={handleM061SearchEmojiStickerSets}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. سرچ پک‌های ایموجی متحرک (searchEmojiStickerSets)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061EmojiSetQuery}
+                          onChange={(e) => setM061EmojiSetQuery(e.target.value)}
+                          placeholder="کلمه کلیدی پک ایموجی..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'searchEmojiStickerSets'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'searchEmojiStickerSets' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'یافتن'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.searchGlobal */}
+                    <form
+                      onSubmit={handleM061SearchGlobal}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. جستجوی سراسری پیام‌های تلگرام (searchGlobal)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061GlobalQuery}
+                          onChange={(e) => setM061GlobalQuery(e.target.value)}
+                          placeholder="جستجو در کل تلگرام..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'searchGlobal'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'searchGlobal' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'سرچ کلی'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.searchSentMedia */}
+                    <form
+                      onSubmit={handleM061SearchSentMedia}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. سرچ رسانه‌های ارسالی اخیر (searchSentMedia)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061SentMediaQuery}
+                          onChange={(e) => setM061SentMediaQuery(e.target.value)}
+                          placeholder="فیلتر اختیاری متن رسانه..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'searchSentMedia'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'searchSentMedia' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'فهرست'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.searchStickerSets */}
+                    <form
+                      onSubmit={handleM061SearchStickerSets}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. سرچ همگانی پک استیکر (searchStickerSets)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061StickerSetQuery}
+                          onChange={(e) => setM061StickerSetQuery(e.target.value)}
+                          placeholder="کلمه جستجوی پک استیکر..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'searchStickerSets'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'searchStickerSets' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'پک‌ها'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.searchStickers */}
+                    <form
+                      onSubmit={handleM061SearchStickers}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. سرچ استیکرهای مجزا (searchStickers)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061StickersQuery}
+                          onChange={(e) => setM061StickersQuery(e.target.value)}
+                          placeholder="متن جستجو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m061StickersEmoticon}
+                          onChange={(e) => setM061StickersEmoticon(e.target.value)}
+                          placeholder="ایموجی"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'searchStickers'}
+                          className="px-4 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'searchStickers' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'یافتن'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.sendBotRequestedPeer */}
+                    <form
+                      onSubmit={handleM061SendBotRequestedPeer}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. ارسال گفتگوی درخواستی به ربات (sendBotRequestedPeer)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m061BotPeer}
+                          onChange={(e) => setM061BotPeer(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم ربات"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m061ButtonId}
+                          onChange={(e) => setM061ButtonId(e.target.value)}
+                          placeholder="Button ID"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m061RequestedPeers}
+                          onChange={(e) => setM061RequestedPeers(e.target.value)}
+                          placeholder="شناسه‌های انتخاب‌شده (با ویرگول)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m061LoadingOp === 'sendBotRequestedPeer'}
+                          className="px-5 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m061LoadingOp === 'sendBotRequestedPeer' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تحویل به ربات'}
                         </button>
                       </div>
                     </form>

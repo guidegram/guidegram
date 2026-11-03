@@ -7754,6 +7754,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 061 IPC Handlers
+  ipcMain.handle('telegram:messages:search-custom-emoji-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchCustomEmojiRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchCustomEmojiRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:search-emoji-sticker-sets-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchEmojiStickerSetsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchEmojiStickerSetsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:search-global-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchGlobalRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchGlobalRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:search-sent-media-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchSentMediaRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchSentMediaRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:search-sticker-sets-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchStickerSetsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchStickerSetsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:search-stickers-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchStickersRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchStickersRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:send-bot-requested-peer-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendBotRequestedPeerRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendBotRequestedPeerRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
