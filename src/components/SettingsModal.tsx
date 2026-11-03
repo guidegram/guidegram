@@ -46,6 +46,7 @@ import {
   Radio,
   Volume2,
   Folder,
+  FileText,
   Type,
   Keyboard,
   Lock,
@@ -430,6 +431,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [useMonochromeIcon, setUseMonochromeIcon] = useState(true)
   const [launchAtStartup, setLaunchAtStartup] = useState(true)
   const [launchMinimized, setLaunchMinimized] = useState(false)
+
+  // Layer 232 Messages Suite State (Microphase 033)
+  // messages.checkChatInvite
+  const [inviteLinkInput, setInviteLinkInput] = useState('')
+  const [isCheckingInvite, setIsCheckingInvite] = useState(false)
+  const [inviteResult, setInviteResult] = useState<any | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+
+  // messages.checkHistoryImport
+  const [historyImportHead, setHistoryImportHead] = useState('')
+  const [isCheckingHistoryImport, setIsCheckingHistoryImport] = useState(false)
+  const [historyImportResult, setHistoryImportResult] = useState<any | null>(null)
+  const [historyImportError, setHistoryImportError] = useState<string | null>(null)
+
+  // messages.acceptUrlAuth
+  const [urlAuthUrl, setUrlAuthUrl] = useState('')
+  const [urlAuthWriteAllowed, setUrlAuthWriteAllowed] = useState(true)
+  const [isAcceptingUrlAuth, setIsAcceptingUrlAuth] = useState(false)
+  const [urlAuthResult, setUrlAuthResult] = useState<any | null>(null)
+  const [urlAuthError, setUrlAuthError] = useState<string | null>(null)
+
+  // messages.addChatUser
+  const [addChatId, setAddChatId] = useState('')
+  const [addChatUserId, setAddChatUserId] = useState('')
+  const [addChatFwdLimit, setAddChatFwdLimit] = useState(100)
+  const [isAddingChatUser, setIsAddingChatUser] = useState(false)
+  const [addChatUserSuccess, setAddChatUserSuccess] = useState<string | null>(null)
+  const [addChatUserError, setAddChatUserError] = useState<string | null>(null)
+
+  // messages.addPollAnswer
+  const [pollPeerId, setPollPeerId] = useState('')
+  const [pollMsgId, setPollMsgId] = useState('')
+  const [pollOptionText, setPollOptionText] = useState('')
+  const [isAddingPollAnswer, setIsAddingPollAnswer] = useState(false)
+  const [pollAnswerSuccess, setPollAnswerSuccess] = useState<string | null>(null)
+  const [pollAnswerError, setPollAnswerError] = useState<string | null>(null)
+
+  // messages.appendTodoList
+  const [todoPeerId, setTodoPeerId] = useState('')
+  const [todoMsgId, setTodoMsgId] = useState('')
+  const [todoText, setTodoText] = useState('')
+  const [isAppendingTodo, setIsAppendingTodo] = useState(false)
+  const [todoSuccess, setTodoSuccess] = useState<string | null>(null)
+  const [todoError, setTodoError] = useState<string | null>(null)
 
   // Chat Theme & Appearance Settings (Official Telegram Parity - Screenshot 5)
   const [activeTheme, setActiveTheme] = useState<'classic' | 'day' | 'tinted' | 'night'>('tinted')
@@ -885,10 +930,169 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Layer 232 Messages Handlers (Microphase 033)
+  const handleCheckChatInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !inviteLinkInput.trim() || !window.guidegram?.checkChatInvite) return
+    setIsCheckingInvite(true)
+    setInviteResult(null)
+    setInviteError(null)
+    try {
+      const raw = inviteLinkInput.trim()
+      const match = raw.match(/(?:t\.me\/(?:\+|joinchat\/))([a-zA-Z0-9_-]+)/)
+      const cleanHash = match ? match[1] : raw.replace(/^\+/, '')
+      const res = await window.guidegram.checkChatInvite(targetId, cleanHash)
+      if (res) {
+        setInviteResult(res)
+      } else {
+        setInviteError('No response received or invalid invite link.')
+      }
+    } catch (err: any) {
+      setInviteError(err?.message || 'Failed to inspect chat invite link.')
+    } finally {
+      setIsCheckingInvite(false)
+    }
+  }
 
+  const handleCheckHistoryImport = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !historyImportHead.trim() || !window.guidegram?.checkHistoryImport) return
+    setIsCheckingHistoryImport(true)
+    setHistoryImportResult(null)
+    setHistoryImportError(null)
+    try {
+      const res = await window.guidegram.checkHistoryImport(targetId, historyImportHead.trim())
+      if (res) {
+        setHistoryImportResult(res)
+      } else {
+        setHistoryImportError('Unable to parse history export header.')
+      }
+    } catch (err: any) {
+      setHistoryImportError(err?.message || 'Failed to check chat history import.')
+    } finally {
+      setIsCheckingHistoryImport(false)
+    }
+  }
 
+  const handleAcceptUrlAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !urlAuthUrl.trim() || !window.guidegram?.acceptUrlAuth) return
+    setIsAcceptingUrlAuth(true)
+    setUrlAuthResult(null)
+    setUrlAuthError(null)
+    try {
+      const res = await window.guidegram.acceptUrlAuth(targetId, {
+        url: urlAuthUrl.trim(),
+        writeAllowed: urlAuthWriteAllowed,
+      })
+      if (res) {
+        setUrlAuthResult(res)
+        showToast('Web authentication approved.')
+      } else {
+        setUrlAuthError('Authentication not accepted by Telegram.')
+      }
+    } catch (err: any) {
+      setUrlAuthError(err?.message || 'Web auth failed.')
+    } finally {
+      setIsAcceptingUrlAuth(false)
+    }
+  }
 
+  const handleAddChatUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !addChatId.trim() || !addChatUserId.trim() || !window.guidegram?.addChatUser) return
+    setIsAddingChatUser(true)
+    setAddChatUserSuccess(null)
+    setAddChatUserError(null)
+    try {
+      const res = await window.guidegram.addChatUser(
+        targetId,
+        BigInt(addChatId.trim()),
+        addChatUserId.trim(),
+        Number(addChatFwdLimit) || 100
+      )
+      if (res) {
+        setAddChatUserSuccess(`User added to chat successfully (fwd_limit: ${addChatFwdLimit}).`)
+        showToast('Chat user added.')
+      } else {
+        setAddChatUserError('Failed to add user. Ensure user exists and chat is valid.')
+      }
+    } catch (err: any) {
+      setAddChatUserError(err?.message || 'Failed to add chat user.')
+    } finally {
+      setIsAddingChatUser(false)
+    }
+  }
 
+  const handleAddPollAnswer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !pollPeerId.trim() || !pollMsgId.trim() || !pollOptionText.trim() || !window.guidegram?.addPollAnswer) return
+    setIsAddingPollAnswer(true)
+    setPollAnswerSuccess(null)
+    setPollAnswerError(null)
+    try {
+      const answerPayload = {
+        _: 'pollAnswer',
+        text: { _: 'textWithEntities', text: pollOptionText.trim(), entities: [] },
+        option: [48],
+      }
+      const res = await window.guidegram.addPollAnswer(
+        targetId,
+        pollPeerId.trim(),
+        Number(pollMsgId.trim()),
+        answerPayload
+      )
+      if (res) {
+        setPollAnswerSuccess('Poll answer/option submitted to Telegram.')
+        showToast('Poll vote/answer recorded.')
+      } else {
+        setPollAnswerError('Could not record poll answer.')
+      }
+    } catch (err: any) {
+      setPollAnswerError(err?.message || 'Failed to submit poll answer.')
+    } finally {
+      setIsAddingPollAnswer(false)
+    }
+  }
+
+  const handleAppendTodoList = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !todoPeerId.trim() || !todoMsgId.trim() || !todoText.trim() || !window.guidegram?.appendTodoList) return
+    setIsAppendingTodo(true)
+    setTodoSuccess(null)
+    setTodoError(null)
+    try {
+      const todoItems = [
+        {
+          _: 'todoItem',
+          id: Math.floor(Math.random() * 10000) + 1,
+          title: { _: 'textWithEntities', text: todoText.trim(), entities: [] },
+        },
+      ]
+      const res = await window.guidegram.appendTodoList(
+        targetId,
+        todoPeerId.trim(),
+        Number(todoMsgId.trim()),
+        todoItems
+      )
+      if (res) {
+        setTodoSuccess('Todo item appended to cloud task list.')
+        showToast('Todo item appended.')
+      } else {
+        setTodoError('Failed to append item to todo list.')
+      }
+    } catch (err: any) {
+      setTodoError(err?.message || 'Failed to append todo item.')
+    } finally {
+      setIsAppendingTodo(false)
+    }
+  }
 
   const openPrivacyRule = (
     key: keyof PrivacySecuritySettings,
@@ -3874,6 +4078,305 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       View Shortcuts
                     </button>
+                  </div>
+
+                  {/* Layer 232 Messages Suite (Microphase 033): Invite Links, History Import, Web Auth & Chat Operations */}
+                  <div className="pt-4 border-t border-white/5 space-y-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-accent-cyan uppercase tracking-wider">
+                      <Sparkles className="w-4 h-4 text-accent-cyan" />
+                      <span>Messaging Core Suite (MTProto Layer 232)</span>
+                    </div>
+
+                    {/* 1. Chat Invite Link Inspector (messages.checkChatInvite) */}
+                    <form onSubmit={handleCheckChatInvite} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <Link2 className="w-4 h-4 text-emerald-400" />
+                          <span>Invite Link Inspector (checkChatInvite)</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        Inspects private group or channel invite hashes and previews metadata before joining.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={inviteLinkInput}
+                          onChange={(e) => setInviteLinkInput(e.target.value)}
+                          placeholder="https://t.me/+AbCdEfGh or raw hash"
+                          className="flex-1 px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isCheckingInvite || !inviteLinkInput.trim()}
+                          className="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                        >
+                          {isCheckingInvite ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                          <span>Inspect</span>
+                        </button>
+                      </div>
+                      {inviteError && (
+                        <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{inviteError}</span>
+                        </div>
+                      )}
+                      {inviteResult && (
+                        <div className="p-3 rounded-xl bg-dark-900 border border-emerald-500/30 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-emerald-300">{inviteResult.title || inviteResult.chat?.title || 'Private Group / Channel'}</span>
+                            <span className="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                              {inviteResult._ === 'chatInviteAlready' ? 'ALREADY A MEMBER' : 'VALID INVITE'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-gray-400">
+                            {inviteResult.about || inviteResult.chat?.about || 'No description provided.'}
+                          </div>
+                          <div className="text-[10px] text-gray-500 font-mono">
+                            Participants: {inviteResult.participantsCount || inviteResult.participants_count || inviteResult.chat?.participantsCount || 'N/A'}
+                          </div>
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. Chat History Import Checker (messages.checkHistoryImport) */}
+                    <form onSubmit={handleCheckHistoryImport} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <FileText className="w-4 h-4 text-purple-400" />
+                          <span>Chat History Import Inspector (checkHistoryImport)</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        Validates the initial lines of an exported chat file (WhatsApp, Line, Kakao) for cloud history migration.
+                      </p>
+                      <textarea
+                        value={historyImportHead}
+                        onChange={(e) => setHistoryImportHead(e.target.value)}
+                        placeholder="Paste first few lines of exported chat log (e.g. [12/24/22, 10:14:22] Alex: Hello...)"
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-purple-400 resize-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isCheckingHistoryImport || !historyImportHead.trim()}
+                        className="w-full py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        {isCheckingHistoryImport ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        <span>Parse & Validate Export Header</span>
+                      </button>
+                      {historyImportError && (
+                        <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{historyImportError}</span>
+                        </div>
+                      )}
+                      {historyImportResult && (
+                        <div className="p-3 rounded-xl bg-dark-900 border border-purple-500/30 space-y-1 text-xs">
+                          <div className="font-semibold text-purple-300">Migration Header Accepted:</div>
+                          <div className="text-[11px] text-gray-300 font-mono">
+                            Title: {historyImportResult.title || 'Recognized Chat'}
+                          </div>
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. Web & Bot URL Auth Approver (messages.acceptUrlAuth) */}
+                    <form onSubmit={handleAcceptUrlAuth} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <ExternalLink className="w-4 h-4 text-cyan-400" />
+                          <span>Web Session & Bot Login (acceptUrlAuth)</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        Authorize web login callbacks and mini app authentications directly through native MTProto protocol.
+                      </p>
+                      <input
+                        type="url"
+                        value={urlAuthUrl}
+                        onChange={(e) => setUrlAuthUrl(e.target.value)}
+                        placeholder="https://oauth.telegram.org/auth?bot_id=... or target login URL"
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                      />
+                      <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={urlAuthWriteAllowed}
+                          onChange={(e) => setUrlAuthWriteAllowed(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded bg-dark-900 border border-white/20"
+                        />
+                        <span>Allow bot to send direct messages (write_allowed)</span>
+                      </label>
+                      <button
+                        type="submit"
+                        disabled={isAcceptingUrlAuth || !urlAuthUrl.trim()}
+                        className="w-full py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        {isAcceptingUrlAuth ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        <span>Approve URL Authentication</span>
+                      </button>
+                      {urlAuthError && (
+                        <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{urlAuthError}</span>
+                        </div>
+                      )}
+                      {urlAuthResult && (
+                        <div className="p-3 rounded-xl bg-dark-900 border border-cyan-500/30 text-xs text-cyan-300">
+                          Auth Granted: {urlAuthResult.url || 'Session established.'}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 4. Group Chat Member Provisioner (messages.addChatUser) */}
+                    <form onSubmit={handleAddChatUser} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <UserPlus className="w-4 h-4 text-amber-400" />
+                          <span>Add User to Chat with Forward Limit (addChatUser)</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        Adds a participant to a standard Telegram group chat specifying previous message forward history limit.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          required
+                          value={addChatId}
+                          onChange={(e) => setAddChatId(e.target.value)}
+                          placeholder="Chat ID (e.g. 123456)"
+                          className="px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                        />
+                        <input
+                          type="text"
+                          required
+                          value={addChatUserId}
+                          onChange={(e) => setAddChatUserId(e.target.value)}
+                          placeholder="User ID or Phone"
+                          className="px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                        />
+                        <input
+                          type="number"
+                          value={addChatFwdLimit}
+                          onChange={(e) => setAddChatFwdLimit(Number(e.target.value) || 0)}
+                          placeholder="Fwd Limit (e.g. 100)"
+                          className="px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isAddingChatUser || !addChatId.trim() || !addChatUserId.trim()}
+                        className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        {isAddingChatUser ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                        <span>Add Participant</span>
+                      </button>
+                      {addChatUserError && (
+                        <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{addChatUserError}</span>
+                        </div>
+                      )}
+                      {addChatUserSuccess && (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                          <Check className="w-4 h-4 shrink-0" />
+                          <span>{addChatUserSuccess}</span>
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 5. Interactive Poll Answer & Todo Appender */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Poll Answer Submitter */}
+                      <form onSubmit={handleAddPollAnswer} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <CheckSquare className="w-4 h-4 text-emerald-400" />
+                          <span>Poll Answer Submitter</span>
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={pollPeerId}
+                          onChange={(e) => setPollPeerId(e.target.value)}
+                          placeholder="Peer ID / Username"
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            required
+                            value={pollMsgId}
+                            onChange={(e) => setPollMsgId(e.target.value)}
+                            placeholder="Message ID"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+                          />
+                          <input
+                            type="text"
+                            required
+                            value={pollOptionText}
+                            onChange={(e) => setPollOptionText(e.target.value)}
+                            placeholder="Option text"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-400"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isAddingPollAnswer || !pollPeerId.trim() || !pollMsgId.trim()}
+                          className="w-full py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                        >
+                          {isAddingPollAnswer ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          <span>Submit Poll Answer</span>
+                        </button>
+                        {pollAnswerSuccess && <div className="text-[11px] text-emerald-400">{pollAnswerSuccess}</div>}
+                        {pollAnswerError && <div className="text-[11px] text-rose-400">{pollAnswerError}</div>}
+                      </form>
+
+                      {/* Todo List Appender */}
+                      <form onSubmit={handleAppendTodoList} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <Plus className="w-4 h-4 text-purple-400" />
+                          <span>Task / Todo Appender</span>
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={todoPeerId}
+                          onChange={(e) => setTodoPeerId(e.target.value)}
+                          placeholder="Peer ID / Username"
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-purple-400"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            required
+                            value={todoMsgId}
+                            onChange={(e) => setTodoMsgId(e.target.value)}
+                            placeholder="Message ID"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-purple-400"
+                          />
+                          <input
+                            type="text"
+                            required
+                            value={todoText}
+                            onChange={(e) => setTodoText(e.target.value)}
+                            placeholder="New Task item"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white focus:outline-none focus:border-purple-400"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isAppendingTodo || !todoPeerId.trim() || !todoMsgId.trim()}
+                          className="w-full py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                        >
+                          {isAppendingTodo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          <span>Append Task Item</span>
+                        </button>
+                        {todoSuccess && <div className="text-[11px] text-emerald-400">{todoSuccess}</div>}
+                        {todoError && <div className="text-[11px] text-rose-400">{todoError}</div>}
+                      </form>
+                    </div>
                   </div>
                 </div>
               </div>

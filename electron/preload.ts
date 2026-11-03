@@ -2169,6 +2169,19 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:set-blocked', { accountId, id, myStoriesFrom }),
   toggleTopPeers: (accountId: string, enabled: boolean): Promise<boolean> =>
     ipcRenderer.invoke('telegram:toggle-top-peers', { accountId, enabled }),
+  // Layer 232 Messages Suite (Microphase 033)
+  addChatUser: (accountId: string, chatId: bigint | number, userId: string, fwdLimit?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:add-chat-user', { accountId, chatId, userId, fwdLimit }),
+  checkChatInvite: (accountId: string, hash: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:check-chat-invite', { accountId, hash }),
+  acceptUrlAuth: (accountId: string, options: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:accept-url-auth', { accountId, options }),
+  checkHistoryImport: (accountId: string, importHead: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:check-history-import', { accountId, importHead }),
+  appendTodoList: (accountId: string, peerId: string, msgId: number, list: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:append-todo-list', { accountId, peerId, msgId, list }),
+  addPollAnswer: (accountId: string, peerId: string, msgId: number, answer: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:add-poll-answer', { accountId, peerId, msgId, answer }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

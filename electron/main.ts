@@ -6056,6 +6056,61 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite IPC Handlers (Microphase 033)
+  ipcMain.handle('telegram:messages:add-chat-user', async (_event, { accountId, chatId, userId, fwdLimit }) => {
+    try {
+      return await accountManager.addChatUser(accountId, chatId, userId, fwdLimit)
+    } catch (err: any) {
+      Logger.warn('[IPC] addChatUser error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:check-chat-invite', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.checkChatInvite(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] checkChatInvite error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:accept-url-auth', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.acceptUrlAuth(accountId, options)
+    } catch (err: any) {
+      Logger.warn('[IPC] acceptUrlAuth error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:check-history-import', async (_event, { accountId, importHead }) => {
+    try {
+      return await accountManager.checkHistoryImport(accountId, importHead)
+    } catch (err: any) {
+      Logger.warn('[IPC] checkHistoryImport error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:append-todo-list', async (_event, { accountId, peerId, msgId, list }) => {
+    try {
+      return await accountManager.appendTodoList(accountId, peerId, msgId, list)
+    } catch (err: any) {
+      Logger.warn('[IPC] appendTodoList error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:add-poll-answer', async (_event, { accountId, peerId, msgId, answer }) => {
+    try {
+      return await accountManager.addPollAnswer(accountId, peerId, msgId, answer)
+    } catch (err: any) {
+      Logger.warn('[IPC] addPollAnswer error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

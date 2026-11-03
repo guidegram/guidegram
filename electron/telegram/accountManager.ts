@@ -18926,5 +18926,63 @@ export class AccountManager {
       throw err
     }
   }
+
+  // Layer 232 Messages Suite (Microphase 033)
+  public async addChatUser(accountId: string, chatId: bigint | number, userId: string, fwdLimit = 100): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.addChatUser(holder as any, accountId, chatId, userId, fwdLimit)
+  }
+
+  public async checkChatInvite(accountId: string, hash: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.checkChatInvite(holder as any, hash)
+  }
+
+  public async acceptUrlAuth(
+    accountId: string,
+    options: {
+      writeAllowed?: boolean
+      sharePhoneNumber?: boolean
+      peerId?: string
+      msgId?: number
+      buttonId?: number
+      url?: string
+      matchCode?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.acceptUrlAuth(
+      holder as any,
+      accountId,
+      options.writeAllowed,
+      options.sharePhoneNumber,
+      options.peerId,
+      options.msgId,
+      options.buttonId,
+      options.url,
+      options.matchCode
+    )
+  }
+
+  public async checkHistoryImport(accountId: string, importHead: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.checkHistoryImport(holder as any, importHead)
+  }
+
+  public async appendTodoList(accountId: string, peerId: string, msgId: number, list: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.appendTodoList(holder as any, accountId, peerId, msgId, list)
+  }
+
+  public async addPollAnswer(accountId: string, peerId: string, msgId: number, answer: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.addPollAnswer(holder as any, accountId, peerId, msgId, answer)
+  }
 }
 
