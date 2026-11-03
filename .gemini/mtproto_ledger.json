@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 39.46,
+  "overall_coverage_pct": 40.28,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -1585,7 +1585,7 @@
       ],
       "method_count": 7,
       "ui_component": "src/components/ScheduledMessagesModal.tsx",
-      "status": "PENDING",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,

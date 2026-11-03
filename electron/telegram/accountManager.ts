@@ -19737,6 +19737,46 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getScheduledHistory(holder as any, accountId, peerId, hash)
   }
+
+  public async getScheduledMessagesRaw(accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getScheduledMessages(holder as any, accountId, peerId, id)
+  }
+
+  public async getSearchCounters(accountId: string, peerId?: string, savedPeerIdId?: string, topMsgId?: number, filters?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSearchCounters(holder as any, accountId, peerId, savedPeerIdId, topMsgId, filters)
+  }
+
+  public async getSearchResultsCalendar(accountId: string, peerId?: string, savedPeerIdId?: string, filter?: any, offsetId?: number, offsetDate?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSearchResultsCalendar(holder as any, accountId, peerId, savedPeerIdId, filter, offsetId, offsetDate)
+  }
+
+  public async getSearchResultsPositions(accountId: string, peerId?: string, savedPeerIdId?: string, filter?: any, offsetId?: number, limit?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSearchResultsPositions(holder as any, accountId, peerId, savedPeerIdId, filter, offsetId, limit)
+  }
+
+  public async getShareThemeBackdrops(accountId: string, params?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getShareThemeBackdrops(holder as any, params)
+  }
+
+  public async getSplitRanges(accountId: string, params?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getSplitRanges(holder as any, params)
+  }
+
+  public async getSponsoredMessagesRaw(accountId: string, peerId: string, msgId?: number): Promise<any> {
+    return this.getSponsoredMessages(accountId, peerId, msgId)
+  }
 }
 
 

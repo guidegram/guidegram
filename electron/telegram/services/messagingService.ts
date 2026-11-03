@@ -1630,12 +1630,13 @@ export class MessagingService {
 
   public async getSearchCounters(holder: RpcClientHolder, accountId: string, peerId?: string, savedPeerIdId?: string, topMsgId?: number, filters?: any): Promise<any> {
     try {
+      const resolvedFilters = Array.isArray(filters) ? filters : (filters ? [filters] : [{ _: 'inputMessagesFilterEmpty' }])
       return await holder.client.call({
         _: 'messages.getSearchCounters',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
         'saved_peer_id': savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
         'top_msg_id': topMsgId,
-        'filters': filters,
+        'filters': resolvedFilters,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getSearchCounters error:', err)
@@ -1702,12 +1703,13 @@ export class MessagingService {
     }
   }
 
-  public async getScheduledMessages(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number): Promise<any> {
+  public async getScheduledMessages(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number | number[]): Promise<any> {
     try {
+      const ids = Array.isArray(id) ? id : (typeof id === 'number' ? [id] : [])
       return await holder.client.call({
         _: 'messages.getScheduledMessages',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        'id': ids,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getScheduledMessages error:', err)
@@ -2136,7 +2138,7 @@ export class MessagingService {
         _: 'messages.getSearchResultsCalendar',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
         'saved_peer_id': savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
-        'filter': filter,
+        'filter': filter || { _: 'inputMessagesFilterEmpty' },
         'offset_id': offsetId,
         'offset_date': offsetDate,
       })
@@ -2152,9 +2154,9 @@ export class MessagingService {
         _: 'messages.getSearchResultsPositions',
         'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
         'saved_peer_id': savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
-        'filter': filter,
-        'offset_id': offsetId,
-        'limit': limit,
+        'filter': filter || { _: 'inputMessagesFilterEmpty' },
+        'offset_id': offsetId ?? 0,
+        'limit': limit ?? 50,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getSearchResultsPositions error:', err)

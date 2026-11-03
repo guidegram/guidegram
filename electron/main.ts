@@ -7181,6 +7181,69 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:messages:get-scheduled-messages', async (_event, { accountId, peerId, id }) => {
+    try {
+      return await accountManager.getScheduledMessagesRaw(accountId, peerId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getScheduledMessages error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-search-counters', async (_event, { accountId, peerId, savedPeerIdId, topMsgId, filters }) => {
+    try {
+      return await accountManager.getSearchCounters(accountId, peerId, savedPeerIdId, topMsgId, filters)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSearchCounters error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-search-results-calendar', async (_event, { accountId, peerId, savedPeerIdId, filter, offsetId, offsetDate }) => {
+    try {
+      return await accountManager.getSearchResultsCalendar(accountId, peerId, savedPeerIdId, filter, offsetId, offsetDate)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSearchResultsCalendar error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-search-results-positions', async (_event, { accountId, peerId, savedPeerIdId, filter, offsetId, limit }) => {
+    try {
+      return await accountManager.getSearchResultsPositions(accountId, peerId, savedPeerIdId, filter, offsetId, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSearchResultsPositions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-share-theme-backdrops', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.getShareThemeBackdrops(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] getShareThemeBackdrops error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-split-ranges', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.getSplitRanges(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSplitRanges error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-sponsored-messages', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.getSponsoredMessagesRaw(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getSponsoredMessages error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

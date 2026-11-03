@@ -2414,6 +2414,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-saved-reaction-tags', { accountId, peerId, hash }),
   getScheduledHistory: (accountId: string, peerId?: string, hash?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-scheduled-history', { accountId, peerId, hash }),
+  // Layer 232 Messages Suite (Microphase 052)
+  getScheduledMessagesRaw: (accountId: string, peerId?: string, id?: number | number[]): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-scheduled-messages', { accountId, peerId, id }),
+  getSearchCounters: (accountId: string, params?: { peerId?: string; savedPeerIdId?: string; topMsgId?: number; filters?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-search-counters', { accountId, ...params }),
+  getSearchResultsCalendar: (accountId: string, params?: { peerId?: string; savedPeerIdId?: string; filter?: any; offsetId?: number; offsetDate?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-search-results-calendar', { accountId, ...params }),
+  getSearchResultsPositions: (accountId: string, params?: { peerId?: string; savedPeerIdId?: string; filter?: any; offsetId?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-search-results-positions', { accountId, ...params }),
+  getShareThemeBackdrops: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-share-theme-backdrops', { accountId, params }),
+  getSplitRanges: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-split-ranges', { accountId, params }),
+  getSponsoredMessagesRaw: (accountId: string, peerId: string, msgId?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-sponsored-messages', { accountId, peerId, msgId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

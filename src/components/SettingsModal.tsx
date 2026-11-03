@@ -3881,6 +3881,182 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 052: Scheduled Messages, Search Counters, Calendar, Positions & Sponsored Messages State
+  const [m052ScheduledPeer, setM052ScheduledPeer] = useState('')
+  const [m052ScheduledIds, setM052ScheduledIds] = useState('')
+  const [m052ScheduledCount, setM052ScheduledCount] = useState<number | null>(null)
+
+  const [m052CountersPeer, setM052CountersPeer] = useState('')
+  const [m052CountersCount, setM052CountersCount] = useState<number | null>(null)
+
+  const [m052CalendarPeer, setM052CalendarPeer] = useState('')
+  const [m052CalendarCount, setM052CalendarCount] = useState<number | null>(null)
+
+  const [m052PositionsPeer, setM052PositionsPeer] = useState('')
+  const [m052PositionsCount, setM052PositionsCount] = useState<number | null>(null)
+
+  const [m052ThemeBackdropsResult, setM052ThemeBackdropsResult] = useState<string | null>(null)
+  const [m052SplitRangesCount, setM052SplitRangesCount] = useState<number | null>(null)
+
+  const [m052SponsoredPeer, setM052SponsoredPeer] = useState('')
+  const [m052SponsoredCount, setM052SponsoredCount] = useState<number | null>(null)
+
+  const [m052LoadingOp, setM052LoadingOp] = useState<string | null>(null)
+  const [m052Status, setM052Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM052GetScheduledMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getScheduledMessagesRaw) return
+    if (!m052ScheduledPeer.trim()) {
+      setM052Status({ type: 'error', message: 'شناسه گفتگو برای پیام‌های زمان‌بندی‌شده الزامی است' })
+      return
+    }
+    const ids = m052ScheduledIds.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    setM052LoadingOp('getScheduledMessages')
+    setM052Status(null)
+    try {
+      const res = await window.guidegram.getScheduledMessagesRaw(targetId, m052ScheduledPeer.trim(), ids.length ? ids : undefined)
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? (res ? 1 : 0))
+      setM052ScheduledCount(count)
+      setM052Status({ type: 'success', message: `تعداد ${count} پیام زمان‌بندی‌شده بازیابی شد` })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در دریافت پیام‌های زمان‌بندی‌شده' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
+  const handleM052GetSearchCounters = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSearchCounters) return
+    if (!m052CountersPeer.trim()) {
+      setM052Status({ type: 'error', message: 'شناسه مخاطب/گفتگو برای شمارنده‌های جستجو الزامی است' })
+      return
+    }
+    setM052LoadingOp('getSearchCounters')
+    setM052Status(null)
+    try {
+      const res = await window.guidegram.getSearchCounters(targetId, {
+        peerId: m052CountersPeer.trim(),
+      })
+      const count = Array.isArray(res) ? res.length : (res?.counters?.length ?? 0)
+      setM052CountersCount(count)
+      setM052Status({ type: 'success', message: `تعداد ${count} شمارنده جستجو استعلام شد` })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در دریافت شمارنده‌های جستجو' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
+  const handleM052GetSearchResultsCalendar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSearchResultsCalendar) return
+    if (!m052CalendarPeer.trim()) {
+      setM052Status({ type: 'error', message: 'شناسه گفتگو برای تقویم نتایج جستجو الزامی است' })
+      return
+    }
+    setM052LoadingOp('getSearchResultsCalendar')
+    setM052Status(null)
+    try {
+      const res = await window.guidegram.getSearchResultsCalendar(targetId, {
+        peerId: m052CalendarPeer.trim(),
+      })
+      const count = Array.isArray(res?.periods) ? res.periods.length : (res?.count ?? 0)
+      setM052CalendarCount(count)
+      setM052Status({ type: 'success', message: `تعداد ${count} دوره زمانی در تقویم جستجو دریافت شد` })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در دریافت تقویم نتایج جستجو' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
+  const handleM052GetSearchResultsPositions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSearchResultsPositions) return
+    if (!m052PositionsPeer.trim()) {
+      setM052Status({ type: 'error', message: 'شناسه گفتگو برای موقعیت نتایج جستجو الزامی است' })
+      return
+    }
+    setM052LoadingOp('getSearchResultsPositions')
+    setM052Status(null)
+    try {
+      const res = await window.guidegram.getSearchResultsPositions(targetId, {
+        peerId: m052PositionsPeer.trim(),
+        limit: 50,
+      })
+      const count = Array.isArray(res?.positions) ? res.positions.length : (res?.count ?? 0)
+      setM052PositionsCount(count)
+      setM052Status({ type: 'success', message: `تعداد ${count} موقعیت نتیجه جستجو استعلام شد` })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در استعلام موقعیت‌های جستجو' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
+  const handleM052GetShareThemeBackdrops = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getShareThemeBackdrops) return
+    setM052LoadingOp('getShareThemeBackdrops')
+    setM052Status(null)
+    try {
+      const res = await window.guidegram.getShareThemeBackdrops(targetId)
+      const desc = res ? (JSON.stringify(res).slice(0, 80) + '...') : 'پس‌زمینه‌ای برای تم اشتراکی یافت نشد'
+      setM052ThemeBackdropsResult(desc)
+      setM052Status({ type: 'success', message: 'داده‌های پس‌زمینه تم‌های اشتراکی استعلام شد' })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در دریافت پس‌زمینه تم اشتراکی' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
+  const handleM052GetSplitRanges = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getSplitRanges) return
+    setM052LoadingOp('getSplitRanges')
+    setM052Status(null)
+    try {
+      const res = await window.guidegram.getSplitRanges(targetId)
+      const count = Array.isArray(res) ? res.length : (res?.ranges?.length ?? 0)
+      setM052SplitRangesCount(count)
+      setM052Status({ type: 'success', message: `تعداد ${count} بازه تفکیک تاریخچه استعلام شد` })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در دریافت بازه‌های اسپلیت' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
+  const handleM052GetSponsoredMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getSponsoredMessagesRaw || (window.guidegram as any)?.getSponsoredMessages
+    if (!targetId || !fn) return
+    if (!m052SponsoredPeer.trim()) {
+      setM052Status({ type: 'error', message: 'شناسه کانال برای پیام‌های تبلیغاتی اسپانسر الزامی است' })
+      return
+    }
+    setM052LoadingOp('getSponsoredMessages')
+    setM052Status(null)
+    try {
+      const res = await fn(targetId, m052SponsoredPeer.trim())
+      const count = Array.isArray(res?.messages) ? res.messages.length : (res?.count ?? 0)
+      setM052SponsoredCount(count)
+      setM052Status({ type: 'success', message: `تعداد ${count} پیام اسپانسر یا تبلیغاتی استعلام شد` })
+    } catch (err: any) {
+      setM052Status({ type: 'error', message: err?.message || 'خطا در استعلام پیام‌های اسپانسر' })
+    } finally {
+      setM052LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -10560,6 +10736,241 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m051ScheduledHistoryCount !== null && (
                         <div className="text-[10px] text-emerald-400 font-mono">
                           پیام‌های زمان‌بندی‌شده: {m051ScheduledHistoryCount} عدد
+                        </div>
+                      )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 052: Messages Domain Suite Part 20 */}
+                <div className="p-4 rounded-2xl bg-dark-900/60 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-200 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-cyan-400" />
+                        <span>میکروفاز ۰۵۲: پیام‌های زمان‌بندی، شمارنده‌ها، تقویم و موقعیت جستجو، پس‌زمینه‌ها، اسپلیت و اسپانسر (Messages Suite Part 20)</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        پوشش کامل متدهای MTProto Layer 232: getScheduledMessages, getSearchCounters, getSearchResultsCalendar, getSearchResultsPositions, getShareThemeBackdrops, getSplitRanges, getSponsoredMessages
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m052Status && (
+                    <div
+                      className={`p-3 rounded-xl text-xs flex items-center gap-2 border ${
+                        m052Status.type === 'success'
+                          ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                      }`}
+                    >
+                      {m052Status.type === 'success' ? (
+                        <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      )}
+                      <span className="flex-1">{m052Status.message}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 pt-1">
+                    {/* 1. messages.getScheduledMessages */}
+                    <form
+                      onSubmit={handleM052GetScheduledMessages}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. پیام‌های زمان‌بندی‌شده بر اساس شناسه (getScheduledMessages)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m052ScheduledPeer}
+                          onChange={(e) => setM052ScheduledPeer(e.target.value)}
+                          placeholder="شناسه مخاطب / گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m052ScheduledIds}
+                          onChange={(e) => setM052ScheduledIds(e.target.value)}
+                          placeholder="شناسه‌ها (اختیاری)"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m052LoadingOp === 'getScheduledMessages'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m052LoadingOp === 'getScheduledMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m052ScheduledCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          پیام‌های زمان‌بندی: {m052ScheduledCount} عدد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getSearchCounters */}
+                    <form
+                      onSubmit={handleM052GetSearchCounters}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. شمارنده‌های نتایج جستجو (getSearchCounters)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m052CountersPeer}
+                          onChange={(e) => setM052CountersPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / مخاطب"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m052LoadingOp === 'getSearchCounters'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m052LoadingOp === 'getSearchCounters' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام شمارنده‌ها'}
+                        </button>
+                      </div>
+                      {m052CountersCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          شمارنده‌های یافت‌شده: {m052CountersCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getSearchResultsCalendar */}
+                    <form
+                      onSubmit={handleM052GetSearchResultsCalendar}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. تقویم نتایج جستجو (getSearchResultsCalendar)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m052CalendarPeer}
+                          onChange={(e) => setM052CalendarPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m052LoadingOp === 'getSearchResultsCalendar'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m052LoadingOp === 'getSearchResultsCalendar' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام تقویم'}
+                        </button>
+                      </div>
+                      {m052CalendarCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          دوره‌های زمانی تقویم: {m052CalendarCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 4. messages.getSearchResultsPositions */}
+                    <form
+                      onSubmit={handleM052GetSearchResultsPositions}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. موقعیت نتایج جستجو (getSearchResultsPositions)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m052PositionsPeer}
+                          onChange={(e) => setM052PositionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m052LoadingOp === 'getSearchResultsPositions'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m052LoadingOp === 'getSearchResultsPositions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام موقعیت‌ها'}
+                        </button>
+                      </div>
+                      {m052PositionsCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          موقعیت‌های جستجو: {m052PositionsCount} مورد
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 5. messages.getShareThemeBackdrops */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. پس‌زمینه‌های تم اشتراکی (getShareThemeBackdrops)</span>
+                        <button
+                          type="button"
+                          onClick={handleM052GetShareThemeBackdrops}
+                          disabled={m052LoadingOp === 'getShareThemeBackdrops'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m052LoadingOp === 'getShareThemeBackdrops' ? 'در حال استعلام...' : 'استعلام پس‌زمینه‌ها'}
+                        </button>
+                      </div>
+                      {m052ThemeBackdropsResult && (
+                        <div className="text-[10px] text-cyan-400 font-mono truncate">
+                          نتیجه: {m052ThemeBackdropsResult}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 6. messages.getSplitRanges */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex items-center justify-between">
+                      <div className="text-xs text-gray-300 font-medium">
+                        <span>۶. بازه‌های تفکیک تاریخچه (getSplitRanges)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM052GetSplitRanges}
+                        disabled={m052LoadingOp === 'getSplitRanges'}
+                        className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m052LoadingOp === 'getSplitRanges' ? 'در حال استعلام...' : `استعلام بازه‌ها ${m052SplitRangesCount !== null ? `(${m052SplitRangesCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 7. messages.getSponsoredMessages */}
+                    <form
+                      onSubmit={handleM052GetSponsoredMessages}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. پیام‌های اسپانسر و تبلیغاتی (getSponsoredMessages)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m052SponsoredPeer}
+                          onChange={(e) => setM052SponsoredPeer(e.target.value)}
+                          placeholder="شناسه کانال"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m052LoadingOp === 'getSponsoredMessages'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m052LoadingOp === 'getSponsoredMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام اسپانسر'}
+                        </button>
+                      </div>
+                      {m052SponsoredCount !== null && (
+                        <div className="text-[10px] text-cyan-400 font-mono">
+                          پیام‌های اسپانسر: {m052SponsoredCount} مورد
                         </div>
                       )}
                     </form>
