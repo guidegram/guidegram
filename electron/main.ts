@@ -5993,6 +5993,69 @@ function setupIpcHandlers() {
     }
   )
 
+  ipcMain.handle('telegram:reset-saved-contacts', async (_event, { accountId }) => {
+    try {
+      return await accountManager.resetSavedContacts(accountId)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetSavedContacts error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:reset-top-peer-rating', async (_event, { accountId, category, peer }) => {
+    try {
+      return await accountManager.resetTopPeerRating(accountId, category, peer)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resetTopPeerRating error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:resolve-phone', async (_event, { accountId, phone }) => {
+    try {
+      return await accountManager.resolvePhone(accountId, phone)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resolvePhone error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:resolve-username', async (_event, { accountId, username, referer }) => {
+    try {
+      return await accountManager.resolveUsername(accountId, username, referer)
+    } catch (err: any) {
+      Logger.warn(`[IPC] resolveUsername error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:search-contacts', async (_event, { accountId, query, limit }) => {
+    try {
+      return await accountManager.searchContacts(accountId, query, limit)
+    } catch (err: any) {
+      Logger.warn(`[IPC] searchContacts error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:set-blocked', async (_event, { accountId, id, myStoriesFrom }) => {
+    try {
+      return await accountManager.setBlocked(accountId, id, myStoriesFrom)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setBlocked error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:toggle-top-peers', async (_event, { accountId, enabled }) => {
+    try {
+      return await accountManager.toggleTopPeers(accountId, enabled)
+    } catch (err: any) {
+      Logger.warn(`[IPC] toggleTopPeers error:`, err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

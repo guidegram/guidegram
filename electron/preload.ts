@@ -2155,6 +2155,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:import-contact-token', { accountId, token }),
   importNoPaidMessagesToken: (accountId: string, userId: any, token: string): Promise<any> =>
     ipcRenderer.invoke('telegram:import-no-paid-messages-token', { accountId, userId, token }),
+  resetSavedContacts: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:reset-saved-contacts', { accountId }),
+  resetTopPeerRating: (accountId: string, category: string, peer: any): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:reset-top-peer-rating', { accountId, category, peer }),
+  resolvePhone: (accountId: string, phone: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:resolve-phone', { accountId, phone }),
+  resolveUsername: (accountId: string, username: string, referer?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:resolve-username', { accountId, username, referer }),
+  searchContacts: (accountId: string, query: string, limit?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:search-contacts', { accountId, query, limit }),
+  setBlocked: (accountId: string, id: any, myStoriesFrom?: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-blocked', { accountId, id, myStoriesFrom }),
+  toggleTopPeers: (accountId: string, enabled: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:toggle-top-peers', { accountId, enabled }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

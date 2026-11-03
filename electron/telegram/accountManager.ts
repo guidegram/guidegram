@@ -16693,6 +16693,49 @@ export class AccountManager {
     return this.contactsService.importNoPaidMessagesToken(holder as any, accountId, String(userId), token)
   }
 
+  public async resetSavedContacts(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.resetSaved(holder as any)
+  }
+
+  public async resetTopPeerRating(accountId: string, category: string, peerId: any): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.resetTopPeerRating(holder as any, accountId, category, String(peerId))
+  }
+
+  public async resolvePhone(accountId: string, phone: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.resolvePhone(holder as any, phone)
+  }
+
+  public async resolveUsername(accountId: string, username: string, referer?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.resolveUsername(holder as any, username, referer)
+  }
+
+  public async searchContacts(accountId: string, query: string, limit = 50): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.search(holder as any, query, limit)
+  }
+
+  public async setBlocked(accountId: string, id: any, myStoriesFrom = false): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const peerIds = Array.isArray(id) ? id.map(String) : [String(id)]
+    return this.contactsService.setBlocked(holder as any, accountId, peerIds, 50, myStoriesFrom)
+  }
+
+  public async toggleTopPeers(accountId: string, enabled: boolean): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.toggleTopPeers(holder as any, enabled)
+  }
+
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {
     const holder = this.clients.get(accountId)
     if (!holder?.client) {

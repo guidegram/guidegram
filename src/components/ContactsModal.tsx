@@ -141,6 +141,16 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [importNoPaidResult, setImportNoPaidResult] = useState<string | null>(null)
   const [importNoPaidError, setImportNoPaidError] = useState<string | null>(null)
 
+  // Layer 232 Contacts States (Microphase 031 - Final Contacts Suite)
+  const [topPeersEnabled, setTopPeersEnabled] = useState(true)
+  const [isTogglingTopPeers, setIsTogglingTopPeers] = useState(false)
+  const [isResettingSaved, setIsResettingSaved] = useState(false)
+  const [resetSavedFeedback, setResetSavedFeedback] = useState<string | null>(null)
+  const [phoneLookupNumber, setPhoneLookupNumber] = useState('')
+  const [isResolvingPhone, setIsResolvingPhone] = useState(false)
+  const [phoneLookupResult, setPhoneLookupResult] = useState<any | null>(null)
+  const [phoneLookupError, setPhoneLookupError] = useState<string | null>(null)
+
   const loadAll = () => {
     if (!isOpen || !accountId) return
     setLoading(true)
@@ -571,6 +581,75 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
     }
   }
 
+  // Microphase 031 Handlers (Final Contacts Suite)
+  const handleToggleTopPeers = async () => {
+    if (!accountId || !window.guidegram?.toggleTopPeers) return
+    setIsTogglingTopPeers(true)
+    try {
+      const next = !topPeersEnabled
+      const ok = await window.guidegram.toggleTopPeers(accountId, next)
+      if (ok) {
+        setTopPeersEnabled(next)
+        loadAll()
+      }
+    } catch (err) {
+      console.warn('Failed to toggle top peers:', err)
+    } finally {
+      setIsTogglingTopPeers(false)
+    }
+  }
+
+  const handleResetTopPeer = async (userId: string) => {
+    if (!accountId || !window.guidegram?.resetTopPeerRating) return
+    try {
+      const ok = await window.guidegram.resetTopPeerRating(accountId, 'Correspondents', userId)
+      if (ok) {
+        setTopPeers((prev) => prev.filter((u) => u.id.toString() !== userId.toString()))
+      }
+    } catch (err) {
+      console.warn('Failed to reset top peer rating:', err)
+    }
+  }
+
+  const handleResetSavedContacts = async () => {
+    if (!accountId || !window.guidegram?.resetSavedContacts) return
+    setIsResettingSaved(true)
+    try {
+      const ok = await window.guidegram.resetSavedContacts(accountId)
+      if (ok) {
+        setSavedContactsList([])
+        setResetSavedFeedback('Cloud saved contacts cache cleared successfully.')
+        setTimeout(() => setResetSavedFeedback(null), 3000)
+      }
+    } catch (err) {
+      console.warn('Failed to reset saved contacts:', err)
+    } finally {
+      setIsResettingSaved(false)
+    }
+  }
+
+  const handleResolvePhone = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!accountId || !phoneLookupNumber.trim() || !window.guidegram?.resolvePhone) return
+    setIsResolvingPhone(true)
+    setPhoneLookupResult(null)
+    setPhoneLookupError(null)
+    try {
+      const cleanPhone = phoneLookupNumber.replace(/[^0-9+]/g, '')
+      const res = await window.guidegram.resolvePhone(accountId, cleanPhone)
+      if (res?.users && res.users.length > 0) {
+        setPhoneLookupResult(res.users[0])
+      } else {
+        setPhoneLookupError('No Telegram user found for this phone number.')
+      }
+    } catch (err: any) {
+      console.warn('Failed to resolve phone:', err)
+      setPhoneLookupError(err?.message || 'Failed to resolve phone number')
+    } finally {
+      setIsResolvingPhone(false)
+    }
+  }
+
   if (!isOpen) return null
 
   const filtered = contacts.filter((c) => {
@@ -794,6 +873,61 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                   <span>Import</span>
                 </button>
               </div>
+            </div>
+
+            {/* Direct Phone Number Resolution (contacts.resolvePhone) */}
+            <div className="pt-4 border-t border-white/5 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-200 uppercase tracking-wider">
+                <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Lookup User by Phone (contacts.resolvePhone)</span>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Directly check if a phone number belongs to an active Telegram account without saving it to address book.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="tel"
+                  value={phoneLookupNumber}
+                  onChange={(e) => setPhoneLookupNumber(e.target.value)}
+                  placeholder="+1 234 567 8900"
+                  className="flex-1 px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleResolvePhone}
+                  disabled={isResolvingPhone || !phoneLookupNumber.trim()}
+                  className="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+                >
+                  {isResolvingPhone ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                  <span>Lookup</span>
+                </button>
+              </div>
+              {phoneLookupError && (
+                <div className="px-3 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{phoneLookupError}</span>
+                </div>
+              )}
+              {phoneLookupResult && (
+                <div
+                  onClick={() => {
+                    onSelectContact(phoneLookupResult.id.toString())
+                    onClose()
+                  }}
+                  className="p-3 rounded-xl bg-dark-950 border border-emerald-500/30 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Avatar accountId={accountId} peerId={phoneLookupResult.id.toString()} title={phoneLookupResult.firstName} initials={phoneLookupResult.firstName?.charAt(0)} size="sm" />
+                    <div>
+                      <div className="text-xs font-semibold text-gray-200">
+                        {phoneLookupResult.firstName} {phoneLookupResult.lastName || ''}
+                      </div>
+                      {phoneLookupResult.username && <div className="text-[10px] text-accent-cyan font-mono">@{phoneLookupResult.username}</div>}
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-full font-bold">Start Chat</span>
+                </div>
+              )}
             </div>
           </form>
         ) : activeTab === 'close_friends' ? (
@@ -1352,10 +1486,25 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                   {isLoadingSavedContacts ? <Loader2 className="w-3 h-3 animate-spin text-emerald-400" /> : <RefreshCw className="w-3 h-3 text-emerald-400" />}
                   <span>Inspect Saved</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={handleResetSavedContacts}
+                  disabled={isResettingSaved}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-[11px] text-rose-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  {isResettingSaved ? <Loader2 className="w-3 h-3 animate-spin text-rose-400" /> : <Trash2 className="w-3 h-3 text-rose-400" />}
+                  <span>Clear Cloud Cache</span>
+                </button>
               </div>
               <p className="text-[11px] text-gray-400">
                 Audits the raw list of saved address book entries stored in your account's cloud cache.
               </p>
+              {resetSavedFeedback && (
+                <div className="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{resetSavedFeedback}</span>
+                </div>
+              )}
               {savedContactsList.length > 0 && (
                 <div className="p-3 rounded-xl bg-dark-950 border border-white/10 space-y-1 max-h-36 overflow-y-auto">
                   <div className="text-[11px] text-emerald-300 font-semibold mb-1">
@@ -1372,33 +1521,69 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
             </div>
           </div>
         ) : activeTab === 'top' ? (
-          <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
-            {topPeers.length === 0 ? (
-              <div className="p-8 text-center text-xs text-gray-400">No top interacting peers yet.</div>
-            ) : (
-              topPeers.map((user: any) => {
-                const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User'
-                return (
-                  <div
-                    key={user.id}
-                    onClick={() => {
-                      onSelectContact(user.id.toString())
-                      onClose()
-                    }}
-                    className="px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Avatar accountId={accountId} peerId={user.id.toString()} title={name} initials={name.charAt(0)} size="md" />
-                      <div>
-                        <div className="text-sm font-semibold text-gray-100 truncate">{name}</div>
-                        {user.username && <div className="text-[11px] text-accent-cyan font-mono">@{user.username}</div>}
+          <div className="flex-1 overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-white/10">
+            {/* Top Peers Header & Toggle */}
+            <div className="px-4 py-2.5 bg-dark-900/60 border-b border-white/5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-semibold text-gray-200">Frequent Peers Tracking</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleTopPeers}
+                disabled={isTogglingTopPeers}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                  topPeersEnabled
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-white/5 text-gray-400 border border-white/10'
+                }`}
+              >
+                {isTogglingTopPeers && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>{topPeersEnabled ? 'ENABLED' : 'DISABLED'}</span>
+              </button>
+            </div>
+
+            <div className="flex-1 divide-y divide-white/5">
+              {topPeers.length === 0 ? (
+                <div className="p-8 text-center text-xs text-gray-400">No top interacting peers yet.</div>
+              ) : (
+                topPeers.map((user: any) => {
+                  const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User'
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => {
+                        onSelectContact(user.id.toString())
+                        onClose()
+                      }}
+                      className="px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar accountId={accountId} peerId={user.id.toString()} title={name} initials={name.charAt(0)} size="md" />
+                        <div>
+                          <div className="text-sm font-semibold text-gray-100 truncate">{name}</div>
+                          {user.username && <div className="text-[11px] text-accent-cyan font-mono">@{user.username}</div>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded-full font-bold">Top Peer</span>
+                        <button
+                          type="button"
+                          title="Reset rating"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleResetTopPeer(user.id.toString())
+                          }}
+                          className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-rose-400 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                    <span className="text-[10px] bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded-full font-bold">Top Peer</span>
-                  </div>
-                )
-              })
-            )}
+                  )
+                })
+              )}
+            </div>
           </div>
         ) : activeTab === 'birthdays' ? (
           <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
