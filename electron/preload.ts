@@ -2461,6 +2461,18 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:install-sticker-set', { accountId, stickerset, archived }),
   hidePeerSettingsBar: (accountId: string, peerId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:hide-peer-settings-bar', { accountId, peerId }),
+  markDialogUnreadRaw: (accountId: string, params: { unread?: boolean; parentPeerId?: string; peer?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:mark-dialog-unread-raw', { accountId, ...params }),
+  migrateChatRaw: (accountId: string, chatId: bigint | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:migrate-chat', { accountId, chatId }),
+  prolongWebViewRaw: (accountId: string, params: { silent?: boolean; peerId?: string; botId?: string; queryId?: any; replyTo?: any; sendAsId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:prolong-web-view', { accountId, ...params }),
+  rateTranscribedAudioRaw: (accountId: string, params: { peerId?: string; msgId?: number; transcriptionId?: any; good?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:rate-transcribed-audio', { accountId, ...params }),
+  readDiscussionRaw: (accountId: string, params: { peerId?: string; msgId?: number; readMaxId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-discussion', { accountId, ...params }),
+  readEncryptedHistoryRaw: (accountId: string, params: { peer?: any; maxDate?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:read-encrypted-history', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

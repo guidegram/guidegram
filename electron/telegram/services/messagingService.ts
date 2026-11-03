@@ -1,4 +1,5 @@
 import { Logger } from '../logger'
+import { Long } from '@mtcute/core'
 
 export interface RpcClientHolder {
   client: {
@@ -489,10 +490,24 @@ export class MessagingService {
 
   public async readEncryptedHistory(holder: RpcClientHolder, peer?: any, maxDate?: number): Promise<any> {
     try {
+      let inputEncryptedChat = peer
+      if (typeof peer === 'number' || typeof peer === 'string') {
+        inputEncryptedChat = {
+          _: 'inputEncryptedChat',
+          chatId: Number(peer),
+          accessHash: Long.ZERO,
+        }
+      } else if (peer && !peer._) {
+        inputEncryptedChat = {
+          _: 'inputEncryptedChat',
+          chatId: Number(peer.chatId || peer.chat_id || 0),
+          accessHash: peer.accessHash ? (Long.isLong(peer.accessHash) ? peer.accessHash : Long.fromValue(peer.accessHash)) : Long.ZERO,
+        }
+      }
       return await holder.client.call({
         _: 'messages.readEncryptedHistory',
-        'peer': peer,
-        'max_date': maxDate,
+        peer: inputEncryptedChat,
+        maxDate: maxDate || Math.floor(Date.now() / 1000),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readEncryptedHistory error:', err)
@@ -756,7 +771,7 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.migrateChat',
-        'chat_id': chatId,
+        chatId: Number(chatId || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.migrateChat error:', err)
@@ -1470,11 +1485,23 @@ export class MessagingService {
 
   public async markDialogUnread(holder: RpcClientHolder, accountId: string, unread?: boolean, parentPeerId?: string, peer?: any): Promise<any> {
     try {
+      let inputDialogPeer = peer
+      if (typeof peer === 'string') {
+        inputDialogPeer = {
+          _: 'inputDialogPeer',
+          peer: await this.resolveInputPeer(accountId, peer),
+        }
+      } else if (peer && !peer._ && peer.peer) {
+        inputDialogPeer = {
+          _: 'inputDialogPeer',
+          peer: typeof peer.peer === 'string' ? await this.resolveInputPeer(accountId, peer.peer) : peer.peer,
+        }
+      }
       return await holder.client.call({
         _: 'messages.markDialogUnread',
-        'unread': unread,
-        'parent_peer': parentPeerId ? await this.resolveInputPeer(accountId, parentPeerId) : undefined,
-        'peer': peer,
+        unread: !!unread,
+        parentPeer: parentPeerId ? await this.resolveInputPeer(accountId, parentPeerId) : undefined,
+        peer: inputDialogPeer,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.markDialogUnread error:', err)
@@ -1883,9 +1910,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.readDiscussion',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'read_max_id': readMaxId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        msgId: Number(msgId || 0),
+        readMaxId: Number(readMaxId || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.readDiscussion error:', err)
@@ -2437,16 +2464,17 @@ export class MessagingService {
     }
   }
 
-  public async prolongWebView(holder: RpcClientHolder, accountId: string, silent?: boolean, peerId?: string, botId?: string, queryId?: bigint | number, replyTo?: any, sendAsId?: string): Promise<any> {
+  public async prolongWebView(holder: RpcClientHolder, accountId: string, silent?: boolean, peerId?: string, botId?: string, queryId?: bigint | number | Long, replyTo?: any, sendAsId?: string): Promise<any> {
     try {
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.prolongWebView',
-        'silent': silent,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'query_id': queryId,
-        'reply_to': replyTo,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        silent: silent,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        bot: botId ? await this.toInputUser(accountId, botId) : undefined,
+        queryId: qId,
+        replyTo: replyTo,
+        sendAs: sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.prolongWebView error:', err)
@@ -2515,14 +2543,15 @@ export class MessagingService {
     }
   }
 
-  public async rateTranscribedAudio(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, transcriptionId?: bigint | number, good?: boolean): Promise<any> {
+  public async rateTranscribedAudio(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, transcriptionId?: bigint | number | Long, good?: boolean): Promise<any> {
     try {
+      const tId = transcriptionId ? (Long.isLong(transcriptionId) ? transcriptionId : Long.fromValue(transcriptionId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.rateTranscribedAudio',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'transcription_id': transcriptionId,
-        'good': good,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        msgId: Number(msgId || 0),
+        transcriptionId: tId,
+        good: !!good,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.rateTranscribedAudio error:', err)

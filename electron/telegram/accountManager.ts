@@ -19867,6 +19867,43 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.hidePeerSettingsBar(holder as any, accountId, peerId)
   }
+
+  // Layer 232 Messages Suite (Microphase 055)
+  public async markDialogUnreadRaw(accountId: string, params: { unread?: boolean; parentPeerId?: string; peer?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.markDialogUnread(holder as any, accountId, params.unread, params.parentPeerId, params.peer)
+  }
+
+  public async migrateChatRaw(accountId: string, chatId: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.migrateChat(holder as any, chatId)
+  }
+
+  public async prolongWebViewRaw(accountId: string, params: { silent?: boolean; peerId?: string; botId?: string; queryId?: any; replyTo?: any; sendAsId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.prolongWebView(holder as any, accountId, params.silent, params.peerId, params.botId, params.queryId, params.replyTo, params.sendAsId)
+  }
+
+  public async rateTranscribedAudioRaw(accountId: string, params: { peerId?: string; msgId?: number; transcriptionId?: any; good?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.rateTranscribedAudio(holder as any, accountId, params.peerId, params.msgId, params.transcriptionId, params.good)
+  }
+
+  public async readDiscussionRaw(accountId: string, params: { peerId?: string; msgId?: number; readMaxId?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readDiscussion(holder as any, accountId, params.peerId, params.msgId, params.readMaxId)
+  }
+
+  public async readEncryptedHistoryRaw(accountId: string, params: { peer?: any; maxDate?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.readEncryptedHistory(holder as any, params.peer, params.maxDate)
+  }
 }
 
 

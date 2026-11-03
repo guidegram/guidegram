@@ -4440,9 +4440,180 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       await window.guidegram.hidePeerSettingsBar(targetId, m054HidePeerSettingsPeer.trim())
       setM054Status({ type: 'success', message: 'نوار تنظیمات گفتگو (PeerSettingsBar) با موفقیت پنهان شد' })
     } catch (err: any) {
-      setM054Status({ type: 'error', message: err?.message || 'خطا در مخفی‌سازی نوار تنظیمات گفتگو' })
+      setM055Status({ type: 'error', message: err?.message || 'خطا در مخفی‌سازی نوار تنظیمات گفتگو' })
     } finally {
       setM054LoadingOp(null)
+    }
+  }
+
+  // Microphase 055 State & Handlers (Messages Domain Part 23 - Layer 232)
+  const [m055Status, setM055Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m055LoadingOp, setM055LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.markDialogUnread
+  const [m055MarkUnreadPeer, setM055MarkUnreadPeer] = useState('')
+  const [m055MarkUnreadFlag, setM055MarkUnreadFlag] = useState(true)
+
+  // 2. messages.migrateChat
+  const [m055MigrateChatId, setM055MigrateChatId] = useState('')
+
+  // 3. messages.prolongWebView
+  const [m055ProlongPeer, setM055ProlongPeer] = useState('')
+  const [m055ProlongBot, setM055ProlongBot] = useState('')
+  const [m055ProlongQueryId, setM055ProlongQueryId] = useState('')
+
+  // 4. messages.rateTranscribedAudio
+  const [m055RatePeer, setM055RatePeer] = useState('')
+  const [m055RateMsgId, setM055RateMsgId] = useState('')
+  const [m055RateTranscriptionId, setM055RateTranscriptionId] = useState('')
+  const [m055RateGood, setM055RateGood] = useState(true)
+
+  // 5. messages.readDiscussion
+  const [m055ReadDiscussionPeer, setM055ReadDiscussionPeer] = useState('')
+  const [m055ReadDiscussionMsgId, setM055ReadDiscussionMsgId] = useState('')
+  const [m055ReadDiscussionMaxId, setM055ReadDiscussionMaxId] = useState('')
+
+  // 6. messages.readEncryptedHistory
+  const [m055ReadEncryptedChatId, setM055ReadEncryptedChatId] = useState('')
+  const [m055ReadEncryptedDate, setM055ReadEncryptedDate] = useState('')
+
+  const handleM055MarkDialogUnread = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.markDialogUnreadRaw) return
+    if (!m055MarkUnreadPeer.trim()) {
+      setM055Status({ type: 'error', message: 'شناسه گفتگو برای تغییر وضعیت خوانده‌نشده الزامی است' })
+      return
+    }
+    setM055LoadingOp('markDialogUnread')
+    setM055Status(null)
+    try {
+      await window.guidegram.markDialogUnreadRaw(targetId, {
+        peer: m055MarkUnreadPeer.trim(),
+        unread: m055MarkUnreadFlag,
+      })
+      setM055Status({ type: 'success', message: `وضعیت گفتگو به ${m055MarkUnreadFlag ? 'خوانده‌نشده (Unread)' : 'خوانده‌شده (Read)'} تغییر یافت` })
+    } catch (err: any) {
+      setM055Status({ type: 'error', message: err?.message || 'خطا در نشانه‌گذاری خوانده‌نشده گفتگو' })
+    } finally {
+      setM055LoadingOp(null)
+    }
+  }
+
+  const handleM055MigrateChat = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.migrateChatRaw) return
+    if (!m055MigrateChatId.trim()) {
+      setM055Status({ type: 'error', message: 'شناسه گروه عادی (Chat ID) الزامی است' })
+      return
+    }
+    setM055LoadingOp('migrateChat')
+    setM055Status(null)
+    try {
+      const res = await window.guidegram.migrateChatRaw(targetId, Number(m055MigrateChatId.trim()))
+      const updateCount = res?.updates?.length || 0
+      setM055Status({ type: 'success', message: `گروه با موفقیت به سوپرگروه ارتقا یافت (${updateCount} آپدیت دریافت شد)` })
+    } catch (err: any) {
+      setM055Status({ type: 'error', message: err?.message || 'خطا در ارتقای گروه به سوپرگروه' })
+    } finally {
+      setM055LoadingOp(null)
+    }
+  }
+
+  const handleM055ProlongWebView = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.prolongWebViewRaw) return
+    if (!m055ProlongPeer.trim() || !m055ProlongBot.trim()) {
+      setM055Status({ type: 'error', message: 'شناسه گفتگو و ربات الزامی است' })
+      return
+    }
+    setM055LoadingOp('prolongWebView')
+    setM055Status(null)
+    try {
+      await window.guidegram.prolongWebViewRaw(targetId, {
+        peerId: m055ProlongPeer.trim(),
+        botId: m055ProlongBot.trim(),
+        queryId: m055ProlongQueryId.trim() || '0',
+      })
+      setM055Status({ type: 'success', message: 'نشست وب‌اپ تلگرام با موفقیت تمدید شد (prolongWebView)' })
+    } catch (err: any) {
+      setM055Status({ type: 'error', message: err?.message || 'خطا در تمدید وب‌اپ' })
+    } finally {
+      setM055LoadingOp(null)
+    }
+  }
+
+  const handleM055RateTranscribedAudio = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.rateTranscribedAudioRaw) return
+    if (!m055RatePeer.trim() || !m055RateMsgId.trim() || !m055RateTranscriptionId.trim()) {
+      setM055Status({ type: 'error', message: 'شناسه گفتگو، پیام و رونویسی الزامی است' })
+      return
+    }
+    setM055LoadingOp('rateTranscribedAudio')
+    setM055Status(null)
+    try {
+      await window.guidegram.rateTranscribedAudioRaw(targetId, {
+        peerId: m055RatePeer.trim(),
+        msgId: Number(m055RateMsgId.trim()),
+        transcriptionId: m055RateTranscriptionId.trim(),
+        good: m055RateGood,
+      })
+      setM055Status({ type: 'success', message: `امتیاز کیفیت تبدیل گفتار به متن ثبت شد (${m055RateGood ? 'عالی' : 'ضعیف'})` })
+    } catch (err: any) {
+      setM055Status({ type: 'error', message: err?.message || 'خطا در ثبت امتیاز رونویسی' })
+    } finally {
+      setM055LoadingOp(null)
+    }
+  }
+
+  const handleM055ReadDiscussion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readDiscussionRaw) return
+    if (!m055ReadDiscussionPeer.trim() || !m055ReadDiscussionMsgId.trim()) {
+      setM055Status({ type: 'error', message: 'شناسه گفتگو و پیام آغازین رشته الزامی است' })
+      return
+    }
+    setM055LoadingOp('readDiscussion')
+    setM055Status(null)
+    try {
+      await window.guidegram.readDiscussionRaw(targetId, {
+        peerId: m055ReadDiscussionPeer.trim(),
+        msgId: Number(m055ReadDiscussionMsgId.trim()),
+        readMaxId: Number(m055ReadDiscussionMaxId.trim() || m055ReadDiscussionMsgId.trim()),
+      })
+      setM055Status({ type: 'success', message: 'رشته گفتگو و نظرات پست با موفقیت خوانده شد (readDiscussion)' })
+    } catch (err: any) {
+      setM055Status({ type: 'error', message: err?.message || 'خطا در ثبت وضعیت خوانده‌شده رشته گفتگو' })
+    } finally {
+      setM055LoadingOp(null)
+    }
+  }
+
+  const handleM055ReadEncryptedHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.readEncryptedHistoryRaw) return
+    if (!m055ReadEncryptedChatId.trim()) {
+      setM055Status({ type: 'error', message: 'شناسه چت امن (Secret Chat ID) الزامی است' })
+      return
+    }
+    setM055LoadingOp('readEncryptedHistory')
+    setM055Status(null)
+    try {
+      await window.guidegram.readEncryptedHistoryRaw(targetId, {
+        peer: Number(m055ReadEncryptedChatId.trim()),
+        maxDate: m055ReadEncryptedDate.trim() ? Number(m055ReadEncryptedDate.trim()) : Math.floor(Date.now() / 1000),
+      })
+      setM055Status({ type: 'success', message: 'تاریخچه چت سرتاسر رمزگذاری‌شده (Secret Chat) خوانده شد' })
+    } catch (err: any) {
+      setM055Status({ type: 'error', message: err?.message || 'خطا در ثبت خوانده شدن چت رمزگذاری‌شده' })
+    } finally {
+      setM055LoadingOp(null)
     }
   }
 
@@ -11892,6 +12063,297 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m054LoadingOp === 'hidePeerSettingsBar' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخفی‌سازی نوار'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 055: Messages Domain Suite Part 23 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۵۵: عملیات پیام‌ها، گفتگوها و چت امن (Messages Suite Part 23)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    مدیریت وضعیت خوانده‌نشده گفتگوها، ارتقای گروه به سوپرگروه، تمدید وب‌اپ، رتبه‌بندی رونویسی صوت، خواندن رشته گفتگوها و ثبت خوانده‌شدن چت امن:
+                    <span className="text-gray-300 font-mono mr-1">
+                      markDialogUnread, migrateChat, prolongWebView, rateTranscribedAudio, readDiscussion, readEncryptedHistory, installStickerSet
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m055Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m055Status.type === 'success'
+                            ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m055Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m055Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM055Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.markDialogUnread */}
+                    <form
+                      onSubmit={handleM055MarkDialogUnread}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. تغییر وضعیت خوانده‌نشده گفتگو (markDialogUnread)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m055MarkUnreadFlag}
+                            onChange={(e) => setM055MarkUnreadFlag(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          <span>خوانده‌نشده</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m055MarkUnreadPeer}
+                          onChange={(e) => setM055MarkUnreadPeer(e.target.value)}
+                          placeholder="شناسه گفتگو / کاربر"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m055LoadingOp === 'markDialogUnread'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m055LoadingOp === 'markDialogUnread' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال وضعیت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.migrateChat */}
+                    <form
+                      onSubmit={handleM055MigrateChat}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. ارتقای گروه به سوپرگروه (migrateChat)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m055MigrateChatId}
+                          onChange={(e) => setM055MigrateChatId(e.target.value)}
+                          placeholder="شناسه گروه عادی (chatId)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m055LoadingOp === 'migrateChat'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m055LoadingOp === 'migrateChat' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارتقا به سوپرگروه'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.prolongWebView */}
+                    <form
+                      onSubmit={handleM055ProlongWebView}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. تمدید نشست وب‌اپ تلگرام (prolongWebView)</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={m055ProlongPeer}
+                          onChange={(e) => setM055ProlongPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m055ProlongBot}
+                          onChange={(e) => setM055ProlongBot(e.target.value)}
+                          placeholder="شناسه ربات"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m055ProlongQueryId}
+                          onChange={(e) => setM055ProlongQueryId(e.target.value)}
+                          placeholder="Query ID"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m055LoadingOp === 'prolongWebView'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m055LoadingOp === 'prolongWebView' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تمدید نشست وب‌اپ'}
+                      </button>
+                    </form>
+
+                    {/* 4. messages.rateTranscribedAudio */}
+                    <form
+                      onSubmit={handleM055RateTranscribedAudio}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. امتیازدهی رونویسی صوت (rateTranscribedAudio)</span>
+                        <div className="flex items-center gap-2 text-[11px]">
+                          <label className="flex items-center gap-1 text-gray-400 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="m055Good"
+                              checked={m055RateGood}
+                              onChange={() => setM055RateGood(true)}
+                              className="text-cyan-500"
+                            />
+                            <span>خوب</span>
+                          </label>
+                          <label className="flex items-center gap-1 text-gray-400 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="m055Good"
+                              checked={!m055RateGood}
+                              onChange={() => setM055RateGood(false)}
+                              className="text-cyan-500"
+                            />
+                            <span>ضعیف</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={m055RatePeer}
+                          onChange={(e) => setM055RatePeer(e.target.value)}
+                          placeholder="گفتگو"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m055RateMsgId}
+                          onChange={(e) => setM055RateMsgId(e.target.value)}
+                          placeholder="Msg ID"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m055RateTranscriptionId}
+                          onChange={(e) => setM055RateTranscriptionId(e.target.value)}
+                          placeholder="Transcription ID"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m055LoadingOp === 'rateTranscribedAudio'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m055LoadingOp === 'rateTranscribedAudio' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت امتیاز رونویسی'}
+                      </button>
+                    </form>
+
+                    {/* 5. messages.readDiscussion */}
+                    <form
+                      onSubmit={handleM055ReadDiscussion}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. خواندن رشته نظرات پست (readDiscussion)</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={m055ReadDiscussionPeer}
+                          onChange={(e) => setM055ReadDiscussionPeer(e.target.value)}
+                          placeholder="شناسه کانال/گروه"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m055ReadDiscussionMsgId}
+                          onChange={(e) => setM055ReadDiscussionMsgId(e.target.value)}
+                          placeholder="پیام شروع (Msg ID)"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m055ReadDiscussionMaxId}
+                          onChange={(e) => setM055ReadDiscussionMaxId(e.target.value)}
+                          placeholder="حداکثر شناسه خوانده‌شده"
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m055LoadingOp === 'readDiscussion'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m055LoadingOp === 'readDiscussion' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت خوانده‌شدن نظرات'}
+                      </button>
+                    </form>
+
+                    {/* 6. messages.readEncryptedHistory */}
+                    <form
+                      onSubmit={handleM055ReadEncryptedHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. خواندن تاریخچه چت امن (readEncryptedHistory)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m055ReadEncryptedChatId}
+                          onChange={(e) => setM055ReadEncryptedChatId(e.target.value)}
+                          placeholder="Secret Chat ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m055ReadEncryptedDate}
+                          onChange={(e) => setM055ReadEncryptedDate(e.target.value)}
+                          placeholder="تاریخ حداکثر (اختیاری)"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m055LoadingOp === 'readEncryptedHistory'}
+                          className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m055LoadingOp === 'readEncryptedHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن چت امن'}
                         </button>
                       </div>
                     </form>

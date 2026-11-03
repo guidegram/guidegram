@@ -7379,6 +7379,61 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 055 IPC Handlers
+  ipcMain.handle('telegram:messages:mark-dialog-unread-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.markDialogUnreadRaw(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] markDialogUnreadRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:migrate-chat', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.migrateChatRaw(accountId, chatId)
+    } catch (err: any) {
+      Logger.warn('[IPC] migrateChat error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:prolong-web-view', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.prolongWebViewRaw(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] prolongWebView error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:rate-transcribed-audio', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.rateTranscribedAudioRaw(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] rateTranscribedAudio error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-discussion', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readDiscussionRaw(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] readDiscussion error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:read-encrypted-history', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.readEncryptedHistoryRaw(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] readEncryptedHistory error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
