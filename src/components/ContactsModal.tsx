@@ -32,6 +32,10 @@ import {
   Link2,
   Radio,
   RefreshCw,
+  FileText,
+  Unlock,
+  ShieldCheck,
+  Save,
 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { ContactItem } from '../types/telegram'
@@ -150,6 +154,18 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
   const [isResolvingPhone, setIsResolvingPhone] = useState(false)
   const [phoneLookupResult, setPhoneLookupResult] = useState<any | null>(null)
   const [phoneLookupError, setPhoneLookupError] = useState<string | null>(null)
+
+  // Layer 232 Contacts States (Microphase 032 - Final Contacts Suite)
+  // contacts.updateContactNote
+  const [editingNoteContactId, setEditingNoteContactId] = useState<string | null>(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
+  const [isSavingNote, setIsSavingNote] = useState(false)
+  const [noteFeedback, setNoteFeedback] = useState<string | null>(null)
+
+  // contacts.unblock
+  const [unblockingUserId, setUnblockingUserId] = useState<string | null>(null)
+  const [blockedList, setBlockedList] = useState<any[]>([])
+  const [isLoadingBlocked, setIsLoadingBlocked] = useState(false)
 
   const loadAll = () => {
     if (!isOpen || !accountId) return
@@ -647,6 +663,68 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
       setPhoneLookupError(err?.message || 'Failed to resolve phone number')
     } finally {
       setIsResolvingPhone(false)
+    }
+  }
+
+  // Microphase 032 Handlers (Final Contacts Suite: updateContactNote & unblock)
+  const handleOpenNoteEditor = (contact: ContactItem) => {
+    setEditingNoteContactId(contact.id)
+    setEditingNoteText((contact as any).note || '')
+    setNoteFeedback(null)
+  }
+
+  const handleSaveContactNote = async () => {
+    if (!accountId || !editingNoteContactId || !window.guidegram?.updateContactNote) return
+    setIsSavingNote(true)
+    try {
+      const ok = await window.guidegram.updateContactNote(accountId, editingNoteContactId, editingNoteText.trim())
+      if (ok) {
+        setNoteFeedback('Note saved to Telegram cloud!')
+        setContacts((prev) =>
+          prev.map((c) => (c.id === editingNoteContactId ? { ...c, note: editingNoteText.trim() } : c))
+        )
+        setTimeout(() => {
+          setEditingNoteContactId(null)
+          setNoteFeedback(null)
+        }, 1200)
+      }
+    } catch (err) {
+      console.warn('Failed to update contact note:', err)
+    } finally {
+      setIsSavingNote(false)
+    }
+  }
+
+  const handleUnblockContact = async (userId: string, myStoriesFrom = false) => {
+    if (!accountId || !window.guidegram?.unblockPeer) return
+    setUnblockingUserId(userId)
+    try {
+      const ok = await window.guidegram.unblockPeer(accountId, userId, myStoriesFrom)
+      if (ok) {
+        setBlockedList((prev) => prev.filter((b) => (b.id || b.peerId)?.toString() !== userId.toString()))
+        loadAll()
+      }
+    } catch (err) {
+      console.warn('Failed to unblock contact:', err)
+    } finally {
+      setUnblockingUserId(null)
+    }
+  }
+
+  const handleFetchBlockedPeers = async () => {
+    if (!accountId || !window.guidegram?.getBlockedPeers) return
+    setIsLoadingBlocked(true)
+    try {
+      const res = await window.guidegram.getBlockedPeers(accountId, 0, 50)
+      if (res && Array.isArray((res as any).blocked)) {
+        setBlockedList((res as any).blocked)
+      } else if (Array.isArray(res)) {
+        setBlockedList(res as any[])
+      }
+    } catch (err) {
+      console.warn('Failed to fetch blocked peers:', err)
+    } finally {
+      setIsLoadingBlocked(false)
     }
   }
 
@@ -1519,6 +1597,67 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Microphase 032: Cloud Blocklist & Unblock Manager (contacts.unblock & contacts.getBlocked) */}
+            <div className="space-y-3 bg-dark-900/60 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-200 uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4 text-rose-400" />
+                  <span>Cloud Blocklist & Unblock Manager</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchBlockedPeers}
+                  disabled={isLoadingBlocked}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  {isLoadingBlocked ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                  ) : (
+                    <RefreshCw className="w-3 h-3 text-rose-400" />
+                  )}
+                  <span>Inspect Blocklist</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                Audits cloud-blocked accounts and unlocks messaging or story permissions directly via contacts.unblock.
+              </p>
+              {isLoadingBlocked ? (
+                <div className="p-4 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                  <span>Querying Telegram cloud blocklist...</span>
+                </div>
+              ) : blockedList.length === 0 ? (
+                <div className="p-3 text-center text-xs text-gray-500 bg-dark-950/50 rounded-xl">
+                  No blocked peers loaded. Click "Inspect Blocklist" to query your account's cloud blacklist.
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5 rounded-xl bg-dark-950 border border-white/5 overflow-hidden max-h-48 overflow-y-auto">
+                  {blockedList.map((b: any, idx) => {
+                    const peerId = (b.id || b.peerId || b.userId || idx).toString()
+                    const name = `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.title || b.username || `Blocked User #${peerId}`
+                    const isUnblocking = unblockingUserId === peerId
+                    return (
+                      <div key={idx} className="px-3 py-2 flex items-center justify-between hover:bg-white/5 transition-colors">
+                        <div className="min-w-0 pr-2">
+                          <div className="text-xs text-gray-200 truncate font-medium">{name}</div>
+                          <div className="text-[10px] text-gray-500 font-mono">ID: {peerId}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleUnblockContact(peerId)}
+                          disabled={isUnblocking}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {isUnblocking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlock className="w-3 h-3" />}
+                          <span>Unblock</span>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         ) : activeTab === 'top' ? (
           <div className="flex-1 overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-white/10">
@@ -1670,6 +1809,12 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                             {c.phone && <span>{c.phone}</span>}
                             {c.username && <span className="text-accent-cyan">@{c.username}</span>}
                           </div>
+                          {(c as any).note && (
+                            <div className="text-[10px] text-purple-300/90 flex items-center gap-1 mt-0.5 italic truncate max-w-[220px]">
+                              <FileText className="w-2.5 h-2.5 shrink-0 text-purple-400" />
+                              <span className="truncate">{(c as any).note}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1723,6 +1868,22 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                           className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          title="Cloud Note"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenNoteEditor(c)
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            (c as any).note
+                              ? 'text-purple-400 bg-purple-500/15'
+                              : 'text-gray-400 hover:text-purple-400 hover:bg-white/5'
+                          }`}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
                         </button>
 
                         <button
@@ -1834,6 +1995,90 @@ export const ContactsModal: React.FC<ContactsModalProps> = ({
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Save .vcf</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* Microphase 032: Cloud Contact Note Editor Modal Overlay */}
+        <AnimatePresence>
+          {editingNoteContactId && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 12 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 12 }}
+                className="bg-[#121b22] border border-purple-500/30 w-full max-w-sm rounded-3xl p-5 shadow-2xl flex flex-col relative"
+              >
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/5">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Cloud Contact Note
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingNoteContactId(null)
+                      setNoteFeedback(null)
+                    }}
+                    className="p-1 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-gray-400 mb-3">
+                  This private note is stored in Telegram cloud datacenter for user ID <span className="font-mono text-purple-300">#{editingNoteContactId}</span>.
+                </p>
+
+                <textarea
+                  value={editingNoteText}
+                  onChange={(e) => setEditingNoteText(e.target.value)}
+                  placeholder="Enter contact note (e.g. Lead, VIP client, Colleague)..."
+                  rows={4}
+                  maxLength={256}
+                  className="w-full px-3 py-2 rounded-xl bg-dark-950 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 resize-none mb-2"
+                />
+
+                <div className="flex items-center justify-between text-[10px] text-gray-500 mb-3 px-1">
+                  <span>Telegram Cloud Synced</span>
+                  <span>{editingNoteText.length}/256</span>
+                </div>
+
+                {noteFeedback && (
+                  <div className="mb-3 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{noteFeedback}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingNoteContactId(null)
+                      setNoteFeedback(null)
+                    }}
+                    className="flex-1 py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveContactNote}
+                    disabled={isSavingNote}
+                    className="flex-1 py-2 px-3 rounded-xl bg-purple-500/25 hover:bg-purple-500/35 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isSavingNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>Save Note</span>
                   </button>
                 </div>
               </motion.div>
