@@ -6211,6 +6211,212 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 064 State & Handlers (Messages Domain Part 32 - Layer 232)
+  const [m064Status, setM064Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m064LoadingOp, setM064LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.sendWebViewResultMessage
+  const [m064WvQueryId, setM064WvQueryId] = useState('')
+  const [m064WvResult, setM064WvResult] = useState('')
+
+  // 2. messages.setBotCallbackAnswer
+  const [m064CbQueryId, setM064CbQueryId] = useState('')
+  const [m064CbMessage, setM064CbMessage] = useState('')
+  const [m064CbUrl, setM064CbUrl] = useState('')
+  const [m064CbAlert, setM064CbAlert] = useState(false)
+
+  // 3. messages.setBotGuestChatResult
+  const [m064GuestQueryId, setM064GuestQueryId] = useState('')
+  const [m064GuestResult, setM064GuestResult] = useState('')
+
+  // 4. messages.setBotPrecheckoutResults
+  const [m064PrecheckoutQueryId, setM064PrecheckoutQueryId] = useState('')
+  const [m064PrecheckoutSuccess, setM064PrecheckoutSuccess] = useState(true)
+  const [m064PrecheckoutError, setM064PrecheckoutError] = useState('')
+
+  // 5. messages.setBotShippingResults
+  const [m064ShippingQueryId, setM064ShippingQueryId] = useState('')
+  const [m064ShippingError, setM064ShippingError] = useState('')
+
+  // 6. messages.setChatAvailableReactions
+  const [m064ReactionsPeer, setM064ReactionsPeer] = useState('')
+  const [m064ReactionsMode, setM064ReactionsMode] = useState<'all' | 'none' | 'some'>('all')
+  const [m064PaidReactionsEnabled, setM064PaidReactionsEnabled] = useState(true)
+
+  // 7. messages.setChatTheme
+  const [m064ThemePeer, setM064ThemePeer] = useState('')
+  const [m064ThemeEmoticon, setM064ThemeEmoticon] = useState('🌙')
+
+  const handleM064SendWebViewResultMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.sendWebViewResultMessageRaw) return
+    if (!m064WvQueryId.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه کوئری وب‌اپلیکیشن الزامی است' })
+      return
+    }
+    setM064LoadingOp('sendWebViewResultMessage')
+    setM064Status(null)
+    try {
+      const res = await window.guidegram.sendWebViewResultMessageRaw(targetId, {
+        botQueryId: m064WvQueryId.trim(),
+        result: m064WvResult.trim() || 'OK',
+      })
+      setM064Status({ type: 'success', message: `نتیجه وب‌اپلیکیشن ارسال شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در ارسال نتیجه وب‌اپلیکیشن' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
+  const handleM064SetBotCallbackAnswer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setBotCallbackAnswerRaw) return
+    if (!m064CbQueryId.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه کلیک کاربر (queryId) الزامی است' })
+      return
+    }
+    setM064LoadingOp('setBotCallbackAnswer')
+    setM064Status(null)
+    try {
+      const res = await window.guidegram.setBotCallbackAnswerRaw(targetId, {
+        queryId: m064CbQueryId.trim(),
+        message: m064CbMessage.trim() || undefined,
+        url: m064CbUrl.trim() || undefined,
+        alert: m064CbAlert,
+        cacheTime: 0,
+      })
+      setM064Status({ type: 'success', message: `پاسخ کلیک به تلگرام تحویل شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در ثبت پاسخ دکمه ربات' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
+  const handleM064SetBotGuestChatResult = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setBotGuestChatResultRaw) return
+    if (!m064GuestQueryId.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه کوئری مهمان الزامی است' })
+      return
+    }
+    setM064LoadingOp('setBotGuestChatResult')
+    setM064Status(null)
+    try {
+      const res = await window.guidegram.setBotGuestChatResultRaw(targetId, {
+        queryId: m064GuestQueryId.trim(),
+        result: m064GuestResult.trim() || 'GuestResult',
+      })
+      setM064Status({ type: 'success', message: `نتیجه گفتگو مهمان ثبت شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در ثبت نتیجه چت مهمان ربات' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
+  const handleM064SetBotPrecheckoutResults = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setBotPrecheckoutResultsRaw) return
+    if (!m064PrecheckoutQueryId.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه پیش‌خرید (queryId) الزامی است' })
+      return
+    }
+    setM064LoadingOp('setBotPrecheckoutResults')
+    setM064Status(null)
+    try {
+      const res = await window.guidegram.setBotPrecheckoutResultsRaw(targetId, {
+        queryId: m064PrecheckoutQueryId.trim(),
+        success: m064PrecheckoutSuccess,
+        error: !m064PrecheckoutSuccess ? (m064PrecheckoutError.trim() || 'Payment rejected') : undefined,
+      })
+      setM064Status({ type: 'success', message: `نتیجه پیش‌خرید ثبت شد: ${res ? 'تأیید شد' : 'موفق'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در ثبت نتیجه پیش‌خرید ربات' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
+  const handleM064SetBotShippingResults = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setBotShippingResultsRaw) return
+    if (!m064ShippingQueryId.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه سفارش ارسال کالا (queryId) الزامی است' })
+      return
+    }
+    setM064LoadingOp('setBotShippingResults')
+    setM064Status(null)
+    try {
+      const res = await window.guidegram.setBotShippingResultsRaw(targetId, {
+        queryId: m064ShippingQueryId.trim(),
+        error: m064ShippingError.trim() || undefined,
+        shippingOptions: [],
+      })
+      setM064Status({ type: 'success', message: `گزینه‌های حمل و نقل ربات تنظیم شد: ${res ? 'ثبت شد' : 'موفق'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در ثبت گزینه‌های حمل و نقل' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
+  const handleM064SetChatAvailableReactions = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setChatAvailableReactionsRaw) return
+    if (!m064ReactionsPeer.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه گفتگو برای تعیین واکنش‌ها الزامی است' })
+      return
+    }
+    setM064LoadingOp('setChatAvailableReactions')
+    setM064Status(null)
+    try {
+      let avReactions: any = 'all'
+      if (m064ReactionsMode === 'none') avReactions = { _: 'chatReactionsNone' }
+      else if (m064ReactionsMode === 'some') avReactions = ['👍', '❤️', '🔥', '🎉', '👏']
+      const res = await window.guidegram.setChatAvailableReactionsRaw(targetId, {
+        peerId: m064ReactionsPeer.trim(),
+        availableReactions: avReactions,
+        paidEnabled: m064PaidReactionsEnabled,
+      })
+      setM064Status({ type: 'success', message: `تنظیمات واکنش‌های گفتگو با موفقیت اعمال شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در تعیین واکنش‌های گفتگو' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
+  const handleM064SetChatTheme = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.setChatThemeRaw) return
+    if (!m064ThemePeer.trim()) {
+      setM064Status({ type: 'error', message: 'شناسه گفتگو برای تنظیم تم الزامی است' })
+      return
+    }
+    setM064LoadingOp('setChatTheme')
+    setM064Status(null)
+    try {
+      const res = await window.guidegram.setChatThemeRaw(targetId, {
+        peerId: m064ThemePeer.trim(),
+        theme: m064ThemeEmoticon.trim() || undefined,
+      })
+      setM064Status({ type: 'success', message: `تم و پوسته گفتگو با موفقیت تغییر کرد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM064Status({ type: 'error', message: err?.message || 'خطا در تنظیم تم گفتگو' })
+    } finally {
+      setM064LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -16231,6 +16437,285 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m063LoadingOp === 'sendWebViewData' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تحویل به ربات'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 064: Messages Domain Suite Part 32 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۴: کال‌بک ربات، مهمان، پیش‌خرید، حمل‌ونقل، واکنش‌ها و تم گفتگو (Messages Suite Part 32)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-400/80 font-mono px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    عملیات هسته پیام‌رسانی و ربات‌ها: تنظیم کال‌بک دکمه، ارسال نتیجه وب‌اپلیکیشن، تسویه‌حساب پیش‌خرید فروشگاهی، نتیجه چت مهمان، گزینه‌های شیپینگ و تم و واکنش‌های مجاز چت:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m064Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m064Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m064Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m064Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM064Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.sendWebViewResultMessage */}
+                    <form
+                      onSubmit={handleM064SendWebViewResultMessage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. ارسال نتیجه وب‌اپلیکیشن (sendWebViewResultMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064WvQueryId}
+                          onChange={(e) => setM064WvQueryId(e.target.value)}
+                          placeholder="شناسه کوئری وب‌اپ (botQueryId)"
+                          className="w-36 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m064WvResult}
+                          onChange={(e) => setM064WvResult(e.target.value)}
+                          placeholder="متن پیام نتیجه..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'sendWebViewResultMessage'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'sendWebViewResultMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.setBotCallbackAnswer */}
+                    <form
+                      onSubmit={handleM064SetBotCallbackAnswer}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. پاسخ کلیک دکمه ربات (setBotCallbackAnswer)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064CbQueryId}
+                          onChange={(e) => setM064CbQueryId(e.target.value)}
+                          placeholder="شناسه queryId"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m064CbMessage}
+                          onChange={(e) => setM064CbMessage(e.target.value)}
+                          placeholder="پیام یا اعلان آلرت..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'setBotCallbackAnswer'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'setBotCallbackAnswer' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.setBotGuestChatResult */}
+                    <form
+                      onSubmit={handleM064SetBotGuestChatResult}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. نتیجه چت مهمان ربات (setBotGuestChatResult)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064GuestQueryId}
+                          onChange={(e) => setM064GuestQueryId(e.target.value)}
+                          placeholder="شناسه queryId"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m064GuestResult}
+                          onChange={(e) => setM064GuestResult(e.target.value)}
+                          placeholder="نتیجه اینلاین مهمان..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'setBotGuestChatResult'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'setBotGuestChatResult' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.setBotPrecheckoutResults */}
+                    <form
+                      onSubmit={handleM064SetBotPrecheckoutResults}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. نتیجه پیش‌خرید فروشگاهی (setBotPrecheckoutResults)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064PrecheckoutQueryId}
+                          onChange={(e) => setM064PrecheckoutQueryId(e.target.value)}
+                          placeholder="شناسه queryId"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <select
+                          value={m064PrecheckoutSuccess ? '1' : '0'}
+                          onChange={(e) => setM064PrecheckoutSuccess(e.target.value === '1')}
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        >
+                          <option value="1">تأیید خرید (OK)</option>
+                          <option value="0">رد خرید (Error)</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'setBotPrecheckoutResults'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'setBotPrecheckoutResults' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت نتیجه'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.setBotShippingResults */}
+                    <form
+                      onSubmit={handleM064SetBotShippingResults}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. گزینه‌های حمل‌ونقل ربات (setBotShippingResults)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064ShippingQueryId}
+                          onChange={(e) => setM064ShippingQueryId(e.target.value)}
+                          placeholder="شناسه سفارش (queryId)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'setBotShippingResults'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'setBotShippingResults' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.setChatAvailableReactions */}
+                    <form
+                      onSubmit={handleM064SetChatAvailableReactions}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. تنظیم واکنش‌های مجاز گفتگو (setChatAvailableReactions)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064ReactionsPeer}
+                          onChange={(e) => setM064ReactionsPeer(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <select
+                          value={m064ReactionsMode}
+                          onChange={(e) => setM064ReactionsMode(e.target.value as any)}
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        >
+                          <option value="all">همه واکنش‌ها</option>
+                          <option value="some">منتخب (۵ ایموجی)</option>
+                          <option value="none">غیرفعال</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'setChatAvailableReactions'}
+                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'setChatAvailableReactions' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.setChatTheme */}
+                    <form
+                      onSubmit={handleM064SetChatTheme}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. تنظیم تم و پوسته چت (setChatTheme)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m064ThemePeer}
+                          onChange={(e) => setM064ThemePeer(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم چت مخاطب"
+                          className="w-48 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m064ThemeEmoticon}
+                          onChange={(e) => setM064ThemeEmoticon(e.target.value)}
+                          placeholder="ایموجی تم (مانند 🌙، ☀️، 🌸)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m064LoadingOp === 'setChatTheme'}
+                          className="px-5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m064LoadingOp === 'setChatTheme' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تغییر پوسته چت'}
                         </button>
                       </div>
                     </form>

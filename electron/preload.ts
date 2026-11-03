@@ -2585,6 +2585,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:send-vote-raw', { accountId, ...params }),
   sendWebViewDataRaw: (accountId: string, params: { botId: string; buttonText: string; data: string; randomId?: bigint | number }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:send-web-view-data-raw', { accountId, ...params }),
+  sendWebViewResultMessageRaw: (accountId: string, params: { botQueryId: string; result?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:send-web-view-result-message-raw', { accountId, ...params }),
+  setBotCallbackAnswerRaw: (accountId: string, params: { alert?: boolean; queryId: bigint | number | any; message?: string; url?: string; cacheTime?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-bot-callback-answer-raw', { accountId, ...params }),
+  setBotGuestChatResultRaw: (accountId: string, params: { queryId: bigint | number | any; result?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-bot-guest-chat-result-raw', { accountId, ...params }),
+  setBotPrecheckoutResultsRaw: (accountId: string, params: { success?: boolean; queryId: bigint | number | any; error?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-bot-precheckout-results-raw', { accountId, ...params }),
+  setBotShippingResultsRaw: (accountId: string, params: { queryId: bigint | number | any; error?: string; shippingOptions?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-bot-shipping-results-raw', { accountId, ...params }),
+  setChatAvailableReactionsRaw: (accountId: string, params: { peerId: string; availableReactions?: any; reactionsLimit?: number; paidEnabled?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-chat-available-reactions-raw', { accountId, ...params }),
+  setChatThemeRaw: (accountId: string, params: { peerId: string; theme?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:set-chat-theme-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

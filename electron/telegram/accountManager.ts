@@ -20248,6 +20248,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.sendWebViewData(holder as any, accountId, params.botId, params.randomId, params.buttonText, params.data)
   }
+
+  // Layer 232 Messages Suite (Microphase 064)
+  public async sendWebViewResultMessageRaw(accountId: string, params: { botQueryId: string; result?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.sendWebViewResultMessage(holder as any, params.botQueryId, params.result)
+  }
+
+  public async setBotCallbackAnswerRaw(accountId: string, params: { alert?: boolean; queryId: bigint | number | Long | string; message?: string; url?: string; cacheTime?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setBotCallbackAnswer(holder as any, params.alert, params.queryId, params.message, params.url, params.cacheTime)
+  }
+
+  public async setBotGuestChatResultRaw(accountId: string, params: { queryId: bigint | number | Long | string; result?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setBotGuestChatResult(holder as any, params.queryId, params.result)
+  }
+
+  public async setBotPrecheckoutResultsRaw(accountId: string, params: { success?: boolean; queryId: bigint | number | Long | string; error?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setBotPrecheckoutResults(holder as any, params.success, params.queryId, params.error)
+  }
+
+  public async setBotShippingResultsRaw(accountId: string, params: { queryId: bigint | number | Long | string; error?: string; shippingOptions?: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setBotShippingResults(holder as any, params.queryId, params.error, params.shippingOptions)
+  }
+
+  public async setChatAvailableReactionsRaw(accountId: string, params: { peerId: string; availableReactions?: any; reactionsLimit?: number; paidEnabled?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setChatAvailableReactions(holder as any, accountId, params.peerId, params.availableReactions, params.reactionsLimit, params.paidEnabled)
+  }
+
+  public async setChatThemeRaw(accountId: string, params: { peerId: string; theme?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.setChatTheme(holder as any, accountId, params.peerId, params.theme)
+  }
 }
 
 

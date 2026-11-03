@@ -7946,6 +7946,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 064 IPC Handlers
+  ipcMain.handle('telegram:messages:send-web-view-result-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.sendWebViewResultMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] sendWebViewResultMessageRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-bot-callback-answer-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setBotCallbackAnswerRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setBotCallbackAnswerRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-bot-guest-chat-result-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setBotGuestChatResultRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setBotGuestChatResultRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-bot-precheckout-results-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setBotPrecheckoutResultsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setBotPrecheckoutResultsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-bot-shipping-results-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setBotShippingResultsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setBotShippingResultsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-chat-available-reactions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setChatAvailableReactionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setChatAvailableReactionsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:set-chat-theme-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.setChatThemeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] setChatThemeRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

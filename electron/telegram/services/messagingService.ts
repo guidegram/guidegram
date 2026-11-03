@@ -1050,15 +1050,16 @@ export class MessagingService {
     }
   }
 
-  public async setBotCallbackAnswer(holder: RpcClientHolder, alert?: boolean, queryId?: bigint | number, message?: string, url?: string, cacheTime?: number): Promise<any> {
+  public async setBotCallbackAnswer(holder: RpcClientHolder, alert?: boolean, queryId?: bigint | number | Long | string, message?: string, url?: string, cacheTime?: number): Promise<any> {
     try {
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.setBotCallbackAnswer',
-        'alert': alert,
-        'query_id': queryId,
-        'message': message,
-        'url': url,
-        'cache_time': cacheTime,
+        alert: Boolean(alert),
+        queryId: qId,
+        message: message ? String(message) : undefined,
+        url: url ? String(url) : undefined,
+        cacheTime: cacheTime !== undefined ? Number(cacheTime) : 0,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setBotCallbackAnswer error:', err)
@@ -1383,13 +1384,14 @@ export class MessagingService {
     }
   }
 
-  public async setBotShippingResults(holder: RpcClientHolder, queryId?: bigint | number, error?: string, shippingOptions?: any): Promise<any> {
+  public async setBotShippingResults(holder: RpcClientHolder, queryId?: bigint | number | Long | string, error?: string, shippingOptions?: any[]): Promise<any> {
     try {
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.setBotShippingResults',
-        'query_id': queryId,
-        'error': error,
-        'shipping_options': shippingOptions,
+        queryId: qId,
+        error: error ? String(error) : undefined,
+        shippingOptions: Array.isArray(shippingOptions) ? shippingOptions : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setBotShippingResults error:', err)
@@ -1397,13 +1399,14 @@ export class MessagingService {
     }
   }
 
-  public async setBotPrecheckoutResults(holder: RpcClientHolder, success?: boolean, queryId?: bigint | number, error?: string): Promise<any> {
+  public async setBotPrecheckoutResults(holder: RpcClientHolder, success?: boolean, queryId?: bigint | number | Long | string, error?: string): Promise<any> {
     try {
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.setBotPrecheckoutResults',
-        'success': success,
-        'query_id': queryId,
-        'error': error,
+        success: Boolean(success),
+        queryId: qId,
+        error: error ? String(error) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setBotPrecheckoutResults error:', err)
@@ -2258,10 +2261,17 @@ export class MessagingService {
 
   public async setChatTheme(holder: RpcClientHolder, accountId: string, peerId?: string, theme?: any): Promise<any> {
     try {
+      let chatTheme: any = { _: 'inputChatThemeEmpty' }
+      if (typeof theme === 'string') {
+        chatTheme = theme ? { _: 'inputChatTheme', emoticon: theme } : { _: 'inputChatThemeEmpty' }
+      } else if (theme && typeof theme === 'object' && theme._) {
+        chatTheme = theme
+      }
+
       return await holder.client.call({
         _: 'messages.setChatTheme',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'theme': theme,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        theme: chatTheme,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setChatTheme error:', err)
@@ -2425,12 +2435,24 @@ export class MessagingService {
 
   public async setChatAvailableReactions(holder: RpcClientHolder, accountId: string, peerId?: string, availableReactions?: any, reactionsLimit?: number, paidEnabled?: boolean): Promise<any> {
     try {
+      let reactions: any = { _: 'chatReactionsNone' }
+      if (availableReactions === 'all' || availableReactions === true) {
+        reactions = { _: 'chatReactionsAll', allowCustom: true }
+      } else if (Array.isArray(availableReactions)) {
+        reactions = {
+          _: 'chatReactionsSome',
+          reactions: availableReactions.map(r => typeof r === 'string' ? { _: 'reactionEmoji', emoticon: r } : r)
+        }
+      } else if (availableReactions && typeof availableReactions === 'object' && availableReactions._) {
+        reactions = availableReactions
+      }
+
       return await holder.client.call({
         _: 'messages.setChatAvailableReactions',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'available_reactions': availableReactions,
-        'reactions_limit': reactionsLimit,
-        'paid_enabled': paidEnabled,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        availableReactions: reactions,
+        reactionsLimit: reactionsLimit !== undefined ? Number(reactionsLimit) : undefined,
+        paidEnabled: paidEnabled !== undefined ? Boolean(paidEnabled) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setChatAvailableReactions error:', err)
@@ -2634,10 +2656,19 @@ export class MessagingService {
 
   public async sendWebViewResultMessage(holder: RpcClientHolder, botQueryId?: string, result?: any): Promise<any> {
     try {
+      let inlineResult = result
+      if (!inlineResult || typeof inlineResult === 'string') {
+        inlineResult = {
+          _: 'inputBotInlineResult',
+          id: String(result || '0'),
+          type: 'article',
+          sendMessage: { _: 'inputBotInlineMessageText', message: String(result || 'WebView result') }
+        }
+      }
       return await holder.client.call({
         _: 'messages.sendWebViewResultMessage',
-        'bot_query_id': botQueryId,
-        'result': result,
+        botQueryId: String(botQueryId || ''),
+        result: inlineResult,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.sendWebViewResultMessage error:', err)
@@ -3941,12 +3972,22 @@ export class MessagingService {
     }
   }
 
-  public async setBotGuestChatResult(holder: RpcClientHolder, queryId?: bigint | number, result?: any): Promise<any> {
+  public async setBotGuestChatResult(holder: RpcClientHolder, queryId?: bigint | number | Long | string, result?: any): Promise<any> {
     try {
+      const qId = queryId ? (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any)) : Long.ZERO
+      let inlineResult = result
+      if (!inlineResult || typeof inlineResult === 'string') {
+        inlineResult = {
+          _: 'inputBotInlineResult',
+          id: String(result || '0'),
+          type: 'article',
+          sendMessage: { _: 'inputBotInlineMessageText', message: String(result || 'Guest result') }
+        }
+      }
       return await holder.client.call({
         _: 'messages.setBotGuestChatResult',
-        'query_id': queryId,
-        'result': result,
+        queryId: qId,
+        result: inlineResult,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.setBotGuestChatResult error:', err)
