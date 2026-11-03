@@ -7562,6 +7562,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 058 IPC Handlers
+  ipcMain.handle('telegram:messages:report-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reportRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:report-encrypted-spam-raw', async (_event, { accountId, peer }) => {
+    try {
+      return await accountManager.reportEncryptedSpamRaw(accountId, peer)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportEncryptedSpamRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:report-messages-delivery-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reportMessagesDeliveryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportMessagesDeliveryRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:report-music-listen-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reportMusicListenRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportMusicListenRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:report-reaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reportReactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportReactionRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:report-read-metrics-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reportReadMetricsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportReadMetricsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:report-spam-raw', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.reportSpamRaw(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] reportSpamRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

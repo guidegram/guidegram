@@ -2501,6 +2501,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:reorder-quick-replies-raw', { accountId, order }),
   reorderStickerSetsRaw: (accountId: string, params: { masks?: boolean; emojis?: boolean; order?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:reorder-sticker-sets-raw', { accountId, ...params }),
+  reportRaw: (accountId: string, params: { peerId: string; id: number[] | number; option?: any; message?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-raw', { accountId, ...params }),
+  reportEncryptedSpamRaw: (accountId: string, peer: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-encrypted-spam-raw', { accountId, peer }),
+  reportMessagesDeliveryRaw: (accountId: string, params: { push?: boolean; peerId?: string; id?: number[] | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-messages-delivery-raw', { accountId, ...params }),
+  reportMusicListenRaw: (accountId: string, params: { id: any; listenedDuration?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-music-listen-raw', { accountId, ...params }),
+  reportReactionRaw: (accountId: string, params: { peerId: string; id: number; reactionPeerId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-reaction-raw', { accountId, ...params }),
+  reportReadMetricsRaw: (accountId: string, params: { peerId: string; metrics?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-read-metrics-raw', { accountId, ...params }),
+  reportSpamRaw: (accountId: string, peerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:report-spam-raw', { accountId, peerId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

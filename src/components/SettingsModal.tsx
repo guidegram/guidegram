@@ -4992,6 +4992,215 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 058 State & Handlers (Messages Domain Part 26 - Layer 232)
+  const [m058Status, setM058Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m058LoadingOp, setM058LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.report
+  const [m058ReportPeer, setM058ReportPeer] = useState('')
+  const [m058ReportIds, setM058ReportIds] = useState('')
+  const [m058ReportOption, setM058ReportOption] = useState('')
+  const [m058ReportMessage, setM058ReportMessage] = useState('')
+
+  // 2. messages.reportEncryptedSpam
+  const [m058ReportEncChatId, setM058ReportEncChatId] = useState('')
+  const [m058ReportEncAccessHash, setM058ReportEncAccessHash] = useState('')
+
+  // 3. messages.reportMessagesDelivery
+  const [m058ReportDelivPeer, setM058ReportDelivPeer] = useState('')
+  const [m058ReportDelivIds, setM058ReportDelivIds] = useState('')
+  const [m058ReportDelivPush, setM058ReportDelivPush] = useState(false)
+
+  // 4. messages.reportMusicListen
+  const [m058MusicDocId, setM058MusicDocId] = useState('')
+  const [m058MusicAccessHash, setM058MusicAccessHash] = useState('')
+  const [m058MusicDuration, setM058MusicDuration] = useState('')
+
+  // 5. messages.reportReaction
+  const [m058ReactionPeer, setM058ReactionPeer] = useState('')
+  const [m058ReactionMsgId, setM058ReactionMsgId] = useState('')
+  const [m058ReactionUserPeer, setM058ReactionUserPeer] = useState('')
+
+  // 6. messages.reportReadMetrics
+  const [m058MetricsPeer, setM058MetricsPeer] = useState('')
+  const [m058MetricsMsgId, setM058MetricsMsgId] = useState('')
+  const [m058MetricsDuration, setM058MetricsDuration] = useState('')
+
+  // 7. messages.reportSpam
+  const [m058SpamPeer, setM058SpamPeer] = useState('')
+
+  const handleM058Report = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportRaw) return
+    if (!m058ReportPeer.trim() || !m058ReportIds.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام‌ها الزامی است' })
+      return
+    }
+    setM058LoadingOp('report')
+    setM058Status(null)
+    try {
+      const ids = m058ReportIds.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n))
+      await window.guidegram.reportRaw(targetId, {
+        peerId: m058ReportPeer.trim(),
+        id: ids,
+        option: m058ReportOption.trim() || undefined,
+        message: m058ReportMessage.trim() || undefined,
+      })
+      setM058Status({ type: 'success', message: 'گزارش تخلف پیام‌ها با موفقیت به پشتیبانی تلگرام ارسال شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در ثبت گزارش تخلف' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
+  const handleM058ReportEncryptedSpam = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportEncryptedSpamRaw) return
+    if (!m058ReportEncChatId.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه گفتگوی امن (Chat ID) الزامی است' })
+      return
+    }
+    setM058LoadingOp('reportEncryptedSpam')
+    setM058Status(null)
+    try {
+      await window.guidegram.reportEncryptedSpamRaw(targetId, {
+        chatId: Number(m058ReportEncChatId.trim()),
+        accessHash: m058ReportEncAccessHash.trim() || '0',
+      })
+      setM058Status({ type: 'success', message: 'گزارش اسپم سکرت‌چت با موفقیت ثبت شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در گزارش اسپم سکرت‌چت' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
+  const handleM058ReportMessagesDelivery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportMessagesDeliveryRaw) return
+    if (!m058ReportDelivPeer.trim() || !m058ReportDelivIds.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه چت و پیام‌های تحویل‌شده الزامی است' })
+      return
+    }
+    setM058LoadingOp('reportMessagesDelivery')
+    setM058Status(null)
+    try {
+      const ids = m058ReportDelivIds.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n))
+      await window.guidegram.reportMessagesDeliveryRaw(targetId, {
+        peerId: m058ReportDelivPeer.trim(),
+        id: ids,
+        push: m058ReportDelivPush,
+      })
+      setM058Status({ type: 'success', message: 'گزارش تله‌متری تحویل پیام‌ها به سرور مخابره شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در گزارش تحویل پیام‌ها' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
+  const handleM058ReportMusicListen = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportMusicListenRaw) return
+    if (!m058MusicDocId.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه فایل صوتی موزیک الزامی است' })
+      return
+    }
+    setM058LoadingOp('reportMusicListen')
+    setM058Status(null)
+    try {
+      await window.guidegram.reportMusicListenRaw(targetId, {
+        id: {
+          id: m058MusicDocId.trim(),
+          accessHash: m058MusicAccessHash.trim() || '0',
+        },
+        listenedDuration: Number(m058MusicDuration.trim() || 30),
+      })
+      setM058Status({ type: 'success', message: 'آمار مدت زمان پخش موزیک در تلگرام با موفقیت ثبت شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در ثبت آمار پخش موزیک' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
+  const handleM058ReportReaction = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportReactionRaw) return
+    if (!m058ReactionPeer.trim() || !m058ReactionMsgId.trim() || !m058ReactionUserPeer.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه گفتگو، شناسه پیام و فرستنده ری‌اکشن الزامی است' })
+      return
+    }
+    setM058LoadingOp('reportReaction')
+    setM058Status(null)
+    try {
+      await window.guidegram.reportReactionRaw(targetId, {
+        peerId: m058ReactionPeer.trim(),
+        id: Number(m058ReactionMsgId.trim()),
+        reactionPeerId: m058ReactionUserPeer.trim(),
+      })
+      setM058Status({ type: 'success', message: 'گزارش ری‌اکشن نامناسب یا مخرب ثبت شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در ثبت گزارش ری‌اکشن' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
+  const handleM058ReportReadMetrics = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportReadMetricsRaw) return
+    if (!m058MetricsPeer.trim() || !m058MetricsMsgId.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام الزامی است' })
+      return
+    }
+    setM058LoadingOp('reportReadMetrics')
+    setM058Status(null)
+    try {
+      await window.guidegram.reportReadMetricsRaw(targetId, {
+        peerId: m058MetricsPeer.trim(),
+        metrics: [
+          {
+            id: Number(m058MetricsMsgId.trim()),
+            readDuration: Number(m058MetricsDuration.trim() || 5),
+          },
+        ],
+      })
+      setM058Status({ type: 'success', message: 'متریک‌های زمان مطالعه پیام مخابره شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در ارسال متریک‌های خوانش' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
+  const handleM058ReportSpam = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reportSpamRaw) return
+    if (!m058SpamPeer.trim()) {
+      setM058Status({ type: 'error', message: 'شناسه گفتگو یا کاربر اسپمر الزامی است' })
+      return
+    }
+    setM058LoadingOp('reportSpam')
+    setM058Status(null)
+    try {
+      await window.guidegram.reportSpamRaw(targetId, m058SpamPeer.trim())
+      setM058Status({ type: 'success', message: 'گزارش اسپم گفتگو به تلگرام مخابره شد' })
+    } catch (err: any) {
+      setM058Status({ type: 'error', message: err?.message || 'خطا در ثبت گزارش اسپم' })
+    } finally {
+      setM058LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -13306,6 +13515,317 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m057LoadingOp === 'reorderStickerSets' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ترتیب استیکرها'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 058: Messages Domain Suite Part 26 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۵۸: گزارش تخلفات، اسپم، تحویل پیام و تله‌متری رسانه (Messages Suite Part 26)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-rose-400/80 font-mono px-2 py-0.5 rounded-full bg-rose-400/10 border border-rose-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    گزارش تخلف محتوا، اسپم سکرت‌چت، تصدیق تحویل پیام‌ها، زمان گوش دادن به موزیک، ری‌اکشن‌های نامناسب و متریک‌های خواندن:
+                    <span className="text-gray-300 font-mono mr-1">
+                      report, reportEncryptedSpam, reportMessagesDelivery, reportMusicListen, reportReaction, reportReadMetrics, reportSpam
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m058Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m058Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m058Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m058Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM058Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.report */}
+                    <form
+                      onSubmit={handleM058Report}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. گزارش تخلف پیام‌ها (report)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058ReportPeer}
+                          onChange={(e) => setM058ReportPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m058ReportIds}
+                          onChange={(e) => setM058ReportIds(e.target.value)}
+                          placeholder="Msg IDs (با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058ReportMessage}
+                          onChange={(e) => setM058ReportMessage(e.target.value)}
+                          placeholder="متن گزارش / علت تخلف"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'report'}
+                          className="px-4 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'report' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت تخلف'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.reportEncryptedSpam */}
+                    <form
+                      onSubmit={handleM058ReportEncryptedSpam}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. گزارش اسپم سکرت‌چت (reportEncryptedSpam)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m058ReportEncChatId}
+                          onChange={(e) => setM058ReportEncChatId(e.target.value)}
+                          placeholder="Secret Chat ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m058ReportEncAccessHash}
+                          onChange={(e) => setM058ReportEncAccessHash(e.target.value)}
+                          placeholder="Access Hash"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'reportEncryptedSpam'}
+                          className="px-4 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'reportEncryptedSpam' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اسپم سکرت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.reportMessagesDelivery */}
+                    <form
+                      onSubmit={handleM058ReportMessagesDelivery}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. اعلام تله‌متری تحویل پیام (reportMessagesDelivery)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 font-normal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m058ReportDelivPush}
+                            onChange={(e) => setM058ReportDelivPush(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          Push Notification
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058ReportDelivPeer}
+                          onChange={(e) => setM058ReportDelivPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m058ReportDelivIds}
+                          onChange={(e) => setM058ReportDelivIds(e.target.value)}
+                          placeholder="Delivered IDs (با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'reportMessagesDelivery'}
+                          className="px-4 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'reportMessagesDelivery' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعلام تحویل'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.reportMusicListen */}
+                    <form
+                      onSubmit={handleM058ReportMusicListen}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. تله‌متری شنیدن موزیک (reportMusicListen)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058MusicDocId}
+                          onChange={(e) => setM058MusicDocId(e.target.value)}
+                          placeholder="Doc ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m058MusicDuration}
+                          onChange={(e) => setM058MusicDuration(e.target.value)}
+                          placeholder="ثانیه"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'reportMusicListen'}
+                          className="px-4 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'reportMusicListen' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت پخش'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.reportReaction */}
+                    <form
+                      onSubmit={handleM058ReportReaction}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. گزارش ری‌اکشن مخرب (reportReaction)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058ReactionPeer}
+                          onChange={(e) => setM058ReactionPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m058ReactionMsgId}
+                          onChange={(e) => setM058ReactionMsgId(e.target.value)}
+                          placeholder="Msg ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m058ReactionUserPeer}
+                          onChange={(e) => setM058ReactionUserPeer(e.target.value)}
+                          placeholder="کاربر فرستنده ری‌اکشن"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'reportReaction'}
+                          className="px-4 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'reportReaction' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'گزارش'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.reportReadMetrics */}
+                    <form
+                      onSubmit={handleM058ReportReadMetrics}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. ارسال متریک مطالعه پیام (reportReadMetrics)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058MetricsPeer}
+                          onChange={(e) => setM058MetricsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m058MetricsMsgId}
+                          onChange={(e) => setM058MetricsMsgId(e.target.value)}
+                          placeholder="Msg ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m058MetricsDuration}
+                          onChange={(e) => setM058MetricsDuration(e.target.value)}
+                          placeholder="ثانیه"
+                          className="w-16 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'reportReadMetrics'}
+                          className="px-4 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'reportReadMetrics' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخابره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.reportSpam */}
+                    <form
+                      onSubmit={handleM058ReportSpam}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. گزارش اسپم کامل گفتگو یا کاربر (reportSpam)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m058SpamPeer}
+                          onChange={(e) => setM058SpamPeer(e.target.value)}
+                          placeholder="شناسه کاربر یا کانال / گروه ارسال‌کننده اسپم"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m058LoadingOp === 'reportSpam'}
+                          className="px-5 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m058LoadingOp === 'reportSpam' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'گزارش اسپم'}
                         </button>
                       </div>
                     </form>

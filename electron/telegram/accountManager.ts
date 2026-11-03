@@ -19990,6 +19990,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.reorderStickerSets(holder as any, params.masks, params.emojis, params.order)
   }
+
+  // Layer 232 Messages Suite (Microphase 058)
+  public async reportRaw(accountId: string, params: { peerId: string; id: number[] | number; option?: any; message?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.report(holder as any, accountId, params.peerId, params.id, params.option, params.message)
+  }
+
+  public async reportEncryptedSpamRaw(accountId: string, peer: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportEncryptedSpam(holder as any, peer)
+  }
+
+  public async reportMessagesDeliveryRaw(accountId: string, params: { push?: boolean; peerId?: string; id?: number[] | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportMessagesDelivery(holder as any, accountId, params.push, params.peerId, params.id)
+  }
+
+  public async reportMusicListenRaw(accountId: string, params: { id: any; listenedDuration?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportMusicListen(holder as any, params.id, params.listenedDuration)
+  }
+
+  public async reportReactionRaw(accountId: string, params: { peerId: string; id: number; reactionPeerId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportReaction(holder as any, accountId, params.peerId, params.id, params.reactionPeerId)
+  }
+
+  public async reportReadMetricsRaw(accountId: string, params: { peerId: string; metrics?: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportReadMetrics(holder as any, accountId, params.peerId, params.metrics)
+  }
+
+  public async reportSpamRaw(accountId: string, peerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reportSpam(holder as any, accountId, peerId)
+  }
 }
 
 

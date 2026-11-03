@@ -290,11 +290,11 @@ export class MessagingService {
     }
   }
 
-  public async reportSpam(holder: RpcClientHolder, accountId: string, peerId?: string): Promise<any> {
+  public async reportSpam(holder: RpcClientHolder, accountId: string, peerId: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.reportSpam',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        peer: await this.resolveInputPeer(accountId, peerId),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportSpam error:', err)
@@ -314,14 +314,21 @@ export class MessagingService {
     }
   }
 
-  public async report(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number, option?: any, message?: string): Promise<any> {
+  public async report(holder: RpcClientHolder, accountId: string, peerId: string, id: number[] | number, option?: any, message?: string): Promise<any> {
     try {
+      const msgIds = Array.isArray(id) ? id.map(Number) : (id !== undefined && id !== null ? [Number(id)] : [])
+      let optBytes: Uint8Array = new Uint8Array(0)
+      if (option instanceof Uint8Array) {
+        optBytes = option
+      } else if (typeof option === 'string') {
+        optBytes = Buffer.from(option)
+      }
       return await holder.client.call({
         _: 'messages.report',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'option': option,
-        'message': message,
+        peer: await this.resolveInputPeer(accountId, peerId),
+        id: msgIds,
+        option: optBytes,
+        message: String(message || ''),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.report error:', err)
@@ -572,11 +579,19 @@ export class MessagingService {
     }
   }
 
-  public async reportEncryptedSpam(holder: RpcClientHolder, peer?: any): Promise<any> {
+  public async reportEncryptedSpam(holder: RpcClientHolder, peer: any): Promise<any> {
     try {
+      let inputPeer: any = peer
+      if (peer && typeof peer === 'object' && peer.chatId && peer.accessHash) {
+        inputPeer = {
+          _: 'inputEncryptedChat',
+          chatId: Number(peer.chatId),
+          accessHash: Long.isLong(peer.accessHash) ? peer.accessHash : Long.fromValue(peer.accessHash),
+        }
+      }
       return await holder.client.call({
         _: 'messages.reportEncryptedSpam',
-        'peer': peer,
+        peer: inputPeer,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportEncryptedSpam error:', err)
@@ -2621,13 +2636,13 @@ export class MessagingService {
     }
   }
 
-  public async reportReaction(holder: RpcClientHolder, accountId: string, peerId?: string, id?: number, reactionPeerId?: string): Promise<any> {
+  public async reportReaction(holder: RpcClientHolder, accountId: string, peerId: string, id: number, reactionPeerId: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.reportReaction',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'reaction_peer': reactionPeerId ? await this.resolveInputPeer(accountId, reactionPeerId) : undefined,
+        peer: await this.resolveInputPeer(accountId, peerId),
+        id: Number(id),
+        reactionPeer: await this.resolveInputPeer(accountId, reactionPeerId),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportReaction error:', err)
@@ -3360,13 +3375,14 @@ export class MessagingService {
     }
   }
 
-  public async reportMessagesDelivery(holder: RpcClientHolder, accountId: string, push?: boolean, peerId?: string, id?: number): Promise<any> {
+  public async reportMessagesDelivery(holder: RpcClientHolder, accountId: string, push?: boolean, peerId?: string, id?: number[] | number): Promise<any> {
     try {
+      const msgIds = Array.isArray(id) ? id.map(Number) : (id !== undefined && id !== null ? [Number(id)] : [])
       return await holder.client.call({
         _: 'messages.reportMessagesDelivery',
-        'push': push,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        push: Boolean(push),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        id: msgIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportMessagesDelivery error:', err)
@@ -3668,12 +3684,23 @@ export class MessagingService {
     }
   }
 
-  public async reportReadMetrics(holder: RpcClientHolder, accountId: string, peerId?: string, metrics?: any): Promise<any> {
+  public async reportReadMetrics(holder: RpcClientHolder, accountId: string, peerId: string, metrics?: any[]): Promise<any> {
     try {
+      let formattedMetrics: any[] = []
+      if (Array.isArray(metrics)) {
+        formattedMetrics = metrics.map((m) => {
+          if (m && m._ === 'inputMessageReadMetric') return m
+          return {
+            _: 'inputMessageReadMetric',
+            id: Number(m.id || m.msgId || 0),
+            readDuration: Number(m.readDuration || m.duration || 0),
+          }
+        })
+      }
       return await holder.client.call({
         _: 'messages.reportReadMetrics',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'metrics': metrics,
+        peer: await this.resolveInputPeer(accountId, peerId),
+        metrics: formattedMetrics,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportReadMetrics error:', err)
@@ -3681,12 +3708,21 @@ export class MessagingService {
     }
   }
 
-  public async reportMusicListen(holder: RpcClientHolder, id?: any, listenedDuration?: number): Promise<any> {
+  public async reportMusicListen(holder: RpcClientHolder, id: any, listenedDuration?: number): Promise<any> {
     try {
+      let inputDoc: any = id
+      if (id && typeof id === 'object' && id.id && id.accessHash) {
+        inputDoc = {
+          _: 'inputDocument',
+          id: Long.isLong(id.id) ? id.id : Long.fromValue(id.id),
+          accessHash: Long.isLong(id.accessHash) ? id.accessHash : Long.fromValue(id.accessHash),
+          fileReference: id.fileReference instanceof Uint8Array ? id.fileReference : new Uint8Array(0),
+        }
+      }
       return await holder.client.call({
         _: 'messages.reportMusicListen',
-        'id': id,
-        'listened_duration': listenedDuration,
+        id: inputDoc,
+        listenedDuration: Number(listenedDuration || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reportMusicListen error:', err)
