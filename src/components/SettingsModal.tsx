@@ -476,6 +476,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [todoSuccess, setTodoSuccess] = useState<string | null>(null)
   const [todoError, setTodoError] = useState<string | null>(null)
 
+  // Layer 232 Messages Suite State (Microphase 034)
+  // messages.checkHistoryImportPeer
+  const [importPeerIdInput, setImportPeerIdInput] = useState('')
+  const [isCheckingImportPeer, setIsCheckingImportPeer] = useState(false)
+  const [importPeerResult, setImportPeerResult] = useState<any | null>(null)
+  const [importPeerError, setImportPeerError] = useState<string | null>(null)
+
+  // messages.checkQuickReplyShortcut
+  const [quickReplyShortcutInput, setQuickReplyShortcutInput] = useState('')
+  const [isCheckingShortcut, setIsCheckingShortcut] = useState(false)
+  const [shortcutAvailable, setShortcutAvailable] = useState<boolean | null>(null)
+  const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null)
+
+  // messages.clearAllDrafts
+  const [isClearingAllDrafts, setIsClearingAllDrafts] = useState(false)
+  const [clearDraftsFeedback, setClearDraftsFeedback] = useState<string | null>(null)
+
+  // messages.clearRecentReactions
+  const [isClearingRecentReactions, setIsClearingRecentReactions] = useState(false)
+  const [clearReactionsFeedback, setClearReactionsFeedback] = useState<string | null>(null)
+
+  // messages.clearRecentStickers
+  const [isClearingRecentStickers, setIsClearingRecentStickers] = useState(false)
+  const [clearStickersFeedback, setClearStickersFeedback] = useState<string | null>(null)
+
+  // messages.createChat & messages.deleteChat
+  const [newChatTitle, setNewChatTitle] = useState('')
+  const [newChatUserIds, setNewChatUserIds] = useState('')
+  const [newChatTtl, setNewChatTtl] = useState<number>(0)
+  const [isCreatingChat, setIsCreatingChat] = useState(false)
+  const [createChatResult, setCreateChatResult] = useState<string | null>(null)
+  const [createChatError, setCreateChatError] = useState<string | null>(null)
+
+  const [deleteChatIdInput, setDeleteChatIdInput] = useState('')
+  const [isDeletingChat, setIsDeletingChat] = useState(false)
+  const [deleteChatFeedback, setDeleteChatFeedback] = useState<string | null>(null)
+
   // Chat Theme & Appearance Settings (Official Telegram Parity - Screenshot 5)
   const [activeTheme, setActiveTheme] = useState<'classic' | 'day' | 'tinted' | 'night'>('tinted')
   const [selectedAccentColor, setSelectedAccentColor] = useState<number>(8) // Tinted teal
@@ -1091,6 +1128,155 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTodoError(err?.message || 'Failed to append todo item.')
     } finally {
       setIsAppendingTodo(false)
+    }
+  }
+
+  // Layer 232 Messages Handlers (Microphase 034)
+  const handleCheckHistoryImportPeer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !importPeerIdInput.trim() || !window.guidegram?.checkHistoryImportPeer) return
+    setIsCheckingImportPeer(true)
+    setImportPeerResult(null)
+    setImportPeerError(null)
+    try {
+      const res = await window.guidegram.checkHistoryImportPeer(targetId, importPeerIdInput.trim())
+      if (res) {
+        setImportPeerResult(res)
+      } else {
+        setImportPeerError('Peer does not allow history import or insufficient permissions.')
+      }
+    } catch (err: any) {
+      setImportPeerError(err?.message || 'History import peer check failed.')
+    } finally {
+      setIsCheckingImportPeer(false)
+    }
+  }
+
+  const handleCheckQuickReplyShortcut = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !quickReplyShortcutInput.trim() || !window.guidegram?.checkQuickReplyShortcut) return
+    setIsCheckingShortcut(true)
+    setShortcutAvailable(null)
+    setShortcutFeedback(null)
+    try {
+      const clean = quickReplyShortcutInput.trim().replace(/^\//, '')
+      const ok = await window.guidegram.checkQuickReplyShortcut(targetId, clean)
+      setShortcutAvailable(ok)
+      setShortcutFeedback(ok ? `Shortcut /${clean} is valid and ready for quick replies!` : `Shortcut /${clean} is unavailable or reserved.`)
+    } catch (err: any) {
+      setShortcutFeedback(err?.message || 'Failed to check shortcut.')
+    } finally {
+      setIsCheckingShortcut(false)
+    }
+  }
+
+  const handleClearAllDrafts = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.clearAllDrafts) return
+    setIsClearingAllDrafts(true)
+    setClearDraftsFeedback(null)
+    try {
+      const ok = await window.guidegram.clearAllDrafts(targetId)
+      if (ok) {
+        setClearDraftsFeedback('All cloud message drafts cleared across chats.')
+        showToast('All drafts cleared.')
+      } else {
+        setClearDraftsFeedback('Failed to clear drafts.')
+      }
+    } catch (err: any) {
+      setClearDraftsFeedback(err?.message || 'Error clearing drafts.')
+    } finally {
+      setIsClearingAllDrafts(false)
+    }
+  }
+
+  const handleClearRecentReactions = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.clearRecentReactions) return
+    setIsClearingRecentReactions(true)
+    setClearReactionsFeedback(null)
+    try {
+      const ok = await window.guidegram.clearRecentReactions(targetId)
+      if (ok) {
+        setClearReactionsFeedback('Recent reaction emojis cleared.')
+        showToast('Recent reactions cleared.')
+      } else {
+        setClearReactionsFeedback('Failed to clear recent reactions.')
+      }
+    } catch (err: any) {
+      setClearReactionsFeedback(err?.message || 'Error clearing reactions.')
+    } finally {
+      setIsClearingRecentReactions(false)
+    }
+  }
+
+  const handleClearRecentStickers = async (attached = false) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.clearRecentStickers) return
+    setIsClearingRecentStickers(true)
+    setClearStickersFeedback(null)
+    try {
+      const ok = await window.guidegram.clearRecentStickers(targetId, attached)
+      if (ok) {
+        setClearStickersFeedback('Recent sticker cache cleared.')
+        showToast('Recent stickers cleared.')
+      } else {
+        setClearStickersFeedback('Failed to clear recent stickers.')
+      }
+    } catch (err: any) {
+      setClearStickersFeedback(err?.message || 'Error clearing stickers.')
+    } finally {
+      setIsClearingRecentStickers(false)
+    }
+  }
+
+  const handleCreateChat = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !newChatTitle.trim() || !newChatUserIds.trim() || !window.guidegram?.createChat) return
+    setIsCreatingChat(true)
+    setCreateChatResult(null)
+    setCreateChatError(null)
+    try {
+      const userList = newChatUserIds.split(/[\s,]+/).filter(Boolean)
+      const res = await window.guidegram.createChat(targetId, userList, newChatTitle.trim(), newChatTtl || undefined)
+      if (res) {
+        setCreateChatResult(`Group chat "${newChatTitle.trim()}" created successfully!`)
+        showToast('Chat created successfully.')
+        setNewChatTitle('')
+        setNewChatUserIds('')
+      } else {
+        setCreateChatError('Could not create chat. Ensure valid users.')
+      }
+    } catch (err: any) {
+      setCreateChatError(err?.message || 'Failed to create chat.')
+    } finally {
+      setIsCreatingChat(false)
+    }
+  }
+
+  const handleDeleteChat = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !deleteChatIdInput.trim() || !window.guidegram?.deleteChat) return
+    setIsDeletingChat(true)
+    setDeleteChatFeedback(null)
+    try {
+      const rawId = deleteChatIdInput.trim().replace(/^-/, '')
+      const ok = await window.guidegram.deleteChat(targetId, BigInt(rawId))
+      if (ok) {
+        setDeleteChatFeedback(`Chat #${rawId} permanently deleted from Telegram.`)
+        showToast('Chat deleted.')
+        setDeleteChatIdInput('')
+      } else {
+        setDeleteChatFeedback('Failed to delete chat. Verify you are the owner.')
+      }
+    } catch (err: any) {
+      setDeleteChatFeedback(err?.message || 'Failed to delete chat.')
+    } finally {
+      setIsDeletingChat(false)
     }
   }
 
@@ -4376,6 +4562,210 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {todoSuccess && <div className="text-[11px] text-emerald-400">{todoSuccess}</div>}
                         {todoError && <div className="text-[11px] text-rose-400">{todoError}</div>}
                       </form>
+                    </div>
+
+                    {/* Layer 232 Messages Suite (Microphase 034): History Import Peer, Quick Replies, Cache Purges & Group Management */}
+                    <div className="pt-4 border-t border-white/5 space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold text-accent-cyan uppercase tracking-wider">
+                        <Sparkles className="w-4 h-4 text-accent-cyan" />
+                        <span>Chat Lifecycle & Maintenance Suite (MTProto Layer 232)</span>
+                      </div>
+
+                      {/* 1. History Import Peer Validator (messages.checkHistoryImportPeer) */}
+                      <form onSubmit={handleCheckHistoryImportPeer} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                            <FileText className="w-4 h-4 text-purple-400" />
+                            <span>History Import Peer Eligibility (checkHistoryImportPeer)</span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-gray-400">
+                          Verifies whether target user or group chat allows importing external message history from other platforms.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={importPeerIdInput}
+                            onChange={(e) => setImportPeerIdInput(e.target.value)}
+                            placeholder="Target Peer ID or Username"
+                            className="flex-1 px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-purple-400"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isCheckingImportPeer || !importPeerIdInput.trim()}
+                            className="px-3 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isCheckingImportPeer ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                            <span>Validate Peer</span>
+                          </button>
+                        </div>
+                        {importPeerError && (
+                          <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{importPeerError}</span>
+                          </div>
+                        )}
+                        {importPeerResult && (
+                          <div className="p-3 rounded-xl bg-dark-900 border border-purple-500/30 text-xs text-purple-300">
+                            Peer Eligibility Confirmed: Import is supported for this destination.
+                          </div>
+                        )}
+                      </form>
+
+                      {/* 2. Quick Reply Shortcut Validator (messages.checkQuickReplyShortcut) */}
+                      <form onSubmit={handleCheckQuickReplyShortcut} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                            <Zap className="w-4 h-4 text-amber-400" />
+                            <span>Telegram Business Quick Reply Shortcut Validator</span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-gray-400">
+                          Checks Telegram cloud registry to verify if a business quick-reply shortcut name is available and valid.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={quickReplyShortcutInput}
+                            onChange={(e) => setQuickReplyShortcutInput(e.target.value)}
+                            placeholder="e.g. /welcome or /pricing"
+                            className="flex-1 px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isCheckingShortcut || !quickReplyShortcutInput.trim()}
+                            className="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isCheckingShortcut ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                            <span>Check Shortcut</span>
+                          </button>
+                        </div>
+                        {shortcutFeedback && (
+                          <div className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                            shortcutAvailable
+                              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                              : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                          }`}>
+                            {shortcutAvailable ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                            <span>{shortcutFeedback}</span>
+                          </div>
+                        )}
+                      </form>
+
+                      {/* 3. Cloud Drafts, Reactions & Sticker Caches Purge */}
+                      <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                          <Trash2 className="w-4 h-4 text-rose-400" />
+                          <span>Cloud Drafts & Recent Media Maintenance</span>
+                        </div>
+                        <p className="text-[11px] text-gray-400">
+                          Synchronize and purge unsent drafts, recent reaction history, and sticker caches across your devices.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleClearAllDrafts}
+                            disabled={isClearingAllDrafts}
+                            className="py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isClearingAllDrafts ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            <span>Clear All Drafts</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearRecentReactions}
+                            disabled={isClearingRecentReactions}
+                            className="py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isClearingRecentReactions ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            <span>Clear Recent Reactions</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleClearRecentStickers(false)}
+                            disabled={isClearingRecentStickers}
+                            className="py-2 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isClearingRecentStickers ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            <span>Clear Recent Stickers</span>
+                          </button>
+                        </div>
+                        {clearDraftsFeedback && <div className="text-[11px] text-emerald-400 font-medium">{clearDraftsFeedback}</div>}
+                        {clearReactionsFeedback && <div className="text-[11px] text-emerald-400 font-medium">{clearReactionsFeedback}</div>}
+                        {clearStickersFeedback && <div className="text-[11px] text-emerald-400 font-medium">{clearStickersFeedback}</div>}
+                      </div>
+
+                      {/* 4. Native Group Creator & Permanent Chat Destroyer (messages.createChat & messages.deleteChat) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Native Group Creator */}
+                        <form onSubmit={handleCreateChat} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-200">
+                            <Users className="w-4 h-4 text-emerald-400" />
+                            <span>Native Group Creator (createChat)</span>
+                          </div>
+                          <input
+                            type="text"
+                            required
+                            value={newChatTitle}
+                            onChange={(e) => setNewChatTitle(e.target.value)}
+                            placeholder="Group Title"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-400"
+                          />
+                          <input
+                            type="text"
+                            required
+                            value={newChatUserIds}
+                            onChange={(e) => setNewChatUserIds(e.target.value)}
+                            placeholder="User IDs / Usernames (space separated)"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+                          />
+                          <input
+                            type="number"
+                            value={newChatTtl || ''}
+                            onChange={(e) => setNewChatTtl(Number(e.target.value) || 0)}
+                            placeholder="Auto-delete TTL seconds (0 for default)"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-emerald-400"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isCreatingChat || !newChatTitle.trim() || !newChatUserIds.trim()}
+                            className="w-full py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isCreatingChat ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                            <span>Create Native Group</span>
+                          </button>
+                          {createChatResult && <div className="text-[11px] text-emerald-400">{createChatResult}</div>}
+                          {createChatError && <div className="text-[11px] text-rose-400">{createChatError}</div>}
+                        </form>
+
+                        {/* Permanent Chat Destroyer */}
+                        <form onSubmit={handleDeleteChat} className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2.5">
+                          <div className="flex items-center gap-2 text-xs font-bold text-rose-400">
+                            <Trash2 className="w-4 h-4 text-rose-400" />
+                            <span>Permanent Chat Deletion (deleteChat)</span>
+                          </div>
+                          <p className="text-[11px] text-gray-400">
+                            Permanently deletes an owned basic group chat and expels all participants across the Telegram core network.
+                          </p>
+                          <input
+                            type="text"
+                            required
+                            value={deleteChatIdInput}
+                            onChange={(e) => setDeleteChatIdInput(e.target.value)}
+                            placeholder="Chat ID (e.g. 123456789)"
+                            className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-rose-400"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isDeletingChat || !deleteChatIdInput.trim()}
+                            className="w-full py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            {isDeletingChat ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            <span>Delete Group Chat</span>
+                          </button>
+                          {deleteChatFeedback && <div className="text-[11px] text-rose-300">{deleteChatFeedback}</div>}
+                        </form>
+                      </div>
                     </div>
                   </div>
                 </div>

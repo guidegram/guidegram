@@ -2182,6 +2182,23 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:append-todo-list', { accountId, peerId, msgId, list }),
   addPollAnswer: (accountId: string, peerId: string, msgId: number, answer: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:add-poll-answer', { accountId, peerId, msgId, answer }),
+  // Layer 232 Messages Suite (Microphase 034)
+  checkHistoryImportPeer: (accountId: string, peerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:check-history-import-peer', { accountId, peerId }),
+  checkQuickReplyShortcut: (accountId: string, shortcut: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:messages:check-quick-reply-shortcut', { accountId, shortcut }),
+  clearAllDrafts: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:messages:clear-all-drafts', { accountId }),
+  clearRecentReactions: (accountId: string): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:messages:clear-recent-reactions', { accountId }),
+  clearRecentStickers: (accountId: string, attached = false): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:messages:clear-recent-stickers', { accountId, attached }),
+  createChat: (accountId: string, userIds: string[], title: string, ttlPeriod?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:create-chat', { accountId, userIds, title, ttlPeriod }),
+  deleteChat: (accountId: string, chatId: bigint | number): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:messages:delete-chat', { accountId, chatId }),
+  checkUrlAuthMatchCode: (accountId: string, url: string, matchCode: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:check-url-auth-match-code', { accountId, url, matchCode }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

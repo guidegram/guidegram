@@ -18984,5 +18984,59 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.addPollAnswer(holder as any, accountId, peerId, msgId, answer)
   }
+
+  // Layer 232 Messages Suite (Microphase 034)
+  public async checkHistoryImportPeer(accountId: string, peerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.checkHistoryImportPeer(holder as any, accountId, peerId)
+  }
+
+  public async checkQuickReplyShortcut(accountId: string, shortcut: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.messagingService.checkQuickReplyShortcut(holder as any, shortcut)
+    return Boolean(res)
+  }
+
+  public async clearAllDrafts(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.messagingService.clearAllDrafts(holder as any)
+    return Boolean(res)
+  }
+
+  public async clearRecentReactions(accountId: string): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.messagingService.clearRecentReactions(holder as any)
+    return Boolean(res)
+  }
+
+  public async clearRecentStickers(accountId: string, attached = false): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.messagingService.clearRecentStickers(holder as any, attached)
+    return Boolean(res)
+  }
+
+  public async createChat(accountId: string, userIds: string[], title: string, ttlPeriod?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.createChat(holder as any, accountId, userIds as any, title, ttlPeriod)
+  }
+
+  public async deleteChat(accountId: string, chatId: bigint | number): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const res = await this.messagingService.deleteChat(holder as any, chatId)
+    return Boolean(res)
+  }
+
+  public async checkUrlAuthMatchCode(accountId: string, url: string, matchCode: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.checkUrlAuthMatchCode(holder as any, url, matchCode)
+  }
 }
 

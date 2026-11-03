@@ -6111,6 +6111,79 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite IPC Handlers (Microphase 034)
+  ipcMain.handle('telegram:messages:check-history-import-peer', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.checkHistoryImportPeer(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] checkHistoryImportPeer error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:check-quick-reply-shortcut', async (_event, { accountId, shortcut }) => {
+    try {
+      return await accountManager.checkQuickReplyShortcut(accountId, shortcut)
+    } catch (err: any) {
+      Logger.warn('[IPC] checkQuickReplyShortcut error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:messages:clear-all-drafts', async (_event, { accountId }) => {
+    try {
+      return await accountManager.clearAllDrafts(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] clearAllDrafts error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:messages:clear-recent-reactions', async (_event, { accountId }) => {
+    try {
+      return await accountManager.clearRecentReactions(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] clearRecentReactions error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:messages:clear-recent-stickers', async (_event, { accountId, attached }) => {
+    try {
+      return await accountManager.clearRecentStickers(accountId, attached)
+    } catch (err: any) {
+      Logger.warn('[IPC] clearRecentStickers error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:messages:create-chat', async (_event, { accountId, userIds, title, ttlPeriod }) => {
+    try {
+      return await accountManager.createChat(accountId, userIds, title, ttlPeriod)
+    } catch (err: any) {
+      Logger.warn('[IPC] createChat error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-chat', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.deleteChat(accountId, chatId)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteChat error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:messages:check-url-auth-match-code', async (_event, { accountId, url, matchCode }) => {
+    try {
+      return await accountManager.checkUrlAuthMatchCode(accountId, url, matchCode)
+    } catch (err: any) {
+      Logger.warn('[IPC] checkUrlAuthMatchCode error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
