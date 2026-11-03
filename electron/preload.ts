@@ -2252,6 +2252,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:edit-fact-check', { accountId, peerId, msgId, text }),
   editInlineBotMessage: (accountId: string, options: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:edit-inline-bot-message', { accountId, options }),
+  // Layer 232 Messages Suite (Microphase 040)
+  faveSticker: (accountId: string, id: any, unfave?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:fave-sticker', { accountId, id, unfave }),
+  getAdminsWithInvites: (accountId: string, peerId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-admins-with-invites', { accountId, peerId }),
+  getArchivedStickers: (accountId: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-archived-stickers', { accountId, options }),
+  getAllStickers: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-all-stickers', { accountId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

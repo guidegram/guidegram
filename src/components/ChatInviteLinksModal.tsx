@@ -124,6 +124,44 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
   const [isDeletingCallHistory, setIsDeletingCallHistory] = useState(false)
   const [deleteCallHistoryFeedback, setDeleteCallHistoryFeedback] = useState<string | null>(null)
 
+  // Layer 232 Messages Suite (Microphase 040)
+  // 1. messages.exportChatInvite
+  const [m040ExportedLink, setM040ExportedLink] = useState<string | null>(null)
+  const [isExportingInvite, setIsExportingInvite] = useState(false)
+  const [exportInviteFeedback, setExportInviteFeedback] = useState<string | null>(null)
+
+  // 2. messages.faveSticker
+  const [m040StickerId, setM040StickerId] = useState('')
+  const [m040Unfave, setM040Unfave] = useState(false)
+  const [isFavingSticker, setIsFavingSticker] = useState(false)
+  const [faveStickerFeedback, setFaveStickerFeedback] = useState<string | null>(null)
+
+  // 3. messages.forwardMessages
+  const [m040ForwardToPeer, setM040ForwardToPeer] = useState('')
+  const [m040ForwardMsgIds, setM040ForwardMsgIds] = useState('')
+  const [isForwardingMessages, setIsForwardingMessages] = useState(false)
+  const [forwardFeedback, setForwardFeedback] = useState<string | null>(null)
+
+  // 4. messages.getAdminsWithInvites
+  const [m040AdminsCount, setM040AdminsCount] = useState<number | null>(null)
+  const [isLoadingAdmins, setIsLoadingAdmins] = useState(false)
+  const [adminsFeedback, setAdminsFeedback] = useState<string | null>(null)
+
+  // 5. messages.getAllDrafts
+  const [m040DraftsCount, setM040DraftsCount] = useState<number | null>(null)
+  const [isLoadingDrafts, setIsLoadingDrafts] = useState(false)
+  const [draftsFeedback, setDraftsFeedback] = useState<string | null>(null)
+
+  // 6. messages.getAllStickers
+  const [m040StickersCount, setM040StickersCount] = useState<number | null>(null)
+  const [isLoadingStickers, setIsLoadingStickers] = useState(false)
+  const [stickersFeedback, setStickersFeedback] = useState<string | null>(null)
+
+  // 7. messages.getArchivedStickers
+  const [m040ArchivedCount, setM040ArchivedCount] = useState<number | null>(null)
+  const [isLoadingArchived, setIsLoadingArchived] = useState(false)
+  const [archivedFeedback, setArchivedFeedback] = useState<string | null>(null)
+
   const formatDate = (unixSeconds?: number): string => {
     if (!unixSeconds) return t('invite_links.never')
     try {
@@ -449,6 +487,132 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
       setDeleteCallHistoryFeedback(err?.message || 'Error deleting call history.')
     } finally {
       setIsDeletingCallHistory(false)
+    }
+  }
+
+  // Microphase 040 Handlers
+  const handleExportPermanentInvite = async () => {
+    if (!window.guidegram?.exportChatInvite) return
+    setIsExportingInvite(true)
+    setExportInviteFeedback(null)
+    try {
+      const link = await window.guidegram.exportChatInvite(accountId, chatId)
+      if (link) {
+        setM040ExportedLink(link)
+        setExportInviteFeedback('Permanent chat invite link generated successfully.')
+      } else {
+        setExportInviteFeedback('Failed to generate invite link.')
+      }
+    } catch (err: any) {
+      setExportInviteFeedback(err?.message || 'Error exporting invite link.')
+    } finally {
+      setIsExportingInvite(false)
+    }
+  }
+
+  const handleFaveSticker = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.faveSticker || !m040StickerId.trim()) return
+    setIsFavingSticker(true)
+    setFaveStickerFeedback(null)
+    try {
+      const res = await window.guidegram.faveSticker(accountId, { _: 'inputDocument', id: m040StickerId.trim() }, m040Unfave)
+      if (res) {
+        setFaveStickerFeedback(m040Unfave ? 'Sticker removed from favorites.' : 'Sticker added to favorites.')
+        setM040StickerId('')
+      } else {
+        setFaveStickerFeedback('Operation failed.')
+      }
+    } catch (err: any) {
+      setFaveStickerFeedback(err?.message || 'Error updating sticker favorites.')
+    } finally {
+      setIsFavingSticker(false)
+    }
+  }
+
+  const handleForwardMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.forwardMessages || !m040ForwardToPeer.trim() || !m040ForwardMsgIds.trim()) return
+    setIsForwardingMessages(true)
+    setForwardFeedback(null)
+    try {
+      const ids = m040ForwardMsgIds.split(',').map((x) => parseInt(x.trim(), 10)).filter((n) => !isNaN(n))
+      if (ids.length === 0) {
+        setForwardFeedback('Enter at least one valid message ID.')
+        setIsForwardingMessages(false)
+        return
+      }
+      await window.guidegram.forwardMessages(accountId, m040ForwardToPeer.trim(), chatId, ids, {})
+      setForwardFeedback(`Forwarded ${ids.length} message(s) successfully.`)
+      setM040ForwardMsgIds('')
+    } catch (err: any) {
+      setForwardFeedback(err?.message || 'Error forwarding messages.')
+    } finally {
+      setIsForwardingMessages(false)
+    }
+  }
+
+  const handleGetAdminsWithInvites = async () => {
+    if (!window.guidegram?.getAdminsWithInvites) return
+    setIsLoadingAdmins(true)
+    setAdminsFeedback(null)
+    try {
+      const res = await window.guidegram.getAdminsWithInvites(accountId, chatId)
+      const count = Array.isArray(res?.admins) ? res.admins.length : Array.isArray(res) ? res.length : 0
+      setM040AdminsCount(count)
+      setAdminsFeedback(`Retrieved ${count} administrator(s) with active invites.`)
+    } catch (err: any) {
+      setAdminsFeedback(err?.message || 'Error fetching admins with invites.')
+    } finally {
+      setIsLoadingAdmins(false)
+    }
+  }
+
+  const handleGetAllDrafts = async () => {
+    if (!window.guidegram?.getAllDrafts) return
+    setIsLoadingDrafts(true)
+    setDraftsFeedback(null)
+    try {
+      const drafts = await window.guidegram.getAllDrafts(accountId)
+      const count = drafts && typeof drafts === 'object' ? Object.keys(drafts).length : 0
+      setM040DraftsCount(count)
+      setDraftsFeedback(`Synchronized ${count} cloud draft(s) across account.`)
+    } catch (err: any) {
+      setDraftsFeedback(err?.message || 'Error synchronizing drafts.')
+    } finally {
+      setIsLoadingDrafts(false)
+    }
+  }
+
+  const handleGetAllStickers = async () => {
+    if (!window.guidegram?.getAllStickers) return
+    setIsLoadingStickers(true)
+    setStickersFeedback(null)
+    try {
+      const res = await window.guidegram.getAllStickers(accountId)
+      const count = Array.isArray(res?.sets) ? res.sets.length : 0
+      setM040StickersCount(count)
+      setStickersFeedback(`Retrieved ${count} installed sticker set(s).`)
+    } catch (err: any) {
+      setStickersFeedback(err?.message || 'Error fetching sticker sets.')
+    } finally {
+      setIsLoadingStickers(false)
+    }
+  }
+
+  const handleGetArchivedStickers = async () => {
+    if (!window.guidegram?.getArchivedStickers) return
+    setIsLoadingArchived(true)
+    setArchivedFeedback(null)
+    try {
+      const res = await window.guidegram.getArchivedStickers(accountId, { limit: 50 })
+      const count = Array.isArray(res?.sets) ? res.sets.length : Array.isArray(res) ? res.length : 0
+      setM040ArchivedCount(count)
+      setArchivedFeedback(`Found ${count} archived sticker set(s).`)
+    } catch (err: any) {
+      setArchivedFeedback(err?.message || 'Error fetching archived stickers.')
+    } finally {
+      setIsLoadingArchived(false)
     }
   }
 
@@ -1008,6 +1172,205 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                   </button>
                 </div>
                 {deleteCallHistoryFeedback && <div className="text-[11px] text-rose-300">{deleteCallHistoryFeedback}</div>}
+              </div>
+
+              {/* Microphase 040: Layer 232 Messages Operations Suite */}
+              <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary-400">
+                    <Link2 className="w-4 h-4 text-primary-400" />
+                    <span>Layer 232 Message & Sticker Suite (Microphase 040)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-400 border border-primary-500/20">
+                    Phase 040 • 7 RPCs
+                  </span>
+                </div>
+
+                {/* 1. messages.exportChatInvite */}
+                <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-300">
+                      ۱. صدور لینک دعوت دائمی چت (exportChatInvite)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">messages.exportChatInvite</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportPermanentInvite}
+                      disabled={isExportingInvite}
+                      className="px-3.5 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isExportingInvite ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      <span>تولید لینک دائمی</span>
+                    </button>
+                    {m040ExportedLink && (
+                      <div className="flex-1 flex items-center justify-between px-3 py-1 bg-dark-900 border border-white/5 rounded-xl text-xs text-primary-300 font-mono">
+                        <span className="truncate">{m040ExportedLink}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyTextToClipboard(m040ExportedLink)}
+                          className="p-1 hover:text-white"
+                          title="کپی لینک"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {exportInviteFeedback && <div className="text-[10px] text-gray-400">{exportInviteFeedback}</div>}
+                </div>
+
+                {/* 2. messages.faveSticker */}
+                <form onSubmit={handleFaveSticker} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-300">
+                      ۲. علاقه‌مندی استیکر (faveSticker)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">messages.faveSticker</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+                    <input
+                      type="text"
+                      value={m040StickerId}
+                      onChange={(e) => setM040StickerId(e.target.value)}
+                      placeholder="شناسه استیکر (Document ID)"
+                      className="sm:col-span-2 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-400 font-mono"
+                    />
+                    <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={m040Unfave}
+                        onChange={(e) => setM040Unfave(e.target.checked)}
+                        className="rounded border-white/20 text-primary-500"
+                      />
+                      <span>حذف از علاقه‌مندی</span>
+                    </label>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isFavingSticker || !m040StickerId.trim()}
+                    className="w-full py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isFavingSticker ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    <span>اعمال وضعیت استیکر</span>
+                  </button>
+                  {faveStickerFeedback && <div className="text-[10px] text-gray-400">{faveStickerFeedback}</div>}
+                </form>
+
+                {/* 3. messages.forwardMessages */}
+                <form onSubmit={handleForwardMessages} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-300">
+                      ۳. فوروارد مستقیم پیام‌ها (forwardMessages)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">messages.forwardMessages</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={m040ForwardToPeer}
+                      onChange={(e) => setM040ForwardToPeer(e.target.value)}
+                      placeholder="شناسه مقصد (To Peer ID / Username)"
+                      className="bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-400 font-mono"
+                    />
+                    <input
+                      type="text"
+                      value={m040ForwardMsgIds}
+                      onChange={(e) => setM040ForwardMsgIds(e.target.value)}
+                      placeholder="شناسه‌های پیام (جداشده با کاما: 12, 13)"
+                      className="bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-400 font-mono"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isForwardingMessages || !m040ForwardToPeer.trim() || !m040ForwardMsgIds.trim()}
+                    className="w-full py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isForwardingMessages ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    <span>فوروارد پیام‌ها</span>
+                  </button>
+                  {forwardFeedback && <div className="text-[10px] text-gray-400">{forwardFeedback}</div>}
+                </form>
+
+                {/* 4, 5, 6, 7: Inspector Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* 4. messages.getAdminsWithInvites */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۴. ادمین‌های لینک‌دار (getAdminsWithInvites)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetAdminsWithInvites}
+                      disabled={isLoadingAdmins}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingAdmins ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                      <span>استعلام ادمین‌ها {m040AdminsCount !== null ? `(${m040AdminsCount})` : ''}</span>
+                    </button>
+                    {adminsFeedback && <div className="text-[10px] text-gray-400">{adminsFeedback}</div>}
+                  </div>
+
+                  {/* 5. messages.getAllDrafts */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۵. همگام‌سازی پیش‌نویس‌ها (getAllDrafts)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetAllDrafts}
+                      disabled={isLoadingDrafts}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingDrafts ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Edit3 className="w-3.5 h-3.5" />}
+                      <span>بررسی درفت‌ها {m040DraftsCount !== null ? `(${m040DraftsCount})` : ''}</span>
+                    </button>
+                    {draftsFeedback && <div className="text-[10px] text-gray-400">{draftsFeedback}</div>}
+                  </div>
+
+                  {/* 6. messages.getAllStickers */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۶. دریافت استیکرها (getAllStickers)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetAllStickers}
+                      disabled={isLoadingStickers}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingStickers ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      <span>مجموعه‌های استیکر {m040StickersCount !== null ? `(${m040StickersCount})` : ''}</span>
+                    </button>
+                    {stickersFeedback && <div className="text-[10px] text-gray-400">{stickersFeedback}</div>}
+                  </div>
+
+                  {/* 7. messages.getArchivedStickers */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۷. استیکرهای آرشیو (getArchivedStickers)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetArchivedStickers}
+                      disabled={isLoadingArchived}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingArchived ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      <span>استیکرهای آرشیو {m040ArchivedCount !== null ? `(${m040ArchivedCount})` : ''}</span>
+                    </button>
+                    {archivedFeedback && <div className="text-[10px] text-gray-400">{archivedFeedback}</div>}
+                  </div>
+                </div>
               </div>
             </div>
           ) : loading ? (

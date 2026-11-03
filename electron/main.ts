@@ -6432,6 +6432,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 040)
+  ipcMain.handle('telegram:messages:export-chat-invite', async (_event, { accountId, chatId }) => {
+    try {
+      return await accountManager.exportChatInvite(accountId, chatId)
+    } catch (err: any) {
+      Logger.warn('[IPC] exportChatInvite error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:fave-sticker', async (_event, { accountId, id, unfave }) => {
+    try {
+      return await accountManager.faveSticker(accountId, id, unfave)
+    } catch (err: any) {
+      Logger.warn('[IPC] faveSticker error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:forward-messages', async (_event, { accountId, fromChatId, toChatId, messageIds, options }) => {
+    try {
+      return await accountManager.forwardMessages(accountId, fromChatId, toChatId, messageIds, options)
+    } catch (err: any) {
+      Logger.warn('[IPC] forwardMessages error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-admins-with-invites', async (_event, { accountId, peerId }) => {
+    try {
+      return await accountManager.getAdminsWithInvites(accountId, peerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAdminsWithInvites error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-all-drafts', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getAllDrafts(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAllDrafts error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-all-stickers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getAllStickersRaw(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getAllStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-archived-stickers', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.getArchivedStickers(accountId, options || {})
+    } catch (err: any) {
+      Logger.warn('[IPC] getArchivedStickers error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

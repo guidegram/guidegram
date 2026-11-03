@@ -19245,5 +19245,36 @@ export class AccountManager {
       options?.richMessage
     )
   }
+
+  // Layer 232 Messages Suite (Microphase 040)
+  public async faveSticker(accountId: string, id: any, unfave?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.faveSticker(holder as any, id, unfave)
+  }
+
+  public async getAdminsWithInvites(accountId: string, peerId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getAdminsWithInvites(holder as any, accountId, peerId)
+  }
+
+  public async getArchivedStickers(accountId: string, options?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getArchivedStickers(
+      holder as any,
+      options?.masks,
+      options?.emojis,
+      options?.offsetId,
+      options?.limit
+    )
+  }
+
+  public async getAllStickersRaw(accountId: string, hash?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getAllStickers(holder as any, hash)
+  }
 }
 
