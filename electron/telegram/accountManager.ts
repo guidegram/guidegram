@@ -19088,5 +19088,36 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.deleteChatUser(holder as any, accountId, revokeHistory, chatId, userId)
   }
+
+  // Layer 232 Messages Suite (Microphase 036)
+  public async deleteExportedChatInvite(accountId: string, peerId: string, link: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteExportedChatInvite(holder as any, accountId, peerId, link)
+  }
+
+  public async deleteFactCheck(accountId: string, peerId: string, msgId: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteFactCheck(holder as any, accountId, peerId, msgId)
+  }
+
+  public async deleteParticipantReaction(accountId: string, peerId: string, msgId: number, participantId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteParticipantReaction(holder as any, accountId, peerId, msgId, participantId)
+  }
+
+  public async deleteParticipantReactions(accountId: string, peerId: string, participantId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deleteParticipantReactions(holder as any, accountId, peerId, participantId)
+  }
+
+  public async deletePhoneCallHistory(accountId: string, revoke = true): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.deletePhoneCallHistory(holder as any, revoke)
+  }
 }
 

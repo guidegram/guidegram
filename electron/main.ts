@@ -6221,6 +6221,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 036)
+  ipcMain.handle('telegram:messages:delete-exported-chat-invite', async (_event, { accountId, peerId, link }) => {
+    try {
+      return await accountManager.deleteExportedChatInvite(accountId, peerId, link)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteExportedChatInvite error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-fact-check', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.deleteFactCheck(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteFactCheck error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-participant-reaction', async (_event, { accountId, peerId, msgId, participantId }) => {
+    try {
+      return await accountManager.deleteParticipantReaction(accountId, peerId, msgId, participantId)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteParticipantReaction error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-participant-reactions', async (_event, { accountId, peerId, participantId }) => {
+    try {
+      return await accountManager.deleteParticipantReactions(accountId, peerId, participantId)
+    } catch (err: any) {
+      Logger.warn('[IPC] deleteParticipantReactions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:delete-phone-call-history', async (_event, { accountId, revoke }) => {
+    try {
+      return await accountManager.deletePhoneCallHistory(accountId, revoke)
+    } catch (err: any) {
+      Logger.warn('[IPC] deletePhoneCallHistory error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

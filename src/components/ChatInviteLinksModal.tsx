@@ -32,7 +32,7 @@ export interface ChatInviteLinksModalProps {
   onInviteLinkChange?: (link: string | null) => void
 }
 
-type Tab = 'active' | 'revoked'
+type Tab = 'active' | 'revoked' | 'maintenance'
 type ConfirmState = { type: 'revoke' | 'delete'; link: ChatInviteLink } | null
 
 const stripIpcPrefix = (value: string): string =>
@@ -102,6 +102,28 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
   const [replacement, setReplacement] = useState<string | null>(null)
   const [selectedJoinRequestLink, setSelectedJoinRequestLink] = useState<string | null>(null)
 
+  // Layer 232 Messages Maintenance (Microphase 036)
+  // 1. messages.deleteExportedChatInvite
+  const [purgeInviteLink, setPurgeInviteLink] = useState('')
+  const [isPurgingInvite, setIsPurgingInvite] = useState(false)
+  const [purgeInviteFeedback, setPurgeInviteFeedback] = useState<string | null>(null)
+
+  // 2. messages.deleteFactCheck
+  const [factCheckMsgId, setFactCheckMsgId] = useState('')
+  const [isDeletingFactCheck, setIsDeletingFactCheck] = useState(false)
+  const [deleteFactCheckFeedback, setDeleteFactCheckFeedback] = useState<string | null>(null)
+
+  // 3. messages.deleteParticipantReaction & deleteParticipantReactions
+  const [reactionMsgId, setReactionMsgId] = useState('')
+  const [reactionParticipantId, setReactionParticipantId] = useState('')
+  const [isDeletingReactions, setIsDeletingReactions] = useState(false)
+  const [deleteReactionsFeedback, setDeleteReactionsFeedback] = useState<string | null>(null)
+
+  // 4. messages.deletePhoneCallHistory
+  const [callHistoryRevoke, setCallHistoryRevoke] = useState(true)
+  const [isDeletingCallHistory, setIsDeletingCallHistory] = useState(false)
+  const [deleteCallHistoryFeedback, setDeleteCallHistoryFeedback] = useState<string | null>(null)
+
   const formatDate = (unixSeconds?: number): string => {
     if (!unixSeconds) return t('invite_links.never')
     try {
@@ -116,6 +138,7 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
 
   const fetchLinks = useCallback(
     async (which: Tab) => {
+      if (which === 'maintenance') return
       setLoading(true)
       setLoadError(null)
       try {
@@ -324,6 +347,108 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
       })
     } finally {
       setBusyLink(null)
+    }
+  }
+
+  const handlePurgeInviteLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!purgeInviteLink.trim() || !window.guidegram?.deleteExportedChatInvite) return
+    setIsPurgingInvite(true)
+    setPurgeInviteFeedback(null)
+    try {
+      const res = await window.guidegram.deleteExportedChatInvite(accountId, chatId, purgeInviteLink.trim())
+      if (res) {
+        setPurgeInviteFeedback('Invite link permanently deleted from Telegram.')
+        setPurgeInviteLink('')
+        void fetchLinks('revoked')
+      } else {
+        setPurgeInviteFeedback('Failed to delete invite link. Verify administrator rights.')
+      }
+    } catch (err: any) {
+      setPurgeInviteFeedback(err?.message || 'Error purging invite link.')
+    } finally {
+      setIsPurgingInvite(false)
+    }
+  }
+
+  const handleDeleteFactCheck = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const msgIdNum = Number(factCheckMsgId.trim())
+    if (!msgIdNum || !window.guidegram?.deleteFactCheck) return
+    setIsDeletingFactCheck(true)
+    setDeleteFactCheckFeedback(null)
+    try {
+      const res = await window.guidegram.deleteFactCheck(accountId, chatId, msgIdNum)
+      if (res) {
+        setDeleteFactCheckFeedback(`Fact-check on message #${msgIdNum} removed.`)
+        setFactCheckMsgId('')
+      } else {
+        setDeleteFactCheckFeedback('Could not remove fact-check. Check permissions.')
+      }
+    } catch (err: any) {
+      setDeleteFactCheckFeedback(err?.message || 'Error deleting fact-check.')
+    } finally {
+      setIsDeletingFactCheck(false)
+    }
+  }
+
+  const handleDeleteParticipantReactions = async (singleMessage: boolean) => {
+    if (!window.guidegram) return
+    setIsDeletingReactions(true)
+    setDeleteReactionsFeedback(null)
+    try {
+      if (singleMessage) {
+        const msgIdNum = Number(reactionMsgId.trim())
+        if (!msgIdNum) {
+          setDeleteReactionsFeedback('Enter a valid message ID.')
+          setIsDeletingReactions(false)
+          return
+        }
+        const res = await window.guidegram.deleteParticipantReaction(
+          accountId,
+          chatId,
+          msgIdNum,
+          reactionParticipantId.trim() || undefined
+        )
+        if (res) {
+          setDeleteReactionsFeedback(`Participant reaction removed from message #${msgIdNum}.`)
+        } else {
+          setDeleteReactionsFeedback('Failed to remove participant reaction.')
+        }
+      } else {
+        const res = await window.guidegram.deleteParticipantReactions(
+          accountId,
+          chatId,
+          reactionParticipantId.trim() || undefined
+        )
+        if (res) {
+          setDeleteReactionsFeedback('All participant reactions in chat removed.')
+        } else {
+          setDeleteReactionsFeedback('Failed to remove reactions. Check permissions.')
+        }
+      }
+    } catch (err: any) {
+      setDeleteReactionsFeedback(err?.message || 'Error deleting reactions.')
+    } finally {
+      setIsDeletingReactions(false)
+    }
+  }
+
+  const handleDeletePhoneCallHistory = async () => {
+    if (!window.guidegram?.deletePhoneCallHistory) return
+    setIsDeletingCallHistory(true)
+    setDeleteCallHistoryFeedback(null)
+    try {
+      const res = await window.guidegram.deletePhoneCallHistory(accountId, callHistoryRevoke)
+      if (res) {
+        setDeleteCallHistoryFeedback('Call history successfully wiped from Telegram cloud.')
+      } else {
+        setDeleteCallHistoryFeedback('Failed to delete call history.')
+      }
+    } catch (err: any) {
+      setDeleteCallHistoryFeedback(err?.message || 'Error deleting call history.')
+    } finally {
+      setIsDeletingCallHistory(false)
     }
   }
 
@@ -700,6 +825,17 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                 {t('invite_links.tab_revoked')}
                 {tab === 'revoked' && !loading ? ` · ${formatNumber(total)}` : ''}
               </button>
+              <button
+                type="button"
+                onClick={() => switchTab('maintenance')}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                  tab === 'maintenance'
+                    ? 'bg-amber-500/20 text-amber-200'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Maintenance & Purge
+              </button>
             </div>
             <button
               type="button"
@@ -712,7 +848,169 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
             </button>
           </div>
 
-          {loading ? (
+          {tab === 'maintenance' ? (
+            <div className="space-y-4">
+              {/* 1. Permanent Chat Invite Purge (messages.deleteExportedChatInvite) */}
+              <form onSubmit={handlePurgeInviteLink} className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-rose-400">
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                    <span>Permanent Invite Link Purge (deleteExportedChatInvite)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    MTProto Core
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Completely eradicates an active or revoked invite link from Telegram servers, preventing any historical joining.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={purgeInviteLink}
+                    onChange={(e) => setPurgeInviteLink(e.target.value)}
+                    placeholder="https://t.me/+... or invite hash"
+                    className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-400 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isPurgingInvite || !purgeInviteLink.trim()}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isPurgingInvite ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>Purge Link</span>
+                  </button>
+                </div>
+                {purgeInviteFeedback && <div className="text-[11px] text-rose-300">{purgeInviteFeedback}</div>}
+              </form>
+
+              {/* 2. Fact-Check Deletion (messages.deleteFactCheck) */}
+              <form onSubmit={handleDeleteFactCheck} className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>Remove Fact-Check Note (deleteFactCheck)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    Layer 232 News
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Deletes administrator-verified fact-check cards or disclaimers attached to a specific chat message.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    required
+                    value={factCheckMsgId}
+                    onChange={(e) => setFactCheckMsgId(e.target.value)}
+                    placeholder="Target Message ID (e.g. 42819)"
+                    className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isDeletingFactCheck || !factCheckMsgId.trim()}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isDeletingFactCheck ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>Delete Fact-Check</span>
+                  </button>
+                </div>
+                {deleteFactCheckFeedback && <div className="text-[11px] text-amber-300">{deleteFactCheckFeedback}</div>}
+              </form>
+
+              {/* 3. Participant Reactions Eraser (messages.deleteParticipantReaction & messages.deleteParticipantReactions) */}
+              <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-300">
+                    <ShieldQuestion className="w-4 h-4 text-cyan-400" />
+                    <span>Participant Reactions Moderator (deleteParticipantReactions)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    Spam Defense
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Wipes abusive emoji reactions from a specific message or erases all reactions from a participant across the entire chat.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={reactionParticipantId}
+                    onChange={(e) => setReactionParticipantId(e.target.value)}
+                    placeholder="Participant ID / Username (Optional)"
+                    className="bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                  <input
+                    type="number"
+                    value={reactionMsgId}
+                    onChange={(e) => setReactionMsgId(e.target.value)}
+                    placeholder="Message ID (for single message)"
+                    className="bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteParticipantReactions(true)}
+                    disabled={isDeletingReactions || !reactionMsgId.trim()}
+                    className="flex-1 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isDeletingReactions ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>Delete Msg Reactions</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteParticipantReactions(false)}
+                    disabled={isDeletingReactions}
+                    className="flex-1 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isDeletingReactions ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>Wipe User Reactions (All)</span>
+                  </button>
+                </div>
+                {deleteReactionsFeedback && <div className="text-[11px] text-cyan-300">{deleteReactionsFeedback}</div>}
+              </div>
+
+              {/* 4. Phone/Video Call History Destroyer (messages.deletePhoneCallHistory) */}
+              <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-rose-300">
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                    <span>Global Call History Purge (deletePhoneCallHistory)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    Privacy Purge
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Permanently deletes all voice and video call logs across your Telegram account.
+                </p>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={callHistoryRevoke}
+                      onChange={(e) => setCallHistoryRevoke(e.target.checked)}
+                      className="rounded border-white/20 text-rose-500 focus:ring-0"
+                    />
+                    <span>Revoke call history for other participants as well</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDeletePhoneCallHistory}
+                    disabled={isDeletingCallHistory}
+                    className="py-1.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isDeletingCallHistory ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>Wipe Call Logs</span>
+                  </button>
+                </div>
+                {deleteCallHistoryFeedback && <div className="text-[11px] text-rose-300">{deleteCallHistoryFeedback}</div>}
+              </div>
+            </div>
+          ) : loading ? (
             <div className="min-h-[160px] flex flex-col items-center justify-center gap-3 text-gray-400 text-xs">
               <Loader2 className="w-6 h-6 animate-spin text-accent-cyan" />
               {t('invite_links.loading')}

@@ -2208,6 +2208,17 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:decline-url-auth', { accountId, url }),
   deleteChatUser: (accountId: string, chatId: bigint | number, userId: string, revokeHistory?: boolean): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:delete-chat-user', { accountId, chatId, userId, revokeHistory }),
+  // Layer 232 Messages Suite (Microphase 036)
+  deleteExportedChatInvite: (accountId: string, peerId: string, link: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-exported-chat-invite', { accountId, peerId, link }),
+  deleteFactCheck: (accountId: string, peerId: string, msgId: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-fact-check', { accountId, peerId, msgId }),
+  deleteParticipantReaction: (accountId: string, peerId: string, msgId: number, participantId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-participant-reaction', { accountId, peerId, msgId, participantId }),
+  deleteParticipantReactions: (accountId: string, peerId: string, participantId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-participant-reactions', { accountId, peerId, participantId }),
+  deletePhoneCallHistory: (accountId: string, revoke = true): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:delete-phone-call-history', { accountId, revoke }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
