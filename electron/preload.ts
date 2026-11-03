@@ -2081,12 +2081,32 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:verify-email', { accountId, purpose, verification }),
   verifyPhone: (accountId: string, phoneNumber?: string, phoneCodeHash?: string, phoneCode?: string): Promise<any> =>
     ipcRenderer.invoke('telegram:verify-phone', { accountId, phoneNumber, phoneCodeHash, phoneCode }),
-
-
-
-
-
-
+  getUserSavedMusic: (
+    accountId: string,
+    userId: string,
+    offset?: number,
+    limit?: number,
+    hash?: bigint | number
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-user-saved-music', { accountId, userId, offset, limit, hash }),
+  getUserSavedMusicByID: (
+    accountId: string,
+    userId: string,
+    id: any[]
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:get-user-saved-music-by-id', { accountId, userId, id }),
+  getUsers: (accountId: string, userIds: string[]): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:get-users', { accountId, userIds }),
+  setSecureValueErrors: (accountId: string, userId: string, errors: any[]): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:set-secure-value-errors', { accountId, userId, errors }),
+  suggestBirthday: (
+    accountId: string,
+    userId: string,
+    day: number,
+    month: number,
+    year?: number
+  ): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:suggest-birthday', { accountId, userId, day, month, year }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

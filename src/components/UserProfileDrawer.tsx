@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
@@ -27,6 +27,12 @@ import {
   EyeOff,
   Eye,
   Check,
+  Music,
+  Cake,
+  AlertCircle,
+  RefreshCw,
+  ShieldAlert,
+  Send,
 } from 'lucide-react'
 import type { ChatDetails, StoryItemPayload } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -70,7 +76,109 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [isBlocking, setIsBlocking] = useState(false)
-  const [profileTab, setProfileTab] = useState<'activity_radar' | 'mutual_groups'>('mutual_groups')
+  const [profileTab, setProfileTab] = useState<'activity_radar' | 'mutual_groups' | 'saved_music'>('mutual_groups')
+
+  // Layer 232 User Features State
+  const [savedMusicList, setSavedMusicList] = useState<any[]>([])
+  const [isLoadingMusic, setIsLoadingMusic] = useState(false)
+  const [musicError, setMusicError] = useState<string | null>(null)
+
+  const [contactRequirements, setContactRequirements] = useState<any[]>([])
+
+  const [isSuggestBirthdayOpen, setIsSuggestBirthdayOpen] = useState(false)
+  const [birthdayDay, setBirthdayDay] = useState<number>(1)
+  const [birthdayMonth, setBirthdayMonth] = useState<number>(1)
+  const [birthdayYear, setBirthdayYear] = useState<string>('')
+  const [isSubmittingBirthday, setIsSubmittingBirthday] = useState(false)
+
+  // Fetch Saved Music (users.getSavedMusic & users.getSavedMusicByID)
+  const fetchSavedMusic = useCallback(async () => {
+    if (!accountId || !peerId || !window.guidegram?.getUserSavedMusic) return
+    setIsLoadingMusic(true)
+    setMusicError(null)
+    try {
+      const res = await window.guidegram.getUserSavedMusic(accountId, peerId, 0, 50)
+      if (res && res.documents) {
+        setSavedMusicList(Array.isArray(res.documents) ? res.documents : [])
+      } else if (Array.isArray(res)) {
+        setSavedMusicList(res)
+      } else {
+        setSavedMusicList([])
+      }
+    } catch (err: any) {
+      console.warn('[UserProfileDrawer] getUserSavedMusic error:', err)
+      setMusicError(err?.message || (isPersian ? 'خطا در دریافت موسیقی ذخیره‌شده' : 'Error fetching saved music'))
+    } finally {
+      setIsLoadingMusic(false)
+    }
+  }, [accountId, peerId, isPersian])
+
+  // Fetch Contact Requirements (users.getRequirementsToContact)
+  useEffect(() => {
+    if (!isOpen || !peerId || !accountId || !window.guidegram?.getRequirementsToContact) {
+      setContactRequirements([])
+      return
+    }
+    let isMounted = true
+    window.guidegram
+      .getRequirementsToContact(accountId, [peerId])
+      .then((res) => {
+        if (isMounted && Array.isArray(res)) {
+          setContactRequirements(res)
+        }
+      })
+      .catch((err) => {
+        console.warn('[UserProfileDrawer] getRequirementsToContact error:', err)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [isOpen, accountId, peerId])
+
+  // Trigger Saved Music when tab changes
+  useEffect(() => {
+    if (profileTab === 'saved_music' && peerId && accountId) {
+      fetchSavedMusic()
+    }
+  }, [profileTab, peerId, accountId, fetchSavedMusic])
+
+  // Handle Birthday Suggestion (users.suggestBirthday)
+  const handleSuggestBirthday = async () => {
+    if (!accountId || !peerId || !window.guidegram?.suggestBirthday) return
+    setIsSubmittingBirthday(true)
+    try {
+      const yr = birthdayYear.trim() ? parseInt(birthdayYear.trim(), 10) : undefined
+      const ok = await window.guidegram.suggestBirthday(
+        accountId,
+        peerId,
+        birthdayDay,
+        birthdayMonth,
+        yr
+      )
+      if (ok) {
+        onShowToast?.(
+          isPersian
+            ? 'پیشنهاد تاریخ تولد با موفقیت برای کاربر ارسال شد'
+            : 'Birthday suggestion sent successfully'
+        )
+        setIsSuggestBirthdayOpen(false)
+      } else {
+        onShowToast?.(
+          isPersian
+            ? 'ارسال پیشنهاد تاریخ تولد ناموفق بود'
+            : 'Failed to suggest birthday'
+        )
+      }
+    } catch (err: any) {
+      onShowToast?.(
+        isPersian
+          ? `خطا در ارسال پیشنهاد: ${err?.message || String(err)}`
+          : `Error suggesting birthday: ${err?.message || String(err)}`
+      )
+    } finally {
+      setIsSubmittingBirthday(false)
+    }
+  }
 
   // User Profile & Activity Tracking State
   const [isTrackingEnabled, setIsTrackingEnabled] = useState(true)
@@ -473,8 +581,8 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
             </div>
           </div>
 
-          {/* Quick Action Buttons: Send Message, Search, Mention */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* Quick Action Buttons: Send Message, Search, Mention, Suggest Birthday */}
+          <div className="grid grid-cols-4 gap-2">
             <button
               type="button"
               onClick={() => {
@@ -486,7 +594,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               className="p-2.5 rounded-xl bg-primary-600/20 hover:bg-primary-600/35 border border-primary-500/30 text-primary-300 hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
               <MessageSquare className="w-4 h-4 text-primary-400" />
-              <span className="text-[11px]">{t('user_profile.action_message')}</span>
+              <span className="text-[11px] truncate">{t('user_profile.action_message')}</span>
             </button>
 
             <button
@@ -502,7 +610,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               className="p-2.5 rounded-xl bg-accent-cyan/15 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
               <Search className="w-4 h-4 text-accent-cyan" />
-              <span className="text-[11px]">{t('user_profile.action_search')}</span>
+              <span className="text-[11px] truncate">{t('user_profile.action_search')}</span>
             </button>
 
             <button
@@ -517,9 +625,31 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
               className="p-2.5 rounded-xl bg-accent-violet/15 hover:bg-accent-violet/30 border border-accent-violet/30 text-accent-violet hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
               <AtSign className="w-4 h-4 text-accent-violet" />
-              <span className="text-[11px]">{t('user_profile.action_mention')}</span>
+              <span className="text-[11px] truncate">{t('user_profile.action_mention')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsSuggestBirthdayOpen(true)}
+              className="p-2.5 rounded-xl bg-pink-500/15 hover:bg-pink-500/30 border border-pink-500/30 text-pink-400 hover:text-white flex flex-col items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+              title={isPersian ? 'پیشنهاد تاریخ تولد' : 'Suggest Birthday'}
+            >
+              <Cake className="w-4 h-4 text-pink-400" />
+              <span className="text-[11px] truncate">{isPersian ? 'پیشنهاد تولد' : 'Birthday'}</span>
             </button>
           </div>
+
+          {/* Contact Requirements Banner (users.getRequirementsToContact) */}
+          {contactRequirements.length > 0 && (
+            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>
+                {isPersian
+                  ? 'ارسال پیام به این کاربر نیازمند اشتراک پرمیوم یا استارز تلگرام است.'
+                  : 'Messaging this user requires Telegram Premium or Stars.'}
+              </span>
+            </div>
+          )}
 
           {/* Profile Stories & Pinned Posts Section */}
           {(hasStories || isLoadingStories) && (
@@ -902,6 +1032,18 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   <Activity className="w-3.5 h-3.5" />
                   <span>{t('user_profile.online_radar')}</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setProfileTab('saved_music')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    profileTab === 'saved_music'
+                      ? 'bg-accent-violet/20 text-accent-violet border border-accent-violet/40 shadow-xs'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  <Music className="w-3.5 h-3.5" />
+                  <span>{isPersian ? 'موسیقی‌ها' : 'Music'}</span>
+                </button>
               </div>
 
               {profileTab === 'mutual_groups' ? (
@@ -915,7 +1057,7 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                     onSelectUserOrChat?.(chatId, msgId)
                   }}
                 />
-              ) : (
+              ) : profileTab === 'activity_radar' ? (
                 <UserActivityRadar
                   accountId={accountId}
                   userId={peerId}
@@ -924,6 +1066,69 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
                   currentStatus={details?.userStatus?.status}
                   lastSeen={details?.userStatus?.lastOnline}
                 />
+              ) : (
+                /* Saved Music View with 4-state UI hygiene */
+                <div className="space-y-3">
+                  {isLoadingMusic ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2.5">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent-violet" />
+                      <span className="text-xs">{isPersian ? 'در حال واکشی موسیقی‌های ذخیره‌شده...' : 'Loading saved music...'}</span>
+                    </div>
+                  ) : musicError ? (
+                    <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                      <span className="text-xs text-red-300">{musicError}</span>
+                      <button
+                        type="button"
+                        onClick={fetchSavedMusic}
+                        className="px-3 py-1 text-xs rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>{isPersian ? 'تلاش مجدد' : 'Retry'}</span>
+                      </button>
+                    </div>
+                  ) : savedMusicList.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center text-gray-400 gap-2 rounded-xl bg-dark-900/60 border border-white/5 p-4">
+                      <Music className="w-8 h-8 text-gray-500 stroke-[1.5]" />
+                      <span className="text-xs font-medium text-gray-300">
+                        {isPersian ? 'هیچ قطعه موسیقی ذخیره‌شده‌ای یافت نشد' : 'No saved music found for this user'}
+                      </span>
+                      <span className="text-[11px] text-gray-500">
+                        {isPersian ? 'این کاربر لیست موسیقی عمومی ذخیره‌شده ندارد' : 'This user has no publicly accessible saved music'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 pr-1">
+                      {savedMusicList.map((doc: any, idx: number) => {
+                        const audioAttr = doc.attributes?.find((a: any) => a._ === 'documentAttributeAudio')
+                        const title = audioAttr?.title || `Track #${idx + 1}`
+                        const performer = audioAttr?.performer || displayTitle
+                        const durationSec = audioAttr?.duration || 0
+                        const mins = Math.floor(durationSec / 60)
+                        const secs = durationSec % 60
+                        const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`
+
+                        return (
+                          <div
+                            key={doc.id || idx}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-dark-900/70 border border-white/5 hover:border-white/15 transition-all"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-accent-violet/15 text-accent-violet flex items-center justify-center shrink-0">
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-gray-200 truncate">{title}</div>
+                                <div className="text-[10px] text-gray-400 truncate">{performer}</div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono text-gray-500 shrink-0">{timeStr}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1011,6 +1216,114 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({
           initialStoryId={selectedStoryViewer.initialStoryId}
         />
       )}
+
+      {/* Suggest Birthday Modal (users.suggestBirthday) */}
+      <AnimatePresence>
+        {isSuggestBirthdayOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-70 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 select-none"
+            onClick={() => setIsSuggestBirthdayOpen(false)}
+          >
+            <div
+              className="bg-dark-900 border border-white/15 rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-pink-400 font-bold text-sm">
+                  <Cake className="w-4 h-4" />
+                  <span>{isPersian ? 'پیشنهاد تاریخ تولد' : 'Suggest Birthday'}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSuggestBirthdayOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-300 leading-relaxed">
+                {isPersian
+                  ? `می‌توانید تاریخ تولد پیشنهادی خود را برای ${displayTitle} ارسال کنید تا در پروفایل او نمایش داده شود.`
+                  : `You can suggest a birthday date for ${displayTitle} to be displayed on their profile.`}
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[10px] text-gray-400 font-semibold block mb-1">
+                    {isPersian ? 'روز' : 'Day'}
+                  </label>
+                  <select
+                    value={birthdayDay}
+                    onChange={(e) => setBirthdayDay(Number(e.target.value))}
+                    className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-hidden focus:border-pink-500"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 font-semibold block mb-1">
+                    {isPersian ? 'ماه' : 'Month'}
+                  </label>
+                  <select
+                    value={birthdayMonth}
+                    onChange={(e) => setBirthdayMonth(Number(e.target.value))}
+                    className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-hidden focus:border-pink-500"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 font-semibold block mb-1">
+                    {isPersian ? 'سال (اختیاری)' : 'Year (opt)'}
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="1995"
+                    value={birthdayYear}
+                    onChange={(e) => setBirthdayYear(e.target.value)}
+                    className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-hidden focus:border-pink-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSuggestBirthdayOpen(false)}
+                  className="px-3 py-1.5 rounded-xl text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  {isPersian ? 'انصراف' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmittingBirthday}
+                  onClick={handleSuggestBirthday}
+                  className="px-4 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingBirthday ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isPersian ? 'ارسال پیشنهاد' : 'Send Suggestion'}</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

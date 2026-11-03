@@ -5789,13 +5789,59 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle(
+    'telegram:get-user-saved-music',
+    async (_event, { accountId, userId, offset, limit, hash }) => {
+      try {
+        return await accountManager.getUserSavedMusic(accountId, userId, offset, limit, hash)
+      } catch (err: any) {
+        Logger.warn(`[IPC] getUserSavedMusic error:`, err)
+        return null
+      }
+    }
+  )
 
+  ipcMain.handle(
+    'telegram:get-user-saved-music-by-id',
+    async (_event, { accountId, userId, id }) => {
+      try {
+        return await accountManager.getUserSavedMusicByID(accountId, userId, id)
+      } catch (err: any) {
+        Logger.warn(`[IPC] getUserSavedMusicByID error:`, err)
+        return []
+      }
+    }
+  )
 
+  ipcMain.handle('telegram:get-users', async (_event, { accountId, userIds }) => {
+    try {
+      return await accountManager.getUsers(accountId, userIds)
+    } catch (err: any) {
+      Logger.warn(`[IPC] getUsers error:`, err)
+      return []
+    }
+  })
 
+  ipcMain.handle('telegram:set-secure-value-errors', async (_event, { accountId, userId, errors }) => {
+    try {
+      return await accountManager.setSecureValueErrors(accountId, userId, errors)
+    } catch (err: any) {
+      Logger.warn(`[IPC] setSecureValueErrors error:`, err)
+      return false
+    }
+  })
 
-
-
-  // Full Profile & Privacy Settings IPC
+  ipcMain.handle(
+    'telegram:suggest-birthday',
+    async (_event, { accountId, userId, day, month, year }) => {
+      try {
+        return await accountManager.suggestBirthday(accountId, userId, day, month, year)
+      } catch (err: any) {
+        Logger.warn(`[IPC] suggestBirthday error:`, err)
+        return false
+      }
+    }
+  )  // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
       return await accountManager.getMyFullProfile(accountId)

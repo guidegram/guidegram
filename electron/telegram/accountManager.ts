@@ -16543,6 +16543,49 @@ export class AccountManager {
     return this.securityService.verifyPhone(holder as any, phoneNumber, phoneCodeHash, phoneCode)
   }
 
+  public async getUserSavedMusic(
+    accountId: string,
+    userId: string,
+    offset: number = 0,
+    limit: number = 50,
+    hash: bigint | number = 0n
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.contactsService.getSavedMusic(holder as any, accountId, userId, offset, limit, hash ? BigInt(hash) : 0n)
+  }
+
+  public async getUserSavedMusicByID(accountId: string, userId: string, id: any[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getSavedMusicByID(holder as any, accountId, userId, id)
+  }
+
+  public async getUsers(accountId: string, userIds: string[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.contactsService.getUsers(holder as any, accountId, userIds)
+  }
+
+  public async setSecureValueErrors(accountId: string, userId: string, errors: any[]): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.setSecureValueErrors(holder as any, accountId, userId, errors)
+  }
+
+  public async suggestBirthday(
+    accountId: string,
+    userId: string,
+    day: number,
+    month: number,
+    year?: number
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.contactsService.suggestBirthday(holder as any, accountId, userId, day, month, year)
+  }
+
+
 
 
 
