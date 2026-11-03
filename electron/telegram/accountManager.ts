@@ -19324,5 +19324,44 @@ export class AccountManager {
       options?.password
     )
   }
+
+  // Layer 232 Messages Suite (Microphase 042)
+  public async getChatInviteImporters(
+    accountId: string,
+    options?: { requested?: boolean; subscriptionExpired?: boolean; peerId?: string; link?: string; q?: string; offsetDate?: number; offsetUserId?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getChatInviteImporters(
+      holder as any,
+      accountId,
+      options?.requested,
+      options?.subscriptionExpired,
+      options?.peerId,
+      options?.link,
+      options?.q,
+      options?.offsetDate,
+      options?.offsetUserId,
+      options?.limit
+    )
+  }
+
+  public async getChatsRaw(accountId: string, id?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getChats(holder as any, id)
+  }
+
+  public async getDefaultTagReactions(accountId: string, hash?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getDefaultTagReactions(holder as any, hash)
+  }
+
+  public async getCustomEmojiDocumentsRaw(accountId: string, documentId: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getCustomEmojiDocuments(holder as any, documentId)
+  }
 }
 

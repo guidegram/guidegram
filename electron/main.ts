@@ -6560,6 +6560,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 042)
+  ipcMain.handle('telegram:messages:get-chat-invite-importers', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.getChatInviteImporters(accountId, options || {})
+    } catch (err: any) {
+      Logger.warn('[IPC] getChatInviteImporters error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-chats', async (_event, { accountId, id }) => {
+    try {
+      return await accountManager.getChatsRaw(accountId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getChats error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-common-chats', async (_event, { accountId, userId, limit }) => {
+    try {
+      return await accountManager.getCommonChats(accountId, userId, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getCommonChats error:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-custom-emoji-documents', async (_event, { accountId, documentId }) => {
+    try {
+      return await accountManager.getCustomEmojiDocumentsRaw(accountId, documentId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getCustomEmojiDocuments error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-default-history-ttl', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getDefaultHistoryTTL(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getDefaultHistoryTTL error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-default-tag-reactions', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getDefaultTagReactions(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getDefaultTagReactions error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-dh-config', async (_event, { accountId, version, randomLength }) => {
+    try {
+      return await accountManager.getDhConfig(accountId, version, randomLength)
+    } catch (err: any) {
+      Logger.warn('[IPC] getDhConfig error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

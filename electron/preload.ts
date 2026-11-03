@@ -2274,6 +2274,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-bot-app', { accountId, app, hash }),
   getBotCallbackAnswerDirect: (accountId: string, options: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-bot-callback-answer', { accountId, options }),
+  // Layer 232 Messages Suite (Microphase 042)
+  getChatInviteImporters: (accountId: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-chat-invite-importers', { accountId, options }),
+  getChats: (accountId: string, id?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-chats', { accountId, id }),
+  getCustomEmojiDocuments: (accountId: string, documentId: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-custom-emoji-documents', { accountId, documentId }),
+  getDefaultTagReactions: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-default-tag-reactions', { accountId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

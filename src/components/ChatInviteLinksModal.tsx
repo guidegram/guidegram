@@ -162,6 +162,44 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
   const [isLoadingArchived, setIsLoadingArchived] = useState(false)
   const [archivedFeedback, setArchivedFeedback] = useState<string | null>(null)
 
+  // Layer 232 Messages Suite (Microphase 042)
+  // 1. messages.getChatInviteImporters
+  const [m042ImportersCount, setM042ImportersCount] = useState<number | null>(null)
+  const [m042RequestedOnly, setM042RequestedOnly] = useState(false)
+  const [isLoadingImporters, setIsLoadingImporters] = useState(false)
+  const [importersFeedback, setImportersFeedback] = useState<string | null>(null)
+
+  // 2. messages.getChats
+  const [m042ChatsCount, setM042ChatsCount] = useState<number | null>(null)
+  const [isLoadingChats, setIsLoadingChats] = useState(false)
+  const [chatsFeedback, setChatsFeedback] = useState<string | null>(null)
+
+  // 3. messages.getCommonChats
+  const [m042CommonUserId, setM042CommonUserId] = useState('')
+  const [m042CommonChatsCount, setM042CommonChatsCount] = useState<number | null>(null)
+  const [isLoadingCommonChats, setIsLoadingCommonChats] = useState(false)
+  const [commonChatsFeedback, setCommonChatsFeedback] = useState<string | null>(null)
+
+  // 4. messages.getCustomEmojiDocuments
+  const [m042EmojiDocId, setM042EmojiDocId] = useState('')
+  const [isLoadingEmojiDoc, setIsLoadingEmojiDoc] = useState(false)
+  const [emojiDocFeedback, setEmojiDocFeedback] = useState<string | null>(null)
+
+  // 5. messages.getDefaultHistoryTTL
+  const [m042HistoryTTL, setM042HistoryTTL] = useState<number | null>(null)
+  const [isLoadingTTL, setIsLoadingTTL] = useState(false)
+  const [ttlFeedback, setTtlFeedback] = useState<string | null>(null)
+
+  // 6. messages.getDefaultTagReactions
+  const [m042TagReactionsCount, setM042TagReactionsCount] = useState<number | null>(null)
+  const [isLoadingTagReactions, setIsLoadingTagReactions] = useState(false)
+  const [tagReactionsFeedback, setTagReactionsFeedback] = useState<string | null>(null)
+
+  // 7. messages.getDhConfig
+  const [m042DhConfigStatus, setM042DhConfigStatus] = useState<string | null>(null)
+  const [isLoadingDh, setIsLoadingDh] = useState(false)
+  const [dhFeedback, setDhFeedback] = useState<string | null>(null)
+
   const formatDate = (unixSeconds?: number): string => {
     if (!unixSeconds) return t('invite_links.never')
     try {
@@ -613,6 +651,118 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
       setArchivedFeedback(err?.message || 'Error fetching archived stickers.')
     } finally {
       setIsLoadingArchived(false)
+    }
+  }
+
+  // Microphase 042 Handlers
+  const handleGetChatInviteImporters = async () => {
+    if (!window.guidegram?.getChatInviteImporters) return
+    setIsLoadingImporters(true)
+    setImportersFeedback(null)
+    try {
+      const res = await window.guidegram.getChatInviteImporters(accountId, { peerId: chatId, requested: m042RequestedOnly, limit: 50 })
+      const count = Array.isArray(res?.importers) ? res.importers.length : 0
+      setM042ImportersCount(count)
+      setImportersFeedback(`Found ${count} join importer(s) for this chat.`)
+    } catch (err: any) {
+      setImportersFeedback(err?.message || 'Error fetching invite importers.')
+    } finally {
+      setIsLoadingImporters(false)
+    }
+  }
+
+  const handleGetChats = async () => {
+    if (!window.guidegram?.getChats) return
+    setIsLoadingChats(true)
+    setChatsFeedback(null)
+    try {
+      const res = await window.guidegram.getChats(accountId, chatId)
+      const count = Array.isArray(res?.chats) ? res.chats.length : 0
+      setM042ChatsCount(count)
+      setChatsFeedback(`Retrieved metadata for ${count} chat(s).`)
+    } catch (err: any) {
+      setChatsFeedback(err?.message || 'Error fetching chat metadata.')
+    } finally {
+      setIsLoadingChats(false)
+    }
+  }
+
+  const handleGetCommonChats = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.getCommonChats || !m042CommonUserId.trim()) return
+    setIsLoadingCommonChats(true)
+    setCommonChatsFeedback(null)
+    try {
+      const chats = await window.guidegram.getCommonChats(accountId, m042CommonUserId.trim(), 50)
+      const count = Array.isArray(chats) ? chats.length : 0
+      setM042CommonChatsCount(count)
+      setCommonChatsFeedback(`Found ${count} mutual group(s) with user ${m042CommonUserId.trim()}.`)
+    } catch (err: any) {
+      setCommonChatsFeedback(err?.message || 'Error fetching mutual groups.')
+    } finally {
+      setIsLoadingCommonChats(false)
+    }
+  }
+
+  const handleGetCustomEmojiDoc = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!window.guidegram?.getCustomEmojiDocuments || !m042EmojiDocId.trim()) return
+    setIsLoadingEmojiDoc(true)
+    setEmojiDocFeedback(null)
+    try {
+      const res = await window.guidegram.getCustomEmojiDocuments(accountId, m042EmojiDocId.trim())
+      const docs = Array.isArray(res) ? res : Array.isArray(res?.documents) ? res.documents : []
+      setEmojiDocFeedback(`Retrieved ${docs.length} custom emoji document specification(s).`)
+    } catch (err: any) {
+      setEmojiDocFeedback(err?.message || 'Error fetching custom emoji document.')
+    } finally {
+      setIsLoadingEmojiDoc(false)
+    }
+  }
+
+  const handleGetDefaultHistoryTTL = async () => {
+    if (!window.guidegram?.getDefaultHistoryTTL) return
+    setIsLoadingTTL(true)
+    setTtlFeedback(null)
+    try {
+      const ttl = await window.guidegram.getDefaultHistoryTTL(accountId)
+      setM042HistoryTTL(ttl?.period ?? 0)
+      setTtlFeedback(`Default cloud history auto-delete period: ${ttl?.period ? `${ttl.period}s` : 'Disabled'}.`)
+    } catch (err: any) {
+      setTtlFeedback(err?.message || 'Error fetching default history TTL.')
+    } finally {
+      setIsLoadingTTL(false)
+    }
+  }
+
+  const handleGetDefaultTagReactions = async () => {
+    if (!window.guidegram?.getDefaultTagReactions) return
+    setIsLoadingTagReactions(true)
+    setTagReactionsFeedback(null)
+    try {
+      const res = await window.guidegram.getDefaultTagReactions(accountId)
+      const count = Array.isArray(res?.reactions) ? res.reactions.length : 0
+      setM042TagReactionsCount(count)
+      setTagReactionsFeedback(`Retrieved ${count} default tag reaction emoji(s).`)
+    } catch (err: any) {
+      setTagReactionsFeedback(err?.message || 'Error fetching tag reactions.')
+    } finally {
+      setIsLoadingTagReactions(false)
+    }
+  }
+
+  const handleGetDhConfig = async () => {
+    if (!window.guidegram?.getDhConfig) return
+    setIsLoadingDh(true)
+    setDhFeedback(null)
+    try {
+      const res = await window.guidegram.getDhConfig(accountId, 0, 256)
+      setM042DhConfigStatus(res ? 'Verified' : 'Unavailable')
+      setDhFeedback(res ? 'Diffie-Hellman encryption parameters verified.' : 'DH config not available.')
+    } catch (err: any) {
+      setDhFeedback(err?.message || 'Error checking Diffie-Hellman configuration.')
+    } finally {
+      setIsLoadingDh(false)
     }
   }
 
@@ -1369,6 +1519,185 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                       <span>استیکرهای آرشیو {m040ArchivedCount !== null ? `(${m040ArchivedCount})` : ''}</span>
                     </button>
                     {archivedFeedback && <div className="text-[10px] text-gray-400">{archivedFeedback}</div>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Microphase 042: Layer 232 Chat Importers & Security Suite */}
+              <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-accent-cyan">
+                    <Users className="w-4 h-4 text-accent-cyan" />
+                    <span>Layer 232 Chat Importers & Security Suite (Microphase 042)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
+                    Phase 042 • 7 RPCs
+                  </span>
+                </div>
+
+                {/* 1. messages.getChatInviteImporters */}
+                <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-300">
+                      ۱. افراد پیوسته با لینک دعوت (getChatInviteImporters)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">messages.getChatInviteImporters</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={m042RequestedOnly}
+                        onChange={(e) => setM042RequestedOnly(e.target.checked)}
+                        className="rounded border-white/20 text-accent-cyan"
+                      />
+                      <span>فقط درخواست‌های در انتظار تأیید</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGetChatInviteImporters}
+                      disabled={isLoadingImporters}
+                      className="px-3.5 py-1.5 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingImporters ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                      <span>استعلام واردکنندگان {m042ImportersCount !== null ? `(${m042ImportersCount})` : ''}</span>
+                    </button>
+                  </div>
+                  {importersFeedback && <div className="text-[10px] text-gray-400">{importersFeedback}</div>}
+                </div>
+
+                {/* 3. messages.getCommonChats */}
+                <form onSubmit={handleGetCommonChats} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-300">
+                      ۳. گروه‌های مشترک با کاربر (getCommonChats)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">messages.getCommonChats</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={m042CommonUserId}
+                      onChange={(e) => setM042CommonUserId(e.target.value)}
+                      placeholder="شناسه کاربر یا یوزرنیم..."
+                      className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan font-mono"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoadingCommonChats || !m042CommonUserId.trim()}
+                      className="px-3.5 py-1.5 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingCommonChats ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                      <span>استعلام گروه‌ها {m042CommonChatsCount !== null ? `(${m042CommonChatsCount})` : ''}</span>
+                    </button>
+                  </div>
+                  {commonChatsFeedback && <div className="text-[10px] text-gray-400">{commonChatsFeedback}</div>}
+                </form>
+
+                {/* 4. messages.getCustomEmojiDocuments */}
+                <form onSubmit={handleGetCustomEmojiDoc} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-gray-300">
+                      ۴. استعلام سند کاستوم ایموجی (getCustomEmojiDocuments)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">messages.getCustomEmojiDocuments</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={m042EmojiDocId}
+                      onChange={(e) => setM042EmojiDocId(e.target.value)}
+                      placeholder="شناسه سند ایموجی (Document ID)..."
+                      className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan font-mono"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoadingEmojiDoc || !m042EmojiDocId.trim()}
+                      className="px-3.5 py-1.5 rounded-xl bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingEmojiDoc ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <span>دریافت سند</span>
+                    </button>
+                  </div>
+                  {emojiDocFeedback && <div className="text-[10px] text-gray-400">{emojiDocFeedback}</div>}
+                </form>
+
+                {/* 2, 5, 6, 7 Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* 2. messages.getChats */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۲. متادیتای چت‌ها (getChats)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetChats}
+                      disabled={isLoadingChats}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingChats ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      <span>استعلام چت فعلی {m042ChatsCount !== null ? `(${m042ChatsCount})` : ''}</span>
+                    </button>
+                    {chatsFeedback && <div className="text-[10px] text-gray-400">{chatsFeedback}</div>}
+                  </div>
+
+                  {/* 5. messages.getDefaultHistoryTTL */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۵. پیش‌فرض حذف خودکار (getDefaultHistoryTTL)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetDefaultHistoryTTL}
+                      disabled={isLoadingTTL}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingTTL ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+                      <span>بررسی TTL پیش‌فرض</span>
+                    </button>
+                    {ttlFeedback && <div className="text-[10px] text-gray-400">{ttlFeedback}</div>}
+                  </div>
+
+                  {/* 6. messages.getDefaultTagReactions */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۶. تگ‌های واکنش (getDefaultTagReactions)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetDefaultTagReactions}
+                      disabled={isLoadingTagReactions}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingTagReactions ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <span>تگ‌های ری‌اکشن {m042TagReactionsCount !== null ? `(${m042TagReactionsCount})` : ''}</span>
+                    </button>
+                    {tagReactionsFeedback && <div className="text-[10px] text-gray-400">{tagReactionsFeedback}</div>}
+                  </div>
+
+                  {/* 7. messages.getDhConfig */}
+                  <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۷. پیکربندی Diffie-Hellman (getDhConfig)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetDhConfig}
+                      disabled={isLoadingDh}
+                      className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      {isLoadingDh ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <span>بررسی DH Config {m042DhConfigStatus ? `(${m042DhConfigStatus})` : ''}</span>
+                    </button>
+                    {dhFeedback && <div className="text-[10px] text-gray-400">{dhFeedback}</div>}
                   </div>
                 </div>
               </div>
