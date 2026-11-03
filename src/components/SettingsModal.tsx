@@ -4806,6 +4806,192 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 057 State & Handlers (Messages Domain Part 25 - Layer 232)
+  const [m057Status, setM057Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m057LoadingOp, setM057LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.receivedMessages
+  const [m057ReceivedMaxId, setM057ReceivedMaxId] = useState('')
+
+  // 2. messages.receivedQueue
+  const [m057ReceivedMaxQts, setM057ReceivedMaxQts] = useState('')
+
+  // 3. messages.reorderPinnedDialogs
+  const [m057ReorderPinnedFolderId, setM057ReorderPinnedFolderId] = useState('0')
+  const [m057ReorderPinnedPeers, setM057ReorderPinnedPeers] = useState('')
+  const [m057ReorderPinnedForce, setM057ReorderPinnedForce] = useState(false)
+
+  // 4. messages.reorderPinnedForumTopics
+  const [m057ReorderTopicsPeer, setM057ReorderTopicsPeer] = useState('')
+  const [m057ReorderTopicsOrder, setM057ReorderTopicsOrder] = useState('')
+  const [m057ReorderTopicsForce, setM057ReorderTopicsForce] = useState(false)
+
+  // 5. messages.reorderPinnedSavedDialogs
+  const [m057ReorderSavedPeers, setM057ReorderSavedPeers] = useState('')
+  const [m057ReorderSavedForce, setM057ReorderSavedForce] = useState(false)
+
+  // 6. messages.reorderQuickReplies
+  const [m057ReorderQuickOrder, setM057ReorderQuickOrder] = useState('')
+
+  // 7. messages.reorderStickerSets
+  const [m057ReorderStickerOrder, setM057ReorderStickerOrder] = useState('')
+  const [m057ReorderStickersMasks, setM057ReorderStickersMasks] = useState(false)
+  const [m057ReorderStickersEmojis, setM057ReorderStickersEmojis] = useState(false)
+
+  const handleM057ReceivedMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.receivedMessagesRaw) return
+    setM057LoadingOp('receivedMessages')
+    setM057Status(null)
+    try {
+      const res = await window.guidegram.receivedMessagesRaw(targetId, m057ReceivedMaxId.trim() ? Number(m057ReceivedMaxId.trim()) : 0)
+      const count = Array.isArray(res) ? res.length : 0
+      setM057Status({ type: 'success', message: `اعلام دریافت پیام‌ها تأیید شد (${count} اعلان دریافت)` })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در ثبت دریافت پیام‌ها' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
+  const handleM057ReceivedQueue = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.receivedQueueRaw) return
+    setM057LoadingOp('receivedQueue')
+    setM057Status(null)
+    try {
+      const res = await window.guidegram.receivedQueueRaw(targetId, m057ReceivedMaxQts.trim() ? Number(m057ReceivedMaxQts.trim()) : 0)
+      const count = Array.isArray(res) ? res.length : 0
+      setM057Status({ type: 'success', message: `اعلام صف دریافت qts تأیید شد (${count} شناسه تصدیق‌شده)` })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در ثبت صف دریافت' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
+  const handleM057ReorderPinnedDialogs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reorderPinnedDialogsRaw) return
+    if (!m057ReorderPinnedPeers.trim()) {
+      setM057Status({ type: 'error', message: 'شناسه چت‌های پین‌شده به ترتیب الزامی است' })
+      return
+    }
+    setM057LoadingOp('reorderPinnedDialogs')
+    setM057Status(null)
+    try {
+      const peers = m057ReorderPinnedPeers.split(',').map((s) => s.trim()).filter(Boolean)
+      await window.guidegram.reorderPinnedDialogsRaw(targetId, {
+        force: m057ReorderPinnedForce,
+        folderId: Number(m057ReorderPinnedFolderId || 0),
+        order: peers,
+      })
+      setM057Status({ type: 'success', message: 'ترتیب گفتگوهای پین‌شده پوشه با موفقیت به‌روزرسانی شد' })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در مرتب‌سازی چت‌های پین‌شده' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
+  const handleM057ReorderPinnedForumTopics = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reorderPinnedForumTopicsRaw) return
+    if (!m057ReorderTopicsPeer.trim() || !m057ReorderTopicsOrder.trim()) {
+      setM057Status({ type: 'error', message: 'شناسه فروم و ترتیب تاپیک‌ها الزامی است' })
+      return
+    }
+    setM057LoadingOp('reorderPinnedForumTopics')
+    setM057Status(null)
+    try {
+      const topicIds = m057ReorderTopicsOrder.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n))
+      await window.guidegram.reorderPinnedForumTopicsRaw(targetId, {
+        peerId: m057ReorderTopicsPeer.trim(),
+        force: m057ReorderTopicsForce,
+        order: topicIds,
+      })
+      setM057Status({ type: 'success', message: 'ترتیب تاپیک‌های پین‌شده فروم با موفقیت ذخیره شد' })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در مرتب‌سازی تاپیک‌های فروم' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
+  const handleM057ReorderPinnedSavedDialogs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reorderPinnedSavedDialogsRaw) return
+    if (!m057ReorderSavedPeers.trim()) {
+      setM057Status({ type: 'error', message: 'شناسه تاپیک‌های ذخیره‌شده الزامی است' })
+      return
+    }
+    setM057LoadingOp('reorderPinnedSavedDialogs')
+    setM057Status(null)
+    try {
+      const peers = m057ReorderSavedPeers.split(',').map((s) => s.trim()).filter(Boolean)
+      await window.guidegram.reorderPinnedSavedDialogsRaw(targetId, {
+        force: m057ReorderSavedForce,
+        order: peers,
+      })
+      setM057Status({ type: 'success', message: 'ترتیب تاپیک‌های پین‌شده ذخیره‌شده (Saved Messages) به‌روز شد' })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در مرتب‌سازی تاپیک‌های ذخیره‌شده' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
+  const handleM057ReorderQuickReplies = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reorderQuickRepliesRaw) return
+    if (!m057ReorderQuickOrder.trim()) {
+      setM057Status({ type: 'error', message: 'شناسه شورت‌کات‌های پاسخ سریع الزامی است' })
+      return
+    }
+    setM057LoadingOp('reorderQuickReplies')
+    setM057Status(null)
+    try {
+      const ids = m057ReorderQuickOrder.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n))
+      await window.guidegram.reorderQuickRepliesRaw(targetId, ids)
+      setM057Status({ type: 'success', message: 'ترتیب میانبرهای پاسخ سریع (Quick Replies) ذخیره شد' })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در مرتب‌سازی پاسخ‌های سریع' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
+  const handleM057ReorderStickerSets = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.reorderStickerSetsRaw) return
+    if (!m057ReorderStickerOrder.trim()) {
+      setM057Status({ type: 'error', message: 'شناسه استیکرست‌ها الزامی است' })
+      return
+    }
+    setM057LoadingOp('reorderStickerSets')
+    setM057Status(null)
+    try {
+      const ids = m057ReorderStickerOrder.split(',').map((s) => s.trim()).filter(Boolean)
+      await window.guidegram.reorderStickerSetsRaw(targetId, {
+        masks: m057ReorderStickersMasks,
+        emojis: m057ReorderStickersEmojis,
+        order: ids,
+      })
+      setM057Status({ type: 'success', message: 'ترتیب بسته‌های استیکر و اموجی با موفقیت اعمال شد' })
+    } catch (err: any) {
+      setM057Status({ type: 'error', message: err?.message || 'خطا در مرتب‌سازی استیکرست‌ها' })
+    } finally {
+      setM057LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -12822,6 +13008,304 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m056LoadingOp === 'readSavedHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'خواندن تاپیک ذخیره‌شده'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 057: Messages Domain Suite Part 25 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۵۷: مرتب‌سازی گفتگوها، تاپیک‌ها، پاسخ‌های سریع و استیکرها (Messages Suite Part 25)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-400/80 font-mono px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    تصدیق دریافت پیام‌ها/صف qts و مرتب‌سازی گفتگوهای پین‌شده، تاپیک‌های فروم، پیام‌های ذخیره‌شده، میانبرهای بیزینس و بسته‌های استیکر:
+                    <span className="text-gray-300 font-mono mr-1">
+                      receivedMessages, receivedQueue, reorderPinnedDialogs, reorderPinnedForumTopics, reorderPinnedSavedDialogs, reorderQuickReplies, reorderStickerSets
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m057Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m057Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m057Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m057Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM057Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.receivedMessages */}
+                    <form
+                      onSubmit={handleM057ReceivedMessages}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. اعلام دریافت پیام‌ها (receivedMessages)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m057ReceivedMaxId}
+                          onChange={(e) => setM057ReceivedMaxId(e.target.value)}
+                          placeholder="Max Message ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'receivedMessages'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'receivedMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعلام دریافت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.receivedQueue */}
+                    <form
+                      onSubmit={handleM057ReceivedQueue}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. اعلام صف دریافت ترتیبی (receivedQueue)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m057ReceivedMaxQts}
+                          onChange={(e) => setM057ReceivedMaxQts(e.target.value)}
+                          placeholder="Max QTS Value"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'receivedQueue'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'receivedQueue' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعلام QTS'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.reorderPinnedDialogs */}
+                    <form
+                      onSubmit={handleM057ReorderPinnedDialogs}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. ترتیب چت‌های پین‌شده (reorderPinnedDialogs)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 font-normal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m057ReorderPinnedForce}
+                            onChange={(e) => setM057ReorderPinnedForce(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          اجباری (Force)
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m057ReorderPinnedFolderId}
+                          onChange={(e) => setM057ReorderPinnedFolderId(e.target.value)}
+                          placeholder="Folder ID"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m057ReorderPinnedPeers}
+                          onChange={(e) => setM057ReorderPinnedPeers(e.target.value)}
+                          placeholder="شناسه چت‌ها به ترتیب (با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'reorderPinnedDialogs'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'reorderPinnedDialogs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره ترتیب'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.reorderPinnedForumTopics */}
+                    <form
+                      onSubmit={handleM057ReorderPinnedForumTopics}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. ترتیب تاپیک‌های پین‌شده فروم (reorderPinnedForumTopics)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 font-normal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m057ReorderTopicsForce}
+                            onChange={(e) => setM057ReorderTopicsForce(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          Force
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m057ReorderTopicsPeer}
+                          onChange={(e) => setM057ReorderTopicsPeer(e.target.value)}
+                          placeholder="شناسه فروم / سوپرگروه"
+                          className="w-32 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m057ReorderTopicsOrder}
+                          onChange={(e) => setM057ReorderTopicsOrder(e.target.value)}
+                          placeholder="Topic IDs به ترتیب (با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'reorderPinnedForumTopics'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'reorderPinnedForumTopics' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ترتیب تاپیک'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.reorderPinnedSavedDialogs */}
+                    <form
+                      onSubmit={handleM057ReorderPinnedSavedDialogs}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. ترتیب تاپیک‌های پیام ذخیره‌شده (reorderPinnedSavedDialogs)</span>
+                        <label className="flex items-center gap-1 text-[11px] text-gray-400 font-normal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m057ReorderSavedForce}
+                            onChange={(e) => setM057ReorderSavedForce(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          Force
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m057ReorderSavedPeers}
+                          onChange={(e) => setM057ReorderSavedPeers(e.target.value)}
+                          placeholder="شناسه تاپیک‌ها به ترتیب (با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'reorderPinnedSavedDialogs'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'reorderPinnedSavedDialogs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره تاپیک‌ها'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.reorderQuickReplies */}
+                    <form
+                      onSubmit={handleM057ReorderQuickReplies}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. ترتیب پاسخ‌های سریع بیزینس (reorderQuickReplies)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m057ReorderQuickOrder}
+                          onChange={(e) => setM057ReorderQuickOrder(e.target.value)}
+                          placeholder="Shortcut IDs به ترتیب (با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'reorderQuickReplies'}
+                          className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'reorderQuickReplies' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ترتیب میانبرها'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.reorderStickerSets */}
+                    <form
+                      onSubmit={handleM057ReorderStickerSets}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. ترتیب بسته‌های استیکر و اموجی (reorderStickerSets)</span>
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-1 text-[11px] text-gray-400 font-normal cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={m057ReorderStickersMasks}
+                              onChange={(e) => setM057ReorderStickersMasks(e.target.checked)}
+                              className="rounded border-white/10"
+                            />
+                            ماسک‌ها (Masks)
+                          </label>
+                          <label className="flex items-center gap-1 text-[11px] text-gray-400 font-normal cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={m057ReorderStickersEmojis}
+                              onChange={(e) => setM057ReorderStickersEmojis(e.target.checked)}
+                              className="rounded border-white/10"
+                            />
+                            اموجی سفارشی (Custom Emojis)
+                          </label>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m057ReorderStickerOrder}
+                          onChange={(e) => setM057ReorderStickerOrder(e.target.value)}
+                          placeholder="شناسه بسته‌ها (StickerSet IDs به ترتیب، جداشده با کاما)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m057LoadingOp === 'reorderStickerSets'}
+                          className="px-5 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m057LoadingOp === 'reorderStickerSets' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ترتیب استیکرها'}
                         </button>
                       </div>
                     </form>

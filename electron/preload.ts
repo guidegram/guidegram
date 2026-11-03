@@ -2487,6 +2487,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:read-reactions-raw', { accountId, ...params }),
   readSavedHistoryRaw: (accountId: string, params: { parentPeerId: string; peerId: string; maxId?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:read-saved-history-raw', { accountId, ...params }),
+  receivedMessagesRaw: (accountId: string, maxId?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:received-messages-raw', { accountId, maxId }),
+  receivedQueueRaw: (accountId: string, maxQts?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:received-queue-raw', { accountId, maxQts }),
+  reorderPinnedDialogsRaw: (accountId: string, params: { force?: boolean; folderId?: number; order?: string[] | any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:reorder-pinned-dialogs-raw', { accountId, ...params }),
+  reorderPinnedForumTopicsRaw: (accountId: string, params: { force?: boolean; peerId: string; order?: number[] | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:reorder-pinned-forum-topics-raw', { accountId, ...params }),
+  reorderPinnedSavedDialogsRaw: (accountId: string, params: { force?: boolean; order?: string[] | any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:reorder-pinned-saved-dialogs-raw', { accountId, ...params }),
+  reorderQuickRepliesRaw: (accountId: string, order?: number[] | number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:reorder-quick-replies-raw', { accountId, order }),
+  reorderStickerSetsRaw: (accountId: string, params: { masks?: boolean; emojis?: boolean; order?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:reorder-sticker-sets-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

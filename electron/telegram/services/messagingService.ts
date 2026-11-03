@@ -170,7 +170,7 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.receivedMessages',
-        'max_id': maxId,
+        maxId: Number(maxId || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.receivedMessages error:', err)
@@ -564,7 +564,7 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.receivedQueue',
-        'max_qts': maxQts,
+        maxQts: Number(maxQts || 0),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.receivedQueue error:', err)
@@ -804,13 +804,19 @@ export class MessagingService {
     }
   }
 
-  public async reorderStickerSets(holder: RpcClientHolder, masks?: boolean, emojis?: boolean, order?: bigint | number): Promise<any> {
+  public async reorderStickerSets(holder: RpcClientHolder, masks?: boolean, emojis?: boolean, order?: any): Promise<any> {
     try {
+      let orders: Long[] = []
+      if (Array.isArray(order)) {
+        orders = order.map((item) => Long.isLong(item) ? item : Long.fromValue(item as any))
+      } else if (order !== undefined && order !== null) {
+        orders = [Long.isLong(order) ? order : Long.fromValue(order as any)]
+      }
       return await holder.client.call({
         _: 'messages.reorderStickerSets',
-        'masks': masks,
-        'emojis': emojis,
-        'order': order,
+        masks: Boolean(masks),
+        emojis: Boolean(emojis),
+        order: orders,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reorderStickerSets error:', err)
@@ -1273,13 +1279,26 @@ export class MessagingService {
     }
   }
 
-  public async reorderPinnedDialogs(holder: RpcClientHolder, force?: boolean, folderId?: number, order?: any): Promise<any> {
+  public async reorderPinnedDialogs(holder: RpcClientHolder, accountId: string, force?: boolean, folderId?: number, order?: string[] | any[]): Promise<any> {
     try {
+      let inputPeers: any[] = []
+      if (Array.isArray(order)) {
+        inputPeers = await Promise.all(
+          order.map(async (item) => {
+            if (typeof item === 'string') {
+              const peer = await this.resolveInputPeer(accountId, item)
+              return { _: 'inputDialogPeer', peer }
+            }
+            if (item && item._ === 'inputDialogPeer') return item
+            return { _: 'inputDialogPeer', peer: item }
+          })
+        )
+      }
       return await holder.client.call({
         _: 'messages.reorderPinnedDialogs',
-        'force': force,
-        'folder_id': folderId,
-        'order': order,
+        force: Boolean(force),
+        folderId: Number(folderId || 0),
+        order: inputPeers,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reorderPinnedDialogs error:', err)
@@ -2912,12 +2931,25 @@ export class MessagingService {
     }
   }
 
-  public async reorderPinnedSavedDialogs(holder: RpcClientHolder, force?: boolean, order?: any): Promise<any> {
+  public async reorderPinnedSavedDialogs(holder: RpcClientHolder, accountId: string, force?: boolean, order?: string[] | any[]): Promise<any> {
     try {
+      let inputPeers: any[] = []
+      if (Array.isArray(order)) {
+        inputPeers = await Promise.all(
+          order.map(async (item) => {
+            if (typeof item === 'string') {
+              const peer = await this.resolveInputPeer(accountId, item)
+              return { _: 'inputDialogPeer', peer }
+            }
+            if (item && item._ === 'inputDialogPeer') return item
+            return { _: 'inputDialogPeer', peer: item }
+          })
+        )
+      }
       return await holder.client.call({
         _: 'messages.reorderPinnedSavedDialogs',
-        'force': force,
-        'order': order,
+        force: Boolean(force),
+        order: inputPeers,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reorderPinnedSavedDialogs error:', err)
@@ -2988,11 +3020,12 @@ export class MessagingService {
     }
   }
 
-  public async reorderQuickReplies(holder: RpcClientHolder, order?: number): Promise<any> {
+  public async reorderQuickReplies(holder: RpcClientHolder, order?: number[] | number): Promise<any> {
     try {
+      const shortcutIds = Array.isArray(order) ? order.map(Number) : (order !== undefined && order !== null ? [Number(order)] : [])
       return await holder.client.call({
         _: 'messages.reorderQuickReplies',
-        'order': order,
+        order: shortcutIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reorderQuickReplies error:', err)
@@ -3481,13 +3514,14 @@ export class MessagingService {
     }
   }
 
-  public async reorderPinnedForumTopics(holder: RpcClientHolder, accountId: string, force?: boolean, peerId?: string, order?: number): Promise<any> {
+  public async reorderPinnedForumTopics(holder: RpcClientHolder, accountId: string, force?: boolean, peerId?: string, order?: number[] | number): Promise<any> {
     try {
+      const topicIds = Array.isArray(order) ? order.map(Number) : (order !== undefined && order !== null ? [Number(order)] : [])
       return await holder.client.call({
         _: 'messages.reorderPinnedForumTopics',
-        'force': force,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'order': order,
+        force: Boolean(force),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        order: topicIds,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.reorderPinnedForumTopics error:', err)

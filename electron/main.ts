@@ -7498,6 +7498,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 057 IPC Handlers
+  ipcMain.handle('telegram:messages:received-messages-raw', async (_event, { accountId, maxId }) => {
+    try {
+      return await accountManager.receivedMessagesRaw(accountId, maxId)
+    } catch (err: any) {
+      Logger.warn('[IPC] receivedMessagesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:received-queue-raw', async (_event, { accountId, maxQts }) => {
+    try {
+      return await accountManager.receivedQueueRaw(accountId, maxQts)
+    } catch (err: any) {
+      Logger.warn('[IPC] receivedQueueRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:reorder-pinned-dialogs-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reorderPinnedDialogsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reorderPinnedDialogsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:reorder-pinned-forum-topics-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reorderPinnedForumTopicsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reorderPinnedForumTopicsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:reorder-pinned-saved-dialogs-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reorderPinnedSavedDialogsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reorderPinnedSavedDialogsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:reorder-quick-replies-raw', async (_event, { accountId, order }) => {
+    try {
+      return await accountManager.reorderQuickRepliesRaw(accountId, order)
+    } catch (err: any) {
+      Logger.warn('[IPC] reorderQuickRepliesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:reorder-sticker-sets-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.reorderStickerSetsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] reorderStickerSetsRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

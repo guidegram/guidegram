@@ -19947,6 +19947,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.readSavedHistory(holder as any, accountId, params.parentPeerId, params.peerId, params.maxId)
   }
+
+  // Layer 232 Messages Suite (Microphase 057)
+  public async receivedMessagesRaw(accountId: string, maxId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.receivedMessages(holder as any, maxId)
+  }
+
+  public async receivedQueueRaw(accountId: string, maxQts?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.receivedQueue(holder as any, maxQts)
+  }
+
+  public async reorderPinnedDialogsRaw(accountId: string, params: { force?: boolean; folderId?: number; order?: string[] | any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reorderPinnedDialogs(holder as any, accountId, params.force, params.folderId, params.order)
+  }
+
+  public async reorderPinnedForumTopicsRaw(accountId: string, params: { force?: boolean; peerId: string; order?: number[] | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reorderPinnedForumTopics(holder as any, accountId, params.force, params.peerId, params.order)
+  }
+
+  public async reorderPinnedSavedDialogsRaw(accountId: string, params: { force?: boolean; order?: string[] | any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reorderPinnedSavedDialogs(holder as any, accountId, params.force, params.order)
+  }
+
+  public async reorderQuickRepliesRaw(accountId: string, order?: number[] | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reorderQuickReplies(holder as any, order)
+  }
+
+  public async reorderStickerSetsRaw(accountId: string, params: { masks?: boolean; emojis?: boolean; order?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.reorderStickerSets(holder as any, params.masks, params.emojis, params.order)
+  }
 }
 
 
