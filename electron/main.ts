@@ -7690,6 +7690,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 060 IPC Handlers
+  ipcMain.handle('telegram:messages:request-web-view-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.requestWebViewRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] requestWebViewRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:save-default-send-as-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.saveDefaultSendAsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] saveDefaultSendAsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:save-draft-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.saveDraftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] saveDraftRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:save-gif-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.saveGifRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] saveGifRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:save-prepared-inline-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.savePreparedInlineMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] savePreparedInlineMessageRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:save-recent-sticker-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.saveRecentStickerRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] saveRecentStickerRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:search-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.searchMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] searchMessagesRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

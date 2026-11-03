@@ -97,25 +97,26 @@ export class MessagingService {
     }
   }
 
-  public async search(holder: RpcClientHolder, accountId: string, peerId?: string, q?: string, fromIdId?: string, savedPeerIdId?: string, savedReaction?: any, topMsgId?: number, filter?: any, minDate?: number, maxDate?: number, offsetId?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number, hash?: bigint | number): Promise<any> {
+  public async search(holder: RpcClientHolder, accountId: string, peerId?: string, q?: string, fromId?: string, savedPeerId?: string, savedReaction?: any, topMsgId?: number, filter?: any, minDate?: number, maxDate?: number, offsetId?: number, addOffset?: number, limit?: number, maxId?: number, minId?: number, hash?: bigint | number): Promise<any> {
     try {
+      const hVal = hash ? (Long.isLong(hash) ? hash : Long.fromValue(hash as any)) : Long.ZERO
       return await holder.client.call({
         _: 'messages.search',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'q': q,
-        'from_id': fromIdId ? await this.resolveInputPeer(accountId, fromIdId) : undefined,
-        'saved_peer_id': savedPeerIdId ? await this.resolveInputPeer(accountId, savedPeerIdId) : undefined,
-        'saved_reaction': savedReaction,
-        'top_msg_id': topMsgId,
-        'filter': filter,
-        'min_date': minDate,
-        'max_date': maxDate,
-        'offset_id': offsetId,
-        'add_offset': addOffset,
-        'limit': limit,
-        'max_id': maxId,
-        'min_id': minId,
-        'hash': hash,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        q: String(q || ''),
+        fromId: fromId ? await this.resolveInputPeer(accountId, fromId) : undefined,
+        savedPeerId: savedPeerId ? await this.resolveInputPeer(accountId, savedPeerId) : undefined,
+        savedReaction: savedReaction,
+        topMsgId: topMsgId !== undefined ? Number(topMsgId) : undefined,
+        filter: filter || { _: 'inputMessagesFilterEmpty' },
+        minDate: minDate !== undefined ? Number(minDate) : 0,
+        maxDate: maxDate !== undefined ? Number(maxDate) : 0,
+        offsetId: offsetId !== undefined ? Number(offsetId) : 0,
+        addOffset: addOffset !== undefined ? Number(addOffset) : 0,
+        limit: limit !== undefined ? Number(limit) : 20,
+        maxId: maxId !== undefined ? Number(maxId) : 0,
+        minId: minId !== undefined ? Number(minId) : 0,
+        hash: hVal,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.search error:', err)
@@ -872,12 +873,21 @@ export class MessagingService {
     }
   }
 
-  public async saveGif(holder: RpcClientHolder, id?: any, unsave?: boolean): Promise<any> {
+  public async saveGif(holder: RpcClientHolder, id: any, unsave?: boolean): Promise<any> {
     try {
+      let doc: any = id
+      if (typeof id === 'string' || typeof id === 'number' || (typeof id === 'object' && id.id && id.accessHash)) {
+        doc = {
+          _: 'inputDocument',
+          id: Long.isLong(id.id || id) ? (id.id || id) : Long.fromValue((id.id || id) as any),
+          accessHash: Long.isLong(id.accessHash || 0) ? (id.accessHash || 0) : Long.fromValue((id.accessHash || 0) as any),
+          fileReference: id.fileReference instanceof Uint8Array ? id.fileReference : new Uint8Array(0),
+        }
+      }
       return await holder.client.call({
         _: 'messages.saveGif',
-        'id': id,
-        'unsave': unsave,
+        id: doc,
+        unsave: Boolean(unsave),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.saveGif error:', err)
@@ -1060,20 +1070,19 @@ export class MessagingService {
     }
   }
 
-  public async saveDraft(holder: RpcClientHolder, accountId: string, noWebpage?: boolean, invertMedia?: boolean, replyTo?: any, peerId?: string, message?: string, entities?: any, media?: any, effect?: bigint | number, suggestedPost?: any, richMessage?: any): Promise<any> {
+  public async saveDraft(holder: RpcClientHolder, accountId: string, noWebpage?: boolean, invertMedia?: boolean, replyTo?: any, peerId?: string, message?: string, entities?: any, media?: any, effect?: bigint | number | Long): Promise<any> {
     try {
+      const eff = effect ? (Long.isLong(effect) ? effect : Long.fromValue(effect as any)) : undefined
       return await holder.client.call({
         _: 'messages.saveDraft',
-        'no_webpage': noWebpage,
-        'invert_media': invertMedia,
-        'reply_to': replyTo,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'message': message,
-        'entities': entities,
-        'media': media,
-        'effect': effect,
-        'suggested_post': suggestedPost,
-        'rich_message': richMessage,
+        noWebpage: Boolean(noWebpage),
+        invertMedia: Boolean(invertMedia),
+        replyTo: replyTo,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        message: String(message || ''),
+        entities: entities,
+        media: media,
+        effect: eff,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.saveDraft error:', err)
@@ -1138,11 +1147,20 @@ export class MessagingService {
 
   public async saveRecentSticker(holder: RpcClientHolder, attached?: boolean, id?: any, unsave?: boolean): Promise<any> {
     try {
+      let doc: any = id
+      if (typeof id === 'string' || typeof id === 'number' || (typeof id === 'object' && id.id && id.accessHash)) {
+        doc = {
+          _: 'inputDocument',
+          id: Long.isLong(id.id || id) ? (id.id || id) : Long.fromValue((id.id || id) as any),
+          accessHash: Long.isLong(id.accessHash || 0) ? (id.accessHash || 0) : Long.fromValue((id.accessHash || 0) as any),
+          fileReference: id.fileReference instanceof Uint8Array ? id.fileReference : new Uint8Array(0),
+        }
+      }
       return await holder.client.call({
         _: 'messages.saveRecentSticker',
-        'attached': attached,
-        'id': id,
-        'unsave': unsave,
+        attached: Boolean(attached),
+        id: doc,
+        unsave: Boolean(unsave),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.saveRecentSticker error:', err)
@@ -2289,12 +2307,12 @@ export class MessagingService {
     }
   }
 
-  public async saveDefaultSendAs(holder: RpcClientHolder, accountId: string, peerId?: string, sendAsId?: string): Promise<any> {
+  public async saveDefaultSendAs(holder: RpcClientHolder, accountId: string, peerId: string, sendAsId: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.saveDefaultSendAs',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        peer: await this.resolveInputPeer(accountId, peerId),
+        sendAs: await this.resolveInputPeer(accountId, sendAsId),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.saveDefaultSendAs error:', err)
@@ -2490,20 +2508,24 @@ export class MessagingService {
 
   public async requestWebView(holder: RpcClientHolder, accountId: string, fromBotMenu?: boolean, silent?: boolean, compact?: boolean, fullscreen?: boolean, peerId?: string, botId?: string, url?: string, startParam?: string, themeParams?: any, platform?: string, replyTo?: any, sendAsId?: string): Promise<any> {
     try {
+      let theme: any = undefined
+      if (themeParams) {
+        theme = typeof themeParams === 'string' ? { _: 'dataJSON', data: themeParams } : themeParams
+      }
       return await holder.client.call({
         _: 'messages.requestWebView',
-        'from_bot_menu': fromBotMenu,
-        'silent': silent,
-        'compact': compact,
-        'fullscreen': fullscreen,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'url': url,
-        'start_param': startParam,
-        'theme_params': themeParams,
-        'platform': platform,
-        'reply_to': replyTo,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        fromBotMenu: Boolean(fromBotMenu),
+        silent: Boolean(silent),
+        compact: Boolean(compact),
+        fullscreen: Boolean(fullscreen),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        bot: botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserEmpty' },
+        url: url,
+        startParam: startParam,
+        themeParams: theme,
+        platform: String(platform || 'tdesktop'),
+        replyTo: replyTo,
+        sendAs: sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.requestWebView error:', err)
@@ -3370,13 +3392,13 @@ export class MessagingService {
     }
   }
 
-  public async savePreparedInlineMessage(holder: RpcClientHolder, accountId: string, result?: any, userIdId?: string, peerTypes?: any): Promise<any> {
+  public async savePreparedInlineMessage(holder: RpcClientHolder, accountId: string, result: any, userId: string, peerTypes?: any[]): Promise<any> {
     try {
       return await holder.client.call({
         _: 'messages.savePreparedInlineMessage',
-        'result': result,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'peer_types': peerTypes,
+        result: result,
+        userId: await this.toInputUser(accountId, userId),
+        peerTypes: peerTypes,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.savePreparedInlineMessage error:', err)

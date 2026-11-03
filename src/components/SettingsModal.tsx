@@ -5400,6 +5400,214 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 060 State & Handlers (Messages Domain Part 28 - Layer 232)
+  const [m060Status, setM060Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m060LoadingOp, setM060LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.requestWebView
+  const [m060WebViewPeer, setM060WebViewPeer] = useState('')
+  const [m060WebViewBot, setM060WebViewBot] = useState('')
+  const [m060WebViewUrl, setM060WebViewUrl] = useState('')
+
+  // 2. messages.saveDefaultSendAs
+  const [m060DefaultPeer, setM060DefaultPeer] = useState('')
+  const [m060DefaultSendAs, setM060DefaultSendAs] = useState('')
+
+  // 3. messages.saveDraft
+  const [m060DraftPeer, setM060DraftPeer] = useState('')
+  const [m060DraftText, setM060DraftText] = useState('')
+
+  // 4. messages.saveGif
+  const [m060GifDocId, setM060GifDocId] = useState('')
+  const [m060GifAccessHash, setM060GifAccessHash] = useState('')
+
+  // 5. messages.savePreparedInlineMessage
+  const [m060PreparedResultId, setM060PreparedResultId] = useState('')
+  const [m060PreparedUserId, setM060PreparedUserId] = useState('')
+
+  // 6. messages.saveRecentSticker
+  const [m060StickerDocId, setM060StickerDocId] = useState('')
+  const [m060StickerAccessHash, setM060StickerAccessHash] = useState('')
+
+  // 7. messages.search
+  const [m060SearchPeer, setM060SearchPeer] = useState('')
+  const [m060SearchQuery, setM060SearchQuery] = useState('')
+
+  const handleM060RequestWebView = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.requestWebViewRaw) return
+    if (!m060WebViewPeer.trim() || !m060WebViewBot.trim()) {
+      setM060Status({ type: 'error', message: 'شناسه گفتگو و شناسه ربات برای بازکردن وب‌ویو الزامی است' })
+      return
+    }
+    setM060LoadingOp('requestWebView')
+    setM060Status(null)
+    try {
+      const res = await window.guidegram.requestWebViewRaw(targetId, {
+        peerId: m060WebViewPeer.trim(),
+        botId: m060WebViewBot.trim(),
+        url: m060WebViewUrl.trim() || undefined,
+      })
+      setM060Status({ type: 'success', message: `نشست وب‌ویو ایجاد شد: ${res?.url ? 'URL دریافت شد' : 'موفق'}` })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در بازکردن وب‌ویو' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
+  const handleM060SaveDefaultSendAs = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.saveDefaultSendAsRaw) return
+    if (!m060DefaultPeer.trim() || !m060DefaultSendAs.trim()) {
+      setM060Status({ type: 'error', message: 'شناسه گروه و شناسه هویت فرستنده پیش‌فرض الزامی است' })
+      return
+    }
+    setM060LoadingOp('saveDefaultSendAs')
+    setM060Status(null)
+    try {
+      await window.guidegram.saveDefaultSendAsRaw(targetId, {
+        peerId: m060DefaultPeer.trim(),
+        sendAsId: m060DefaultSendAs.trim(),
+      })
+      setM060Status({ type: 'success', message: 'هویت پیش‌فرض ارسال پیام در گروه ذخیره شد' })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در ذخیره هویت پیش‌فرض' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
+  const handleM060SaveDraft = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.saveDraftRaw) return
+    if (!m060DraftPeer.trim() || !m060DraftText.trim()) {
+      setM060Status({ type: 'error', message: 'شناسه گفتگو و متن پیش‌نویس الزامی است' })
+      return
+    }
+    setM060LoadingOp('saveDraft')
+    setM060Status(null)
+    try {
+      await window.guidegram.saveDraftRaw(targetId, {
+        peerId: m060DraftPeer.trim(),
+        message: m060DraftText.trim(),
+      })
+      setM060Status({ type: 'success', message: 'پیش‌نویس پیام (Draft) در سرور تلگرام همگام‌سازی شد' })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در همگام‌سازی پیش‌نویس' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
+  const handleM060SaveGif = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.saveGifRaw) return
+    if (!m060GifDocId.trim()) {
+      setM060Status({ type: 'error', message: 'شناسه سند گیف (GIF Document ID) الزامی است' })
+      return
+    }
+    setM060LoadingOp('saveGif')
+    setM060Status(null)
+    try {
+      await window.guidegram.saveGifRaw(targetId, {
+        id: {
+          id: m060GifDocId.trim(),
+          accessHash: m060GifAccessHash.trim() || '0',
+        },
+        unsave: false,
+      })
+      setM060Status({ type: 'success', message: 'گیف متحرک در لیست ذخیره‌شده‌های تلگرام ذخیره شد' })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در ذخیره گیف' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
+  const handleM060SavePreparedInlineMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.savePreparedInlineMessageRaw) return
+    if (!m060PreparedResultId.trim() || !m060PreparedUserId.trim()) {
+      setM060Status({ type: 'error', message: 'شناسه نتیجه اینلاین و شناسه کاربر الزامی است' })
+      return
+    }
+    setM060LoadingOp('savePreparedInlineMessage')
+    setM060Status(null)
+    try {
+      await window.guidegram.savePreparedInlineMessageRaw(targetId, {
+        result: {
+          _: 'inputBotInlineResult',
+          id: m060PreparedResultId.trim(),
+          type: 'article',
+          sendMessage: { _: 'inputBotInlineMessageText', message: 'Prepared message from Guidegram' },
+        },
+        userId: m060PreparedUserId.trim(),
+      })
+      setM060Status({ type: 'success', message: 'پیام اینلاین آماده‌شده برای مینی‌اپ با موفقیت ذخیره شد' })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در ذخیره پیام اینلاین آماده‌شده' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
+  const handleM060SaveRecentSticker = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.saveRecentStickerRaw) return
+    if (!m060StickerDocId.trim()) {
+      setM060Status({ type: 'error', message: 'شناسه استیکر الزامی است' })
+      return
+    }
+    setM060LoadingOp('saveRecentSticker')
+    setM060Status(null)
+    try {
+      await window.guidegram.saveRecentStickerRaw(targetId, {
+        id: {
+          id: m060StickerDocId.trim(),
+          accessHash: m060StickerAccessHash.trim() || '0',
+        },
+        unsave: false,
+      })
+      setM060Status({ type: 'success', message: 'استیکر به لیست استفاده‌های اخیر تلگرام افزوده شد' })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در ثبت استیکر اخیر' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
+  const handleM060Search = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.searchMessagesRaw) return
+    if (!m060SearchQuery.trim()) {
+      setM060Status({ type: 'error', message: 'عبارت جستجو الزامی است' })
+      return
+    }
+    setM060LoadingOp('search')
+    setM060Status(null)
+    try {
+      const res = await window.guidegram.searchMessagesRaw(targetId, {
+        peerId: m060SearchPeer.trim() || undefined,
+        q: m060SearchQuery.trim(),
+        limit: 10,
+      })
+      const count = res?.messages?.length || res?.count || 0
+      setM060Status({ type: 'success', message: `جستجوی پیام‌ها انجام شد: ${count} پیام یافت شد` })
+    } catch (err: any) {
+      setM060Status({ type: 'error', message: err?.message || 'خطا در جستجوی پیام‌ها' })
+    } finally {
+      setM060LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -14304,6 +14512,292 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="px-5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                         >
                           {m059LoadingOp === 'requestUrlAuth' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'احراز URL'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 060: Messages Domain Suite Part 28 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۰: وب‌ویو ربات، پیش‌نویس ابری، استیکر و جستجوی پیام (Messages Suite Part 28)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-indigo-400/80 font-mono px-2 py-0.5 rounded-full bg-indigo-400/10 border border-indigo-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    وب‌ویوی تعاملی، هویت فرستنده پیش‌فرض، پیش‌نویس ابری، گیف و استیکر اخیر و سرچ پیام‌ها:
+                    <span className="text-gray-300 font-mono mr-1">
+                      requestWebView, saveDefaultSendAs, saveDraft, saveGif, savePreparedInlineMessage, saveRecentSticker, search
+                    </span>
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m060Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m060Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m060Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m060Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM060Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.requestWebView */}
+                    <form
+                      onSubmit={handleM060RequestWebView}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. نشست وب‌ویو ربات (requestWebView)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060WebViewPeer}
+                          onChange={(e) => setM060WebViewPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060WebViewBot}
+                          onChange={(e) => setM060WebViewBot(e.target.value)}
+                          placeholder="Bot Username / ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'requestWebView'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'requestWebView' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اجرا'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.saveDefaultSendAs */}
+                    <form
+                      onSubmit={handleM060SaveDefaultSendAs}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. هویت ارسال پیش‌فرض گروه (saveDefaultSendAs)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060DefaultPeer}
+                          onChange={(e) => setM060DefaultPeer(e.target.value)}
+                          placeholder="شناسه گروه"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060DefaultSendAs}
+                          onChange={(e) => setM060DefaultSendAs(e.target.value)}
+                          placeholder="Send As Peer ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'saveDefaultSendAs'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'saveDefaultSendAs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.saveDraft */}
+                    <form
+                      onSubmit={handleM060SaveDraft}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. ذخیره پیش‌نویس ابری پیام (saveDraft)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060DraftPeer}
+                          onChange={(e) => setM060DraftPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060DraftText}
+                          onChange={(e) => setM060DraftText(e.target.value)}
+                          placeholder="متن پیش‌نویس..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'saveDraft'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'saveDraft' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'سینک Draft'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.saveGif */}
+                    <form
+                      onSubmit={handleM060SaveGif}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. ذخیره گیف متحرک (saveGif)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060GifDocId}
+                          onChange={(e) => setM060GifDocId(e.target.value)}
+                          placeholder="GIF Document ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060GifAccessHash}
+                          onChange={(e) => setM060GifAccessHash(e.target.value)}
+                          placeholder="Access Hash"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'saveGif'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'saveGif' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره GIF'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.savePreparedInlineMessage */}
+                    <form
+                      onSubmit={handleM060SavePreparedInlineMessage}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. ذخیره پیام اینلاین آماده (savePreparedInlineMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060PreparedResultId}
+                          onChange={(e) => setM060PreparedResultId(e.target.value)}
+                          placeholder="Result ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060PreparedUserId}
+                          onChange={(e) => setM060PreparedUserId(e.target.value)}
+                          placeholder="Target User ID"
+                          className="w-28 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'savePreparedInlineMessage'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'savePreparedInlineMessage' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.saveRecentSticker */}
+                    <form
+                      onSubmit={handleM060SaveRecentSticker}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. ذخیره استیکر اخیر (saveRecentSticker)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060StickerDocId}
+                          onChange={(e) => setM060StickerDocId(e.target.value)}
+                          placeholder="Sticker Doc ID"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060StickerAccessHash}
+                          onChange={(e) => setM060StickerAccessHash(e.target.value)}
+                          placeholder="Access Hash"
+                          className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'saveRecentSticker'}
+                          className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'saveRecentSticker' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'افزودن'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.search */}
+                    <form
+                      onSubmit={handleM060Search}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. جستجوی پیشرفته پیام‌های گفتگو (messages.search)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m060SearchPeer}
+                          onChange={(e) => setM060SearchPeer(e.target.value)}
+                          placeholder="شناسه گفتگو (خالی = همه چت‌های خصوصی)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m060SearchQuery}
+                          onChange={(e) => setM060SearchQuery(e.target.value)}
+                          placeholder="کلمه کلیدی جستجو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m060LoadingOp === 'search'}
+                          className="px-5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m060LoadingOp === 'search' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'جستجو'}
                         </button>
                       </div>
                     </form>

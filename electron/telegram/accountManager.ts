@@ -20076,6 +20076,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.requestUrlAuth(holder as any, accountId, params.peerId, params.msgId, params.buttonId, params.url, params.inAppOrigin)
   }
+
+  // Layer 232 Messages Suite (Microphase 060)
+  public async requestWebViewRaw(accountId: string, params: { fromBotMenu?: boolean; silent?: boolean; compact?: boolean; fullscreen?: boolean; peerId?: string; botId?: string; url?: string; startParam?: string; themeParams?: any; platform?: string; replyTo?: any; sendAsId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.requestWebView(holder as any, accountId, params.fromBotMenu, params.silent, params.compact, params.fullscreen, params.peerId, params.botId, params.url, params.startParam, params.themeParams, params.platform, params.replyTo, params.sendAsId)
+  }
+
+  public async saveDefaultSendAsRaw(accountId: string, params: { peerId: string; sendAsId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.saveDefaultSendAs(holder as any, accountId, params.peerId, params.sendAsId)
+  }
+
+  public async saveDraftRaw(accountId: string, params: { noWebpage?: boolean; invertMedia?: boolean; replyTo?: any; peerId?: string; message?: string; entities?: any; media?: any; effect?: bigint | number | Long }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.saveDraft(holder as any, accountId, params.noWebpage, params.invertMedia, params.replyTo, params.peerId, params.message, params.entities, params.media, params.effect)
+  }
+
+  public async saveGifRaw(accountId: string, params: { id: any; unsave?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.saveGif(holder as any, params.id, params.unsave)
+  }
+
+  public async savePreparedInlineMessageRaw(accountId: string, params: { result: any; userId: string; peerTypes?: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.savePreparedInlineMessage(holder as any, accountId, params.result, params.userId, params.peerTypes)
+  }
+
+  public async saveRecentStickerRaw(accountId: string, params: { attached?: boolean; id?: any; unsave?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.saveRecentSticker(holder as any, params.attached, params.id, params.unsave)
+  }
+
+  public async searchMessagesRaw(accountId: string, params: { peerId?: string; q?: string; fromId?: string; savedPeerId?: string; savedReaction?: any; topMsgId?: number; filter?: any; minDate?: number; maxDate?: number; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: bigint | number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.search(holder as any, accountId, params.peerId, params.q, params.fromId, params.savedPeerId, params.savedReaction, params.topMsgId, params.filter, params.minDate, params.maxDate, params.offsetId, params.addOffset, params.limit, params.maxId, params.minId, params.hash)
+  }
 }
 
 

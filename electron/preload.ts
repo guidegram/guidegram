@@ -2529,6 +2529,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:request-simple-web-view-raw', { accountId, ...params }),
   requestUrlAuthRaw: (accountId: string, params: { peerId?: string; msgId?: number; buttonId?: number; url?: string; inAppOrigin?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:request-url-auth-raw', { accountId, ...params }),
+  requestWebViewRaw: (accountId: string, params: { fromBotMenu?: boolean; silent?: boolean; compact?: boolean; fullscreen?: boolean; peerId?: string; botId?: string; url?: string; startParam?: string; themeParams?: any; platform?: string; replyTo?: any; sendAsId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:request-web-view-raw', { accountId, ...params }),
+  saveDefaultSendAsRaw: (accountId: string, params: { peerId: string; sendAsId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:save-default-send-as-raw', { accountId, ...params }),
+  saveDraftRaw: (accountId: string, params: { noWebpage?: boolean; invertMedia?: boolean; replyTo?: any; peerId?: string; message?: string; entities?: any; media?: any; effect?: bigint | number | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:save-draft-raw', { accountId, ...params }),
+  saveGifRaw: (accountId: string, params: { id: any; unsave?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:save-gif-raw', { accountId, ...params }),
+  savePreparedInlineMessageRaw: (accountId: string, params: { result: any; userId: string; peerTypes?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:save-prepared-inline-message-raw', { accountId, ...params }),
+  saveRecentStickerRaw: (accountId: string, params: { attached?: boolean; id?: any; unsave?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:save-recent-sticker-raw', { accountId, ...params }),
+  searchMessagesRaw: (accountId: string, params: { peerId?: string; q?: string; fromId?: string; savedPeerId?: string; savedReaction?: any; topMsgId?: number; filter?: any; minDate?: number; maxDate?: number; offsetId?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:search-messages-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
