@@ -16441,6 +16441,37 @@ export class AccountManager {
     return this.securityService.updateColor(holder as any, forProfile, color)
   }
 
+  public async updateConnectedBot(
+    accountId: string,
+    deleted?: boolean,
+    rights?: any,
+    botId?: string,
+    recipients?: any
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateConnectedBot(holder as any, accountId, deleted, rights, botId, recipients)
+  }
+
+  public async updateDeviceLocked(accountId: string, period?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateDeviceLocked(holder as any, period)
+  }
+
+  public async updatePasswordSettings(accountId: string, password?: any, newSettings?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updatePasswordSettings(holder as any, password, newSettings)
+  }
+
+  public async updateProfile(accountId: string, firstName?: string, lastName?: string, about?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateProfile(holder as any, firstName, lastName, about)
+  }
+
+
 
 
   public async getEmojiStatuses(accountId: string): Promise<EmojiStatusesResult> {

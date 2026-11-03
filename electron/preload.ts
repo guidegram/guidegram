@@ -2027,6 +2027,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:update-birthday', { accountId, birthday }),
   updateAccountColor: (accountId: string, forProfile?: boolean, color?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:update-color', { accountId, forProfile, color }),
+  updateConnectedBot: (
+    accountId: string,
+    deleted?: boolean,
+    rights?: any,
+    botId?: string,
+    recipients?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-connected-bot', { accountId, deleted, rights, botId, recipients }),
+  updateDeviceLocked: (accountId: string, period?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-device-locked', { accountId, period }),
+  updatePasswordSettings: (accountId: string, password?: any, newSettings?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-password-settings', { accountId, password, newSettings }),
+  updateProfile: (accountId: string, firstName?: string, lastName?: string, about?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-profile', { accountId, firstName, lastName, about }),
+
 
 
 

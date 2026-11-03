@@ -5669,6 +5669,46 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle(
+    'telegram:update-connected-bot',
+    async (_event, { accountId, deleted, rights, botId, recipients }) => {
+      try {
+        return await accountManager.updateConnectedBot(accountId, deleted, rights, botId, recipients)
+      } catch (err: any) {
+        Logger.warn(`[IPC] updateConnectedBot error:`, err)
+        return false
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:update-device-locked', async (_event, { accountId, period }) => {
+    try {
+      return await accountManager.updateDeviceLocked(accountId, period)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateDeviceLocked error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-password-settings', async (_event, { accountId, password, newSettings }) => {
+    try {
+      return await accountManager.updatePasswordSettings(accountId, password, newSettings)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updatePasswordSettings error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:update-profile', async (_event, { accountId, firstName, lastName, about }) => {
+    try {
+      return await accountManager.updateProfile(accountId, firstName, lastName, about)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateProfile error:`, err)
+      return false
+    }
+  })
+
+
 
 
 

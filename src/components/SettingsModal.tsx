@@ -778,6 +778,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleUpdateProfile = async (firstName?: string, lastName?: string, about?: string) => {
+    if (!targetAccountId || !window.guidegram?.updateProfile) return
+    try {
+      await window.guidegram.updateProfile(targetAccountId, firstName, lastName, about)
+      showToast(isPersian ? 'اطلاعات پروفایل با موفقیت ذخیره شد.' : 'Profile updated successfully.')
+    } catch {
+      showToast(isPersian ? 'خطا در به‌روزرسانی پروفایل' : 'Failed to update profile.')
+    }
+  }
+
+  const handleUpdateConnectedBot = async (botId: string, rights?: any, deleted?: boolean) => {
+    if (!targetAccountId || !window.guidegram?.updateConnectedBot) return
+    try {
+      await window.guidegram.updateConnectedBot(targetAccountId, deleted, rights, botId)
+      showToast(isPersian ? 'تنظیمات ربات متصل به‌روزرسانی شد.' : 'Connected bot settings updated.')
+    } catch {
+      showToast(isPersian ? 'خطا در به‌روزرسانی ربات متصل' : 'Failed to update connected bot.')
+    }
+  }
+
+  const handleUpdateDeviceLocked = async (period: number) => {
+    if (!targetAccountId || !window.guidegram?.updateDeviceLocked) return
+    try {
+      await window.guidegram.updateDeviceLocked(targetAccountId, period)
+      showToast(isPersian ? `مدت زمان قفل خودکار دستگاه به ${period} ثانیه تغییر یافت.` : `Device lock period updated to ${period}s.`)
+    } catch {
+      showToast(isPersian ? 'خطا در تنظیم قفل خودکار' : 'Failed to update device lock period.')
+    }
+  }
+
+  const handleUpdatePasswordSettings = async (password?: any, newSettings?: any) => {
+    if (!targetAccountId || !window.guidegram?.updatePasswordSettings) return
+    try {
+      await window.guidegram.updatePasswordSettings(targetAccountId, password, newSettings)
+      showToast(isPersian ? 'تنظیمات گذرواژه دو مرحله‌ای ذخیره شد.' : 'Two-step verification settings saved.')
+    } catch {
+      showToast(isPersian ? 'خطا در ذخیره تنظیمات گذرواژه' : 'Failed to update password settings.')
+    }
+  }
+
+
 
 
   const openPrivacyRule = (
