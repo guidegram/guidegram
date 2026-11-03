@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { X, Folder, Plus, Trash2, ArrowUp, ArrowDown, Check, Users, User, Radio, Bot, BellOff, CheckCheck, Archive, Sparkles, Palette, Edit2, ShieldAlert, Pin } from 'lucide-react'
+import {
+  X, Folder, Plus, Trash2, ArrowUp, ArrowDown, Check, Users, User, Radio, Bot,
+  BellOff, CheckCheck, Archive, Sparkles, Palette, Edit2, ShieldAlert, Pin,
+  Layers, MessageSquare, FileText, Smile, Dices, Wrench, RefreshCw, AlertCircle, CheckCircle2
+} from 'lucide-react'
 import { CloudFolderItem } from '../types/telegram'
 import { useI18n } from '../i18n'
 import { TELEGRAM_FOLDER_TAG_COLORS } from './ChatTabs'
@@ -23,12 +27,170 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
   onFoldersUpdated,
 }) => {
   const { t, isRTL, formatNumber } = useI18n()
+  const [activeTab, setActiveTab] = useState<'folders' | 'maintenance'>('folders')
   const [localFolders, setLocalFolders] = useState<CloudFolderItem[]>(folders)
   const [editingFolder, setEditingFolder] = useState<Partial<CloudFolderItem> | null>(null)
   const [suggestedFilters, setSuggestedFilters] = useState<any[]>([])
   const [isLoadingSuggested, setIsLoadingSuggested] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // Microphase 043: Messages Domain Suite Part 11 State
+  const [m043FiltersLoading, setM043FiltersLoading] = useState(false)
+  const [m043FiltersFeedback, setM043FiltersFeedback] = useState<string | null>(null)
+  const [m043FiltersCount, setM043FiltersCount] = useState<number | null>(null)
+
+  const [m043UnreadMarksLoading, setM043UnreadMarksLoading] = useState(false)
+  const [m043UnreadMarksFeedback, setM043UnreadMarksFeedback] = useState<string | null>(null)
+  const [m043UnreadParentPeer, setM043UnreadParentPeer] = useState('')
+  const [m043UnreadMarksCount, setM043UnreadMarksCount] = useState<number | null>(null)
+
+  const [m043DialogsLoading, setM043DialogsLoading] = useState(false)
+  const [m043DialogsFeedback, setM043DialogsFeedback] = useState<string | null>(null)
+  const [m043DialogsLimit, setM043DialogsLimit] = useState('20')
+  const [m043DialogsCount, setM043DialogsCount] = useState<number | null>(null)
+
+  const [m043DiscussionLoading, setM043DiscussionLoading] = useState(false)
+  const [m043DiscussionFeedback, setM043DiscussionFeedback] = useState<string | null>(null)
+  const [m043DiscussionPeer, setM043DiscussionPeer] = useState('')
+  const [m043DiscussionMsgId, setM043DiscussionMsgId] = useState('')
+  const [m043DiscussionData, setM043DiscussionData] = useState<any>(null)
+
+  const [m043DocLoading, setM043DocLoading] = useState(false)
+  const [m043DocFeedback, setM043DocFeedback] = useState<string | null>(null)
+  const [m043DocSha256, setM043DocSha256] = useState('')
+  const [m043DocSize, setM043DocSize] = useState('')
+  const [m043DocMime, setM043DocMime] = useState('')
+
+  const [m043GameLoading, setM043GameLoading] = useState(false)
+  const [m043GameFeedback, setM043GameFeedback] = useState<string | null>(null)
+  const [m043GameData, setM043GameData] = useState<any>(null)
+
+  const [m043EmojiGroupsLoading, setM043EmojiGroupsLoading] = useState(false)
+  const [m043EmojiGroupsFeedback, setM043EmojiGroupsFeedback] = useState<string | null>(null)
+  const [m043EmojiGroupsHash, setM043EmojiGroupsHash] = useState('0')
+  const [m043EmojiGroupsCount, setM043EmojiGroupsCount] = useState<number | null>(null)
+
+  // Microphase 043 Handlers
+  const handleGetDialogFiltersRaw = async () => {
+    if (!accountId || !window.guidegram?.getDialogFiltersRaw) return
+    setM043FiltersLoading(true)
+    setM043FiltersFeedback(null)
+    try {
+      const res = await window.guidegram.getDialogFiltersRaw(accountId)
+      const count = Array.isArray(res) ? res.length : (res?.filters ? res.filters.length : 0)
+      setM043FiltersCount(count)
+      setM043FiltersFeedback(`Found ${count} dialog filter(s) in MTProto session.`)
+    } catch (err: any) {
+      setM043FiltersFeedback(err?.message || 'Error querying dialog filters.')
+    } finally {
+      setM043FiltersLoading(false)
+    }
+  }
+
+  const handleGetDialogUnreadMarks = async () => {
+    if (!accountId || !window.guidegram?.getDialogUnreadMarks) return
+    setM043UnreadMarksLoading(true)
+    setM043UnreadMarksFeedback(null)
+    try {
+      const res = await window.guidegram.getDialogUnreadMarks(accountId, m043UnreadParentPeer.trim() || undefined)
+      const count = Array.isArray(res) ? res.length : (res?.marks ? res.marks.length : 0)
+      setM043UnreadMarksCount(count)
+      setM043UnreadMarksFeedback(`Discovered ${count} unread dialog mark(s).`)
+    } catch (err: any) {
+      setM043UnreadMarksFeedback(err?.message || 'Error querying dialog unread marks.')
+    } finally {
+      setM043UnreadMarksLoading(false)
+    }
+  }
+
+  const handleGetDialogsRaw = async () => {
+    if (!accountId || !window.guidegram?.getDialogs) return
+    setM043DialogsLoading(true)
+    setM043DialogsFeedback(null)
+    try {
+      const limit = Math.max(1, Math.min(100, parseInt(m043DialogsLimit, 10) || 20))
+      const res = await window.guidegram.getDialogs(accountId, limit)
+      const count = Array.isArray(res) ? res.length : 0
+      setM043DialogsCount(count)
+      setM043DialogsFeedback(`Fetched ${count} dialog(s) from Telegram cloud.`)
+    } catch (err: any) {
+      setM043DialogsFeedback(err?.message || 'Error querying MTProto dialogs.')
+    } finally {
+      setM043DialogsLoading(false)
+    }
+  }
+
+  const handleGetDiscussionMessage = async () => {
+    if (!accountId || !window.guidegram?.getDiscussionMessage || !m043DiscussionPeer.trim() || !m043DiscussionMsgId.trim()) return
+    setM043DiscussionLoading(true)
+    setM043DiscussionFeedback(null)
+    try {
+      const msgId = parseInt(m043DiscussionMsgId, 10)
+      const res = await window.guidegram.getDiscussionMessage(accountId, m043DiscussionPeer.trim(), msgId)
+      setM043DiscussionData(res)
+      if (res) {
+        setM043DiscussionFeedback(`Discussion thread resolved: top_msg_id=${res.topMsgId ?? 'N/A'}, read_inbox_max_id=${res.readInboxMaxId ?? 'N/A'}`)
+      } else {
+        setM043DiscussionFeedback('No discussion comments group attached to this post.')
+      }
+    } catch (err: any) {
+      setM043DiscussionFeedback(err?.message || 'Error querying discussion message.')
+    } finally {
+      setM043DiscussionLoading(false)
+    }
+  }
+
+  const handleGetDocumentByHash = async () => {
+    if (!accountId || !window.guidegram?.getDocumentByHash || !m043DocSha256.trim()) return
+    setM043DocLoading(true)
+    setM043DocFeedback(null)
+    try {
+      const sizeVal = m043DocSize.trim() ? BigInt(m043DocSize.trim()) : undefined
+      const res = await window.guidegram.getDocumentByHash(accountId, m043DocSha256.trim(), sizeVal, m043DocMime.trim() || undefined)
+      if (res && res._ !== 'documentEmpty') {
+        setM043DocFeedback(`Document found: ID=${res.id || 'N/A'}, size=${res.size || 'N/A'} bytes`)
+      } else {
+        setM043DocFeedback('Document not found for given SHA256/size/mime hash.')
+      }
+    } catch (err: any) {
+      setM043DocFeedback(err?.message || 'Error querying document by hash.')
+    } finally {
+      setM043DocLoading(false)
+    }
+  }
+
+  const handleGetEmojiGameInfo = async () => {
+    if (!accountId || !window.guidegram?.getEmojiGameInfo) return
+    setM043GameLoading(true)
+    setM043GameFeedback(null)
+    try {
+      const res = await window.guidegram.getEmojiGameInfo(accountId, {})
+      setM043GameData(res)
+      setM043GameFeedback(`Emoji game info loaded: ${res ? JSON.stringify(res).slice(0, 80) : 'Available'}`)
+    } catch (err: any) {
+      setM043GameFeedback(err?.message || 'Error querying emoji game info.')
+    } finally {
+      setM043GameLoading(false)
+    }
+  }
+
+  const handleGetEmojiGroups = async () => {
+    if (!accountId || !window.guidegram?.getEmojiGroups) return
+    setM043EmojiGroupsLoading(true)
+    setM043EmojiGroupsFeedback(null)
+    try {
+      const hashVal = parseInt(m043EmojiGroupsHash, 10) || 0
+      const res = await window.guidegram.getEmojiGroups(accountId, hashVal)
+      const count = Array.isArray(res?.groups) ? res.groups.length : (Array.isArray(res) ? res.length : 0)
+      setM043EmojiGroupsCount(count)
+      setM043EmojiGroupsFeedback(`Discovered ${count} emoji category group(s).`)
+    } catch (err: any) {
+      setM043EmojiGroupsFeedback(err?.message || 'Error querying emoji groups.')
+    } finally {
+      setM043EmojiGroupsLoading(false)
+    }
+  }
 
   useEffect(() => {
     setLocalFolders(folders)
@@ -259,6 +421,34 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
           </button>
         </div>
 
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-white/5 bg-dark-900/40 px-5 pt-1 gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('folders')}
+            className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'folders'
+                ? 'border-primary-500 text-primary-400'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Folder className="w-3.5 h-3.5" />
+            <span>{t('folders.title')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('maintenance')}
+            className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'maintenance'
+                ? 'border-primary-500 text-primary-400'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>MTProto Layer 232 Suite</span>
+          </button>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4 smooth-scroll-physics">
           {errorMsg && (
@@ -268,7 +458,8 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
             </div>
           )}
 
-          {editingFolder ? (
+          {activeTab === 'folders' ? (
+            editingFolder ? (
             /* Editing / Creating Form */
             <div className="space-y-4">
               {/* Folder Name & Emoticon */}
@@ -628,6 +819,281 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+            )
+          ) : (
+            /* Maintenance Tab: Layer 232 Messages Suite Part 11 (Microphase 043) */
+            <div className="space-y-4">
+              <div className="p-3 rounded-xl bg-primary-500/10 border border-primary-500/20 text-primary-300 text-xs">
+                <p className="font-semibold mb-1">Telegram MTProto Layer 232 — Messages Domain Suite Part 11</p>
+                <p className="text-[11px] text-gray-400">Direct protocol wiring for dialog filters, unread marks, raw dialogs, discussion messages, document hashes, and emoji game physics.</p>
+              </div>
+
+              {/* 1. messages.getDialogFilters */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-sky-400" />
+                    <div>
+                      <span className="text-xs font-semibold text-white block">Raw Dialog Filters</span>
+                      <span className="text-[10px] text-gray-400 font-mono">messages.getDialogFilters</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetDialogFiltersRaw}
+                    disabled={m043FiltersLoading}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-500 hover:bg-sky-600 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {m043FiltersLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>Query Filters</span>
+                  </button>
+                </div>
+                {m043FiltersFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043FiltersCount !== null ? 'bg-sky-500/10 border border-sky-500/20 text-sky-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043FiltersCount !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043FiltersFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. messages.getDialogUnreadMarks */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <CheckCheck className="w-4 h-4 text-emerald-400" />
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Dialog Unread Marks</span>
+                    <span className="text-[10px] text-gray-400 font-mono">messages.getDialogUnreadMarks</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={m043UnreadParentPeer}
+                    onChange={(e) => setM043UnreadParentPeer(e.target.value)}
+                    placeholder="Parent Peer ID (optional)"
+                    className="flex-1 h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGetDialogUnreadMarks}
+                    disabled={m043UnreadMarksLoading}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {m043UnreadMarksLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>Fetch Marks</span>
+                  </button>
+                </div>
+                {m043UnreadMarksFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043UnreadMarksCount !== null ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043UnreadMarksCount !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043UnreadMarksFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. messages.getDialogs */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-violet-400" />
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Raw MTProto Dialogs</span>
+                    <span className="text-[10px] text-gray-400 font-mono">messages.getDialogs</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={m043DialogsLimit}
+                    onChange={(e) => setM043DialogsLimit(e.target.value)}
+                    placeholder="Limit (1-100)"
+                    className="w-28 h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-violet-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGetDialogsRaw}
+                    disabled={m043DialogsLoading}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-violet-500 hover:bg-violet-600 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {m043DialogsLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>Fetch Dialogs</span>
+                  </button>
+                </div>
+                {m043DialogsFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043DialogsCount !== null ? 'bg-violet-500/10 border border-violet-500/20 text-violet-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043DialogsCount !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043DialogsFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. messages.getDiscussionMessage */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-amber-400" />
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Channel Discussion Message</span>
+                    <span className="text-[10px] text-gray-400 font-mono">messages.getDiscussionMessage</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={m043DiscussionPeer}
+                    onChange={(e) => setM043DiscussionPeer(e.target.value)}
+                    placeholder="Channel Peer ID / Username"
+                    className="h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                  <input
+                    type="number"
+                    value={m043DiscussionMsgId}
+                    onChange={(e) => setM043DiscussionMsgId(e.target.value)}
+                    placeholder="Post Message ID"
+                    className="h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-amber-500 font-mono"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGetDiscussionMessage}
+                  disabled={m043DiscussionLoading || !m043DiscussionPeer.trim() || !m043DiscussionMsgId.trim()}
+                  className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {m043DiscussionLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Lookup Discussion Thread</span>
+                </button>
+                {m043DiscussionFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043DiscussionData !== null ? 'bg-amber-500/10 border border-amber-500/20 text-amber-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043DiscussionData !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043DiscussionFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. messages.getDocumentByHash */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-cyan-400" />
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Document Lookup By Hash</span>
+                    <span className="text-[10px] text-gray-400 font-mono">messages.getDocumentByHash</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={m043DocSha256}
+                  onChange={(e) => setM043DocSha256(e.target.value)}
+                  placeholder="SHA-256 Base64 / Hex"
+                  className="w-full h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 font-mono"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={m043DocSize}
+                    onChange={(e) => setM043DocSize(e.target.value)}
+                    placeholder="File size (bytes)"
+                    className="h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                  <input
+                    type="text"
+                    value={m043DocMime}
+                    onChange={(e) => setM043DocMime(e.target.value)}
+                    placeholder="MIME type (e.g. image/png)"
+                    className="h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGetDocumentByHash}
+                  disabled={m043DocLoading || !m043DocSha256.trim()}
+                  className="w-full px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-cyan-500 hover:bg-cyan-600 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {m043DocLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>Find Document By Hash</span>
+                </button>
+                {m043DocFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043DocFeedback.includes('found: ID') ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043DocFeedback.includes('found: ID') ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043DocFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 6. messages.getEmojiGameInfo */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Dices className="w-4 h-4 text-fuchsia-400" />
+                    <div>
+                      <span className="text-xs font-semibold text-white block">Emoji Game / Dice Info</span>
+                      <span className="text-[10px] text-gray-400 font-mono">messages.getEmojiGameInfo</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetEmojiGameInfo}
+                    disabled={m043GameLoading}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-fuchsia-500 hover:bg-fuchsia-600 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {m043GameLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>Query Game Info</span>
+                  </button>
+                </div>
+                {m043GameFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043GameData !== null ? 'bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043GameData !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043GameFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 7. messages.getEmojiGroups */}
+              <div className="p-3.5 rounded-xl bg-dark-800/80 border border-white/5 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Smile className="w-4 h-4 text-yellow-400" />
+                  <div>
+                    <span className="text-xs font-semibold text-white block">Emoji Category Groups</span>
+                    <span className="text-[10px] text-gray-400 font-mono">messages.getEmojiGroups</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={m043EmojiGroupsHash}
+                    onChange={(e) => setM043EmojiGroupsHash(e.target.value)}
+                    placeholder="Hash (0 for latest)"
+                    className="w-32 h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-yellow-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGetEmojiGroups}
+                    disabled={m043EmojiGroupsLoading}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-yellow-500 hover:bg-yellow-600 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {m043EmojiGroupsLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>Query Groups</span>
+                  </button>
+                </div>
+                {m043EmojiGroupsFeedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m043EmojiGroupsCount !== null ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m043EmojiGroupsCount !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m043EmojiGroupsFeedback}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -2283,6 +2283,17 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-custom-emoji-documents', { accountId, documentId }),
   getDefaultTagReactions: (accountId: string, hash?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-default-tag-reactions', { accountId, hash }),
+  // Layer 232 Messages Suite (Microphase 043)
+  getDialogFiltersRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-dialog-filters', { accountId }),
+  getDialogUnreadMarks: (accountId: string, parentPeerId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-dialog-unread-marks', { accountId, parentPeerId }),
+  getDocumentByHash: (accountId: string, sha256?: any, size?: bigint | number, mimeType?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-document-by-hash', { accountId, sha256, size, mimeType }),
+  getEmojiGameInfo: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-game-info', { accountId, params }),
+  getEmojiGroups: (accountId: string, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-groups', { accountId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

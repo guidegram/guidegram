@@ -19363,5 +19363,36 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getCustomEmojiDocuments(holder as any, documentId)
   }
+
+  // Layer 232 Messages Suite (Microphase 043)
+  public async getDialogFiltersRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getDialogFilters(holder as any)
+  }
+
+  public async getDialogUnreadMarks(accountId: string, parentPeerId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getDialogUnreadMarks(holder as any, accountId, parentPeerId)
+  }
+
+  public async getDocumentByHash(accountId: string, sha256?: any, size?: bigint | number, mimeType?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getDocumentByHash(holder as any, sha256, size, mimeType)
+  }
+
+  public async getEmojiGameInfo(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiGameInfo(holder as any, params)
+  }
+
+  public async getEmojiGroups(accountId: string, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiGroups(holder as any, hash)
+  }
 }
 

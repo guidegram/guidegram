@@ -6624,6 +6624,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 043)
+  ipcMain.handle('telegram:messages:get-dialog-filters', async (_event, { accountId }) => {
+    try {
+      return await accountManager.getDialogFiltersRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getDialogFilters error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-dialog-unread-marks', async (_event, { accountId, parentPeerId }) => {
+    try {
+      return await accountManager.getDialogUnreadMarks(accountId, parentPeerId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getDialogUnreadMarks error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-document-by-hash', async (_event, { accountId, sha256, size, mimeType }) => {
+    try {
+      return await accountManager.getDocumentByHash(accountId, sha256, size, mimeType)
+    } catch (err: any) {
+      Logger.warn('[IPC] getDocumentByHash error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-game-info', async (_event, { accountId, params }) => {
+    try {
+      return await accountManager.getEmojiGameInfo(accountId, params)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiGameInfo error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-groups', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getEmojiGroups(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiGroups error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
