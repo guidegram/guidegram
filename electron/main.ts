@@ -8349,6 +8349,34 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 071 IPC Handlers (Updates Domain Part 1)
+  ipcMain.handle('telegram:updates:get-state-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.updatesGetStateRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] updatesGetStateRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:updates:get-difference-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updatesGetDifferenceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updatesGetDifferenceRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:updates:get-channel-difference-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.updatesGetChannelDifferenceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] updatesGetChannelDifferenceRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

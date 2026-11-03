@@ -2673,6 +2673,12 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:upload-media-raw', { accountId, ...params }),
   viewSponsoredMessageRaw: (accountId: string, params: { randomId?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:view-sponsored-message-raw', { accountId, ...params }),
+  updatesGetStateRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:updates:get-state-raw', { accountId }),
+  updatesGetDifferenceRaw: (accountId: string, params: { pts?: number; ptsLimit?: number; ptsTotalLimit?: number; date?: number; qts?: number; qtsLimit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:updates:get-difference-raw', { accountId, ...params }),
+  updatesGetChannelDifferenceRaw: (accountId: string, params: { force?: boolean; channel: any; filter?: any; pts?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:updates:get-channel-difference-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -20519,6 +20519,25 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.viewSponsoredMessage(holder as any, params.randomId)
   }
+
+  // Layer 232 Updates Suite (Microphase 071)
+  public async updatesGetStateRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.updates_getState(holder as any)
+  }
+
+  public async updatesGetDifferenceRaw(accountId: string, params: { pts?: number; ptsLimit?: number; ptsTotalLimit?: number; date?: number; qts?: number; qtsLimit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.updates_getDifference(holder as any, params?.pts, params?.ptsLimit, params?.ptsTotalLimit, params?.date, params?.qts, params?.qtsLimit)
+  }
+
+  public async updatesGetChannelDifferenceRaw(accountId: string, params: { force?: boolean; channel: any; filter?: any; pts?: number; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.updates_getChannelDifference(holder as any, accountId, params?.force, params?.channel, params?.filter, params?.pts, params?.limit)
+  }
 }
 
 

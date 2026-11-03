@@ -7395,6 +7395,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 071 State & Handlers (Updates Domain Part 1)
+  const [m071Status, setM071Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m071LoadingOp, setM071LoadingOp] = useState<string | null>(null)
+  const [m071StateResult, setM071StateResult] = useState<any>(null)
+
+  // 1. updates.getState
+  const handleM071GetState = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updatesGetStateRaw) return
+    setM071LoadingOp('getState')
+    setM071Status(null)
+    try {
+      const res = await window.guidegram.updatesGetStateRaw(targetId)
+      setM071StateResult(res)
+      setM071Status({ type: 'success', message: `وضعیت دریافت شد: PTS=${res?.pts ?? '-'} | QTS=${res?.qts ?? '-'} | تاریخ=${res?.date ?? '-'}` })
+    } catch (err: any) {
+      setM071Status({ type: 'error', message: err?.message || 'خطا در دریافت وضعیت آپدیت‌ها' })
+    } finally {
+      setM071LoadingOp(null)
+    }
+  }
+
+  // 2. updates.getDifference
+  const [m071DiffPts, setM071DiffPts] = useState('')
+  const [m071DiffQts, setM071DiffQts] = useState('')
+  const handleM071GetDifference = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updatesGetDifferenceRaw) return
+    setM071LoadingOp('getDifference')
+    setM071Status(null)
+    try {
+      const res = await window.guidegram.updatesGetDifferenceRaw(targetId, {
+        pts: m071DiffPts ? Number(m071DiffPts) : 1,
+        qts: m071DiffQts ? Number(m071DiffQts) : 1,
+      })
+      setM071Status({ type: 'success', message: `تفاوت آپدیت‌ها دریافت شد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM071Status({ type: 'error', message: err?.message || 'خطا در دریافت تفاوت آپدیت‌ها' })
+    } finally {
+      setM071LoadingOp(null)
+    }
+  }
+
+  // 3. updates.getChannelDifference
+  const [m071ChanDiffPeer, setM071ChanDiffPeer] = useState('')
+  const [m071ChanDiffPts, setM071ChanDiffPts] = useState('')
+  const handleM071GetChannelDifference = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.updatesGetChannelDifferenceRaw) return
+    if (!m071ChanDiffPeer.trim()) {
+      setM071Status({ type: 'error', message: 'شناسه کانال الزامی است' })
+      return
+    }
+    setM071LoadingOp('getChannelDifference')
+    setM071Status(null)
+    try {
+      const res = await window.guidegram.updatesGetChannelDifferenceRaw(targetId, {
+        channel: m071ChanDiffPeer.trim(),
+        pts: m071ChanDiffPts ? Number(m071ChanDiffPts) : 1,
+      })
+      setM071Status({ type: 'success', message: `تفاوت وضعیت کانال دریافت شد: ${res?._ || 'انجام شد'}` })
+    } catch (err: any) {
+      setM071Status({ type: 'error', message: err?.message || 'خطا در دریافت تفاوت کانال' })
+    } finally {
+      setM071LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -19202,6 +19272,138 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </button>
                         </div>
                       </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 071: Updates Domain Suite Part 1 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۱: همگام‌سازی وضعیت و آپدیت‌های زنده تلگرام (Updates Domain Part 1)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-sky-400/80 font-mono px-2 py-0.5 rounded-full bg-sky-400/10 border border-sky-400/20">
+                      لایه ۲۳۲ | دامنه Updates
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    مدیریت دنباله رویدادهای زنده، دریافت آخرین وضعیت سیستم PTS/QTS کلاینت و همگام‌سازی اختلاف پیام‌های کاربر و کانال‌ها:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m071Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m071Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m071Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m071Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM071Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-1">
+                    {/* 1. updates.getState */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-gray-300 font-medium">۱. وضعیت جاری (getState)</span>
+                        <span className="text-[10px] text-gray-500">
+                          {m071StateResult ? `PTS: ${m071StateResult.pts} | QTS: ${m071StateResult.qts}` : 'استعلام مقادیر PTS/QTS'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM071GetState}
+                        disabled={m071LoadingOp === 'getState'}
+                        className="w-full py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m071LoadingOp === 'getState' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام وضعیت'}
+                      </button>
+                    </div>
+
+                    {/* 2. updates.getDifference */}
+                    <form
+                      onSubmit={handleM071GetDifference}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۲. تفاوت پیام‌ها (getDifference)</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          value={m071DiffPts}
+                          onChange={(e) => setM071DiffPts(e.target.value)}
+                          placeholder="PTS مبدا..."
+                          className="w-1/2 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m071DiffQts}
+                          onChange={(e) => setM071DiffQts(e.target.value)}
+                          placeholder="QTS مبدا..."
+                          className="w-1/2 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m071LoadingOp === 'getDifference'}
+                        className="w-full py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m071LoadingOp === 'getDifference' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت تفاوت'}
+                      </button>
+                    </form>
+
+                    {/* 3. updates.getChannelDifference */}
+                    <form
+                      onSubmit={handleM071GetChannelDifference}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. تفاوت کانال (getChannelDiff)</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={m071ChanDiffPeer}
+                          onChange={(e) => setM071ChanDiffPeer(e.target.value)}
+                          placeholder="شناسه کانال..."
+                          className="w-2/3 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m071ChanDiffPts}
+                          onChange={(e) => setM071ChanDiffPts(e.target.value)}
+                          placeholder="PTS..."
+                          className="w-1/3 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-sky-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m071LoadingOp === 'getChannelDifference'}
+                        className="w-full py-1.5 bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m071LoadingOp === 'getChannelDifference' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'بررسی کانال'}
+                      </button>
                     </form>
                   </div>
                 </div>

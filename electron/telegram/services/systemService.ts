@@ -37,6 +37,19 @@ export class SystemService {
     return { _: 'inputUser', userId: BigInt(userId), accessHash: 0n }
   }
 
+  private async toInputChannel(accountId: string, channelId: string): Promise<any> {
+    if (!channelId) return { _: 'inputChannelEmpty' }
+    try {
+      const peer = await this.resolveInputPeer(accountId, channelId)
+      if (peer._ === 'inputPeerChannel') {
+        return { _: 'inputChannel', channelId: peer.channelId, accessHash: peer.accessHash }
+      }
+    } catch {
+      // fallback
+    }
+    return { _: 'inputChannel', channelId: BigInt(channelId), accessHash: 0n }
+  }
+
   public async root_invokeAfterMsg(holder: RpcClientHolder, msgId?: bigint | number, query?: any): Promise<any> {
     try {
       return await holder.client.call({
@@ -189,11 +202,10 @@ export class SystemService {
     }
   }
 
-  public async updates_getState(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async updates_getState(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'updates.getState',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] updates.getState error:', err)
@@ -205,12 +217,12 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'updates.getDifference',
-        'pts': pts,
-        'pts_limit': ptsLimit,
-        'pts_total_limit': ptsTotalLimit,
-        'date': date,
-        'qts': qts,
-        'qts_limit': qtsLimit,
+        pts: pts ?? 1,
+        ptsLimit: ptsLimit || undefined,
+        ptsTotalLimit: ptsTotalLimit || undefined,
+        date: date || Math.floor(Date.now() / 1000),
+        qts: qts ?? 1,
+        qtsLimit: qtsLimit || undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] updates.getDifference error:', err)
@@ -218,15 +230,21 @@ export class SystemService {
     }
   }
 
-  public async updates_getChannelDifference(holder: RpcClientHolder, force?: boolean, channel?: any, filter?: any, pts?: number, limit?: number): Promise<any> {
+  public async updates_getChannelDifference(holder: RpcClientHolder, accountId: string, force?: boolean, channel?: any, filter?: any, pts?: number, limit?: number): Promise<any> {
     try {
+      let chanObj: any
+      if (typeof channel === 'string' || typeof channel === 'number' || typeof channel === 'bigint') {
+        chanObj = await this.toInputChannel(accountId, String(channel))
+      } else {
+        chanObj = channel || { _: 'inputChannelEmpty' }
+      }
       return await holder.client.call({
         _: 'updates.getChannelDifference',
-        'force': force,
-        'channel': channel,
-        'filter': filter,
-        'pts': pts,
-        'limit': limit,
+        force: force || undefined,
+        channel: chanObj,
+        filter: filter || { _: 'channelMessagesFilterEmpty' },
+        pts: pts ?? 1,
+        limit: limit ?? 100,
       })
     } catch (err) {
       Logger.warn('[SystemService] updates.getChannelDifference error:', err)
