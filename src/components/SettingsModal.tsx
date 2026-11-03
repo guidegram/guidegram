@@ -2950,6 +2950,210 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 047 State: Messages Domain Part 15 (Inline Bots, Inline Game Scores, Mask Stickers, Edit Data, Reactions List, Read Participants & Messages)
+  const [m047InlineBotId, setM047InlineBotId] = useState('')
+  const [m047InlineBotQuery, setM047InlineBotQuery] = useState('')
+  const [m047InlineBotResultsCount, setM047InlineBotResultsCount] = useState<number | null>(null)
+
+  const [m047InlineGameMsgId, setM047InlineGameMsgId] = useState('')
+  const [m047InlineGameScoresCount, setM047InlineGameScoresCount] = useState<number | null>(null)
+
+  const [m047MaskStickersCount, setM047MaskStickersCount] = useState<number | null>(null)
+
+  const [m047EditDataPeer, setM047EditDataPeer] = useState('')
+  const [m047EditDataMsgId, setM047EditDataMsgId] = useState('')
+  const [m047EditDataResult, setM047EditDataResult] = useState<string | null>(null)
+
+  const [m047ReactionsPeer, setM047ReactionsPeer] = useState('')
+  const [m047ReactionsMsgId, setM047ReactionsMsgId] = useState('')
+  const [m047ReactionsCount, setM047ReactionsCount] = useState<number | null>(null)
+
+  const [m047ReadParticipantsPeer, setM047ReadParticipantsPeer] = useState('')
+  const [m047ReadParticipantsMsgId, setM047ReadParticipantsMsgId] = useState('')
+  const [m047ReadParticipantsCount, setM047ReadParticipantsCount] = useState<number | null>(null)
+
+  const [m047MessagesMsgId, setM047MessagesMsgId] = useState('')
+  const [m047MessagesCount, setM047MessagesCount] = useState<number | null>(null)
+
+  const [m047LoadingOp, setM047LoadingOp] = useState<string | null>(null)
+  const [m047Status, setM047Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM047GetInlineBotResults = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getInlineBotResultsRaw || window.guidegram?.getInlineBotResults
+    if (!targetId || !fn) return
+    if (!m047InlineBotId.trim()) {
+      setM047Status({ type: 'error', message: 'لطفاً شناسه یا یوزرنیم ربات اینلاین را وارد کنید' })
+      return
+    }
+    setM047LoadingOp('getInlineBotResults')
+    setM047Status(null)
+    try {
+      const res = await fn(targetId, {
+        botId: m047InlineBotId.trim(),
+        query: m047InlineBotQuery.trim(),
+        offset: '',
+      })
+      const count = Array.isArray(res?.results) ? res.results.length : 0
+      setM047InlineBotResultsCount(count)
+      setM047Status({ type: 'success', message: `تعداد ${count} نتیجه اینلاین ربات دریافت شد` })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در دریافت نتایج اینلاین ربات' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
+  const handleM047GetInlineGameHighScores = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getInlineGameHighScores) return
+    if (!m047InlineGameMsgId.trim()) {
+      setM047Status({ type: 'error', message: 'لطفاً شناسه پیام اینلاین بازی را وارد کنید' })
+      return
+    }
+    setM047LoadingOp('getInlineGameHighScores')
+    setM047Status(null)
+    try {
+      const res = await window.guidegram.getInlineGameHighScores(targetId, { _: 'inputBotInlineMessageID', id: m047InlineGameMsgId.trim() })
+      const count = Array.isArray(res?.scores) ? res.scores.length : (Array.isArray(res) ? res.length : 0)
+      setM047InlineGameScoresCount(count)
+      setM047Status({ type: 'success', message: `تعداد ${count} رکورد برتر بازی اینلاین استعلام شد` })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در دریافت رکوردهای بازی اینلاین' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
+  const handleM047GetMaskStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getMaskStickers) return
+    setM047LoadingOp('getMaskStickers')
+    setM047Status(null)
+    try {
+      const res = await window.guidegram.getMaskStickers(targetId, 0)
+      const count = Array.isArray(res?.sets) ? res.sets.length : (Array.isArray(res) ? res.length : 0)
+      setM047MaskStickersCount(count)
+      setM047Status({ type: 'success', message: `تعداد ${count} بسته استیکر ماسک (Mask Stickers) استعلام شد` })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در دریافت استیکرهای ماسک' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
+  const handleM047GetMessageEditData = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getMessageEditData) return
+    if (!m047EditDataPeer.trim()) {
+      setM047Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m047EditDataMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM047Status({ type: 'error', message: 'شناسه پیام باید عدد باشد' })
+      return
+    }
+    setM047LoadingOp('getMessageEditData')
+    setM047Status(null)
+    try {
+      const res = await window.guidegram.getMessageEditData(targetId, m047EditDataPeer.trim(), msgIdNum)
+      const caption = res?.caption ? 'پیام دارای کپشن ویرایش‌پذیر' : 'داده‌های ویرایش پیام استعلام شد'
+      setM047EditDataResult(caption)
+      setM047Status({ type: 'success', message: caption })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در استعلام داده‌های ویرایش پیام' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
+  const handleM047GetMessageReactionsList = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getMessageReactionsListRaw || window.guidegram?.getMessageReactionsList
+    if (!targetId || !fn) return
+    if (!m047ReactionsPeer.trim()) {
+      setM047Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m047ReactionsMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM047Status({ type: 'error', message: 'شناسه پیام باید عدد باشد' })
+      return
+    }
+    setM047LoadingOp('getMessageReactionsList')
+    setM047Status(null)
+    try {
+      const res = await fn(targetId, {
+        peerId: m047ReactionsPeer.trim(),
+        id: msgIdNum,
+        limit: 50,
+      })
+      const count = Array.isArray(res?.reactions) ? res.reactions.length : (res?.count ?? 0)
+      setM047ReactionsCount(count)
+      setM047Status({ type: 'success', message: `تعداد ${count} ری‌اکشن برای پیام استعلام شد` })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در دریافت لیست ری‌اکشن‌های پیام' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
+  const handleM047GetMessageReadParticipants = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getMessageReadParticipants) return
+    if (!m047ReadParticipantsPeer.trim()) {
+      setM047Status({ type: 'error', message: 'لطفاً شناسه گفتگو را وارد کنید' })
+      return
+    }
+    const msgIdNum = parseInt(m047ReadParticipantsMsgId.trim(), 10)
+    if (isNaN(msgIdNum)) {
+      setM047Status({ type: 'error', message: 'شناسه پیام باید عدد باشد' })
+      return
+    }
+    setM047LoadingOp('getMessageReadParticipants')
+    setM047Status(null)
+    try {
+      const res = await window.guidegram.getMessageReadParticipants(targetId, m047ReadParticipantsPeer.trim(), msgIdNum)
+      const count = Array.isArray(res) ? res.length : 0
+      setM047ReadParticipantsCount(count)
+      setM047Status({ type: 'success', message: `تعداد ${count} نفر پیام را خوانده‌اند (Read Receipts)` })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در استعلام خوانندگان پیام' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
+  const handleM047GetMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const fn = window.guidegram?.getMessagesRaw || window.guidegram?.getMessages
+    if (!targetId || !fn) return
+    const ids = m047MessagesMsgId.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    if (ids.length === 0) {
+      setM047Status({ type: 'error', message: 'لطفاً حداقل یک شناسه عددی پیام وارد کنید' })
+      return
+    }
+    setM047LoadingOp('getMessages')
+    setM047Status(null)
+    try {
+      const res = await fn(targetId, ids)
+      const count = Array.isArray(res?.messages) ? res.messages.length : (Array.isArray(res) ? res.length : ids.length)
+      setM047MessagesCount(count)
+      setM047Status({ type: 'success', message: `تعداد ${count} پیام با شناسه اختصاصی دریافت شد` })
+    } catch (err: any) {
+      setM047Status({ type: 'error', message: err?.message || 'خطا در دریافت پیام‌ها با شناسه' })
+    } finally {
+      setM047LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -8389,6 +8593,278 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m046HistoryCount !== null && (
                         <div className="text-[10px] text-emerald-400 font-mono">
                           پیام‌های دریافتی: {m046HistoryCount} عدد
+                        </div>
+                      )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 047: Layer 232 Messages Domain Part 15 (Inline Bots, Inline Game Scores, Mask Stickers, Edit Data, Reactions List, Read Participants & Messages) */}
+                <div className="p-4 bg-dark-850/80 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          ربات‌های اینلاین، استیکرهای ماسک و وضعیت پیام‌ها (Layer 232)
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          مدیریت نتایج اینلاین، استیکرهای ماسک، لیست ری‌اکشن‌ها، خوانندگان پیام و بازی‌های اینلاین
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20 font-mono">
+                      Phase 047 • Layer 232
+                    </span>
+                  </div>
+
+                  {/* Operational Status Banner */}
+                  {m047Status && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        m047Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m047Status.type === 'success' ? (
+                          <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        )}
+                        <span className="leading-relaxed">{m047Status.message}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM047Status(null)}
+                        className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                        title="بستن"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* 1. messages.getInlineBotResults */}
+                    <form onSubmit={handleM047GetInlineBotResults} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Bot className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۱. نتایج اینلاین ربات (getInlineBotResults)</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={m047InlineBotId}
+                          onChange={(e) => setM047InlineBotId(e.target.value)}
+                          placeholder="یوزرنیم یا شناسه ربات (@gif)"
+                          className="w-full bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m047InlineBotQuery}
+                            onChange={(e) => setM047InlineBotQuery(e.target.value)}
+                            placeholder="عبارت جستجو"
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                          />
+                          <button
+                            type="submit"
+                            disabled={m047LoadingOp === 'getInlineBotResults'}
+                            className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {m047LoadingOp === 'getInlineBotResults' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                          </button>
+                        </div>
+                      </div>
+                      {m047InlineBotResultsCount !== null && (
+                        <div className="text-[10px] text-teal-400 font-mono">
+                          تعداد نتایج اینلاین: {m047InlineBotResultsCount}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. messages.getInlineGameHighScores */}
+                    <form onSubmit={handleM047GetInlineGameHighScores} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Trophy className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۲. رکوردهای برتر بازی اینلاین (getInlineGameHighScores)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m047InlineGameMsgId}
+                          onChange={(e) => setM047InlineGameMsgId(e.target.value)}
+                          placeholder="شناسه پیام اینلاین"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m047LoadingOp === 'getInlineGameHighScores'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m047LoadingOp === 'getInlineGameHighScores' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m047InlineGameScoresCount !== null && (
+                        <div className="text-[10px] text-teal-400 font-mono">
+                          تعداد رکوردها: {m047InlineGameScoresCount}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 3. messages.getMaskStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۳. استیکرهای ماسک (getMaskStickers)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM047GetMaskStickers}
+                        disabled={m047LoadingOp === 'getMaskStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m047LoadingOp === 'getMaskStickers' ? 'در حال استعلام...' : `بسته‌های ماسک ${m047MaskStickersCount !== null ? `(${m047MaskStickersCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 4. messages.getMessageEditData */}
+                    <form onSubmit={handleM047GetMessageEditData} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۴. متادیتای ویرایش پیام (getMessageEditData)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m047EditDataPeer}
+                          onChange={(e) => setM047EditDataPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m047EditDataMsgId}
+                          onChange={(e) => setM047EditDataMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m047LoadingOp === 'getMessageEditData'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m047LoadingOp === 'getMessageEditData' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m047EditDataResult && (
+                        <div className="text-[10px] text-teal-400 truncate bg-dark-900/60 p-1.5 rounded-lg border border-white/5">
+                          {m047EditDataResult}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 5. messages.getMessageReactionsList */}
+                    <form onSubmit={handleM047GetMessageReactionsList} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <Heart className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۵. لیست ری‌اکشن‌های پیام (getMessageReactionsList)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m047ReactionsPeer}
+                          onChange={(e) => setM047ReactionsPeer(e.target.value)}
+                          placeholder="شناسه گفتگو"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m047ReactionsMsgId}
+                          onChange={(e) => setM047ReactionsMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m047LoadingOp === 'getMessageReactionsList'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m047LoadingOp === 'getMessageReactionsList' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m047ReactionsCount !== null && (
+                        <div className="text-[10px] text-teal-400 font-mono">
+                          تعداد ری‌اکشن‌ها: {m047ReactionsCount}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 6. messages.getMessageReadParticipants */}
+                    <form onSubmit={handleM047GetMessageReadParticipants} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <CheckCheck className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۶. خوانندگان پیام در گروه (getMessageReadParticipants)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m047ReadParticipantsPeer}
+                          onChange={(e) => setM047ReadParticipantsPeer(e.target.value)}
+                          placeholder="شناسه گروه"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m047ReadParticipantsMsgId}
+                          onChange={(e) => setM047ReadParticipantsMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m047LoadingOp === 'getMessageReadParticipants'}
+                          className="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m047LoadingOp === 'getMessageReadParticipants' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                      {m047ReadParticipantsCount !== null && (
+                        <div className="text-[10px] text-teal-400 font-mono">
+                          تعداد خوانندگان: {m047ReadParticipantsCount}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 7. messages.getMessages */}
+                    <form onSubmit={handleM047GetMessages} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-[11px] font-medium text-gray-300 flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-teal-400" />
+                        <span>۷. استعلام پیام‌ها با شناسه اختصاصی (getMessages)</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m047MessagesMsgId}
+                          onChange={(e) => setM047MessagesMsgId(e.target.value)}
+                          placeholder="شناسه‌های پیام (جداشده با کاما: مثلاً 100, 101, 102)"
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-teal-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m047LoadingOp === 'getMessages'}
+                          className="px-4 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 text-teal-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m047LoadingOp === 'getMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت پیام‌ها'}
+                        </button>
+                      </div>
+                      {m047MessagesCount !== null && (
+                        <div className="text-[10px] text-teal-400 font-mono">
+                          پیام‌های دریافتی: {m047MessagesCount} عدد
                         </div>
                       )}
                     </form>

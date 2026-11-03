@@ -39,9 +39,19 @@ export class MessagingService {
 
   public async getMessages(holder: RpcClientHolder, id?: any): Promise<any> {
     try {
+      let inputMessages: any[] = []
+      if (Array.isArray(id)) {
+        inputMessages = id.map((item) =>
+          typeof item === 'number' ? { _: 'inputMessageID', id: item } : item
+        )
+      } else if (typeof id === 'number') {
+        inputMessages = [{ _: 'inputMessageID', id }]
+      } else if (id) {
+        inputMessages = [id]
+      }
       return await holder.client.call({
         _: 'messages.getMessages',
-        'id': id,
+        'id': inputMessages,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.getMessages error:', err)

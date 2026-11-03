@@ -2339,6 +2339,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-game-high-scores', { accountId, peerId, id, userIdId }),
   getHistoryRaw: (accountId: string, params?: { peerId?: string; offsetId?: number; offsetDate?: number; addOffset?: number; limit?: number; maxId?: number; minId?: number; hash?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-history', { accountId, ...params }),
+  // Layer 232 Messages Suite (Microphase 047)
+  getInlineBotResultsRaw: (accountId: string, params?: { botId?: string; peerId?: string; geoPoint?: any; query?: string; offset?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-inline-bot-results', { accountId, ...params }),
+  getInlineGameHighScores: (accountId: string, id?: any, userIdId?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-inline-game-high-scores', { accountId, id, userIdId }),
+  getMaskStickers: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-mask-stickers', { accountId, hash }),
+  getMessageEditData: (accountId: string, peerId?: string, id?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-message-edit-data', { accountId, peerId, id }),
+  getMessageReactionsListRaw: (accountId: string, params?: { peerId?: string; id?: number; reaction?: any; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-message-reactions-list', { accountId, ...params }),
+  getMessageReadParticipants: (accountId: string, peerId?: string, msgId?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-message-read-participants', { accountId, peerId, msgId }),
+  getMessagesRaw: (accountId: string, id?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-messages', { accountId, id }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

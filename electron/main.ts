@@ -6862,6 +6862,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 047)
+  ipcMain.handle('telegram:messages:get-inline-bot-results', async (_event, { accountId, botId, peerId, geoPoint, query, offset }) => {
+    try {
+      return await accountManager.getInlineBotResultsRaw(accountId, botId, peerId, geoPoint, query, offset)
+    } catch (err: any) {
+      Logger.warn('[IPC] getInlineBotResults error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-inline-game-high-scores', async (_event, { accountId, id, userIdId }) => {
+    try {
+      return await accountManager.getInlineGameHighScores(accountId, id, userIdId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getInlineGameHighScores error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-mask-stickers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getMaskStickers(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMaskStickers error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-message-edit-data', async (_event, { accountId, peerId, id }) => {
+    try {
+      return await accountManager.getMessageEditData(accountId, peerId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMessageEditData error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-message-reactions-list', async (_event, { accountId, peerId, id, reaction, offset, limit }) => {
+    try {
+      return await accountManager.getMessageReactionsListRaw(accountId, peerId, id, reaction, offset, limit)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMessageReactionsList error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-message-read-participants', async (_event, { accountId, peerId, msgId }) => {
+    try {
+      return await accountManager.getMessageReadParticipants(accountId, peerId, msgId)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMessageReadParticipants error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-messages', async (_event, { accountId, id }) => {
+    try {
+      return await accountManager.getMessagesRaw(accountId, id)
+    } catch (err: any) {
+      Logger.warn('[IPC] getMessages error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

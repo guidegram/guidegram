@@ -19523,7 +19523,51 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getHistory(holder as any, accountId, peerId, offsetId, offsetDate, addOffset, limit, maxId, minId, hash)
   }
+
+  // --- Microphase 047: Messages domain part 15 ---
+  public async getInlineBotResultsRaw(accountId: string, botId?: string, peerId?: string, geoPoint?: any, query?: string, offset?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getInlineBotResults(holder as any, accountId, botId, peerId, geoPoint, query, offset)
+  }
+
+  public async getInlineGameHighScores(accountId: string, id?: any, userIdId?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getInlineGameHighScores(holder as any, accountId, id, userIdId)
+  }
+
+  public async getMaskStickers(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMaskStickers(holder as any, hash)
+  }
+
+  public async getMessageEditData(accountId: string, peerId?: string, id?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMessageEditData(holder as any, accountId, peerId, id)
+  }
+
+  public async getMessageReactionsListRaw(accountId: string, peerId?: string, id?: number, reaction?: any, offset?: string, limit?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMessageReactionsList(holder as any, accountId, peerId, id, reaction, offset, limit)
+  }
+
+  public async getMessageReadParticipants(accountId: string, peerId?: string, msgId?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMessageReadParticipants(holder as any, accountId, peerId, msgId)
+  }
+
+  public async getMessagesRaw(accountId: string, id?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getMessages(holder as any, id)
+  }
 }
+
 
 
 
