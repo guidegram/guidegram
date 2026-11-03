@@ -19199,5 +19199,51 @@ export class AccountManager {
     const finalPhoto = photo || { _: 'inputChatPhotoEmpty' }
     return this.messagingService.editChatPhoto(holder as any, typeof chatId === 'string' ? BigInt(chatId) : chatId, finalPhoto)
   }
+
+  // --- Layer 232 Messages Suite (Microphase 039) ---
+  public async editChatTitle(accountId: string, chatId: bigint | number | string, title: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editChatTitle(holder as any, typeof chatId === 'string' ? BigInt(chatId) : chatId, title)
+  }
+
+  public async editExportedChatInvite(accountId: string, peerId: string, link: string, options?: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editExportedChatInvite(
+      holder as any,
+      accountId,
+      options?.revoked,
+      peerId,
+      link,
+      options?.expireDate,
+      options?.usageLimit,
+      options?.requestNeeded,
+      options?.title
+    )
+  }
+
+  public async editFactCheck(accountId: string, peerId: string, msgId: number, text: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const payload = typeof text === 'string' ? { _: 'textWithEntities', text, entities: [] } : text
+    return this.messagingService.editFactCheck(holder as any, accountId, peerId, msgId, payload)
+  }
+
+  public async editInlineBotMessage(accountId: string, options: any): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.editInlineBotMessage(
+      holder as any,
+      options?.noWebpage,
+      options?.invertMedia,
+      options?.id,
+      options?.message,
+      options?.media,
+      options?.replyMarkup,
+      options?.entities,
+      options?.richMessage
+    )
+  }
 }
 

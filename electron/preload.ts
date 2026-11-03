@@ -2243,6 +2243,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:edit-chat-participant-rank', { accountId, peerId, participantId, rank }),
   editChatPhoto: (accountId: string, chatId: bigint | number | string, photo?: any): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:edit-chat-photo', { accountId, chatId, photo }),
+  // Layer 232 Messages Suite (Microphase 039)
+  editChatTitle: (accountId: string, chatId: bigint | number | string, title: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-chat-title', { accountId, chatId, title }),
+  editExportedChatInvite: (accountId: string, peerId: string, link: string, options?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-exported-chat-invite', { accountId, peerId, link, options }),
+  editFactCheck: (accountId: string, peerId: string, msgId: number, text: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-fact-check', { accountId, peerId, msgId, text }),
+  editInlineBotMessage: (accountId: string, options: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:edit-inline-bot-message', { accountId, options }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

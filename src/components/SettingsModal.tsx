@@ -2171,7 +2171,153 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
-  if (!isOpen) return null
+  // Microphase 039: Layer 232 Message & Content Editing Suite State
+  const [m039ChatId, setM039ChatId] = useState('')
+  const [m039NewTitle, setM039NewTitle] = useState('')
+  const [m039InviteLink, setM039InviteLink] = useState('')
+  const [m039InviteTitle, setM039InviteTitle] = useState('')
+  const [m039FactCheckMsgId, setM039FactCheckMsgId] = useState('')
+  const [m039FactCheckText, setM039FactCheckText] = useState('')
+  const [m039TopicId, setM039TopicId] = useState('')
+  const [m039TopicTitle, setM039TopicTitle] = useState('')
+  const [m039InlineMsgId, setM039InlineMsgId] = useState('')
+  const [m039InlineMsgText, setM039InlineMsgText] = useState('')
+  const [m039EditMsgId, setM039EditMsgId] = useState('')
+  const [m039EditMsgText, setM039EditMsgText] = useState('')
+  const [m039ShortcutId, setM039ShortcutId] = useState('')
+  const [m039ShortcutTitle, setM039ShortcutTitle] = useState('')
+
+  const [m039LoadingOp, setM039LoadingOp] = useState<string | null>(null)
+  const [m039Status, setM039Status] = useState<{ type: 'success' | 'error'; message: string; op?: string } | null>(null)
+
+  const handleM039EditChatTitle = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editChatTitle || !m039ChatId || !m039NewTitle.trim()) return
+    setM039LoadingOp('editChatTitle')
+    setM039Status(null)
+    try {
+      await window.guidegram.editChatTitle(targetId, m039ChatId.trim(), m039NewTitle.trim())
+      setM039Status({ type: 'success', message: 'عنوان چت با موفقیت ویرایش شد (messages.editChatTitle)' })
+      setM039NewTitle('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ویرایش عنوان چت', op: 'editChatTitle' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
+
+  const handleM039EditExportedInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editExportedChatInvite || !m039ChatId || !m039InviteLink.trim()) return
+    setM039LoadingOp('editExportedInvite')
+    setM039Status(null)
+    try {
+      await window.guidegram.editExportedChatInvite(targetId, m039ChatId.trim(), m039InviteLink.trim(), {
+        title: m039InviteTitle.trim() || undefined,
+      })
+      setM039Status({ type: 'success', message: 'لینک دعوت با موفقیت ویرایش شد (messages.editExportedChatInvite)' })
+      setM039InviteTitle('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ویرایش لینک دعوت', op: 'editExportedInvite' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
+
+  const handleM039EditFactCheck = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editFactCheck || !m039ChatId || !m039FactCheckMsgId) return
+    setM039LoadingOp('editFactCheck')
+    setM039Status(null)
+    try {
+      await window.guidegram.editFactCheck(targetId, m039ChatId.trim(), parseInt(m039FactCheckMsgId, 10), {
+        text: m039FactCheckText.trim(),
+        entities: [],
+      })
+      setM039Status({ type: 'success', message: 'فکت‌چک پیام ثبت شد (messages.editFactCheck)' })
+      setM039FactCheckText('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ثبت فکت‌چک پیام', op: 'editFactCheck' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
+
+  const handleM039EditForumTopic = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editForumTopic || !m039ChatId || !m039TopicId) return
+    setM039LoadingOp('editForumTopic')
+    setM039Status(null)
+    try {
+      await window.guidegram.editForumTopic(targetId, m039ChatId.trim(), parseInt(m039TopicId, 10), {
+        title: m039TopicTitle.trim() || undefined,
+      })
+      setM039Status({ type: 'success', message: 'تاپیک انجمن ویرایش شد (messages.editForumTopic)' })
+      setM039TopicTitle('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ویرایش تاپیک انجمن', op: 'editForumTopic' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
+
+  const handleM039EditInlineBotMsg = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editInlineBotMessage || !m039InlineMsgId || !m039InlineMsgText.trim()) return
+    setM039LoadingOp('editInlineBotMsg')
+    setM039Status(null)
+    try {
+      await window.guidegram.editInlineBotMessage(targetId, {
+        id: m039InlineMsgId.trim(),
+        message: m039InlineMsgText.trim(),
+      })
+      setM039Status({ type: 'success', message: 'پیام اینلاین ربات به‌روزرسانی شد (messages.editInlineBotMessage)' })
+      setM039InlineMsgText('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ویرایش پیام اینلاین', op: 'editInlineBotMsg' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
+
+  const handleM039EditMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editMessage || !m039ChatId || !m039EditMsgId || !m039EditMsgText.trim()) return
+    setM039LoadingOp('editMessage')
+    setM039Status(null)
+    try {
+      await window.guidegram.editMessage(targetId, m039ChatId.trim(), parseInt(m039EditMsgId, 10), m039EditMsgText.trim())
+      setM039Status({ type: 'success', message: 'پیام با موفقیت ویرایش شد (messages.editMessage)' })
+      setM039EditMsgText('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ویرایش پیام', op: 'editMessage' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
+
+  const handleM039EditQuickReplyShortcut = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.editQuickReplyShortcut || !m039ShortcutId || !m039ShortcutTitle.trim()) return
+    setM039LoadingOp('editQuickReplyShortcut')
+    setM039Status(null)
+    try {
+      await window.guidegram.editQuickReplyShortcut(targetId, parseInt(m039ShortcutId, 10), m039ShortcutTitle.trim())
+      setM039Status({ type: 'success', message: 'میانبر پاسخ سریع ویرایش شد (messages.editQuickReplyShortcut)' })
+      setM039ShortcutTitle('')
+    } catch (err: any) {
+      setM039Status({ type: 'error', message: err?.message || 'خطا در ویرایش میانبر پاسخ سریع', op: 'editQuickReplyShortcut' })
+    } finally {
+      setM039LoadingOp(null)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -6434,6 +6580,293 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Microphase 039: Layer 232 Message & Content Editing Suite */}
+                <div className="p-4 bg-dark-850/80 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary-500/10 border border-primary-500/20 flex items-center justify-center text-primary-400">
+                        <Edit3 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          مدیریت و ویرایش محتوا و پیام‌ها
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          مجموعه ۷ متد MTProto Layer 232 برای ویرایش عنوان، اینوایت‌ها، فکت‌چک و پیام‌ها
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-mono">
+                      Phase 039 • Layer 232
+                    </span>
+                  </div>
+
+                  {/* Operational Status Banner */}
+                  {m039Status && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        m039Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m039Status.type === 'success' ? (
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span>{m039Status.message}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM039Status(null)}
+                        className="text-[10px] hover:underline shrink-0 opacity-75"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Common Chat ID Input */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-medium text-gray-400">
+                      شناسه چت / گروه / کانال (Chat / Peer ID)
+                    </label>
+                    <input
+                      type="text"
+                      value={m039ChatId}
+                      onChange={(e) => setM039ChatId(e.target.value)}
+                      placeholder="مثال: -1001234567890 یا username"
+                      className="w-full px-3 py-1.5 bg-dark-800/80 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                    />
+                  </div>
+
+                  {/* 1. messages.editChatTitle */}
+                  <form onSubmit={handleM039EditChatTitle} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۱. ویرایش عنوان چت (editChatTitle)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editChatTitle</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={m039NewTitle}
+                        onChange={(e) => setM039NewTitle(e.target.value)}
+                        placeholder="عنوان جدید گفت‌وگو..."
+                        className="flex-1 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m039LoadingOp === 'editChatTitle' || !m039ChatId || !m039NewTitle.trim()}
+                        className="px-3 py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer"
+                      >
+                        {m039LoadingOp === 'editChatTitle' ? 'در حال ثبت...' : 'تغییر عنوان'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* 2. messages.editExportedChatInvite */}
+                  <form onSubmit={handleM039EditExportedInvite} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۲. ویرایش لینک دعوت (editExportedChatInvite)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editExportedChatInvite</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={m039InviteLink}
+                        onChange={(e) => setM039InviteLink(e.target.value)}
+                        placeholder="لینک دعوت قبلی (https://t.me/+...)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m039InviteTitle}
+                        onChange={(e) => setM039InviteTitle(e.target.value)}
+                        placeholder="عنوان جدید لینک (اختیاری)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m039LoadingOp === 'editExportedInvite' || !m039ChatId || !m039InviteLink.trim()}
+                      className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m039LoadingOp === 'editExportedInvite' ? 'در حال ویرایش لینک...' : 'به‌روزرسانی لینک دعوت'}
+                    </button>
+                  </form>
+
+                  {/* 3. messages.editFactCheck */}
+                  <form onSubmit={handleM039EditFactCheck} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۳. درج و ویرایش راستی‌آزمایی پیام (editFactCheck)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editFactCheck</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={m039FactCheckMsgId}
+                        onChange={(e) => setM039FactCheckMsgId(e.target.value)}
+                        placeholder="شناسه پیام (Msg ID)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m039FactCheckText}
+                        onChange={(e) => setM039FactCheckText(e.target.value)}
+                        placeholder="متن فکت‌چک (راستی‌آزمایی)..."
+                        className="sm:col-span-2 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m039LoadingOp === 'editFactCheck' || !m039ChatId || !m039FactCheckMsgId}
+                      className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m039LoadingOp === 'editFactCheck' ? 'در حال ثبت فکت‌چک...' : 'ثبت راستی‌آزمایی'}
+                    </button>
+                  </form>
+
+                  {/* 4. messages.editForumTopic */}
+                  <form onSubmit={handleM039EditForumTopic} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۴. ویرایش تاپیک انجمن (editForumTopic)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editForumTopic</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={m039TopicId}
+                        onChange={(e) => setM039TopicId(e.target.value)}
+                        placeholder="شناسه تاپیک (Topic ID)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m039TopicTitle}
+                        onChange={(e) => setM039TopicTitle(e.target.value)}
+                        placeholder="عنوان جدید تاپیک..."
+                        className="sm:col-span-2 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m039LoadingOp === 'editForumTopic' || !m039ChatId || !m039TopicId}
+                      className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m039LoadingOp === 'editForumTopic' ? 'در حال ویرایش تاپیک...' : 'به‌روزرسانی تاپیک'}
+                    </button>
+                  </form>
+
+                  {/* 5. messages.editInlineBotMessage */}
+                  <form onSubmit={handleM039EditInlineBotMsg} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۵. ویرایش پیام اینلاین ربات (editInlineBotMessage)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editInlineBotMessage</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={m039InlineMsgId}
+                        onChange={(e) => setM039InlineMsgId(e.target.value)}
+                        placeholder="شناسه اینلاین (Bot Msg ID)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m039InlineMsgText}
+                        onChange={(e) => setM039InlineMsgText(e.target.value)}
+                        placeholder="متن جدید پیام اینلاین..."
+                        className="sm:col-span-2 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m039LoadingOp === 'editInlineBotMsg' || !m039InlineMsgId || !m039InlineMsgText.trim()}
+                      className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m039LoadingOp === 'editInlineBotMsg' ? 'در حال ویرایش پیام اینلاین...' : 'ویرایش پیام اینلاین'}
+                    </button>
+                  </form>
+
+                  {/* 6. messages.editMessage */}
+                  <form onSubmit={handleM039EditMessage} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۶. ویرایش پیام استاندارد (editMessage)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editMessage</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={m039EditMsgId}
+                        onChange={(e) => setM039EditMsgId(e.target.value)}
+                        placeholder="شناسه پیام (Msg ID)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m039EditMsgText}
+                        onChange={(e) => setM039EditMsgText(e.target.value)}
+                        placeholder="متن جدید پیام..."
+                        className="sm:col-span-2 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m039LoadingOp === 'editMessage' || !m039ChatId || !m039EditMsgId || !m039EditMsgText.trim()}
+                      className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m039LoadingOp === 'editMessage' ? 'در حال ویرایش پیام...' : 'اعمال تغییرات پیام'}
+                    </button>
+                  </form>
+
+                  {/* 7. messages.editQuickReplyShortcut */}
+                  <form onSubmit={handleM039EditQuickReplyShortcut} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۷. ویرایش میانبر پاسخ سریع (editQuickReplyShortcut)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.editQuickReplyShortcut</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={m039ShortcutId}
+                        onChange={(e) => setM039ShortcutId(e.target.value)}
+                        placeholder="شناسه میانبر (Shortcut ID)"
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m039ShortcutTitle}
+                        onChange={(e) => setM039ShortcutTitle(e.target.value)}
+                        placeholder="نام جدید میانبر..."
+                        className="sm:col-span-2 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={m039LoadingOp === 'editQuickReplyShortcut' || !m039ShortcutId || !m039ShortcutTitle.trim()}
+                      className="w-full py-1.5 bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                    >
+                      {m039LoadingOp === 'editQuickReplyShortcut' ? 'در حال ویرایش میانبر...' : 'به‌روزرسانی میانبر'}
+                    </button>
+                  </form>
                 </div>
               </div>
             )}

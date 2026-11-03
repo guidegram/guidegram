@@ -6368,6 +6368,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 039)
+  ipcMain.handle('telegram:messages:edit-chat-title', async (_event, { accountId, chatId, title }) => {
+    try {
+      return await accountManager.editChatTitle(accountId, chatId, title)
+    } catch (err: any) {
+      Logger.warn('[IPC] editChatTitle error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-exported-chat-invite', async (_event, { accountId, peerId, link, options }) => {
+    try {
+      return await accountManager.editExportedChatInvite(accountId, peerId, link, options)
+    } catch (err: any) {
+      Logger.warn('[IPC] editExportedChatInvite error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-fact-check', async (_event, { accountId, peerId, msgId, text }) => {
+    try {
+      return await accountManager.editFactCheck(accountId, peerId, msgId, text)
+    } catch (err: any) {
+      Logger.warn('[IPC] editFactCheck error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-forum-topic', async (_event, { accountId, chatId, topicId, options }) => {
+    try {
+      return await accountManager.editForumTopic(accountId, chatId, topicId, options || {})
+    } catch (err: any) {
+      Logger.warn('[IPC] editForumTopic error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-inline-bot-message', async (_event, { accountId, options }) => {
+    try {
+      return await accountManager.editInlineBotMessage(accountId, options || {})
+    } catch (err: any) {
+      Logger.warn('[IPC] editInlineBotMessage error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-message', async (_event, { accountId, chatId, messageId, text }) => {
+    try {
+      return await accountManager.editMessage(accountId, chatId, messageId, text)
+    } catch (err: any) {
+      Logger.warn('[IPC] editMessage error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:edit-quick-reply-shortcut', async (_event, { accountId, shortcutId, shortcut }) => {
+    try {
+      return await accountManager.editQuickReplyShortcut(accountId, shortcutId, shortcut)
+    } catch (err: any) {
+      Logger.warn('[IPC] editQuickReplyShortcut error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
