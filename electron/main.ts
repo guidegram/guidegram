@@ -8138,6 +8138,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 067 IPC Handlers
+  ipcMain.handle('telegram:messages:toggle-dialog-filter-tags-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleDialogFilterTagsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleDialogFilterTagsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-dialog-pin-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleDialogPinRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleDialogPinRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-no-forwards-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleNoForwardsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleNoForwardsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-paid-reaction-privacy-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.togglePaidReactionPrivacyRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] togglePaidReactionPrivacyRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-peer-translations-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.togglePeerTranslationsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] togglePeerTranslationsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-saved-dialog-pin-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleSavedDialogPinRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleSavedDialogPinRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:toggle-sticker-sets-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toggleStickerSetsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toggleStickerSetsRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

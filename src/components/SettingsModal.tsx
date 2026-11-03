@@ -6817,6 +6817,197 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 067 State & Handlers (Messages Domain Part 35 - Layer 232)
+  const [m067Status, setM067Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m067LoadingOp, setM067LoadingOp] = useState<string | null>(null)
+
+  // 1. messages.toggleDialogFilterTags
+  const [m067FilterTagsEnabled, setM067FilterTagsEnabled] = useState(true)
+
+  // 2. messages.toggleDialogPin
+  const [m067PinPeer, setM067PinPeer] = useState('')
+  const [m067PinState, setM067PinState] = useState(true)
+
+  // 3. messages.toggleNoForwards
+  const [m067NoFwdPeer, setM067NoFwdPeer] = useState('')
+  const [m067NoFwdEnabled, setM067NoFwdEnabled] = useState(true)
+
+  // 4. messages.togglePaidReactionPrivacy
+  const [m067PaidReactPeer, setM067PaidReactPeer] = useState('')
+  const [m067PaidReactMsgId, setM067PaidReactMsgId] = useState('')
+  const [m067PaidReactAnonymous, setM067PaidReactAnonymous] = useState(true)
+
+  // 5. messages.togglePeerTranslations
+  const [m067TransPeer, setM067TransPeer] = useState('')
+  const [m067TransDisabled, setM067TransDisabled] = useState(false)
+
+  // 6. messages.toggleSavedDialogPin
+  const [m067SavedPinPeer, setM067SavedPinPeer] = useState('')
+  const [m067SavedPinState, setM067SavedPinState] = useState(true)
+
+  // 7. messages.toggleStickerSets
+  const [m067StickerShortName, setM067StickerShortName] = useState('')
+  const [m067StickerAction, setM067StickerAction] = useState<'archive' | 'unarchive' | 'uninstall'>('archive')
+
+  const handleM067ToggleDialogFilterTags = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleDialogFilterTagsRaw) return
+    setM067LoadingOp('toggleDialogFilterTags')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.toggleDialogFilterTagsRaw(targetId, {
+        enabled: m067FilterTagsEnabled,
+      })
+      setM067Status({ type: 'success', message: `برچسب‌های فیلتر گفتگو تغییر یافت: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در تغییر برچسب‌های فیلتر' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
+  const handleM067ToggleDialogPin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleDialogPinRaw) return
+    if (!m067PinPeer.trim()) {
+      setM067Status({ type: 'error', message: 'شناسه گفتگو برای پین الزامی است' })
+      return
+    }
+    setM067LoadingOp('toggleDialogPin')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.toggleDialogPinRaw(targetId, {
+        peerId: m067PinPeer.trim(),
+        pinned: m067PinState,
+      })
+      setM067Status({ type: 'success', message: `وضعیت پین گفتگو تغییر یافت: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در پین کردن گفتگو' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
+  const handleM067ToggleNoForwards = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleNoForwardsRaw) return
+    if (!m067NoFwdPeer.trim()) {
+      setM067Status({ type: 'error', message: 'شناسه گفتگو برای منع فوروارد الزامی است' })
+      return
+    }
+    setM067LoadingOp('toggleNoForwards')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.toggleNoForwardsRaw(targetId, {
+        peerId: m067NoFwdPeer.trim(),
+        enabled: m067NoFwdEnabled,
+      })
+      setM067Status({ type: 'success', message: `محدودیت فوروارد گفتگو ذخیره شد: ${res?._ || 'موفق'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در تنظیم منع فوروارد' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
+  const handleM067TogglePaidReactionPrivacy = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.togglePaidReactionPrivacyRaw) return
+    if (!m067PaidReactPeer.trim() || !m067PaidReactMsgId.trim()) {
+      setM067Status({ type: 'error', message: 'شناسه گفتگو و شناسه پیام الزامی است' })
+      return
+    }
+    setM067LoadingOp('togglePaidReactionPrivacy')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.togglePaidReactionPrivacyRaw(targetId, {
+        peerId: m067PaidReactPeer.trim(),
+        msgId: Number(m067PaidReactMsgId.trim()),
+        private: m067PaidReactAnonymous ? 'anonymous' : 'default',
+      })
+      setM067Status({ type: 'success', message: `حریم خصوصی ری‌اکشن پولی تغییر یافت: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در تغییر حریم خصوصی ری‌اکشن' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
+  const handleM067TogglePeerTranslations = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.togglePeerTranslationsRaw) return
+    if (!m067TransPeer.trim()) {
+      setM067Status({ type: 'error', message: 'شناسه گفتگو برای ترجمه الزامی است' })
+      return
+    }
+    setM067LoadingOp('togglePeerTranslations')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.togglePeerTranslationsRaw(targetId, {
+        peerId: m067TransPeer.trim(),
+        disabled: m067TransDisabled,
+      })
+      setM067Status({ type: 'success', message: `وضعیت نوار ترجمه گفتگو ذخیره شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در تغییر نوار ترجمه گفتگو' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
+  const handleM067ToggleSavedDialogPin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleSavedDialogPinRaw) return
+    if (!m067SavedPinPeer.trim()) {
+      setM067Status({ type: 'error', message: 'شناسه گفتگوی ذخیره‌شده الزامی است' })
+      return
+    }
+    setM067LoadingOp('toggleSavedDialogPin')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.toggleSavedDialogPinRaw(targetId, {
+        peerId: m067SavedPinPeer.trim(),
+        pinned: m067SavedPinState,
+      })
+      setM067Status({ type: 'success', message: `وضعیت پین پیام‌های ذخیره‌شده تغییر یافت: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در پین کردن پیام‌های ذخیره‌شده' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
+  const handleM067ToggleStickerSets = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.toggleStickerSetsRaw) return
+    if (!m067StickerShortName.trim()) {
+      setM067Status({ type: 'error', message: 'نام کوتاه پکیج استیکر الزامی است' })
+      return
+    }
+    setM067LoadingOp('toggleStickerSets')
+    setM067Status(null)
+    try {
+      const res = await window.guidegram.toggleStickerSetsRaw(targetId, {
+        stickersets: [m067StickerShortName.trim()],
+        archive: m067StickerAction === 'archive',
+        unarchive: m067StickerAction === 'unarchive',
+        uninstall: m067StickerAction === 'uninstall',
+      })
+      setM067Status({ type: 'success', message: `وضعیت پکیج استیکر تغییر یافت: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM067Status({ type: 'error', message: err?.message || 'خطا در تغییر وضعیت پکیج استیکر' })
+    } finally {
+      setM067LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -17701,6 +17892,304 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           {m066SummaryResult}
                         </div>
                       )}
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 067: Messages Domain Suite Part 35 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۶۷: پین گفتگو و پیام‌های ذخیره، تگ پوشه‌ها، منع فوروارد، حریم ری‌اکشن، ترجمه زنده و بسته‌های استیکر (Messages Suite Part 35)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-indigo-400/80 font-mono px-2 py-0.5 rounded-full bg-indigo-400/10 border border-indigo-400/20">
+                      لایه ۲۳۲ | ۷ متد RPC
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    کنترل ساختاری و حریم خصوصی گفتگوها: پین و آن‌پین چت‌های اصلی و Saved Messages، نمایش تگ‌های پوشه، قفل امنیتی منع ذخیره و فوروارد، ناشناس‌سازی ری‌اکشن ستاره‌ای، خاموش/روشن کردن نوار ترجمه زنده و بایگانی بسته‌های استیکر:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m067Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m067Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m067Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m067Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM067Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. messages.toggleDialogPin */}
+                    <form
+                      onSubmit={handleM067ToggleDialogPin}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۱. پین / آن‌پین گفتگو (toggleDialogPin)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m067PinPeer}
+                          onChange={(e) => setM067PinPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m067PinState}
+                            onChange={(e) => setM067PinState(e.target.checked)}
+                            className="rounded border-white/10 text-indigo-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>پین</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'toggleDialogPin'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'toggleDialogPin' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 2. messages.toggleSavedDialogPin */}
+                    <form
+                      onSubmit={handleM067ToggleSavedDialogPin}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. پین پیام‌های ذخیره‌شده (toggleSavedDialogPin)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m067SavedPinPeer}
+                          onChange={(e) => setM067SavedPinPeer(e.target.value)}
+                          placeholder="شناسه گفتگو در Saved..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m067SavedPinState}
+                            onChange={(e) => setM067SavedPinState(e.target.checked)}
+                            className="rounded border-white/10 text-indigo-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>پین</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'toggleSavedDialogPin'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'toggleSavedDialogPin' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. messages.toggleDialogFilterTags */}
+                    <form
+                      onSubmit={handleM067ToggleDialogFilterTags}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۳. برچسب تب‌های پوشه (toggleDialogFilterTags)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1 flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m067FilterTagsEnabled}
+                            onChange={(e) => setM067FilterTagsEnabled(e.target.checked)}
+                            className="rounded border-white/10 text-indigo-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>نمایش تگ‌های رنگی پوشه</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'toggleDialogFilterTags'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'toggleDialogFilterTags' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. messages.toggleNoForwards */}
+                    <form
+                      onSubmit={handleM067ToggleNoForwards}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. منع ذخیره و فوروارد محتوا (toggleNoForwards)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m067NoFwdPeer}
+                          onChange={(e) => setM067NoFwdPeer(e.target.value)}
+                          placeholder="شناسه گروه یا کانال..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m067NoFwdEnabled}
+                            onChange={(e) => setM067NoFwdEnabled(e.target.checked)}
+                            className="rounded border-white/10 text-indigo-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>قفل محتوا</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'toggleNoForwards'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'toggleNoForwards' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 5. messages.togglePeerTranslations */}
+                    <form
+                      onSubmit={handleM067TogglePeerTranslations}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۵. نوار ترجمه زنده در چت (togglePeerTranslations)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m067TransPeer}
+                          onChange={(e) => setM067TransPeer(e.target.value)}
+                          placeholder="شناسه گفتگو..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m067TransDisabled}
+                            onChange={(e) => setM067TransDisabled(e.target.checked)}
+                            className="rounded border-white/10 text-indigo-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>غیرفعال</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'togglePeerTranslations'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'togglePeerTranslations' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 6. messages.togglePaidReactionPrivacy */}
+                    <form
+                      onSubmit={handleM067TogglePaidReactionPrivacy}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۶. حریم ری‌اکشن پولی (togglePaidReactionPrivacy)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m067PaidReactPeer}
+                          onChange={(e) => setM067PaidReactPeer(e.target.value)}
+                          placeholder="شناسه چت..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m067PaidReactMsgId}
+                          onChange={(e) => setM067PaidReactMsgId(e.target.value)}
+                          placeholder="شناسه پیام"
+                          className="w-20 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <label className="flex items-center gap-1 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m067PaidReactAnonymous}
+                            onChange={(e) => setM067PaidReactAnonymous(e.target.checked)}
+                            className="rounded border-white/10 text-indigo-500 focus:ring-0 bg-dark-900"
+                          />
+                          <span>ناشناس</span>
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'togglePaidReactionPrivacy'}
+                          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'togglePaidReactionPrivacy' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 7. messages.toggleStickerSets */}
+                    <form
+                      onSubmit={handleM067ToggleStickerSets}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col gap-2 md:col-span-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۷. مدیریت بسته‌های استیکر (toggleStickerSets)</span>
+                        <span className="text-[10px] text-indigo-400">بایگانی / فعال‌سازی / حذف</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m067StickerShortName}
+                          onChange={(e) => setM067StickerShortName(e.target.value)}
+                          placeholder="نام کوتاه بسته استیکر (shortName)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        />
+                        <select
+                          value={m067StickerAction}
+                          onChange={(e) => setM067StickerAction(e.target.value as any)}
+                          className="bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-500/40"
+                        >
+                          <option value="archive">بایگانی کردن (Archive)</option>
+                          <option value="unarchive">خروج از بایگانی (Unarchive)</option>
+                          <option value="uninstall">حذف نصب (Uninstall)</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={m067LoadingOp === 'toggleStickerSets'}
+                          className="px-5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m067LoadingOp === 'toggleStickerSets' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال روی استیکر'}
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </div>

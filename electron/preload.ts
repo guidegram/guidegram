@@ -2627,6 +2627,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:summarize-text-raw', { accountId, ...params }),
   toggleBotInAttachMenuRaw: (accountId: string, params: { writeAllowed?: boolean; botId: string; enabled: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:toggle-bot-in-attach-menu-raw', { accountId, ...params }),
+  toggleDialogFilterTagsRaw: (accountId: string, params: { enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-dialog-filter-tags-raw', { accountId, ...params }),
+  toggleDialogPinRaw: (accountId: string, params: { pinned?: boolean; peerId?: string; peer?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-dialog-pin-raw', { accountId, ...params }),
+  toggleNoForwardsRaw: (accountId: string, params: { peerId: string; enabled: boolean; requestMsgId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-no-forwards-raw', { accountId, ...params }),
+  togglePaidReactionPrivacyRaw: (accountId: string, params: { peerId: string; msgId: number; private?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-paid-reaction-privacy-raw', { accountId, ...params }),
+  togglePeerTranslationsRaw: (accountId: string, params: { disabled?: boolean; peerId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-peer-translations-raw', { accountId, ...params }),
+  toggleSavedDialogPinRaw: (accountId: string, params: { pinned?: boolean; peerId?: string; peer?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-saved-dialog-pin-raw', { accountId, ...params }),
+  toggleStickerSetsRaw: (accountId: string, params: { uninstall?: boolean; archive?: boolean; unarchive?: boolean; stickersets?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:toggle-sticker-sets-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

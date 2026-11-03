@@ -1350,12 +1350,19 @@ export class MessagingService {
     }
   }
 
-  public async toggleDialogPin(holder: RpcClientHolder, pinned?: boolean, peer?: any): Promise<any> {
+  public async toggleDialogPin(holder: RpcClientHolder, accountId: string, pinned?: boolean, peerId?: string, peer?: any): Promise<any> {
     try {
+      let inputDialogPeer = peer
+      if (!inputDialogPeer && peerId) {
+        inputDialogPeer = {
+          _: 'inputDialogPeer',
+          peer: await this.resolveInputPeer(accountId, peerId),
+        }
+      }
       return await holder.client.call({
         _: 'messages.toggleDialogPin',
-        'pinned': pinned,
-        'peer': peer,
+        pinned: Boolean(pinned),
+        peer: inputDialogPeer || { _: 'inputDialogPeer', peer: { _: 'inputPeerEmpty' } },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleDialogPin error:', err)
@@ -1930,14 +1937,17 @@ export class MessagingService {
     }
   }
 
-  public async toggleStickerSets(holder: RpcClientHolder, uninstall?: boolean, archive?: boolean, unarchive?: boolean, stickersets?: any): Promise<any> {
+  public async toggleStickerSets(holder: RpcClientHolder, uninstall?: boolean, archive?: boolean, unarchive?: boolean, stickersets?: any[]): Promise<any> {
     try {
+      const sets = Array.isArray(stickersets)
+        ? stickersets.map((s: any) => (typeof s === 'string' ? { _: 'inputStickerSetShortName', shortName: s } : s))
+        : []
       return await holder.client.call({
         _: 'messages.toggleStickerSets',
-        'uninstall': uninstall,
-        'archive': archive,
-        'unarchive': unarchive,
-        'stickersets': stickersets,
+        uninstall: Boolean(uninstall),
+        archive: Boolean(archive),
+        unarchive: Boolean(unarchive),
+        stickersets: sets,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleStickerSets error:', err)
@@ -2375,9 +2385,9 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.toggleNoForwards',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'enabled': enabled,
-        'request_msg_id': requestMsgId,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        enabled: Boolean(enabled),
+        requestMsgId: requestMsgId !== undefined ? Number(requestMsgId) : undefined,
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleNoForwards error:', err)
@@ -2948,8 +2958,8 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.togglePeerTranslations',
-        'disabled': disabled,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        disabled: Boolean(disabled),
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.togglePeerTranslations error:', err)
@@ -3099,12 +3109,19 @@ export class MessagingService {
     }
   }
 
-  public async toggleSavedDialogPin(holder: RpcClientHolder, pinned?: boolean, peer?: any): Promise<any> {
+  public async toggleSavedDialogPin(holder: RpcClientHolder, accountId: string, pinned?: boolean, peerId?: string, peer?: any): Promise<any> {
     try {
+      let inputDialogPeer = peer
+      if (!inputDialogPeer && peerId) {
+        inputDialogPeer = {
+          _: 'inputDialogPeer',
+          peer: await this.resolveInputPeer(accountId, peerId),
+        }
+      }
       return await holder.client.call({
         _: 'messages.toggleSavedDialogPin',
-        'pinned': pinned,
-        'peer': peer,
+        pinned: Boolean(pinned),
+        peer: inputDialogPeer || { _: 'inputDialogPeer', peer: { _: 'inputPeerEmpty' } },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleSavedDialogPin error:', err)
@@ -3307,7 +3324,7 @@ export class MessagingService {
     try {
       return await holder.client.call({
         _: 'messages.toggleDialogFilterTags',
-        'enabled': enabled,
+        enabled: Boolean(enabled),
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.toggleDialogFilterTags error:', err)
@@ -3441,11 +3458,17 @@ export class MessagingService {
 
   public async togglePaidReactionPrivacy(holder: RpcClientHolder, accountId: string, peerId?: string, msgId?: number, isPrivate?: any): Promise<any> {
     try {
+      let privacyObj = isPrivate
+      if (typeof isPrivate === 'string' || typeof isPrivate === 'boolean') {
+        privacyObj = (isPrivate === 'anonymous' || isPrivate === true)
+          ? { _: 'paidReactionPrivacyAnonymous' }
+          : { _: 'paidReactionPrivacyDefault' }
+      }
       return await holder.client.call({
         _: 'messages.togglePaidReactionPrivacy',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
-        'private': isPrivate,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' },
+        msgId: Number(msgId || 0),
+        private: privacyObj || { _: 'paidReactionPrivacyDefault' },
       })
     } catch (err) {
       Logger.warn('[MessagingService] messages.togglePaidReactionPrivacy error:', err)

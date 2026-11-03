@@ -20377,6 +20377,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.toggleBotInAttachMenu(holder as any, accountId, params.writeAllowed, params.botId, params.enabled)
   }
+
+  // Layer 232 Messages Suite (Microphase 067)
+  public async toggleDialogFilterTagsRaw(accountId: string, params: { enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleDialogFilterTags(holder as any, params.enabled)
+  }
+
+  public async toggleDialogPinRaw(accountId: string, params: { pinned?: boolean; peerId?: string; peer?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleDialogPin(holder as any, accountId, params.pinned, params.peerId, params.peer)
+  }
+
+  public async toggleNoForwardsRaw(accountId: string, params: { peerId: string; enabled: boolean; requestMsgId?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleNoForwards(holder as any, accountId, params.peerId, params.enabled, params.requestMsgId)
+  }
+
+  public async togglePaidReactionPrivacyRaw(accountId: string, params: { peerId: string; msgId: number; private?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.togglePaidReactionPrivacy(holder as any, accountId, params.peerId, params.msgId, params.private)
+  }
+
+  public async togglePeerTranslationsRaw(accountId: string, params: { disabled?: boolean; peerId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.togglePeerTranslations(holder as any, accountId, params.disabled, params.peerId)
+  }
+
+  public async toggleSavedDialogPinRaw(accountId: string, params: { pinned?: boolean; peerId?: string; peer?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleSavedDialogPin(holder as any, accountId, params.pinned, params.peerId, params.peer)
+  }
+
+  public async toggleStickerSetsRaw(accountId: string, params: { uninstall?: boolean; archive?: boolean; unarchive?: boolean; stickersets?: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.toggleStickerSets(holder as any, params.uninstall, params.archive, params.unarchive, params.stickersets)
+  }
 }
 
 
