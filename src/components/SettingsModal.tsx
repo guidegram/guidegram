@@ -818,6 +818,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const handleUpdateStatus = async (offline: boolean) => {
+    if (!targetAccountId || !window.guidegram?.updateStatus) return
+    try {
+      await window.guidegram.updateStatus(targetAccountId, offline)
+      showToast(isPersian ? (offline ? 'وضعیت به آفلاین تغییر یافت.' : 'وضعیت به آنلاین تغییر یافت.') : (offline ? 'Status set to offline.' : 'Status set to online.'))
+    } catch {
+      showToast(isPersian ? 'خطا در تغییر وضعیت آنلاین' : 'Failed to update online status.')
+    }
+  }
+
+  const handleUpdateAccountUsername = async (username: string) => {
+    if (!targetAccountId || !window.guidegram?.updateAccountUsername) return
+    try {
+      await window.guidegram.updateAccountUsername(targetAccountId, username)
+      showToast(isPersian ? `نام کاربری به @${username} تغییر یافت.` : `Username updated to @${username}.`)
+    } catch {
+      showToast(isPersian ? 'خطا در تغییر نام کاربری' : 'Failed to update username.')
+    }
+  }
+
+  const handleUpdateWebBrowserSettings = async (openExternalBrowser: boolean, displayCloseButton?: boolean) => {
+    if (!targetAccountId || !window.guidegram?.updateWebBrowserSettings) return
+    try {
+      await window.guidegram.updateWebBrowserSettings(targetAccountId, openExternalBrowser, displayCloseButton)
+      showToast(isPersian ? 'تنظیمات مرورگر وب ذخیره شد.' : 'Web browser settings saved.')
+    } catch {
+      showToast(isPersian ? 'خطا در به‌روزرسانی تنظیمات مرورگر' : 'Failed to update web browser settings.')
+    }
+  }
+
+  const handleUploadWallPaper = async (file: any, forChat?: boolean, mimeType?: string, settings?: any) => {
+    if (!targetAccountId || !window.guidegram?.uploadWallPaper) return null
+    try {
+      const res = await window.guidegram.uploadWallPaper(targetAccountId, forChat, file, mimeType, settings)
+      showToast(isPersian ? 'تصویر پس‌زمینه در کلاود بارگذاری شد.' : 'Wallpaper uploaded to cloud.')
+      return res
+    } catch {
+      showToast(isPersian ? 'خطا در بارگذاری تصویر پس‌زمینه' : 'Failed to upload wallpaper.')
+      return null
+    }
+  }
+
+
 
 
 

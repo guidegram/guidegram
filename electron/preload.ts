@@ -2041,6 +2041,43 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:update-password-settings', { accountId, password, newSettings }),
   updateProfile: (accountId: string, firstName?: string, lastName?: string, about?: string): Promise<any> =>
     ipcRenderer.invoke('telegram:update-profile', { accountId, firstName, lastName, about }),
+  updateStatus: (accountId: string, offline?: boolean): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-status', { accountId, offline }),
+  updateTheme: (
+    accountId: string,
+    format?: string,
+    theme?: any,
+    slug?: string,
+    title?: string,
+    document?: any,
+    settings?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-theme', { accountId, format, theme, slug, title, document, settings }),
+  updateAccountUsername: (accountId: string, username?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-account-username', { accountId, username }),
+  updateWebBrowserSettings: (
+    accountId: string,
+    openExternalBrowser?: boolean,
+    displayCloseButton?: boolean
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:update-web-browser-settings', { accountId, openExternalBrowser, displayCloseButton }),
+  uploadTheme: (
+    accountId: string,
+    file?: any,
+    thumb?: any,
+    fileName?: string,
+    mimeType?: string
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload-theme', { accountId, file, thumb, fileName, mimeType }),
+  uploadWallPaper: (
+    accountId: string,
+    forChat?: boolean,
+    file?: any,
+    mimeType?: string,
+    settings?: any
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload-wallpaper', { accountId, forChat, file, mimeType, settings }),
+
 
 
 

@@ -5708,6 +5708,70 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:update-status', async (_event, { accountId, offline }) => {
+    try {
+      return await accountManager.updateStatus(accountId, offline)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateStatus error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:update-theme',
+    async (_event, { accountId, format, theme, slug, title, document, settings }) => {
+      try {
+        return await accountManager.updateTheme(accountId, format, theme, slug, title, document, settings)
+      } catch (err: any) {
+        Logger.warn(`[IPC] updateTheme error:`, err)
+        return false
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:update-account-username', async (_event, { accountId, username }) => {
+    try {
+      return await accountManager.updateAccountUsername(accountId, username)
+    } catch (err: any) {
+      Logger.warn(`[IPC] updateAccountUsername error:`, err)
+      return false
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:update-web-browser-settings',
+    async (_event, { accountId, openExternalBrowser, displayCloseButton }) => {
+      try {
+        return await accountManager.updateWebBrowserSettings(accountId, openExternalBrowser, displayCloseButton)
+      } catch (err: any) {
+        Logger.warn(`[IPC] updateWebBrowserSettings error:`, err)
+        return false
+      }
+    }
+  )
+
+  ipcMain.handle('telegram:upload-theme', async (_event, { accountId, file, thumb, fileName, mimeType }) => {
+    try {
+      return await accountManager.uploadTheme(accountId, file, thumb, fileName, mimeType)
+    } catch (err: any) {
+      Logger.warn(`[IPC] uploadTheme error:`, err)
+      return null
+    }
+  })
+
+  ipcMain.handle(
+    'telegram:upload-wallpaper',
+    async (_event, { accountId, forChat, file, mimeType, settings }) => {
+      try {
+        return await accountManager.uploadWallPaper(accountId, forChat, file, mimeType, settings)
+      } catch (err: any) {
+        Logger.warn(`[IPC] uploadWallPaper error:`, err)
+        return null
+      }
+    }
+  )
+
+
 
 
 

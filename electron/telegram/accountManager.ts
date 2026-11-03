@@ -16471,6 +16471,67 @@ export class AccountManager {
     return this.securityService.updateProfile(holder as any, firstName, lastName, about)
   }
 
+  public async updateStatus(accountId: string, offline?: boolean): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateStatus(holder as any, offline)
+  }
+
+  public async updateTheme(
+    accountId: string,
+    format?: string,
+    theme?: any,
+    slug?: string,
+    title?: string,
+    document?: any,
+    settings?: any
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateTheme(holder as any, format, theme, slug, title, document, settings)
+  }
+
+  public async updateAccountUsername(accountId: string, username?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateUsername(holder as any, username)
+  }
+
+  public async updateWebBrowserSettings(
+    accountId: string,
+    openExternalBrowser?: boolean,
+    displayCloseButton?: boolean
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.updateWebBrowserSettings(holder as any, openExternalBrowser, displayCloseButton)
+  }
+
+  public async uploadTheme(
+    accountId: string,
+    file?: any,
+    thumb?: any,
+    fileName?: string,
+    mimeType?: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.uploadTheme(holder as any, file, thumb, fileName, mimeType)
+  }
+
+  public async uploadWallPaper(
+    accountId: string,
+    forChat?: boolean,
+    file?: any,
+    mimeType?: string,
+    settings?: any
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.securityService.uploadWallPaper(holder as any, forChat, file, mimeType, settings)
+  }
+
+
 
 
 
