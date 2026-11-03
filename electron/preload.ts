@@ -2294,6 +2294,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:messages:get-emoji-game-info', { accountId, params }),
   getEmojiGroups: (accountId: string, hash?: number): Promise<any> =>
     ipcRenderer.invoke('telegram:messages:get-emoji-groups', { accountId, hash }),
+  // Layer 232 Messages Suite (Microphase 044)
+  getEmojiKeywords: (accountId: string, langCode?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-keywords', { accountId, langCode }),
+  getEmojiKeywordsDifference: (accountId: string, langCode?: string, fromVersion?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-keywords-difference', { accountId, langCode, fromVersion }),
+  getEmojiKeywordsLanguages: (accountId: string, langCodes?: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-keywords-languages', { accountId, langCodes }),
+  getEmojiProfilePhotoGroups: (accountId: string, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-profile-photo-groups', { accountId, hash }),
+  getEmojiStatusGroups: (accountId: string, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-status-groups', { accountId, hash }),
+  getEmojiStickerGroups: (accountId: string, hash?: number): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-sticker-groups', { accountId, hash }),
+  getEmojiStickers: (accountId: string, hash?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:messages:get-emoji-stickers', { accountId, hash }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -19394,5 +19394,48 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.getEmojiGroups(holder as any, hash)
   }
+
+  // Layer 232 Messages Suite (Microphase 044)
+  public async getEmojiKeywords(accountId: string, langCode?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiKeywords(holder as any, langCode)
+  }
+
+  public async getEmojiKeywordsDifference(accountId: string, langCode?: string, fromVersion?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiKeywordsDifference(holder as any, langCode, fromVersion)
+  }
+
+  public async getEmojiKeywordsLanguages(accountId: string, langCodes?: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiKeywordsLanguages(holder as any, langCodes)
+  }
+
+  public async getEmojiProfilePhotoGroups(accountId: string, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiProfilePhotoGroups(holder as any, hash)
+  }
+
+  public async getEmojiStatusGroups(accountId: string, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiStatusGroups(holder as any, hash)
+  }
+
+  public async getEmojiStickerGroups(accountId: string, hash?: number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiStickerGroups(holder as any, hash)
+  }
+
+  public async getEmojiStickersRaw(accountId: string, hash?: bigint | number): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.getEmojiStickers(holder as any, hash)
+  }
 }
 

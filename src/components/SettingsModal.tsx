@@ -82,6 +82,7 @@ import {
   Wifi,
   Signal,
   Edit3,
+  Smile,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -2430,6 +2431,157 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setM041Status({ type: 'error', message: err?.message || 'خطا در فراخوانی کال‌بک ربات' })
     } finally {
       setM041LoadingOp(null)
+    }
+  }
+
+  // Microphase 044 State: Emoji Keywords, Groups & Stickers Suite
+  const [m044KeywordsLang, setM044KeywordsLang] = useState('en')
+  const [m044KeywordsCount, setM044KeywordsCount] = useState<number | null>(null)
+
+  const [m044DiffLang, setM044DiffLang] = useState('en')
+  const [m044DiffVersion, setM044DiffVersion] = useState('0')
+  const [m044DiffCount, setM044DiffCount] = useState<number | null>(null)
+
+  const [m044LangCodes, setM044LangCodes] = useState('en,fa')
+  const [m044LanguagesCount, setM044LanguagesCount] = useState<number | null>(null)
+
+  const [m044ProfilePhotoHash, setM044ProfilePhotoHash] = useState('0')
+  const [m044ProfilePhotoGroupsCount, setM044ProfilePhotoGroupsCount] = useState<number | null>(null)
+
+  const [m044StatusHash, setM044StatusHash] = useState('0')
+  const [m044StatusGroupsCount, setM044StatusGroupsCount] = useState<number | null>(null)
+
+  const [m044StickerHash, setM044StickerHash] = useState('0')
+  const [m044StickerGroupsCount, setM044StickerGroupsCount] = useState<number | null>(null)
+
+  const [m044StickersCount, setM044StickersCount] = useState<number | null>(null)
+
+  const [m044LoadingOp, setM044LoadingOp] = useState<string | null>(null)
+  const [m044Status, setM044Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const handleM044GetEmojiKeywords = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiKeywords) return
+    setM044LoadingOp('getEmojiKeywords')
+    setM044Status(null)
+    try {
+      const res = await window.guidegram.getEmojiKeywords(targetId, m044KeywordsLang.trim() || undefined)
+      const count = Array.isArray(res?.keywords) ? res.keywords.length : 0
+      setM044KeywordsCount(count)
+      setM044Status({ type: 'success', message: `تعداد ${count} کلیدواژه ایموجی برای زبان ${m044KeywordsLang} دریافت شد` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در دریافت کلیدواژه‌های ایموجی' })
+    } finally {
+      setM044LoadingOp(null)
+    }
+  }
+
+  const handleM044GetEmojiKeywordsDifference = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiKeywordsDifference) return
+    setM044LoadingOp('getEmojiKeywordsDifference')
+    setM044Status(null)
+    try {
+      const version = parseInt(m044DiffVersion, 10) || 0
+      const res = await window.guidegram.getEmojiKeywordsDifference(targetId, m044DiffLang.trim() || undefined, version)
+      const count = Array.isArray(res?.keywords) ? res.keywords.length : 0
+      setM044DiffCount(count)
+      setM044Status({ type: 'success', message: `تغییرات کلیدواژه‌های ایموجی از نسخه ${version}: ${count} مورد` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در استعلام تفاوت کلیدواژه‌ها' })
+    } finally {
+      setM044LoadingOp(null)
+    }
+  }
+
+  const handleM044GetEmojiKeywordsLanguages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiKeywordsLanguages) return
+    setM044LoadingOp('getEmojiKeywordsLanguages')
+    setM044Status(null)
+    try {
+      const res = await window.guidegram.getEmojiKeywordsLanguages(targetId, m044LangCodes.trim() || undefined)
+      const count = Array.isArray(res) ? res.length : (Array.isArray(res?.languages) ? res.languages.length : 0)
+      setM044LanguagesCount(count)
+      setM044Status({ type: 'success', message: `تعداد ${count} زبان کلیدواژه ایموجی پشتیبانی می‌شود` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در دریافت زبان‌های ایموجی' })
+    } finally {
+      setM044LoadingOp(null)
+    }
+  }
+
+  const handleM044GetEmojiProfilePhotoGroups = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiProfilePhotoGroups) return
+    setM044LoadingOp('getEmojiProfilePhotoGroups')
+    setM044Status(null)
+    try {
+      const hash = parseInt(m044ProfilePhotoHash, 10) || 0
+      const res = await window.guidegram.getEmojiProfilePhotoGroups(targetId, hash)
+      const count = Array.isArray(res?.groups) ? res.groups.length : 0
+      setM044ProfilePhotoGroupsCount(count)
+      setM044Status({ type: 'success', message: `تعداد ${count} گروه ایموجی تصویر پروفایل استعلام شد` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در دریافت گروه‌های ایموجی پروفایل' })
+    } finally {
+      setM044LoadingOp(null)
+    }
+  }
+
+  const handleM044GetEmojiStatusGroups = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiStatusGroups) return
+    setM044LoadingOp('getEmojiStatusGroups')
+    setM044Status(null)
+    try {
+      const hash = parseInt(m044StatusHash, 10) || 0
+      const res = await window.guidegram.getEmojiStatusGroups(targetId, hash)
+      const count = Array.isArray(res?.groups) ? res.groups.length : 0
+      setM044StatusGroupsCount(count)
+      setM044Status({ type: 'success', message: `تعداد ${count} گروه وضعیت ایموجی استعلام شد` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در دریافت گروه‌های وضعیت ایموجی' })
+    } finally {
+      setM044LoadingOp(null)
+    }
+  }
+
+  const handleM044GetEmojiStickerGroups = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiStickerGroups) return
+    setM044LoadingOp('getEmojiStickerGroups')
+    setM044Status(null)
+    try {
+      const hash = parseInt(m044StickerHash, 10) || 0
+      const res = await window.guidegram.getEmojiStickerGroups(targetId, hash)
+      const count = Array.isArray(res?.groups) ? res.groups.length : 0
+      setM044StickerGroupsCount(count)
+      setM044Status({ type: 'success', message: `تعداد ${count} گروه استیکرهای ایموجی استعلام شد` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در دریافت گروه‌های استیکر ایموجی' })
+    } finally {
+      setM044LoadingOp(null)
+    }
+  }
+
+  const handleM044GetEmojiStickers = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.getEmojiStickers) return
+    setM044LoadingOp('getEmojiStickers')
+    setM044Status(null)
+    try {
+      const res = await window.guidegram.getEmojiStickers(targetId, 0)
+      const count = Array.isArray(res?.sets) ? res.sets.length : (Array.isArray(res) ? res.length : 0)
+      setM044StickersCount(count)
+      setM044Status({ type: 'success', message: `تعداد ${count} مجموعه استیکرهای ایموجی ابری دریافت شد` })
+    } catch (err: any) {
+      setM044Status({ type: 'error', message: err?.message || 'خطا در استعلام استیکرهای ایموجی' })
+    } finally {
+      setM044LoadingOp(null)
     }
   }
 
@@ -7163,6 +7315,203 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m041LoadingOp === 'getBotCallbackAnswer' ? 'در حال ارسال کال‌بک...' : 'دریافت پاسخ کال‌بک'}
                     </button>
                   </form>
+                </div>
+
+                {/* Microphase 044: Layer 232 Emoji Keywords, Groups & Stickers Suite */}
+                <div className="p-4 bg-dark-850/80 rounded-2xl border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400">
+                        <Smile className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-200">
+                          کلیدواژه‌ها، دسته‌بندی و استیکرهای ایموجی
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          مجموعه ۷ متد MTProto Layer 232 برای کلیدواژه‌های چندزبانه، تفاوت نسخه‌ها و گروه‌های وضعیت
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-mono">
+                      Phase 044 • Layer 232
+                    </span>
+                  </div>
+
+                  {/* Operational Status Banner */}
+                  {m044Status && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                        m044Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m044Status.type === 'success' ? (
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        <span>{m044Status.message}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM044Status(null)}
+                        className="text-[10px] hover:underline shrink-0 opacity-75"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 1. messages.getEmojiKeywords */}
+                  <form onSubmit={handleM044GetEmojiKeywords} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۱. کلیدواژه‌های جستجوی ایموجی (getEmojiKeywords)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.getEmojiKeywords</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={m044KeywordsLang}
+                        onChange={(e) => setM044KeywordsLang(e.target.value)}
+                        placeholder="کد زبان (مثلاً fa یا en)..."
+                        className="flex-1 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m044LoadingOp === 'getEmojiKeywords' || !m044KeywordsLang.trim()}
+                        className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer"
+                      >
+                        {m044LoadingOp === 'getEmojiKeywords' ? 'در حال دریافت...' : `دریافت ${m044KeywordsCount !== null ? `(${m044KeywordsCount})` : ''}`}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* 2. messages.getEmojiKeywordsDifference */}
+                  <form onSubmit={handleM044GetEmojiKeywordsDifference} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۲. تفاوت نسخه‌های کلیدواژه (getEmojiKeywordsDifference)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.getEmojiKeywordsDifference</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={m044DiffLang}
+                        onChange={(e) => setM044DiffLang(e.target.value)}
+                        placeholder="کد زبان..."
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                      <input
+                        type="number"
+                        value={m044DiffVersion}
+                        onChange={(e) => setM044DiffVersion(e.target.value)}
+                        placeholder="از نسخه (from version)..."
+                        className="px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m044LoadingOp === 'getEmojiKeywordsDifference'}
+                        className="py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all cursor-pointer"
+                      >
+                        {m044LoadingOp === 'getEmojiKeywordsDifference' ? 'استعلام...' : `بررسی تفاوت ${m044DiffCount !== null ? `(${m044DiffCount})` : ''}`}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* 3. messages.getEmojiKeywordsLanguages */}
+                  <form onSubmit={handleM044GetEmojiKeywordsLanguages} className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-gray-300">
+                        ۳. زبان‌های پشتیبانی‌شده ایموجی (getEmojiKeywordsLanguages)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-mono">messages.getEmojiKeywordsLanguages</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={m044LangCodes}
+                        onChange={(e) => setM044LangCodes(e.target.value)}
+                        placeholder="کدهای فیلتر (مثلاً en,fa)..."
+                        className="flex-1 px-3 py-1.5 bg-dark-900 border border-white/5 rounded-xl text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m044LoadingOp === 'getEmojiKeywordsLanguages'}
+                        className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-white rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer"
+                      >
+                        {m044LoadingOp === 'getEmojiKeywordsLanguages' ? 'در حال استعلام...' : `زبان‌ها ${m044LanguagesCount !== null ? `(${m044LanguagesCount})` : ''}`}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* 4, 5, 6, 7 Emoji Groups & Stickers Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* 4. messages.getEmojiProfilePhotoGroups */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۴. گروه‌های ایموجی پروفایل (getEmojiProfilePhotoGroups)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM044GetEmojiProfilePhotoGroups}
+                        disabled={m044LoadingOp === 'getEmojiProfilePhotoGroups'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m044LoadingOp === 'getEmojiProfilePhotoGroups' ? 'در حال دریافت...' : `استعلام گروه‌ها ${m044ProfilePhotoGroupsCount !== null ? `(${m044ProfilePhotoGroupsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 5. messages.getEmojiStatusGroups */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۵. گروه‌های وضعیت ایموجی (getEmojiStatusGroups)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM044GetEmojiStatusGroups}
+                        disabled={m044LoadingOp === 'getEmojiStatusGroups'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m044LoadingOp === 'getEmojiStatusGroups' ? 'در حال دریافت...' : `استعلام وضعیت‌ها ${m044StatusGroupsCount !== null ? `(${m044StatusGroupsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 6. messages.getEmojiStickerGroups */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۶. گروه‌های استیکر ایموجی (getEmojiStickerGroups)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM044GetEmojiStickerGroups}
+                        disabled={m044LoadingOp === 'getEmojiStickerGroups'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m044LoadingOp === 'getEmojiStickerGroups' ? 'در حال دریافت...' : `استعلام استیکرها ${m044StickerGroupsCount !== null ? `(${m044StickerGroupsCount})` : ''}`}
+                      </button>
+                    </div>
+
+                    {/* 7. messages.getEmojiStickers */}
+                    <div className="p-3 bg-dark-800/50 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-gray-300">
+                        ۷. استیکرهای ایموجی ابری (getEmojiStickers)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM044GetEmojiStickers}
+                        disabled={m044LoadingOp === 'getEmojiStickers'}
+                        className="w-full py-1.5 bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m044LoadingOp === 'getEmojiStickers' ? 'در حال دریافت...' : `مجموعه‌ها ${m044StickersCount !== null ? `(${m044StickersCount})` : ''}`}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

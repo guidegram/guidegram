@@ -6670,6 +6670,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Messages Suite (Microphase 044)
+  ipcMain.handle('telegram:messages:get-emoji-keywords', async (_event, { accountId, langCode }) => {
+    try {
+      return await accountManager.getEmojiKeywords(accountId, langCode)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiKeywords error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-keywords-difference', async (_event, { accountId, langCode, fromVersion }) => {
+    try {
+      return await accountManager.getEmojiKeywordsDifference(accountId, langCode, fromVersion)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiKeywordsDifference error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-keywords-languages', async (_event, { accountId, langCodes }) => {
+    try {
+      return await accountManager.getEmojiKeywordsLanguages(accountId, langCodes)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiKeywordsLanguages error:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-profile-photo-groups', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getEmojiProfilePhotoGroups(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiProfilePhotoGroups error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-status-groups', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getEmojiStatusGroups(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiStatusGroups error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-sticker-groups', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getEmojiStickerGroups(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiStickerGroups error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:messages:get-emoji-stickers', async (_event, { accountId, hash }) => {
+    try {
+      return await accountManager.getEmojiStickersRaw(accountId, hash)
+    } catch (err: any) {
+      Logger.warn('[IPC] getEmojiStickers error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
