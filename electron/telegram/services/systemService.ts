@@ -2564,12 +2564,19 @@ export class SystemService {
     }
   }
 
-  public async stats_loadAsyncGraph(holder: RpcClientHolder, token?: string, x?: bigint | number): Promise<any> {
+  public async stats_loadAsyncGraph(
+    holder: RpcClientHolder,
+    tokenOrParams?: string | { token: string; x?: bigint | number | string },
+    maybeX?: bigint | number | string
+  ): Promise<any> {
     try {
+      const token = typeof tokenOrParams === 'string' ? tokenOrParams : tokenOrParams?.token
+      const rawX = typeof tokenOrParams === 'object' && tokenOrParams?.x !== undefined ? tokenOrParams.x : maybeX
+      const x = rawX !== undefined && rawX !== null && rawX !== '' ? BigInt(rawX) : undefined
       return await holder.client.call({
         _: 'stats.loadAsyncGraph',
-        'token': token,
-        'x': x,
+        token: token || '',
+        x: x as any,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.loadAsyncGraph error:', err)

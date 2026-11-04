@@ -23401,6 +23401,19 @@ export class AccountManager {
       params.dark
     )
   }
+
+  // --- Microphase 117: Stats Domain Suite Part 2 (loadAsyncGraph) ---
+  public async statsLoadAsyncGraphRaw(
+    accountId: string,
+    params: {
+      token: string
+      x?: bigint | number | string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stats_loadAsyncGraph(holder as any, params)
+  }
 }
 
 

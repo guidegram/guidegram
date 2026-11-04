@@ -3268,6 +3268,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:stats:get-story-public-forwards-raw', { accountId, ...params }),
   statsGetStoryStatsRaw: (accountId: string, params: { peer: string; id: number; dark?: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:stats:get-story-stats-raw', { accountId, ...params }),
+  statsLoadAsyncGraphRaw: (accountId: string, params: { token: string; x?: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:load-async-graph-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

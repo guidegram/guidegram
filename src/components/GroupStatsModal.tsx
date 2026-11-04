@@ -219,15 +219,17 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const [copied, setCopied] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
 
-  // MTProto Layer 232 Server Stats State (Microphase 116)
+  // MTProto Layer 232 Server Stats State (Microphase 116 & 117)
   const [mtprotoRpc, setMtprotoRpc] = useState<
-    'broadcast' | 'megagroup' | 'messageForwards' | 'messageStats' | 'pollStats' | 'storyForwards' | 'storyStats'
+    'broadcast' | 'megagroup' | 'messageForwards' | 'messageStats' | 'pollStats' | 'storyForwards' | 'storyStats' | 'asyncGraph'
   >('broadcast')
   const [mtprotoDark, setMtprotoDark] = useState<boolean>(true)
   const [mtprotoMsgId, setMtprotoMsgId] = useState<number>(messages[0]?.id || 1)
   const [mtprotoStoryId, setMtprotoStoryId] = useState<number>(1)
   const [mtprotoOffset, setMtprotoOffset] = useState<string>('')
   const [mtprotoLimit, setMtprotoLimit] = useState<number>(50)
+  const [mtprotoGraphToken, setMtprotoGraphToken] = useState<string>('')
+  const [mtprotoGraphX, setMtprotoGraphX] = useState<string>('')
   const [mtprotoLoading, setMtprotoLoading] = useState<boolean>(false)
   const [mtprotoError, setMtprotoError] = useState<string | null>(null)
   const [mtprotoData, setMtprotoData] = useState<any | null>(null)
@@ -288,6 +290,12 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             peer: chat.id,
             id: Number(mtprotoStoryId) || 1,
             dark: mtprotoDark,
+          })
+          break
+        case 'asyncGraph':
+          res = await window.guidegram.statsLoadAsyncGraphRaw(chat.accountId, {
+            token: mtprotoGraphToken,
+            x: mtprotoGraphX ? BigInt(mtprotoGraphX) : undefined,
           })
           break
       }
@@ -1928,6 +1936,7 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                   { id: 'pollStats', label: 'Poll Stats', rpc: 'stats.getPollStats' },
                   { id: 'storyStats', label: 'Story Stats', rpc: 'stats.getStoryStats' },
                   { id: 'storyForwards', label: 'Story Forwards', rpc: 'stats.getStoryPublicForwards' },
+                  { id: 'asyncGraph', label: 'Async Graph', rpc: 'stats.loadAsyncGraph' },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -1965,6 +1974,31 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {mtprotoRpc === 'asyncGraph' && (
+                    <>
+                      <div>
+                        <label className="block text-[11px] text-gray-400 mb-1">Graph Token (`token`)</label>
+                        <input
+                          type="text"
+                          value={mtprotoGraphToken}
+                          onChange={(e) => setMtprotoGraphToken(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-white text-xs font-mono focus:border-primary-500 focus:outline-none"
+                          placeholder="Async graph token string"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-gray-400 mb-1">Zoom Coordinate X (`x`, optional)</label>
+                        <input
+                          type="number"
+                          value={mtprotoGraphX}
+                          onChange={(e) => setMtprotoGraphX(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-white text-xs font-mono focus:border-primary-500 focus:outline-none"
+                          placeholder="Timestamp or BigInt X (optional)"
+                        />
+                      </div>
+                    </>
+                  )}
+
                   {['messageStats', 'messageForwards', 'pollStats'].includes(mtprotoRpc) && (
                     <div>
                       <label className="block text-[11px] text-gray-400 mb-1">Message ID (`msgId`)</label>

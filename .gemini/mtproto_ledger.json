@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 83.82,
+  "overall_coverage_pct": 87.31,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -3549,7 +3549,7 @@
       ],
       "method_count": 1,
       "ui_component": "src/components/GroupStatsModal.tsx",
-      "status": "PENDING",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,

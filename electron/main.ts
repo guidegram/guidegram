@@ -10929,6 +10929,16 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stats Domain Suite Part 2 IPC (Microphase 117)
+  ipcMain.handle('telegram:stats:load-async-graph-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsLoadAsyncGraphRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsLoadAsyncGraphRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
