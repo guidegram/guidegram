@@ -21958,6 +21958,69 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.getPremiumGiftCodeOptions(holder as any, accountId, params?.boostPeerId)
   }
+
+  // --- Microphase 099: payments resale star gifts, saved gifts, active auctions & state ---
+  public async paymentsGetResaleStarGiftsRaw(
+    accountId: string,
+    params: { giftId: bigint | number | string; offset?: string; limit?: number; [key: string]: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const { giftId, ...rest } = params || {}
+    return this.paymentsService.getResaleStarGifts(holder as any, giftId, rest)
+  }
+
+  public async paymentsGetSavedInfoRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getSavedInfo(holder as any)
+  }
+
+  public async paymentsGetSavedStarGiftRaw(
+    accountId: string,
+    params: { stargift: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getSavedStarGift(holder as any, params?.stargift)
+  }
+
+  public async paymentsGetSavedStarGiftsRaw(
+    accountId: string,
+    params?: { peerId?: string; [key: string]: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const { peerId, ...options } = params || {}
+    return this.paymentsService.getSavedStarGifts(holder as any, accountId, peerId, options)
+  }
+
+  public async paymentsGetStarGiftActiveAuctionsRaw(
+    accountId: string,
+    params?: { hash?: bigint | number | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftActiveAuctions(holder as any, params?.hash || 0n)
+  }
+
+  public async paymentsGetStarGiftAuctionAcquiredGiftsRaw(
+    accountId: string,
+    params: { giftId: bigint | number | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftAuctionAcquiredGifts(holder as any, params?.giftId)
+  }
+
+  public async paymentsGetStarGiftAuctionStateRaw(
+    accountId: string,
+    params: { auction: any; version?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftAuctionState(holder as any, params?.auction, params?.version || 0)
+  }
 }
 
 

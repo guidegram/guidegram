@@ -3039,6 +3039,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:get-payment-receipt-raw', { accountId, ...params }),
   paymentsGetPremiumGiftCodeOptionsRaw: (accountId: string, params?: { boostPeerId?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:get-premium-gift-code-options-raw', { accountId, ...params }),
+  // Microphase 099: Payments Domain Suite Part 6 (7 RPCs: Resale Gifts, Saved Gifts & Auctions)
+  paymentsGetResaleStarGiftsRaw: (accountId: string, params: { giftId: bigint | number | string; offset?: string; limit?: number; [key: string]: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-resale-star-gifts-raw', { accountId, ...params }),
+  paymentsGetSavedInfoRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-saved-info-raw', { accountId }),
+  paymentsGetSavedStarGiftRaw: (accountId: string, params: { stargift: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-saved-star-gift-raw', { accountId, ...params }),
+  paymentsGetSavedStarGiftsRaw: (accountId: string, params?: { peerId?: string; [key: string]: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-saved-star-gifts-raw', { accountId, ...params }),
+  paymentsGetStarGiftActiveAuctionsRaw: (accountId: string, params?: { hash?: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-active-auctions-raw', { accountId, ...params }),
+  paymentsGetStarGiftAuctionAcquiredGiftsRaw: (accountId: string, params: { giftId: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-auction-acquired-gifts-raw', { accountId, ...params }),
+  paymentsGetStarGiftAuctionStateRaw: (accountId: string, params: { auction: any; version?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-auction-state-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

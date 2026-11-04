@@ -118,9 +118,9 @@ export class PaymentsService {
       return await holder.client.call({
         _: 'payments.getSavedInfo',
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getSavedInfo error:', err)
-      return null
+      throw err
     }
   }
 
@@ -626,28 +626,32 @@ export class PaymentsService {
     }
   }
 
-  public async getSavedStarGifts(holder: RpcClientHolder, accountId: string, peerId: string, options: any = {}): Promise<any> {
+  public async getSavedStarGifts(holder: RpcClientHolder, accountId: string, peerId?: string, options: any = {}): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' as const }
       return await holder.client.call({
         _: 'payments.getSavedStarGifts',
-        peer, ...options,
+        peer,
+        offset: options.offset || '',
+        limit: options.limit || 50,
+        ...options,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getSavedStarGifts error:', err)
-      return null
+      throw err
     }
   }
 
   public async getSavedStarGift(holder: RpcClientHolder, stargift: any): Promise<any> {
     try {
+      const list = Array.isArray(stargift) ? stargift : [stargift]
       return await holder.client.call({
         _: 'payments.getSavedStarGift',
-        stargift,
+        stargift: list,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getSavedStarGift error:', err)
-      return null
+      throw err
     }
   }
 
@@ -707,15 +711,19 @@ export class PaymentsService {
     }
   }
 
-  public async getResaleStarGifts(holder: RpcClientHolder, giftId: bigint, options: any = {}): Promise<any> {
+  public async getResaleStarGifts(holder: RpcClientHolder, giftId: bigint | number | string, options: any = {}): Promise<any> {
     try {
+      const gId = typeof giftId === 'bigint' ? giftId : BigInt(giftId.toString())
       return await holder.client.call({
         _: 'payments.getResaleStarGifts',
-        giftId, ...options,
+        giftId: gId,
+        offset: options.offset || '',
+        limit: options.limit || 50,
+        ...options,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getResaleStarGifts error:', err)
-      return null
+      throw err
     }
   }
 
@@ -836,35 +844,38 @@ export class PaymentsService {
     try {
       return await holder.client.call({
         _: 'payments.getStarGiftAuctionState',
-        auction, version,
+        auction,
+        version,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftAuctionState error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getStarGiftAuctionAcquiredGifts(holder: RpcClientHolder, giftId: bigint): Promise<any> {
+  public async getStarGiftAuctionAcquiredGifts(holder: RpcClientHolder, giftId: bigint | number | string): Promise<any> {
     try {
+      const gId = typeof giftId === 'bigint' ? giftId : BigInt(giftId.toString())
       return await holder.client.call({
         _: 'payments.getStarGiftAuctionAcquiredGifts',
-        giftId,
+        giftId: gId,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftAuctionAcquiredGifts error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getStarGiftActiveAuctions(holder: RpcClientHolder, hash = 0n): Promise<any> {
+  public async getStarGiftActiveAuctions(holder: RpcClientHolder, hash: bigint | number | string = 0n): Promise<any> {
     try {
+      const h = typeof hash === 'bigint' ? hash : BigInt(hash.toString())
       return await holder.client.call({
         _: 'payments.getStarGiftActiveAuctions',
-        hash,
+        hash: h,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftActiveAuctions error:', err)
-      return null
+      throw err
     }
   }
 

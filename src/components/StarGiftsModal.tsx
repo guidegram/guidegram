@@ -16,6 +16,11 @@ import {
   Coins,
   Percent,
   Layers,
+  Gavel,
+  RefreshCw,
+  AlertCircle,
+  Search,
+  ShieldCheck,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
@@ -45,11 +50,78 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
   const [loadingCatalog, setLoadingCatalog] = useState(false)
+
+  // Microphase 099: Auctions & Resale States (payments.getStarGiftActiveAuctions & payments.getResaleStarGifts)
+  const [activeAuctions, setActiveAuctions] = useState<any[] | null>(null)
+  const [loadingAuctions, setLoadingAuctions] = useState<boolean>(false)
+  const [auctionsError, setAuctionsError] = useState<string | null>(null)
+
+  const [resaleGiftId, setResaleGiftId] = useState<string>('')
+  const [resaleGifts, setResaleGifts] = useState<any | null>(null)
+  const [loadingResale, setLoadingResale] = useState<boolean>(false)
+  const [resaleError, setResaleError] = useState<string | null>(null)
+
+  const [savedInfoData, setSavedInfoData] = useState<any | null>(null)
+  const [loadingSavedInfo, setLoadingSavedInfo] = useState<boolean>(false)
+
+  const loadActiveAuctions = async () => {
+    if (!accountId) return
+    setLoadingAuctions(true)
+    setAuctionsError(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarGiftActiveAuctionsRaw?.(accountId, { hash: 0n })
+      const list = res?.auctions || res?.items || (Array.isArray(res) ? res : [])
+      setActiveAuctions(list)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadActiveAuctions error:', err)
+      setAuctionsError(err?.message || 'Failed to fetch active auctions from MTProto')
+    } finally {
+      setLoadingAuctions(false)
+    }
+  }
+
+  const loadResaleGifts = async () => {
+    if (!accountId || !resaleGiftId.trim()) return
+    setLoadingResale(true)
+    setResaleError(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetResaleStarGiftsRaw?.(accountId, {
+        giftId: resaleGiftId.trim(),
+        limit: 20,
+      })
+      setResaleGifts(res)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadResaleGifts error:', err)
+      setResaleError(err?.message || 'Failed to query secondary market')
+    } finally {
+      setLoadingResale(false)
+    }
+  }
+
+  const loadSavedInfo = async () => {
+    if (!accountId) return
+    setLoadingSavedInfo(true)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetSavedInfoRaw?.(accountId)
+      setSavedInfoData(res)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadSavedInfo error:', err)
+    } finally {
+      setLoadingSavedInfo(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'auctions' && activeAuctions === null && !loadingAuctions) {
+      loadActiveAuctions()
+      loadSavedInfo()
+    }
+  }, [activeTab, accountId])
 
   // Detail View and Traits Modal States (Telegram Photo 2 & 3 Parity)
   const [selectedGift, setSelectedGift] = useState<StarGiftItem | null>(null)
@@ -723,6 +795,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                 <ShoppingBag className="w-3.5 h-3.5" />
                 <span>Gift Catalog</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('auctions')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'auctions'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Gavel className="w-3.5 h-3.5" />
+                <span>Auctions & Resale</span>
+              </button>
             </div>
 
             {/* Ultra-Refined Minimalist Sorting & Filter Bar (/minimalist-ui) */}
@@ -891,7 +975,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ))}
                   </div>
                 )
-              ) : (
+              ) : activeTab === 'catalog' ? (
                 /* Catalog Tab */
                 loadingCatalog ? (
                   <div className="flex flex-col items-center justify-center py-16 text-xs text-neutral-400 gap-3">
@@ -990,6 +1074,186 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ))}
                   </div>
                 )
+              ) : (
+                /* Microphase 099: Auctions & Resale Secondary Market Explorer */
+                <div className="space-y-4">
+                  {/* Active Auctions Section */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                          <Gavel className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                            <span>Active Star Gift Auctions</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                              MTProto Layer 232
+                            </span>
+                          </h4>
+                          <p className="text-[10px] text-neutral-400">
+                            حراجی‌های زنده هدایای تلگرام در شبکه استارز
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadActiveAuctions}
+                        disabled={loadingAuctions}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${loadingAuctions ? 'animate-spin' : ''}`} />
+                        <span>بروزرسانی</span>
+                      </button>
+                    </div>
+
+                    {/* 4 States for Active Auctions */}
+                    {loadingAuctions ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2.5 text-xs text-neutral-400">
+                        <div className="w-6 h-6 rounded-full border-2 border-amber-500/40 border-t-amber-400 animate-spin" />
+                        <span>در حال دریافت حراجی‌های فعال از MTProto...</span>
+                      </div>
+                    ) : auctionsError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 flex items-start justify-between gap-3 text-xs text-rose-300">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-semibold">خطا در بارگذاری حراجی‌ها</div>
+                            <div className="text-[10px] opacity-80 mt-0.5">{auctionsError}</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={loadActiveAuctions}
+                          className="px-2 py-1 rounded-md bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] shrink-0 font-medium transition-colors"
+                        >
+                          تلاش مجدد
+                        </button>
+                      </div>
+                    ) : !activeAuctions || activeAuctions.length === 0 ? (
+                      <div className="py-8 px-4 rounded-xl bg-black/20 border border-dashed border-white/5 flex flex-col items-center justify-center text-center">
+                        <Gavel className="w-8 h-8 text-neutral-600 mb-2" />
+                        <span className="text-xs font-semibold text-neutral-300">هیچ حراجی فعالی یافت نشد</span>
+                        <span className="text-[10px] text-neutral-500 max-w-xs mt-1">
+                          در حال حاضر حراجی عمومی ثبت‌شده‌ای در این کلاستر تلگرام فعال نیست (payments.getStarGiftActiveAuctions).
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-2">
+                        {activeAuctions.map((auction: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between text-xs"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold">
+                                #{idx + 1}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-neutral-200">
+                                  {auction.title || auction.gift?.title || `Auction Lot #${auction.id || idx}`}
+                                </div>
+                                <div className="text-[10px] text-neutral-400 font-mono">
+                                  {auction.currentBid ? `${auction.currentBid} ⭐` : 'بدون پیشنهاد'}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                              زنده
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Secondary Market / Resale Search Section */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <ShoppingBag className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                          <span>Secondary Market (بازار ثانویه هدایا)</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-400/10 text-purple-300 border border-purple-400/20">
+                            payments.getResaleStarGifts
+                          </span>
+                        </h4>
+                        <p className="text-[10px] text-neutral-400">
+                          جستجوی آیتم‌های بازفروش بر اساس شناسه هدیه (Gift ID)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                        <input
+                          type="text"
+                          value={resaleGiftId}
+                          onChange={(e) => setResaleGiftId(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && loadResaleGifts()}
+                          placeholder="شناسه هدیه (مثلاً 5421...)"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-amber-400/50 font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadResaleGifts}
+                        disabled={loadingResale || !resaleGiftId.trim()}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        <Search className={`w-3.5 h-3.5 ${loadingResale ? 'animate-spin' : ''}`} />
+                        <span>جستجو</span>
+                      </button>
+                    </div>
+
+                    {/* Resale Query Results */}
+                    {loadingResale ? (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2 text-xs text-neutral-400">
+                        <div className="w-5 h-5 rounded-full border-2 border-purple-500/40 border-t-purple-400 animate-spin" />
+                        <span>در حال استعلام بازار ثانویه...</span>
+                      </div>
+                    ) : resaleError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+                        <span>{resaleError}</span>
+                        <button
+                          type="button"
+                          onClick={loadResaleGifts}
+                          className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 text-[10px]"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : resaleGifts ? (
+                      <div className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold text-neutral-200">
+                          <span>نتایج بازار ثانویه</span>
+                          <span className="text-[10px] font-mono text-amber-400">
+                            {resaleGifts?.count ?? resaleGifts?.gifts?.length ?? 0} مورد
+                          </span>
+                        </div>
+                        <pre className="text-[10px] font-mono text-neutral-400 bg-black/40 p-2 rounded-lg overflow-x-auto max-h-36">
+                          {JSON.stringify(resaleGifts, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Saved Info & Checkout Wallet Telemetry */}
+                  {savedInfoData && (
+                    <div className="p-3 rounded-xl bg-neutral-900/40 border border-white/5 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <span className="text-neutral-300">وضعیت پرداخت امن تلگرام (Saved Info)</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-neutral-400">
+                        {savedInfoData?.hasSavedCredentials ? 'اطلاعات پرداخت ذخیره است' : 'فعال'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1000,7 +1264,9 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                 <span className="font-mono text-[11px]">
                   {activeTab === 'saved'
                     ? 'Telegram MTProto payments.getSavedStarGifts'
-                    : 'Telegram MTProto payments.getStarGifts'}
+                    : activeTab === 'catalog'
+                    ? 'Telegram MTProto payments.getStarGifts'
+                    : 'Telegram MTProto payments.getStarGiftActiveAuctions & Resale'}
                 </span>
               </div>
               <button
