@@ -37,6 +37,8 @@ import {
   Layers,
   Key,
   ExternalLink,
+  UserPlus,
+  MonitorUp,
 } from 'lucide-react'
 import { GroupCallInfo, GroupCallParticipantItem } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -144,6 +146,33 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   const [rtmpRevoke, setRtmpRevoke] = useState(false)
   const [rtmpLiveStory, setRtmpLiveStory] = useState(false)
   const [rtmpStreamInfo, setRtmpStreamInfo] = useState<{ url?: string; key?: string } | null>(null)
+
+  // Microphase 110: Phone Domain Suite Part 4 States
+  // 1: phone.getGroupParticipants
+  const [partOffset, setPartOffset] = useState('')
+  const [partSourcesInput, setPartSourcesInput] = useState('')
+  const [partPeersInput, setPartPeersInput] = useState('')
+  const [fetchedGroupParticipants, setFetchedGroupParticipants] = useState<any | null>(null)
+
+  // 2: phone.inviteConferenceCallParticipant
+  const [confInviteUser, setConfInviteUser] = useState('')
+  const [confInviteVideo, setConfInviteVideo] = useState(false)
+
+  // 3: phone.inviteToGroupCall
+  const [inviteGroupCallUsers, setInviteGroupCallUsers] = useState('')
+
+  // 4: phone.joinGroupCall
+  const [customJoinMuted, setCustomJoinMuted] = useState(false)
+  const [customJoinVideoStopped, setCustomJoinVideoStopped] = useState(false)
+  const [customJoinAs, setCustomJoinAs] = useState('')
+  const [customJoinInviteHash, setCustomJoinInviteHash] = useState('')
+
+  // 5 & 7: phone.joinGroupCallPresentation & leaveGroupCallPresentation
+  const [presentationDataPayload, setPresentationDataPayload] = useState('')
+  const [isJoinedPresentation, setIsJoinedPresentation] = useState(false)
+
+  // 6: phone.leaveGroupCall
+  const [leaveCallSourceId, setLeaveCallSourceId] = useState('0')
 
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
@@ -987,6 +1016,219 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Microphase 110: 1. Get Group Participants (phone.getGroupParticipants)
+  const handleGetGroupParticipants = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_group_participants')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const ids = partPeersInput ? partPeersInput.split(',').map((s) => s.trim()).filter(Boolean) : undefined
+      const sources = partSourcesInput ? partSourcesInput.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n)) : undefined
+      const res = await api?.phoneGetGroupParticipantsRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        ids,
+        sources,
+        offset: partOffset || '',
+        limit: 50,
+      })
+      setLastOpResult(res)
+      setFetchedGroupParticipants(res)
+      if (res?.next_offset || res?.nextOffset) {
+        setPartOffset(res.next_offset || res.nextOffset)
+      }
+      if (Array.isArray(res?.participants)) {
+        setParticipants(res.participants)
+      }
+      setSuccessMsg(`لیست شرکت‌کنندگان دریافت شد (${res?.count ?? res?.participants?.length ?? 0} نفر) (phone.getGroupParticipants)`)
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupParticipants error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت لیست شرکت‌کنندگان')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 110: 2. Invite Conference Call Participant (phone.inviteConferenceCallParticipant)
+  const handleInviteConferenceCallParticipant = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی/کنفرانس فعال یافت نشد')
+      return
+    }
+    if (!confInviteUser.trim()) {
+      setErrorMsg('شناسه کاربری جهت دعوت به کنفرانس الزامی است')
+      return
+    }
+    setLoadingOp('invite_conf_part')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneInviteConferenceCallParticipantRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        userId: confInviteUser.trim(),
+        video: confInviteVideo,
+      })
+      setLastOpResult(res)
+      setSuccessMsg(`کاربر ${confInviteUser.trim()} به کنفرانس دعوت شد (phone.inviteConferenceCallParticipant)`)
+      setConfInviteUser('')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] inviteConferenceCallParticipant error:', err)
+      setErrorMsg(err?.message || 'خطا در ارسال دعوت‌نامه کنفرانس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 110: 3. Invite to Group Call (phone.inviteToGroupCall)
+  const handleInviteToGroupCall = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!inviteGroupCallUsers.trim()) {
+      setErrorMsg('شناسه یا نام کاربری افراد جهت دعوت الزامی است')
+      return
+    }
+    setLoadingOp('invite_group_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const users = inviteGroupCallUsers.split(',').map((s) => s.trim()).filter(Boolean)
+      const res = await api?.phoneInviteToGroupCallRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        users,
+      })
+      setLastOpResult(res)
+      setSuccessMsg(`دعوت‌نامه برای ${users.length} کاربر ارسال شد (phone.inviteToGroupCall)`)
+      setInviteGroupCallUsers('')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] inviteToGroupCall error:', err)
+      setErrorMsg(err?.message || 'خطا در دعوت کاربران به تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 110: 4. Join Group Call (phone.joinGroupCall)
+  const handleCustomJoinGroupCall = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('custom_join_group_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneJoinGroupCallRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        muted: customJoinMuted,
+        videoStopped: customJoinVideoStopped,
+        joinAs: customJoinAs.trim() || undefined,
+        inviteHash: customJoinInviteHash.trim() || undefined,
+      })
+      setLastOpResult(res)
+      setIsMuted(customJoinMuted)
+      setSuccessMsg('با موفقیت به تماس گروهی ملحق شدید (phone.joinGroupCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] joinGroupCall error:', err)
+      setErrorMsg(err?.message || 'خطا در پیوستن به تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 110: 5. Join Presentation (phone.joinGroupCallPresentation)
+  const handleJoinGroupCallPresentation = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('join_presentation')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneJoinGroupCallPresentationRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        params: presentationDataPayload.trim() || undefined,
+      })
+      setLastOpResult(res)
+      setIsJoinedPresentation(true)
+      setIsScreenSharing(true)
+      setSuccessMsg('استریم پرزنتیشن و اسکرین‌شیر آغاز شد (phone.joinGroupCallPresentation)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] joinGroupCallPresentation error:', err)
+      setErrorMsg(err?.message || 'خطا در آغاز پرزنتیشن تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 110: 6. Leave Group Call (phone.leaveGroupCall)
+  const handleLeaveGroupCallExplicit = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('leave_group_call_explicit')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneLeaveGroupCallRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        source: Number(leaveCallSourceId || 0),
+      })
+      setLastOpResult(res)
+      setSuccessMsg('از تماس گروهی با سورس مشخص خارج شدید (phone.leaveGroupCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] leaveGroupCall error:', err)
+      setErrorMsg(err?.message || 'خطا در خروج از تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 110: 7. Leave Presentation (phone.leaveGroupCallPresentation)
+  const handleLeaveGroupCallPresentation = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('leave_presentation')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneLeaveGroupCallPresentationRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+      })
+      setLastOpResult(res)
+      setIsJoinedPresentation(false)
+      setIsScreenSharing(false)
+      setSuccessMsg('پرزنتیشن تماس با موفقیت متوقف گردید (phone.leaveGroupCallPresentation)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] leaveGroupCallPresentation error:', err)
+      setErrorMsg(err?.message || 'خطا در توقف پرزنتیشن تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -1629,6 +1871,213 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Microphase 110: Participants Pagination & Filter (phone.getGroupParticipants) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>استعلام صفحه‌بندی‌شده شرکت‌کنندگان (phone.getGroupParticipants)</span>
+                      </div>
+                      {fetchedGroupParticipants && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold">
+                          {fetchedGroupParticipants?.count ?? fetchedGroupParticipants?.participants?.length ?? 0} شرکت‌کننده
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div>
+                        <span className="text-[10px] text-neutral-400 block mb-0.5">فیلتر شناسه‌های کاربری (اختیاری):</span>
+                        <input
+                          type="text"
+                          value={partPeersInput}
+                          onChange={(e) => setPartPeersInput(e.target.value)}
+                          placeholder="مثلاً @user1, @user2"
+                          className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 block mb-0.5">فیلتر سورس‌های WebRTC (اختیاری):</span>
+                        <input
+                          type="text"
+                          value={partSourcesInput}
+                          onChange={(e) => setPartSourcesInput(e.target.value)}
+                          placeholder="مثلاً 1001, 1002"
+                          className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-400 block mb-0.5">توکن آفست (Offset Token):</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={partOffset}
+                            onChange={(e) => setPartOffset(e.target.value)}
+                            placeholder="آفست خالی برای صفحه اول"
+                            className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleGetGroupParticipants}
+                            disabled={loadingOp === 'get_group_participants'}
+                            className="px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                          >
+                            {loadingOp === 'get_group_participants' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                            <span>دریافت</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Microphase 110: Invite to Group Call (phone.inviteToGroupCall) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <UserPlus className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>دعوت کاربران به تماس گروهی (phone.inviteToGroupCall)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={inviteGroupCallUsers}
+                      onChange={(e) => setInviteGroupCallUsers(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کاربران (با کاما جدا کنید)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleInviteToGroupCall}
+                      disabled={loadingOp === 'invite_group_call'}
+                      className="w-full py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'invite_group_call' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                      <span>ارسال دعوت‌نامه تماس گروهی</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 110: Custom Join Group Call (phone.joinGroupCall) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Radio className="w-3.5 h-3.5 text-accent-cyan" />
+                        <span>پیوستن سفارشی با هویت خاص (phone.joinGroupCall)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={customJoinMuted}
+                            onChange={(e) => setCustomJoinMuted(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                          />
+                          <span>Muted</span>
+                        </label>
+                        <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={customJoinVideoStopped}
+                            onChange={(e) => setCustomJoinVideoStopped(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                          />
+                          <span>No Video</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="text"
+                        value={customJoinAs}
+                        onChange={(e) => setCustomJoinAs(e.target.value)}
+                        placeholder="Join As: @channel یا self"
+                        className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={customJoinInviteHash}
+                        onChange={(e) => setCustomJoinInviteHash(e.target.value)}
+                        placeholder="Invite Hash (اختیاری)"
+                        className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCustomJoinGroupCall}
+                      disabled={loadingOp === 'custom_join_group_call'}
+                      className="w-full py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'custom_join_group_call' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                      <span>پیوستن به تماس با هویت انتخابی</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 110: Presentation Control (phone.joinGroupCallPresentation / leaveGroupCallPresentation) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <MonitorUp className="w-3.5 h-3.5 text-blue-400" />
+                        <span>اشتراک‌گذاری تصویر و پرزنتیشن (Presentation Stream)</span>
+                      </div>
+                      {isJoinedPresentation && (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold animate-pulse">
+                          LIVE PRESENTING
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={presentationDataPayload}
+                      onChange={(e) => setPresentationDataPayload(e.target.value)}
+                      placeholder="JSON دیتای پرزنتیشن (پیش‌فرض webrtc)"
+                      className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleJoinGroupCallPresentation}
+                        disabled={loadingOp === 'join_presentation'}
+                        className="py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'join_presentation' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <MonitorUp className="w-3.5 h-3.5" />}
+                        <span>شروع پرزنتیشن</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLeaveGroupCallPresentation}
+                        disabled={loadingOp === 'leave_presentation'}
+                        className="py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'leave_presentation' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <VideoOff className="w-3.5 h-3.5" />}
+                        <span>توقف پرزنتیشن</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Microphase 110: Explicit Leave Group Call (phone.leaveGroupCall) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <PhoneOff className="w-3.5 h-3.5 text-rose-400" />
+                      <span>خروج صریح از تماس گروهی (phone.leaveGroupCall)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <span className="text-[10px] text-neutral-400 block mb-0.5">شناسه سورس استریم (Source ID):</span>
+                        <input
+                          type="number"
+                          value={leaveCallSourceId}
+                          onChange={(e) => setLeaveCallSourceId(e.target.value)}
+                          className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleLeaveGroupCallExplicit}
+                        disabled={loadingOp === 'leave_group_call_explicit'}
+                        className="mt-4 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                      >
+                        {loadingOp === 'leave_group_call_explicit' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <PhoneOff className="w-3.5 h-3.5" />}
+                        <span>خروج با سورس</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1935,6 +2384,43 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                         )}
                         <span>رد دعوت کنفرانس</span>
                       </button>
+                    </div>
+
+                    {/* Microphase 110: Invite to Conference Call (phone.inviteConferenceCallParticipant) */}
+                    <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                          <UserPlus className="w-3.5 h-3.5 text-purple-400" />
+                          <span>دعوت اختصاصی به کنفرانس صوتی/تصویری (phone.inviteConferenceCallParticipant)</span>
+                        </div>
+                        <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={confInviteVideo}
+                            onChange={(e) => setConfInviteVideo(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-purple-500 focus:ring-0"
+                          />
+                          <span>دعوت با ویدئو (Video Call)</span>
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={confInviteUser}
+                          onChange={(e) => setConfInviteUser(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم کاربر جهت دعوت به کنفرانس (مثلاً @username یا User ID)"
+                          className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleInviteConferenceCallParticipant}
+                          disabled={loadingOp === 'invite_conf_part'}
+                          className="px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                        >
+                          {loadingOp === 'invite_conf_part' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                          <span>ارسال دعوت کنفرانس</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

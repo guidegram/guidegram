@@ -22909,6 +22909,100 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_getGroupCallStreamRtmpUrl(holder as any, accountId, params)
   }
+
+  // Microphase 110: Phone Domain Suite Part 4 Raw Methods
+  public async phoneGetGroupParticipantsRaw(
+    accountId: string,
+    params: {
+      call: any
+      ids?: any[]
+      sources?: number[]
+      offset?: string
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupParticipants(holder as any, accountId, params)
+  }
+
+  public async phoneInviteConferenceCallParticipantRaw(
+    accountId: string,
+    params: {
+      call: any
+      userId: any
+      video?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_inviteConferenceCallParticipant(holder as any, accountId, params)
+  }
+
+  public async phoneInviteToGroupCallRaw(
+    accountId: string,
+    params: {
+      call: any
+      users: any[]
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_inviteToGroupCall(holder as any, accountId, params)
+  }
+
+  public async phoneJoinGroupCallRaw(
+    accountId: string,
+    params: {
+      call: any
+      joinAs?: any
+      muted?: boolean
+      videoStopped?: boolean
+      inviteHash?: string
+      publicKey?: any
+      block?: any
+      params?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_joinGroupCall(holder as any, accountId, params)
+  }
+
+  public async phoneJoinGroupCallPresentationRaw(
+    accountId: string,
+    params: {
+      call: any
+      params?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_joinGroupCallPresentation(holder as any, params)
+  }
+
+  public async phoneLeaveGroupCallRaw(
+    accountId: string,
+    params: {
+      call: any
+      source?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_leaveGroupCall(holder as any, params)
+  }
+
+  public async phoneLeaveGroupCallPresentationRaw(
+    accountId: string,
+    params: {
+      call: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_leaveGroupCallPresentation(holder as any, params)
+  }
 }
 
 

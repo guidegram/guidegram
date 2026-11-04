@@ -3196,6 +3196,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:get-group-call-stream-channels-raw', { accountId, ...params }),
   phoneGetGroupCallStreamRtmpUrlRaw: (accountId: string, params: { peerId: string; revoke?: boolean; liveStory?: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:get-group-call-stream-rtmp-url-raw', { accountId, ...params }),
+  // Layer 232 Phone Suite (Microphase 110)
+  phoneGetGroupParticipantsRaw: (accountId: string, params: { call: any; ids?: any[]; sources?: number[]; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-participants-raw', { accountId, ...params }),
+  phoneInviteConferenceCallParticipantRaw: (accountId: string, params: { call: any; userId: any; video?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:invite-conference-call-participant-raw', { accountId, ...params }),
+  phoneInviteToGroupCallRaw: (accountId: string, params: { call: any; users: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:invite-to-group-call-raw', { accountId, ...params }),
+  phoneJoinGroupCallRaw: (accountId: string, params: { call: any; joinAs?: any; muted?: boolean; videoStopped?: boolean; inviteHash?: string; publicKey?: any; block?: any; params?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:join-group-call-raw', { accountId, ...params }),
+  phoneJoinGroupCallPresentationRaw: (accountId: string, params: { call: any; params?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:join-group-call-presentation-raw', { accountId, ...params }),
+  phoneLeaveGroupCallRaw: (accountId: string, params: { call: any; source?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:leave-group-call-raw', { accountId, ...params }),
+  phoneLeaveGroupCallPresentationRaw: (accountId: string, params: { call: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:leave-group-call-presentation-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

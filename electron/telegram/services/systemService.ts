@@ -1371,48 +1371,113 @@ export class SystemService {
     }
   }
 
-  public async phone_joinGroupCall(holder: RpcClientHolder, accountId: string, muted?: boolean, videoStopped?: boolean, call?: any, joinAsId?: string, inviteHash?: string, publicKey?: any, block?: any, params?: any): Promise<any> {
+  public async phone_joinGroupCall(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrMuted?: any,
+    videoStopped?: boolean,
+    call?: any,
+    joinAsId?: string,
+    inviteHash?: string,
+    publicKey?: any,
+    block?: any,
+    params?: any
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrMuted === 'object' && paramsOrMuted !== null && !paramsOrMuted._ && (paramsOrMuted.call !== undefined || paramsOrMuted.joinAs !== undefined || paramsOrMuted.join_as !== undefined)) {
+        p = paramsOrMuted
+      } else {
+        p = {
+          muted: paramsOrMuted,
+          videoStopped,
+          call,
+          joinAs: joinAsId,
+          inviteHash,
+          publicKey,
+          block,
+          params,
+        }
+      }
+      const joinAsPeer = p.joinAs ?? p.join_as
+      const resolvedJoinAs = joinAsPeer
+        ? await this.resolveInputPeer(accountId, joinAsPeer)
+        : { _: 'inputPeerSelf' }
+
+      let dataParams = p.params
+      if (typeof dataParams === 'string') {
+        dataParams = { _: 'dataJSON', data: dataParams }
+      } else if (typeof dataParams === 'object' && dataParams !== null && !dataParams._) {
+        dataParams = { _: 'dataJSON', data: JSON.stringify(dataParams) }
+      } else if (!dataParams) {
+        dataParams = { _: 'dataJSON', data: JSON.stringify({ transport: 'webrtc' }) }
+      }
+
       return await holder.client.call({
         _: 'phone.joinGroupCall',
-        'muted': muted,
-        'video_stopped': videoStopped,
-        'call': call,
-        'join_as': joinAsId ? await this.resolveInputPeer(accountId, joinAsId) : undefined,
-        'invite_hash': inviteHash,
-        'public_key': publicKey,
-        'block': block,
-        'params': params,
+        muted: p.muted !== undefined ? !!p.muted : undefined,
+        video_stopped: p.videoStopped !== undefined ? !!p.videoStopped : (p.video_stopped !== undefined ? !!p.video_stopped : undefined),
+        call: this.toInputGroupCall(p.call),
+        join_as: resolvedJoinAs,
+        invite_hash: p.inviteHash ?? p.invite_hash,
+        public_key: p.publicKey ?? p.public_key,
+        block: p.block,
+        params: dataParams,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.joinGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
-  public async phone_leaveGroupCall(holder: RpcClientHolder, call?: any, source?: number): Promise<any> {
+  public async phone_leaveGroupCall(holder: RpcClientHolder, callOrParams?: any, source?: number): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        p = callOrParams
+      } else {
+        p = {
+          call: callOrParams,
+          source,
+        }
+      }
       return await holder.client.call({
         _: 'phone.leaveGroupCall',
-        'call': call,
-        'source': source,
+        call: this.toInputGroupCall(p.call),
+        source: Number(p.source || 0),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.leaveGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
-  public async phone_inviteToGroupCall(holder: RpcClientHolder, accountId: string, call?: any, usersId?: string): Promise<any> {
+  public async phone_inviteToGroupCall(holder: RpcClientHolder, accountId: string, paramsOrCall?: any, users?: any): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrCall === 'object' && paramsOrCall !== null && !paramsOrCall._ && paramsOrCall.call !== undefined) {
+        p = paramsOrCall
+      } else {
+        p = {
+          call: paramsOrCall,
+          users,
+        }
+      }
+      let resolvedUsers: any[] = []
+      const uList = p.users ?? p.userIds ?? p.user_ids
+      if (Array.isArray(uList)) {
+        resolvedUsers = await Promise.all(uList.map((u: any) => this.toInputUser(accountId, u)))
+      } else if (uList !== undefined && uList !== null) {
+        resolvedUsers = [await this.toInputUser(accountId, uList)]
+      }
       return await holder.client.call({
         _: 'phone.inviteToGroupCall',
-        'call': call,
-        'users': usersId ? await this.toInputUser(accountId, usersId) : undefined,
+        call: this.toInputGroupCall(p.call),
+        users: resolvedUsers,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.inviteToGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1466,19 +1531,51 @@ export class SystemService {
     }
   }
 
-  public async phone_getGroupParticipants(holder: RpcClientHolder, accountId: string, call?: any, idsId?: string, sources?: number, offset?: string, limit?: number): Promise<any> {
+  public async phone_getGroupParticipants(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrCallbackOrCall?: any,
+    ids?: any,
+    sources?: any,
+    offset?: string,
+    limit?: number
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrCallbackOrCall === 'object' && paramsOrCallbackOrCall !== null && !paramsOrCallbackOrCall._ && paramsOrCallbackOrCall.call !== undefined) {
+        p = paramsOrCallbackOrCall
+      } else {
+        p = {
+          call: paramsOrCallbackOrCall,
+          ids,
+          sources,
+          offset,
+          limit,
+        }
+      }
+      let resolvedIds: any[] = []
+      if (Array.isArray(p.ids)) {
+        resolvedIds = await Promise.all(p.ids.map((id: any) => this.resolveInputPeer(accountId, id)))
+      } else if (p.ids !== undefined && p.ids !== null && p.ids !== '') {
+        resolvedIds = [await this.resolveInputPeer(accountId, p.ids)]
+      }
+      let resolvedSources: number[] = []
+      if (Array.isArray(p.sources)) {
+        resolvedSources = p.sources.map(Number)
+      } else if (typeof p.sources === 'number') {
+        resolvedSources = [p.sources]
+      }
       return await holder.client.call({
         _: 'phone.getGroupParticipants',
-        'call': call,
-        'ids': idsId ? await this.resolveInputPeer(accountId, idsId) : undefined,
-        'sources': sources,
-        'offset': offset,
-        'limit': limit,
+        call: this.toInputGroupCall(p.call),
+        ids: resolvedIds,
+        sources: resolvedSources,
+        offset: String(p.offset || ''),
+        limit: Number(p.limit || 100),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.getGroupParticipants error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1801,28 +1898,48 @@ export class SystemService {
     }
   }
 
-  public async phone_joinGroupCallPresentation(holder: RpcClientHolder, call?: any, params?: any): Promise<any> {
+  public async phone_joinGroupCallPresentation(holder: RpcClientHolder, callOrParams?: any, params?: any): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        p = callOrParams
+      } else {
+        p = {
+          call: callOrParams,
+          params,
+        }
+      }
+      let dataParams = p.params
+      if (typeof dataParams === 'string') {
+        dataParams = { _: 'dataJSON', data: dataParams }
+      } else if (typeof dataParams === 'object' && dataParams !== null && !dataParams._) {
+        dataParams = { _: 'dataJSON', data: JSON.stringify(dataParams) }
+      } else if (!dataParams) {
+        dataParams = { _: 'dataJSON', data: JSON.stringify({ transport: 'webrtc' }) }
+      }
       return await holder.client.call({
         _: 'phone.joinGroupCallPresentation',
-        'call': call,
-        'params': params,
+        call: this.toInputGroupCall(p.call),
+        params: dataParams,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.joinGroupCallPresentation error:', err)
-      return null
+      throw err
     }
   }
 
-  public async phone_leaveGroupCallPresentation(holder: RpcClientHolder, call?: any): Promise<any> {
+  public async phone_leaveGroupCallPresentation(holder: RpcClientHolder, callOrParams?: any): Promise<any> {
     try {
+      const call = (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined)
+        ? callOrParams.call
+        : callOrParams
       return await holder.client.call({
         _: 'phone.leaveGroupCallPresentation',
-        'call': call,
+        call: this.toInputGroupCall(call),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.leaveGroupCallPresentation error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1934,17 +2051,34 @@ export class SystemService {
     }
   }
 
-  public async phone_inviteConferenceCallParticipant(holder: RpcClientHolder, accountId: string, video?: boolean, call?: any, userIdId?: string): Promise<any> {
+  public async phone_inviteConferenceCallParticipant(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrVideo?: any,
+    call?: any,
+    userIdId?: string
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrVideo === 'object' && paramsOrVideo !== null && !paramsOrVideo._ && (paramsOrVideo.call !== undefined || paramsOrVideo.userId !== undefined || paramsOrVideo.user_id !== undefined)) {
+        p = paramsOrVideo
+      } else {
+        p = {
+          video: paramsOrVideo,
+          call,
+          userId: userIdId,
+        }
+      }
+      const u = p.userId ?? p.user_id ?? p.user
       return await holder.client.call({
         _: 'phone.inviteConferenceCallParticipant',
-        'video': video,
-        'call': call,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
+        video: p.video !== undefined ? !!p.video : undefined,
+        call: this.toInputGroupCall(p.call),
+        user_id: await this.toInputUser(accountId, u),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.inviteConferenceCallParticipant error:', err)
-      return null
+      throw err
     }
   }
 

@@ -10611,6 +10611,69 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 110: Phone Domain Suite Part 4 IPC Handlers
+  ipcMain.handle('telegram:phone:get-group-participants-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupParticipantsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupParticipantsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:invite-conference-call-participant-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneInviteConferenceCallParticipantRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneInviteConferenceCallParticipantRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:invite-to-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneInviteToGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneInviteToGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:join-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneJoinGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneJoinGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:join-group-call-presentation-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneJoinGroupCallPresentationRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneJoinGroupCallPresentationRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:leave-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneLeaveGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneLeaveGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:leave-group-call-presentation-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneLeaveGroupCallPresentationRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneLeaveGroupCallPresentationRaw error:', err)
+      throw err
+    }
+  })
 
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {

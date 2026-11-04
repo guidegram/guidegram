@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 79.74,
+  "overall_coverage_pct": 80.56,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -3351,8 +3351,8 @@
         "leaveGroupCallPresentation"
       ],
       "method_count": 7,
-      "ui_component": "src/components/SettingsModal.tsx",
-      "status": "PENDING",
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,
