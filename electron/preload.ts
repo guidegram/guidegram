@@ -3054,6 +3054,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:get-star-gift-auction-acquired-gifts-raw', { accountId, ...params }),
   paymentsGetStarGiftAuctionStateRaw: (accountId: string, params: { auction: any; version?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:get-star-gift-auction-state-raw', { accountId, ...params }),
+  // Microphase 100: Payments Domain Suite Part 7 (7 RPCs: Collections, Upgrades, Withdrawal, Gifts & Giveaways)
+  paymentsGetStarGiftCollectionsRaw: (accountId: string, params?: { peerId?: string; hash?: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-collections-raw', { accountId, ...params }),
+  paymentsGetStarGiftUpgradeAttributesRaw: (accountId: string, params: { giftId: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-upgrade-attributes-raw', { accountId, ...params }),
+  paymentsGetStarGiftUpgradePreviewRaw: (accountId: string, params: { giftId: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-upgrade-preview-raw', { accountId, ...params }),
+  paymentsGetStarGiftWithdrawalUrlRaw: (accountId: string, params: { stargift: any; password?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gift-withdrawal-url-raw', { accountId, ...params }),
+  paymentsGetStarGiftsRaw: (accountId: string, params?: { hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-star-gifts-raw', { accountId, ...params }),
+  paymentsGetStarsGiftOptionsRaw: (accountId: string, params?: { userId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-gift-options-raw', { accountId, ...params }),
+  paymentsGetStarsGiveawayOptionsRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-giveaway-options-raw', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

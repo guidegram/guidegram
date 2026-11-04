@@ -374,11 +374,11 @@ export class PaymentsService {
     try {
       return await holder.client.call({
         _: 'payments.getStarsGiftOptions',
-        user: userId ? await this.toInputUser(accountId, userId) : undefined,
-      })
-    } catch (err) {
+        userId: userId ? await this.toInputUser(accountId, userId) : undefined,
+      } as any)
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarsGiftOptions error:', err)
-      return null
+      throw err
     }
   }
 
@@ -413,21 +413,21 @@ export class PaymentsService {
       return await holder.client.call({
         _: 'payments.getStarsGiveawayOptions',
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarsGiveawayOptions error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getStarGifts(holder: RpcClientHolder, hash = 0): Promise<any> {
+  public async getStarGifts(holder: RpcClientHolder, hash: number = 0): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getStarGifts',
-        hash,
+        hash: Number(hash || 0),
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGifts error:', err)
-      return null
+      throw err
     }
   }
 
@@ -578,15 +578,15 @@ export class PaymentsService {
     }
   }
 
-  public async getStarGiftUpgradePreview(holder: RpcClientHolder, giftId: bigint): Promise<any> {
+  public async getStarGiftUpgradePreview(holder: RpcClientHolder, giftId: bigint | number | Long | string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getStarGiftUpgradePreview',
-        giftId,
+        giftId: toLong(giftId) as any,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftUpgradePreview error:', err)
-      return null
+      throw err
     }
   }
 
@@ -657,13 +657,26 @@ export class PaymentsService {
 
   public async getStarGiftWithdrawalUrl(holder: RpcClientHolder, stargift: any, password?: any): Promise<any> {
     try {
+      let inputStarGift: any = stargift
+      if (typeof stargift === 'object' && stargift) {
+        if (!stargift._) {
+          if (stargift.slug) {
+            inputStarGift = { _: 'inputSavedStarGiftSlug', slug: String(stargift.slug) }
+          } else if (stargift.msgId) {
+            inputStarGift = { _: 'inputSavedStarGiftUser', msgId: Number(stargift.msgId) }
+          } else if (stargift.savedId) {
+            inputStarGift = { _: 'inputSavedStarGiftChat', peer: stargift.peer, savedId: toLong(stargift.savedId) }
+          }
+        }
+      }
       return await holder.client.call({
         _: 'payments.getStarGiftWithdrawalUrl',
-        stargift, password,
-      })
-    } catch (err) {
+        stargift: inputStarGift,
+        password: password || { _: 'inputCheckPasswordEmpty' },
+      } as any)
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftWithdrawalUrl error:', err)
-      return null
+      throw err
     }
   }
 
@@ -803,16 +816,17 @@ export class PaymentsService {
     }
   }
 
-  public async getStarGiftCollections(holder: RpcClientHolder, accountId: string, peerId: string, hash = 0n): Promise<any> {
+  public async getStarGiftCollections(holder: RpcClientHolder, accountId: string, peerId?: string, hash: bigint | number | Long | string = 0n): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getStarGiftCollections',
-        peer, hash,
+        peer,
+        hash: toLong(hash) as any,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftCollections error:', err)
-      return null
+      throw err
     }
   }
 
@@ -904,15 +918,15 @@ export class PaymentsService {
     }
   }
 
-  public async getStarGiftUpgradeAttributes(holder: RpcClientHolder, giftId: bigint): Promise<any> {
+  public async getStarGiftUpgradeAttributes(holder: RpcClientHolder, giftId: bigint | number | Long | string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getStarGiftUpgradeAttributes',
-        giftId,
+        giftId: toLong(giftId) as any,
       })
-    } catch (err) {
+    } catch (err: any) {
       Logger.warn('[PaymentsService] getStarGiftUpgradeAttributes error:', err)
-      return null
+      throw err
     }
   }
 

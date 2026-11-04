@@ -21,6 +21,10 @@ import {
   AlertCircle,
   Search,
   ShieldCheck,
+  ArrowUpRight,
+  Trophy,
+  Zap,
+  Wallet,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
@@ -50,7 +54,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
@@ -68,6 +72,105 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
 
   const [savedInfoData, setSavedInfoData] = useState<any | null>(null)
   const [loadingSavedInfo, setLoadingSavedInfo] = useState<boolean>(false)
+
+  // Microphase 100: Collections, Upgrades, Withdrawal & Stars Options
+  const [collectionsData, setCollectionsData] = useState<any[] | null>(null)
+  const [loadingCollections, setLoadingCollections] = useState<boolean>(false)
+  const [collectionsError, setCollectionsError] = useState<string | null>(null)
+
+  const [upgradeGiftId, setUpgradeGiftId] = useState<string>('')
+  const [upgradePreviewData, setUpgradePreviewData] = useState<any | null>(null)
+  const [upgradeAttributesData, setUpgradeAttributesData] = useState<any | null>(null)
+  const [loadingUpgrade, setLoadingUpgrade] = useState<boolean>(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
+
+  const [withdrawalGiftId, setWithdrawalGiftId] = useState<string>('')
+  const [withdrawalUrl, setWithdrawalUrl] = useState<string | null>(null)
+  const [loadingWithdrawal, setLoadingWithdrawal] = useState<boolean>(false)
+  const [withdrawalError, setWithdrawalError] = useState<string | null>(null)
+
+  const [giftOptionsData, setGiftOptionsData] = useState<any[] | null>(null)
+  const [giveawayOptionsData, setGiveawayOptionsData] = useState<any | null>(null)
+  const [loadingOptions, setLoadingOptions] = useState<boolean>(false)
+  const [optionsError, setOptionsError] = useState<string | null>(null)
+
+  const loadCollections = async () => {
+    if (!accountId) return
+    setLoadingCollections(true)
+    setCollectionsError(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarGiftCollectionsRaw?.(accountId, {
+        peerId: peerId || undefined,
+        hash: 0n,
+      })
+      const list = res?.collections || (Array.isArray(res) ? res : [])
+      setCollectionsData(list)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadCollections error:', err)
+      setCollectionsError(err?.message || 'Failed to fetch star gift collections')
+    } finally {
+      setLoadingCollections(false)
+    }
+  }
+
+  const loadUpgradeInfo = async () => {
+    if (!accountId || !upgradeGiftId.trim()) return
+    setLoadingUpgrade(true)
+    setUpgradeError(null)
+    try {
+      const [preview, attrs] = await Promise.all([
+        (window as any).guidegramAPI?.paymentsGetStarGiftUpgradePreviewRaw?.(accountId, {
+          giftId: upgradeGiftId.trim(),
+        }),
+        (window as any).guidegramAPI?.paymentsGetStarGiftUpgradeAttributesRaw?.(accountId, {
+          giftId: upgradeGiftId.trim(),
+        }),
+      ])
+      setUpgradePreviewData(preview)
+      setUpgradeAttributesData(attrs)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadUpgradeInfo error:', err)
+      setUpgradeError(err?.message || 'Failed to query upgrade attributes')
+    } finally {
+      setLoadingUpgrade(false)
+    }
+  }
+
+  const loadWithdrawalUrl = async () => {
+    if (!accountId || !withdrawalGiftId.trim()) return
+    setLoadingWithdrawal(true)
+    setWithdrawalError(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarGiftWithdrawalUrlRaw?.(accountId, {
+        stargift: { _: 'inputSavedStarGiftUser', msgId: Number(withdrawalGiftId.trim()) || 1 },
+      })
+      setWithdrawalUrl(res?.url || (typeof res === 'string' ? res : JSON.stringify(res)))
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadWithdrawalUrl error:', err)
+      setWithdrawalError(err?.message || 'Failed to get withdrawal URL')
+    } finally {
+      setLoadingWithdrawal(false)
+    }
+  }
+
+  const loadStarsOptions = async () => {
+    if (!accountId) return
+    setLoadingOptions(true)
+    setOptionsError(null)
+    try {
+      const [gifts, giveaways] = await Promise.all([
+        (window as any).guidegramAPI?.paymentsGetStarsGiftOptionsRaw?.(accountId, { userId: peerId || undefined }),
+        (window as any).guidegramAPI?.paymentsGetStarsGiveawayOptionsRaw?.(accountId),
+      ])
+      setGiftOptionsData(Array.isArray(gifts) ? gifts : gifts?.options || [])
+      setGiveawayOptionsData(giveaways)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadStarsOptions error:', err)
+      setOptionsError(err?.message || 'Failed to fetch gift & giveaway options')
+    } finally {
+      setLoadingOptions(false)
+    }
+  }
 
   const loadActiveAuctions = async () => {
     if (!accountId) return
@@ -120,6 +223,9 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
     if (activeTab === 'auctions' && activeAuctions === null && !loadingAuctions) {
       loadActiveAuctions()
       loadSavedInfo()
+    } else if (activeTab === 'upgrades' && collectionsData === null && !loadingCollections) {
+      loadCollections()
+      loadStarsOptions()
     }
   }, [activeTab, accountId])
 
@@ -807,6 +913,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                 <Gavel className="w-3.5 h-3.5" />
                 <span>Auctions & Resale</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('upgrades')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'upgrades'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Upgrades & Collections</span>
+              </button>
             </div>
 
             {/* Ultra-Refined Minimalist Sorting & Filter Bar (/minimalist-ui) */}
@@ -1074,7 +1192,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ))}
                   </div>
                 )
-              ) : (
+              ) : activeTab === 'auctions' ? (
                 /* Microphase 099: Auctions & Resale Secondary Market Explorer */
                 <div className="space-y-4">
                   {/* Active Auctions Section */}
@@ -1254,6 +1372,329 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     </div>
                   )}
                 </div>
+              ) : (
+                /* Microphase 100: Upgrades, Collections, Withdrawals & Stars Options */
+                <div className="space-y-4">
+                  {/* Collections Explorer Section */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                          <Layers className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                            <span>Star Gift Collections</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-400/10 text-indigo-300 border border-indigo-400/20">
+                              payments.getStarGiftCollections
+                            </span>
+                          </h4>
+                          <p className="text-[10px] text-neutral-400">
+                            مجموعه‌های رسمی هدایای کاربر و کانال در شبکه استارز
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadCollections}
+                        disabled={loadingCollections}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${loadingCollections ? 'animate-spin' : ''}`} />
+                        <span>بروزرسانی</span>
+                      </button>
+                    </div>
+
+                    {/* 4 States for Collections */}
+                    {loadingCollections ? (
+                      <div className="flex flex-col items-center justify-center py-8 gap-2.5 text-xs text-neutral-400">
+                        <div className="w-6 h-6 rounded-full border-2 border-indigo-500/40 border-t-indigo-400 animate-spin" />
+                        <span>در حال استعلام کلکسیون‌های هدایا از MTProto...</span>
+                      </div>
+                    ) : collectionsError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 flex items-start justify-between gap-3 text-xs text-rose-300">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-semibold">خطا در دریافت مجموعه‌ها</div>
+                            <div className="text-[10px] opacity-80 mt-0.5">{collectionsError}</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={loadCollections}
+                          className="px-2 py-1 rounded-md bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] shrink-0 font-medium transition-colors"
+                        >
+                          تلاش مجدد
+                        </button>
+                      </div>
+                    ) : !collectionsData || collectionsData.length === 0 ? (
+                      <div className="py-6 px-4 rounded-xl bg-black/20 border border-dashed border-white/5 flex flex-col items-center justify-center text-center">
+                        <Layers className="w-7 h-7 text-neutral-600 mb-2" />
+                        <span className="text-xs font-semibold text-neutral-300">مجموعه‌ای یافت نشد</span>
+                        <span className="text-[10px] text-neutral-500 max-w-xs mt-1">
+                          هیچ کلکسیون هدیه‌ای برای این شناسه کاربری ثبت نشده است (Zero Genesis State).
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {collectionsData.map((col: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between text-xs"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold">
+                                #{idx + 1}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-neutral-200">
+                                  {col.title || `Collection ${col.id || idx + 1}`}
+                                </div>
+                                <div className="text-[10px] text-neutral-400 font-mono">
+                                  {col.giftsCount ?? col.count ?? 0} هدایا
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">
+                              فعال
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gift Upgrade Studio Section */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Zap className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                          <span>Star Gift Upgrade Studio</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                            getStarGiftUpgradeAttributes & Preview
+                          </span>
+                        </h4>
+                        <p className="text-[10px] text-neutral-400">
+                          پیش‌نمایش ویژگی‌های نایاب (Model, Backdrop, Symbol) و هزینه استارز جهت تبدیل هدیه به NFT
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                        <input
+                          type="text"
+                          value={upgradeGiftId}
+                          onChange={(e) => setUpgradeGiftId(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && loadUpgradeInfo()}
+                          placeholder="شناسه هدیه برای ارتقا (مثلاً 5429...)"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-amber-400/50 font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadUpgradeInfo}
+                        disabled={loadingUpgrade || !upgradeGiftId.trim()}
+                        className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        <Zap className={`w-3.5 h-3.5 ${loadingUpgrade ? 'animate-spin' : ''}`} />
+                        <span>بررسی ارتقا</span>
+                      </button>
+                    </div>
+
+                    {/* 4 States for Upgrade */}
+                    {loadingUpgrade ? (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2 text-xs text-neutral-400">
+                        <div className="w-5 h-5 rounded-full border-2 border-amber-500/40 border-t-amber-400 animate-spin" />
+                        <span>در حال محاسبه ویژگی‌های ارتقا از MTProto...</span>
+                      </div>
+                    ) : upgradeError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+                        <span>{upgradeError}</span>
+                        <button
+                          type="button"
+                          onClick={loadUpgradeInfo}
+                          className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 text-[10px]"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : upgradePreviewData || upgradeAttributesData ? (
+                      <div className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold text-neutral-200">
+                          <span>نتایج ویژگی‌های ارتقا هدیه</span>
+                          {upgradePreviewData?.price && (
+                            <span className="text-[10px] font-mono text-amber-400">
+                              هزینه ارتقا: {upgradePreviewData.price} ⭐
+                            </span>
+                          )}
+                        </div>
+                        <pre className="text-[10px] font-mono text-neutral-400 bg-black/40 p-2 rounded-lg overflow-x-auto max-h-36">
+                          {JSON.stringify({ preview: upgradePreviewData, attributes: upgradeAttributesData }, null, 2)}
+                        </pre>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* TON / Fragment NFT Withdrawal Link */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <Wallet className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                          <span>Fragment NFT Withdrawal URL</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">
+                            payments.getStarGiftWithdrawalUrl
+                          </span>
+                        </h4>
+                        <p className="text-[10px] text-neutral-400">
+                          دریافت پیوند امن جهت انتقال مالکیت هدیه یونیک به آدرس بلاک‌چین TON
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                        <input
+                          type="text"
+                          value={withdrawalGiftId}
+                          onChange={(e) => setWithdrawalGiftId(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && loadWithdrawalUrl()}
+                          placeholder="شناسه پیام هدیه ذخیره شده (Saved Gift msgId)"
+                          className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-cyan-400/50 font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadWithdrawalUrl}
+                        disabled={loadingWithdrawal || !withdrawalGiftId.trim()}
+                        className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        <ArrowUpRight className={`w-3.5 h-3.5 ${loadingWithdrawal ? 'animate-spin' : ''}`} />
+                        <span>دریافت لینک فرگمنت</span>
+                      </button>
+                    </div>
+
+                    {/* 4 States for Withdrawal */}
+                    {loadingWithdrawal ? (
+                      <div className="flex flex-col items-center justify-center py-4 gap-2 text-xs text-neutral-400">
+                        <div className="w-5 h-5 rounded-full border-2 border-cyan-500/40 border-t-cyan-400 animate-spin" />
+                        <span>در حال تولید آدرس انتقال در Fragment...</span>
+                      </div>
+                    ) : withdrawalError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+                        <span>{withdrawalError}</span>
+                        <button
+                          type="button"
+                          onClick={loadWithdrawalUrl}
+                          className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 text-[10px]"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : withdrawalUrl ? (
+                      <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/30 flex items-center justify-between gap-3 text-xs text-cyan-200">
+                        <div className="truncate font-mono text-[11px]">{withdrawalUrl}</div>
+                        <a
+                          href={withdrawalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-medium text-[11px] shrink-0 flex items-center gap-1"
+                        >
+                          <span>باز کردن در فرگمنت</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Stars Gift & Giveaway Presets Section */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                          <Trophy className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                            <span>Stars Gift & Giveaway Options</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-400/10 text-emerald-300 border border-emerald-400/20">
+                              getStarsGiftOptions & GiveawayOptions
+                            </span>
+                          </h4>
+                          <p className="text-[10px] text-neutral-400">
+                            گزینه‌های ارسال هدیه استارز به دوستان و پریست‌های قرعه‌کشی کانال
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadStarsOptions}
+                        disabled={loadingOptions}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${loadingOptions ? 'animate-spin' : ''}`} />
+                        <span>بروزرسانی</span>
+                      </button>
+                    </div>
+
+                    {/* 4 States for Options */}
+                    {loadingOptions ? (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2 text-xs text-neutral-400">
+                        <div className="w-5 h-5 rounded-full border-2 border-emerald-500/40 border-t-emerald-400 animate-spin" />
+                        <span>در حال استعلام گزینه‌های استارز و قرعه‌کشی...</span>
+                      </div>
+                    ) : optionsError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/30 flex items-center justify-between text-xs text-rose-300">
+                        <span>{optionsError}</span>
+                        <button
+                          type="button"
+                          onClick={loadStarsOptions}
+                          className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 text-[10px]"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {giftOptionsData && giftOptionsData.length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {giftOptionsData.slice(0, 6).map((opt: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded-xl bg-black/30 border border-white/5 text-center space-y-1"
+                              >
+                                <div className="text-xs font-bold text-amber-400 flex items-center justify-center gap-1">
+                                  <Star className="w-3 h-3 fill-current" />
+                                  <span>{opt.stars || opt.amount || 0} Stars</span>
+                                </div>
+                                <div className="text-[10px] text-neutral-400 font-mono">
+                                  {opt.currency ? `${opt.currency} ${opt.amount}` : opt.price || 'پیشنهاد هدیه'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {giveawayOptionsData && (
+                          <div className="p-3 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between text-xs">
+                            <span className="text-neutral-300 font-medium">پریست‌های قرعه‌کشی فعال کانال</span>
+                            <span className="text-[10px] font-mono text-emerald-400">
+                              {giveawayOptionsData?.options?.length ?? 1} گزینه در دسترس
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1266,7 +1707,9 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ? 'Telegram MTProto payments.getSavedStarGifts'
                     : activeTab === 'catalog'
                     ? 'Telegram MTProto payments.getStarGifts'
-                    : 'Telegram MTProto payments.getStarGiftActiveAuctions & Resale'}
+                    : activeTab === 'auctions'
+                    ? 'Telegram MTProto payments.getStarGiftActiveAuctions & Resale'
+                    : 'Telegram MTProto payments.getStarGiftCollections, Upgrades & Giveaways'}
                 </span>
               </div>
               <button

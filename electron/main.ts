@@ -10007,6 +10007,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 100: Payments Domain Suite Part 7 IPC Handlers (Collections, Upgrades, Withdrawal, Gifts & Giveaways)
+  ipcMain.handle('telegram:payments:get-star-gift-collections-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarGiftCollectionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarGiftCollectionsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-star-gift-upgrade-attributes-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarGiftUpgradeAttributesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarGiftUpgradeAttributesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-star-gift-upgrade-preview-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarGiftUpgradePreviewRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarGiftUpgradePreviewRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-star-gift-withdrawal-url-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarGiftWithdrawalUrlRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarGiftWithdrawalUrlRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-star-gifts-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarGiftsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarGiftsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-gift-options-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsGiftOptionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsGiftOptionsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-giveaway-options-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.paymentsGetStarsGiveawayOptionsRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsGiveawayOptionsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

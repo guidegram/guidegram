@@ -22021,6 +22021,69 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.getStarGiftAuctionState(holder as any, params?.auction, params?.version || 0)
   }
+
+  // --- Microphase 100: payments collections, upgrade attributes/preview, withdrawal, star gifts & giveaway options ---
+  public async paymentsGetStarGiftCollectionsRaw(
+    accountId: string,
+    params?: { peerId?: string; hash?: bigint | number | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftCollections(holder as any, accountId, params?.peerId, params?.hash || 0n)
+  }
+
+  public async paymentsGetStarGiftUpgradeAttributesRaw(
+    accountId: string,
+    params: { giftId: bigint | number | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftUpgradeAttributes(holder as any, params?.giftId)
+  }
+
+  public async paymentsGetStarGiftUpgradePreviewRaw(
+    accountId: string,
+    params: { giftId: bigint | number | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftUpgradePreview(holder as any, params?.giftId)
+  }
+
+  public async paymentsGetStarGiftWithdrawalUrlRaw(
+    accountId: string,
+    params: { stargift: any; password?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGiftWithdrawalUrl(holder as any, params?.stargift, params?.password)
+  }
+
+  public async paymentsGetStarGiftsRaw(
+    accountId: string,
+    params?: { hash?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarGifts(holder as any, params?.hash || 0)
+  }
+
+  public async paymentsGetStarsGiftOptionsRaw(
+    accountId: string,
+    params?: { userId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsGiftOptions(holder as any, accountId, params?.userId)
+  }
+
+  public async paymentsGetStarsGiveawayOptionsRaw(
+    accountId: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsGiveawayOptions(holder as any)
+  }
 }
 
 
