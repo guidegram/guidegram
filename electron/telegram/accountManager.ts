@@ -20748,6 +20748,31 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.help_getTimezonesList(holder as any, params?.hash)
   }
+
+  // Layer 232 Help Suite Part 4 (Microphase 078)
+  public async helpGetUserInfoRaw(accountId: string, params: { userId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getUserInfo(holder as any, accountId, params?.userId)
+  }
+
+  public async helpHidePromoDataRaw(accountId: string, params: { peerId?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_hidePromoData(holder as any, accountId, params?.peerId)
+  }
+
+  public async helpSaveAppLogRaw(accountId: string, params: { events?: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_saveAppLog(holder as any, params?.events)
+  }
+
+  public async helpSetBotUpdatesStatusRaw(accountId: string, params: { pendingUpdatesCount?: number; message?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_setBotUpdatesStatus(holder as any, params?.pendingUpdatesCount, params?.message)
+  }
 }
 
 

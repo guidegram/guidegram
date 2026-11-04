@@ -8689,6 +8689,43 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 078 IPC Handlers (Help Domain Part 4)
+  ipcMain.handle('telegram:help:get-user-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetUserInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetUserInfoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:hide-promo-data-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpHidePromoDataRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpHidePromoDataRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:save-app-log-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpSaveAppLogRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpSaveAppLogRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:set-bot-updates-status-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpSetBotUpdatesStatusRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpSetBotUpdatesStatusRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

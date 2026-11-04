@@ -8032,6 +8032,105 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 078 State & Handlers (Help Domain Part 4)
+  const [m078Status, setM078Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m078LoadingOp, setM078LoadingOp] = useState<string | null>(null)
+  const [m078UserId, setM078UserId] = useState('')
+  const [m078PromoPeer, setM078PromoPeer] = useState('')
+  const [m078BotPendingCount, setM078BotPendingCount] = useState('0')
+  const [m078BotMessage, setM078BotMessage] = useState('OK')
+
+  const handleM078GetUserInfo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetUserInfoRaw) return
+    setM078LoadingOp('getUserInfo')
+    setM078Status(null)
+    try {
+      const res = await window.guidegram.helpGetUserInfoRaw(targetId, {
+        userId: m078UserId.trim() || undefined,
+      })
+      setM078Status({
+        type: 'success',
+        message: `اطلاعات کاربر: ${res?.message || res?._ || 'اطلاعات با موفقیت دریافت گردید'}`,
+      })
+    } catch (err: any) {
+      setM078Status({ type: 'error', message: err?.message || 'خطا در استعلام help.getUserInfo' })
+    } finally {
+      setM078LoadingOp(null)
+    }
+  }
+
+  const handleM078HidePromoData = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpHidePromoDataRaw) return
+    setM078LoadingOp('hidePromoData')
+    setM078Status(null)
+    try {
+      await window.guidegram.helpHidePromoDataRaw(targetId, {
+        peerId: m078PromoPeer.trim() || undefined,
+      })
+      setM078Status({
+        type: 'success',
+        message: 'پروموشن با موفقیت مخفی گردید',
+      })
+    } catch (err: any) {
+      setM078Status({ type: 'error', message: err?.message || 'خطا در مخفی‌سازی help.hidePromoData' })
+    } finally {
+      setM078LoadingOp(null)
+    }
+  }
+
+  const handleM078SaveAppLog = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpSaveAppLogRaw) return
+    setM078LoadingOp('saveAppLog')
+    setM078Status(null)
+    try {
+      await window.guidegram.helpSaveAppLogRaw(targetId, {
+        events: [
+          {
+            time: Math.floor(Date.now() / 1000),
+            type: 'guidegram_health_ping',
+            peer: 0,
+            data: JSON.stringify({ source: 'guidegram_desktop', layer: 232 }),
+          },
+        ],
+      })
+      setM078Status({
+        type: 'success',
+        message: 'لاگ تشخیصی کلاینت با موفقیت به سرورهای تلگرام ارسال شد',
+      })
+    } catch (err: any) {
+      setM078Status({ type: 'error', message: err?.message || 'خطا در ارسال help.saveAppLog' })
+    } finally {
+      setM078LoadingOp(null)
+    }
+  }
+
+  const handleM078SetBotUpdatesStatus = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpSetBotUpdatesStatusRaw) return
+    setM078LoadingOp('setBotUpdatesStatus')
+    setM078Status(null)
+    try {
+      await window.guidegram.helpSetBotUpdatesStatusRaw(targetId, {
+        pendingUpdatesCount: parseInt(m078BotPendingCount) || 0,
+        message: m078BotMessage.trim() || 'OK',
+      })
+      setM078Status({
+        type: 'success',
+        message: 'وضعیت آپدیت‌های ربات با موفقیت ثبت شد',
+      })
+    } catch (err: any) {
+      setM078Status({ type: 'error', message: err?.message || 'خطا در تنظیم help.setBotUpdatesStatus' })
+    } finally {
+      setM078LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -20802,6 +20901,148 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m077LoadingOp === 'getTimezonesList' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت مناطق زمانی'}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Microphase 078: Help Domain Suite Part 4 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۸: اطلاعات کاربر، مدیریت پروموشن و لاگ‌ها (Help Domain Part 4)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Help
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    استعلام اطلاعات و یادداشت پشتیبانی کاربر، مخفی‌سازی پروموشن، ارسال لاگ کلاینت و وضعیت ربات:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m078Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m078Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m078Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m078Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM078Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2.5">
+                    {/* 1. help.getUserInfo */}
+                    <form
+                      onSubmit={handleM078GetUserInfo}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. اطلاعات کاربر (getUserInfo)</span>
+                      <input
+                        type="text"
+                        value={m078UserId}
+                        onChange={(e) => setM078UserId(e.target.value)}
+                        placeholder="شناسه کاربر (خالی = اکانت جاری)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m078LoadingOp === 'getUserInfo'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m078LoadingOp === 'getUserInfo' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام اطلاعات'}
+                      </button>
+                    </form>
+
+                    {/* 2. help.hidePromoData */}
+                    <form
+                      onSubmit={handleM078HidePromoData}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۲. مخفی‌سازی پروموشن (hidePromoData)</span>
+                      <input
+                        type="text"
+                        value={m078PromoPeer}
+                        onChange={(e) => setM078PromoPeer(e.target.value)}
+                        placeholder="شناسه پیر یا کانال پروموت‌شده..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m078LoadingOp === 'hidePromoData'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m078LoadingOp === 'hidePromoData' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخفی‌سازی پروموشن'}
+                      </button>
+                    </form>
+
+                    {/* 3. help.saveAppLog */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۳. ثبت لاگ تشخیصی کلاینت (saveAppLog)</span>
+                      <p className="text-[10px] text-gray-400">ارسال رویدادهای سیستمی و سلامت کلاینت به سرور تلگرام</p>
+                      <button
+                        type="button"
+                        onClick={handleM078SaveAppLog}
+                        disabled={m078LoadingOp === 'saveAppLog'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m078LoadingOp === 'saveAppLog' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال لاگ کلاینت'}
+                      </button>
+                    </div>
+
+                    {/* 4. help.setBotUpdatesStatus */}
+                    <form
+                      onSubmit={handleM078SetBotUpdatesStatus}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۴. وضعیت آپدیت‌های ربات (setBotUpdatesStatus)</span>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={m078BotPendingCount}
+                          onChange={(e) => setM078BotPendingCount(e.target.value)}
+                          placeholder="تعداد معوق..."
+                          className="w-1/3 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m078BotMessage}
+                          onChange={(e) => setM078BotMessage(e.target.value)}
+                          placeholder="پیام وضعیت..."
+                          className="w-2/3 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m078LoadingOp === 'setBotUpdatesStatus'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m078LoadingOp === 'setBotUpdatesStatus' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت وضعیت آپدیت'}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>

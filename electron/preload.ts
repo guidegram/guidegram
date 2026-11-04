@@ -2747,6 +2747,14 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:help:get-terms-of-service-update-raw', { accountId }),
   helpGetTimezonesListRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:help:get-timezones-list-raw', { accountId, ...params }),
+  helpGetUserInfoRaw: (accountId: string, params: { userId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-user-info-raw', { accountId, ...params }),
+  helpHidePromoDataRaw: (accountId: string, params: { peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:hide-promo-data-raw', { accountId, ...params }),
+  helpSaveAppLogRaw: (accountId: string, params: { events?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:save-app-log-raw', { accountId, ...params }),
+  helpSetBotUpdatesStatusRaw: (accountId: string, params: { pendingUpdatesCount?: number; message?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:set-bot-updates-status-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

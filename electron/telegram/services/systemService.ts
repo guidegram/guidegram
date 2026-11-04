@@ -533,8 +533,8 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.setBotUpdatesStatus',
-        'pending_updates_count': pendingUpdatesCount,
-        'message': message,
+        pendingUpdatesCount: pendingUpdatesCount ?? 0,
+        message: message || '',
       })
     } catch (err) {
       Logger.warn('[SystemService] help.setBotUpdatesStatus error:', err)
@@ -613,18 +613,6 @@ export class SystemService {
     }
   }
 
-  public async help_saveAppLog(holder: RpcClientHolder, events?: any): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'help.saveAppLog',
-        'events': events,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] help.saveAppLog error:', err)
-      return null
-    }
-  }
-
   public async help_getPassportConfig(holder: RpcClientHolder, hash?: number): Promise<any> {
     try {
       return await holder.client.call({
@@ -648,11 +636,12 @@ export class SystemService {
     }
   }
 
-  public async help_getUserInfo(holder: RpcClientHolder, accountId: string, userIdId?: string): Promise<any> {
+  public async help_getUserInfo(holder: RpcClientHolder, accountId: string, userId?: string): Promise<any> {
     try {
+      const inputUser = userId ? await this.toInputUser(accountId, userId) : { _: 'inputUserSelf' as const }
       return await holder.client.call({
         _: 'help.getUserInfo',
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
+        userId: inputUser,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getUserInfo error:', err)
@@ -688,12 +677,43 @@ export class SystemService {
 
   public async help_hidePromoData(holder: RpcClientHolder, accountId: string, peerId?: string): Promise<any> {
     try {
+      const inputPeer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' as const }
       return await holder.client.call({
         _: 'help.hidePromoData',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        peer: inputPeer,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.hidePromoData error:', err)
+      return null
+    }
+  }
+
+  public async help_saveAppLog(holder: RpcClientHolder, events?: any[]): Promise<any> {
+    try {
+      const formattedEvents = Array.isArray(events) && events.length > 0
+        ? events.map(ev => ({
+            _: 'inputAppEvent' as const,
+            time: ev.time ?? Date.now() / 1000,
+            type: ev.type || 'app_event',
+            peer: BigInt(ev.peer || 0),
+            data: typeof ev.data === 'object' && ev.data?._ ? ev.data : { _: 'jsonString' as const, value: typeof ev.data === 'string' ? ev.data : JSON.stringify(ev.data || {}) },
+          }))
+        : [
+            {
+              _: 'inputAppEvent' as const,
+              time: Date.now() / 1000,
+              type: 'guidegram_ping',
+              peer: BigInt(0),
+              data: { _: 'jsonString' as const, value: '{"status":"ok"}' },
+            },
+          ]
+
+      return await holder.client.call({
+        _: 'help.saveAppLog',
+        events: formattedEvents,
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] help.saveAppLog error:', err)
       return null
     }
   }
