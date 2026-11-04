@@ -22827,6 +22827,88 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_exportGroupCallInvite(holder as any, params)
   }
+
+  // Layer 232 Phone Suite (Microphase 109)
+  public async phoneGetCallConfigRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getCallConfig(holder as any, params)
+  }
+
+  public async phoneGetGroupCallRaw(
+    accountId: string,
+    params: {
+      call: any
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupCall(holder as any, params)
+  }
+
+  public async phoneGetGroupCallChainBlocksRaw(
+    accountId: string,
+    params: {
+      call: any
+      subChainId?: number
+      offset?: number
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupCallChainBlocks(holder as any, params)
+  }
+
+  public async phoneGetGroupCallJoinAsRaw(
+    accountId: string,
+    params: {
+      peerId?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupCallJoinAs(holder as any, accountId, params)
+  }
+
+  public async phoneGetGroupCallStarsRaw(
+    accountId: string,
+    params: {
+      call: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupCallStars(holder as any, params)
+  }
+
+  public async phoneGetGroupCallStreamChannelsRaw(
+    accountId: string,
+    params: {
+      call: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupCallStreamChannels(holder as any, params)
+  }
+
+  public async phoneGetGroupCallStreamRtmpUrlRaw(
+    accountId: string,
+    params: {
+      peerId: string
+      revoke?: boolean
+      liveStory?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_getGroupCallStreamRtmpUrl(holder as any, accountId, params)
+  }
 }
 
 

@@ -32,6 +32,11 @@ import {
   MessageSquare,
   Share2,
   Copy,
+  Star,
+  Server,
+  Layers,
+  Key,
+  ExternalLink,
 } from 'lucide-react'
 import { GroupCallInfo, GroupCallParticipantItem } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -127,6 +132,18 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   // 6: Export Group Call Invite
   const [exportCanSelfUnmute, setExportCanSelfUnmute] = useState(true)
   const [exportedInviteLink, setExportedInviteLink] = useState<string | null>(null)
+
+  // Microphase 109: Phone Domain Suite Part 3 States
+  const [callConfigData, setCallConfigData] = useState<any | null>(null)
+  const [fetchedCallDetails, setFetchedCallDetails] = useState<any | null>(null)
+  const [chainSubChainId, setChainSubChainId] = useState('0')
+  const [chainBlocksResult, setChainBlocksResult] = useState<any | null>(null)
+  const [joinAsPeersResult, setJoinAsPeersResult] = useState<any[] | null>(null)
+  const [groupCallStarsResult, setGroupCallStarsResult] = useState<any | null>(null)
+  const [streamChannelsResult, setStreamChannelsResult] = useState<any[] | null>(null)
+  const [rtmpRevoke, setRtmpRevoke] = useState(false)
+  const [rtmpLiveStory, setRtmpLiveStory] = useState(false)
+  const [rtmpStreamInfo, setRtmpStreamInfo] = useState<{ url?: string; key?: string } | null>(null)
 
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
@@ -777,6 +794,199 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Microphase 109: 1. Get Call Config (phone.getCallConfig)
+  const handleGetCallConfig = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_call_config')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetCallConfigRaw?.(accountId)
+      setLastOpResult(res)
+      setCallConfigData(res)
+      setSuccessMsg('پیکربندی تماس‌های صوتی و سرورهای رفلکتور دریافت شد (phone.getCallConfig)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getCallConfig error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت کانفیگ تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 109: 2. Get Group Call Details (phone.getGroupCall)
+  const handleGetGroupCall = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_group_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetGroupCallRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        limit: 50,
+      })
+      setLastOpResult(res)
+      setFetchedCallDetails(res)
+      if (res?.call) setCallInfo(res.call)
+      if (Array.isArray(res?.participants)) setParticipants(res.participants)
+      setSuccessMsg('اطلاعات تفصیلی تماس گروهی به‌روزرسانی شد (phone.getGroupCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupCall error:', err)
+      setErrorMsg(err?.message || 'خطا در استعلام اطلاعات تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 109: 3. Get Group Call Chain Blocks (phone.getGroupCallChainBlocks)
+  const handleGetGroupCallChainBlocks = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_chain_blocks')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetGroupCallChainBlocksRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        subChainId: Number(chainSubChainId || 0),
+        offset: 0,
+        limit: 10,
+      })
+      setLastOpResult(res)
+      setChainBlocksResult(res)
+      setSuccessMsg('بلاک‌های زنجیره تماس گروهی با موفقیت دریافت شدند (phone.getGroupCallChainBlocks)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupCallChainBlocks error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت بلاک‌های زنجیره تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 109: 4. Get Group Call Join As Peers (phone.getGroupCallJoinAs)
+  const handleGetGroupCallJoinAs = async () => {
+    if (!accountId || !chatId) {
+      setErrorMsg('چت فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_join_as')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetGroupCallJoinAsRaw?.(accountId, {
+        peer: chatId,
+      })
+      setLastOpResult(res)
+      const peers = res?.peers || res?.joinAsPeers || (Array.isArray(res) ? res : [])
+      setJoinAsPeersResult(peers)
+      setSuccessMsg(`هویت‌های مجاز جهت پیوستن دریافت شد (${peers.length} هویت) (phone.getGroupCallJoinAs)`)
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupCallJoinAs error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت هویت‌های پیوستن به تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 109: 5. Get Group Call Stars (phone.getGroupCallStars)
+  const handleGetGroupCallStars = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_call_stars')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetGroupCallStarsRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+      })
+      setLastOpResult(res)
+      setGroupCallStarsResult(res)
+      const starsCount = res?.stars || res?.count || 0
+      setSuccessMsg(`موجودی استارز تماس دریافت شد: ${starsCount} Stars (phone.getGroupCallStars)`)
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupCallStars error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت استارز تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 109: 6. Get Group Call Stream Channels (phone.getGroupCallStreamChannels)
+  const handleGetGroupCallStreamChannels = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_stream_channels')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetGroupCallStreamChannelsRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+      })
+      setLastOpResult(res)
+      const channels = res?.channels || (Array.isArray(res) ? res : [])
+      setStreamChannelsResult(channels)
+      setSuccessMsg(`کانال‌های استریم فعال وب‌کال دریافت شدند: ${channels.length} کانال (phone.getGroupCallStreamChannels)`)
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupCallStreamChannels error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت کانال‌های استریم تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 109: 7. Get Group Call Stream RTMP URL (phone.getGroupCallStreamRtmpUrl)
+  const handleGetGroupCallStreamRtmpUrl = async () => {
+    if (!accountId || !chatId) {
+      setErrorMsg('چت فعال یافت نشد')
+      return
+    }
+    setLoadingOp('get_stream_rtmp')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneGetGroupCallStreamRtmpUrlRaw?.(accountId, {
+        peer: chatId,
+        revoke: rtmpRevoke,
+        liveStory: rtmpLiveStory,
+      })
+      setLastOpResult(res)
+      const info = {
+        url: res?.url || res?.streamUrl || '',
+        key: res?.key || res?.streamKey || '',
+      }
+      setRtmpStreamInfo(info)
+      setSuccessMsg(
+        rtmpRevoke
+          ? 'آدرس و کلید استریم RTMP بازنشانی (Revoke) شد (phone.getGroupCallStreamRtmpUrl)'
+          : 'آدرس و کلید اینجست RTMP با موفقیت دریافت شد (phone.getGroupCallStreamRtmpUrl)'
+      )
+    } catch (err: any) {
+      console.warn('[GroupCallModal] getGroupCallStreamRtmpUrl error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت آدرس اینجست RTMP')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -1222,6 +1432,203 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Microphase 109: RTMP Stream Ingest (OBS / Live Streaming) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                        <Radio className="w-3.5 h-3.5 text-accent-cyan" />
+                        <span>پخش زنده با نرم‌افزارهای استریمینگ RTMP (phone.getGroupCallStreamRtmpUrl)</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rtmpLiveStory}
+                            onChange={(e) => setRtmpLiveStory(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                          />
+                          <span>استوری زنده (Live Story)</span>
+                        </label>
+                        <label className="flex items-center gap-1 text-[11px] text-rose-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rtmpRevoke}
+                            onChange={(e) => setRtmpRevoke(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                          />
+                          <span>باطل کردن کلید قبلی (Revoke)</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleGetGroupCallStreamRtmpUrl}
+                        disabled={loadingOp === 'get_stream_rtmp'}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {loadingOp === 'get_stream_rtmp' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
+                        <span>دریافت آدرس سرور و کلید استریم</span>
+                      </button>
+                      <span className="text-[11px] text-neutral-400">
+                        مناسب اتصال مستقیم به OBS Studio، Wirecast و پنل‌های استریمینگ
+                      </span>
+                    </div>
+                    {rtmpStreamInfo && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 bg-black/30 p-2.5 rounded-xl border border-white/5">
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-neutral-400">آدرس سرور استریم (Server URL):</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              readOnly
+                              value={rtmpStreamInfo.url || 'rtmp://...'}
+                              className="w-full px-2 py-1 rounded bg-black/50 border border-white/10 text-xs text-neutral-200 font-mono select-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard?.writeText(rtmpStreamInfo.url || '')}
+                              className="p-1 rounded bg-white/10 hover:bg-white/20 text-neutral-300"
+                              title="کپی آدرس سرور"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-neutral-400">کلید استریم (Stream Key):</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              readOnly
+                              type="password"
+                              value={rtmpStreamInfo.key || ''}
+                              className="w-full px-2 py-1 rounded bg-black/50 border border-white/10 text-xs text-neutral-200 font-mono select-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard?.writeText(rtmpStreamInfo.key || '')}
+                              className="p-1 rounded bg-white/10 hover:bg-white/20 text-neutral-300"
+                              title="کپی کلید استریم"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Microphase 109: Stars Balance & Details Refresh */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Star className="w-3.5 h-3.5 text-amber-400" />
+                        <span>استارز و جزئیات تماس (phone.getGroupCallStars & getGroupCall)</span>
+                      </div>
+                      {groupCallStarsResult && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold">
+                          ⭐ {groupCallStarsResult?.stars || groupCallStarsResult?.count || 0} Stars
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleGetGroupCallStars}
+                        disabled={loadingOp === 'get_call_stars'}
+                        className="flex-1 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'get_call_stars' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Star className="w-3 h-3" />}
+                        <span>استعلام Stars</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGetGroupCall}
+                        disabled={loadingOp === 'get_group_call'}
+                        className="flex-1 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-neutral-200 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'get_group_call' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        <span>بروزرسانی داده‌ها</span>
+                      </button>
+                    </div>
+                    {fetchedCallDetails && (
+                      <div className="text-[11px] text-neutral-400 bg-black/30 p-2 rounded-xl border border-white/5 space-y-0.5">
+                        <div>شرکت‌کنندگان در سرور: <span className="text-neutral-200 font-mono">{fetchedCallDetails?.participants_count || fetchedCallDetails?.participants?.length || 0}</span></div>
+                        <div>نسخه تماس: <span className="text-neutral-200 font-mono">{fetchedCallDetails?.call?.version || 'نامشخص'}</span></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Microphase 109: Stream Channels & Join As */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>کانال‌های استریم و هویت‌های ورود (StreamChannels & JoinAs)</span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleGetGroupCallStreamChannels}
+                        disabled={loadingOp === 'get_stream_channels'}
+                        className="flex-1 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'get_stream_channels' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />}
+                        <span>کانال‌های استریم</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGetGroupCallJoinAs}
+                        disabled={loadingOp === 'get_join_as'}
+                        className="flex-1 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'get_join_as' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Users className="w-3 h-3" />}
+                        <span>هویت‌های ورود</span>
+                      </button>
+                    </div>
+                    {(streamChannelsResult || joinAsPeersResult) && (
+                      <div className="text-[11px] text-neutral-400 bg-black/30 p-2 rounded-xl border border-white/5 space-y-1">
+                        {streamChannelsResult && (
+                          <div>تعداد ترک‌های وب‌کال: <span className="text-neutral-200 font-mono">{streamChannelsResult.length} کانال</span></div>
+                        )}
+                        {joinAsPeersResult && (
+                          <div>هویت‌های قابل انتخاب: <span className="text-emerald-300 font-mono">{joinAsPeersResult.length} پروفایل/کانال</span></div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Microphase 109: Group Call Chain Blocks */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                        <Server className="w-3.5 h-3.5 text-purple-400" />
+                        <span>بلاک‌های زنجیره وضعیت تماس گروهی (phone.getGroupCallChainBlocks)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-neutral-400">Sub-Chain ID:</span>
+                        <input
+                          type="number"
+                          value={chainSubChainId}
+                          onChange={(e) => setChainSubChainId(e.target.value)}
+                          className="w-16 px-2 py-0.5 rounded bg-black/40 border border-white/10 text-xs text-neutral-200 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGetGroupCallChainBlocks}
+                          disabled={loadingOp === 'get_chain_blocks'}
+                          className="px-3 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {loadingOp === 'get_chain_blocks' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Server className="w-3 h-3" />}
+                          <span>دریافت بلاک‌های زنجیره</span>
+                        </button>
+                      </div>
+                    </div>
+                    {chainBlocksResult && (
+                      <div className="text-[11px] text-neutral-300 bg-black/30 p-2 rounded-xl border border-white/5 font-mono">
+                        آپدیت‌های زنجیره: {JSON.stringify(chainBlocksResult).slice(0, 160)}...
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1360,6 +1767,35 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Microphase 109: Call Config Inspector (phone.getCallConfig) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                        <Settings className="w-3.5 h-3.5 text-accent-cyan" />
+                        <span>پیکربندی سرورها و رفلکتورهای VoIP تلگرام (phone.getCallConfig)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGetCallConfig}
+                        disabled={loadingOp === 'get_call_config'}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {loadingOp === 'get_call_config' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Settings className="w-3.5 h-3.5" />}
+                        <span>استعلام کانفیگ شبکه (phone.getCallConfig)</span>
+                      </button>
+                    </div>
+                    {callConfigData && (
+                      <div className="text-[11px] text-neutral-300 bg-black/30 p-2.5 rounded-xl border border-white/5 font-mono space-y-1">
+                        <div className="text-neutral-400">تنظیمات JSON رفلکتورها:</div>
+                        <pre className="text-[10px] text-cyan-300 overflow-x-auto max-h-24 p-1 bg-black/40 rounded">
+                          {typeof callConfigData === 'string'
+                            ? callConfigData
+                            : JSON.stringify(callConfigData, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

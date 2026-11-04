@@ -1163,7 +1163,7 @@ export class SystemService {
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.getCallConfig error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1447,16 +1447,22 @@ export class SystemService {
     }
   }
 
-  public async phone_getGroupCall(holder: RpcClientHolder, call?: any, limit?: number): Promise<any> {
+  public async phone_getGroupCall(holder: RpcClientHolder, callOrParams?: any, limit?: number): Promise<any> {
     try {
+      let call = callOrParams
+      let lim = limit ?? 100
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        lim = callOrParams.limit ?? 100
+      }
       return await holder.client.call({
         _: 'phone.getGroupCall',
-        'call': call,
-        'limit': limit,
+        call: this.toInputGroupCall(call),
+        limit: Number(lim || 100),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.getGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1643,15 +1649,96 @@ export class SystemService {
     }
   }
 
-  public async phone_getGroupCallJoinAs(holder: RpcClientHolder, accountId: string, peerId?: string): Promise<any> {
+  public async phone_getGroupCallJoinAs(holder: RpcClientHolder, accountId: string, peerOrParams?: any): Promise<any> {
     try {
+      const peerId = (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && (peerOrParams.peer !== undefined || peerOrParams.peerId !== undefined))
+        ? (peerOrParams.peer ?? peerOrParams.peerId)
+        : peerOrParams
       return await holder.client.call({
         _: 'phone.getGroupCallJoinAs',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' },
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.getGroupCallJoinAs error:', err)
-      return null
+      throw err
+    }
+  }
+
+  public async phone_getGroupCallChainBlocks(
+    holder: RpcClientHolder,
+    paramsOrCallbackOrCall?: any,
+    subChainId?: number,
+    offset?: number,
+    limit?: number
+  ): Promise<any> {
+    try {
+      let p: any = {}
+      if (typeof paramsOrCallbackOrCall === 'object' && paramsOrCallbackOrCall !== null && !paramsOrCallbackOrCall._ && paramsOrCallbackOrCall.call !== undefined) {
+        p = paramsOrCallbackOrCall
+      } else {
+        p = {
+          call: paramsOrCallbackOrCall,
+          subChainId,
+          offset,
+          limit,
+        }
+      }
+      return await holder.client.call({
+        _: 'phone.getGroupCallChainBlocks',
+        call: this.toInputGroupCall(p.call),
+        sub_chain_id: Number(p.subChainId ?? p.sub_chain_id ?? 0),
+        offset: Number(p.offset || 0),
+        limit: Number(p.limit || 100),
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] phone.getGroupCallChainBlocks error:', err)
+      throw err
+    }
+  }
+
+  public async phone_getGroupCallStreamChannels(holder: RpcClientHolder, callOrParams?: any): Promise<any> {
+    try {
+      const call = (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined)
+        ? callOrParams.call
+        : callOrParams
+      return await holder.client.call({
+        _: 'phone.getGroupCallStreamChannels',
+        call: this.toInputGroupCall(call),
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] phone.getGroupCallStreamChannels error:', err)
+      throw err
+    }
+  }
+
+  public async phone_getGroupCallStreamRtmpUrl(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrPeer?: any,
+    revoke?: boolean,
+    liveStory?: boolean
+  ): Promise<any> {
+    try {
+      let p: any = {}
+      if (typeof paramsOrPeer === 'object' && paramsOrPeer !== null && !paramsOrPeer._ && (paramsOrPeer.peer !== undefined || paramsOrPeer.peerId !== undefined)) {
+        p = paramsOrPeer
+      } else {
+        p = {
+          peer: paramsOrPeer,
+          revoke,
+          liveStory,
+        }
+      }
+      const peerId = p.peer ?? p.peerId
+      return await holder.client.call({
+        _: 'phone.getGroupCallStreamRtmpUrl',
+        live_story: !!(p.liveStory ?? p.live_story),
+        peer: await this.resolveInputPeer(accountId, peerId),
+        revoke: !!p.revoke,
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] phone.getGroupCallStreamRtmpUrl error:', err)
+      throw err
     }
   }
 
@@ -1735,32 +1822,6 @@ export class SystemService {
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.leaveGroupCallPresentation error:', err)
-      return null
-    }
-  }
-
-  public async phone_getGroupCallStreamChannels(holder: RpcClientHolder, call?: any): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'phone.getGroupCallStreamChannels',
-        'call': call,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] phone.getGroupCallStreamChannels error:', err)
-      return null
-    }
-  }
-
-  public async phone_getGroupCallStreamRtmpUrl(holder: RpcClientHolder, accountId: string, liveStory?: boolean, peerId?: string, revoke?: boolean): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'phone.getGroupCallStreamRtmpUrl',
-        'live_story': liveStory,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'revoke': revoke,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] phone.getGroupCallStreamRtmpUrl error:', err)
       return null
     }
   }
@@ -1902,21 +1963,6 @@ export class SystemService {
     }
   }
 
-  public async phone_getGroupCallChainBlocks(holder: RpcClientHolder, call?: any, subChainId?: number, offset?: number, limit?: number): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'phone.getGroupCallChainBlocks',
-        'call': call,
-        'sub_chain_id': subChainId,
-        'offset': offset,
-        'limit': limit,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] phone.getGroupCallChainBlocks error:', err)
-      return null
-    }
-  }
-
   public async phone_sendGroupCallMessage(holder: RpcClientHolder, accountId: string, call?: any, randomId?: bigint | number, message?: any, allowPaidStars?: bigint | number, sendAsId?: string): Promise<any> {
     try {
       return await holder.client.call({
@@ -1948,15 +1994,18 @@ export class SystemService {
 
 
 
-  public async phone_getGroupCallStars(holder: RpcClientHolder, call?: any): Promise<any> {
+  public async phone_getGroupCallStars(holder: RpcClientHolder, callOrParams?: any): Promise<any> {
     try {
+      const call = (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined)
+        ? callOrParams.call
+        : callOrParams
       return await holder.client.call({
         _: 'phone.getGroupCallStars',
-        'call': call,
+        call: this.toInputGroupCall(call),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.getGroupCallStars error:', err)
-      return null
+      throw err
     }
   }
 

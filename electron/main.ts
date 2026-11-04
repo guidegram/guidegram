@@ -10547,6 +10547,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Phone Suite (Microphase 109)
+  ipcMain.handle('telegram:phone:get-call-config-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetCallConfigRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetCallConfigRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:get-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:get-group-call-chain-blocks-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupCallChainBlocksRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupCallChainBlocksRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:get-group-call-join-as-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupCallJoinAsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupCallJoinAsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:get-group-call-stars-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupCallStarsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupCallStarsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:get-group-call-stream-channels-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupCallStreamChannelsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupCallStreamChannelsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:get-group-call-stream-rtmp-url-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneGetGroupCallStreamRtmpUrlRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneGetGroupCallStreamRtmpUrlRaw error:', err)
+      throw err
+    }
+  })
+
 
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {

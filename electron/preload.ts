@@ -3181,6 +3181,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:edit-group-call-title-raw', { accountId, ...params }),
   phoneExportGroupCallInviteRaw: (accountId: string, params: { call: any; canSelfUnmute?: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:export-group-call-invite-raw', { accountId, ...params }),
+  // Layer 232 Phone Suite (Microphase 109)
+  phoneGetCallConfigRaw: (accountId: string, params?: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-call-config-raw', { accountId, ...params }),
+  phoneGetGroupCallRaw: (accountId: string, params: { call: any; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-call-raw', { accountId, ...params }),
+  phoneGetGroupCallChainBlocksRaw: (accountId: string, params: { call: any; subChainId?: number; offset?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-call-chain-blocks-raw', { accountId, ...params }),
+  phoneGetGroupCallJoinAsRaw: (accountId: string, params: { peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-call-join-as-raw', { accountId, ...params }),
+  phoneGetGroupCallStarsRaw: (accountId: string, params: { call: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-call-stars-raw', { accountId, ...params }),
+  phoneGetGroupCallStreamChannelsRaw: (accountId: string, params: { call: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-call-stream-channels-raw', { accountId, ...params }),
+  phoneGetGroupCallStreamRtmpUrlRaw: (accountId: string, params: { peerId: string; revoke?: boolean; liveStory?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:get-group-call-stream-rtmp-url-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (
