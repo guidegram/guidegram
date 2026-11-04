@@ -21050,6 +21050,50 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.channelsService.setMainProfileTab(holder as any, accountId, params.channelId, params.tabName)
   }
+
+  // Layer 232 Channels Domain Part 7 (Microphase 085)
+  public async channelsSetStickersRaw(accountId: string, params: { channelId: string; stickerset?: any }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const stickerset = params.stickerset || { _: 'inputStickerSetEmpty' }
+    return this.channelsService.setStickers(holder as any, accountId, params.channelId, stickerset)
+  }
+
+  public async channelsToggleAntiSpamRaw(accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleAntiSpam(holder as any, accountId, params.channelId, params.enabled)
+  }
+
+  public async channelsToggleAutotranslationRaw(accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleAutotranslation(holder as any, accountId, params.channelId, params.enabled)
+  }
+
+  public async channelsToggleForumRaw(accountId: string, params: { channelId: string; enabled: boolean; tabs?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleForum(holder as any, accountId, params.channelId, params.enabled, params.tabs)
+  }
+
+  public async channelsToggleJoinRequestRaw(accountId: string, params: { channelId: string; enabled: boolean; applyToInvites?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleJoinRequest(holder as any, accountId, params.channelId, params.enabled, params.applyToInvites)
+  }
+
+  public async channelsToggleJoinToSendRaw(accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleJoinToSend(holder as any, accountId, params.channelId, params.enabled)
+  }
+
+  public async channelsToggleParticipantsHiddenRaw(accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleParticipantsHidden(holder as any, accountId, params.channelId, params.enabled)
+  }
 }
 
 

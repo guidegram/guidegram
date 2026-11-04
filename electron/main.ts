@@ -9110,6 +9110,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 085 IPC Handlers (Channels Domain Part 7)
+  ipcMain.handle('telegram:channels:set-stickers-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsSetStickersRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsSetStickersRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-anti-spam-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleAntiSpamRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleAntiSpamRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-autotranslation-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleAutotranslationRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleAutotranslationRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-forum-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleForumRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleForumRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-join-request-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleJoinRequestRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleJoinRequestRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-join-to-send-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleJoinToSendRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleJoinToSendRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-participants-hidden-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleParticipantsHiddenRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleParticipantsHiddenRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

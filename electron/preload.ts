@@ -2849,6 +2849,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:set-emoji-stickers-raw', { accountId, ...params }),
   channelsSetMainProfileTabRaw: (accountId: string, params: { channelId: string; tabName?: string }): Promise<boolean> =>
     ipcRenderer.invoke('telegram:channels:set-main-profile-tab-raw', { accountId, ...params }),
+  channelsSetStickersRaw: (accountId: string, params: { channelId: string; stickerset?: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:set-stickers-raw', { accountId, ...params }),
+  channelsToggleAntiSpamRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-anti-spam-raw', { accountId, ...params }),
+  channelsToggleAutotranslationRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-autotranslation-raw', { accountId, ...params }),
+  channelsToggleForumRaw: (accountId: string, params: { channelId: string; enabled: boolean; tabs?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-forum-raw', { accountId, ...params }),
+  channelsToggleJoinRequestRaw: (accountId: string, params: { channelId: string; enabled: boolean; applyToInvites?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-join-request-raw', { accountId, ...params }),
+  channelsToggleJoinToSendRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-join-to-send-raw', { accountId, ...params }),
+  channelsToggleParticipantsHiddenRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-participants-hidden-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

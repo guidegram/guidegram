@@ -9178,6 +9178,169 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 085 State & Handlers (Channels Domain Part 7)
+  const [m085Status, setM085Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m085LoadingOp, setM085LoadingOp] = useState<string | null>(null)
+  const [m085ChannelId, setM085ChannelId] = useState('')
+  const [m085StickersShortName, setM085StickersShortName] = useState('')
+
+  const handleM085SetStickers = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsSetStickersRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('setStickers')
+    setM085Status(null)
+    try {
+      const stickerset = m085StickersShortName.trim()
+        ? { _: 'inputStickerSetShortName', shortName: m085StickersShortName.trim() }
+        : { _: 'inputStickerSetEmpty' }
+      const ok = await window.guidegram.channelsSetStickersRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        stickerset,
+      })
+      if (ok) {
+        setM085Status({
+          type: 'success',
+          message: m085StickersShortName.trim() ? 'پک استیکر گروه با موفقیت تنظیم شد' : 'پک استیکر گروه حذف شد',
+        })
+      } else {
+        setM085Status({ type: 'error', message: 'عدم موفقیت در تنظیم استیکر گروه' })
+      }
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.setStickers' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
+  const handleM085ToggleAntiSpam = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleAntiSpamRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('toggleAntiSpam')
+    setM085Status(null)
+    try {
+      await window.guidegram.channelsToggleAntiSpamRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        enabled,
+      })
+      setM085Status({
+        type: 'success',
+        message: enabled ? 'آنتی‌اسپم پیشرفته تلگرام فعال شد' : 'آنتی‌اسپم غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.toggleAntiSpam' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
+  const handleM085ToggleAutotranslation = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleAutotranslationRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('toggleAutotranslation')
+    setM085Status(null)
+    try {
+      await window.guidegram.channelsToggleAutotranslationRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        enabled,
+      })
+      setM085Status({
+        type: 'success',
+        message: enabled ? 'ترجمه خودکار سراسری کانال فعال شد' : 'ترجمه خودکار غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.toggleAutotranslation' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
+  const handleM085ToggleForum = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleForumRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('toggleForum')
+    setM085Status(null)
+    try {
+      await window.guidegram.channelsToggleForumRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        enabled,
+        tabs: true,
+      })
+      setM085Status({
+        type: 'success',
+        message: enabled ? 'حالت فروم (تاپیک‌ها) برای سوپرگروه فعال شد' : 'حالت فروم غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.toggleForum' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
+  const handleM085ToggleJoinRequest = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleJoinRequestRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('toggleJoinRequest')
+    setM085Status(null)
+    try {
+      await window.guidegram.channelsToggleJoinRequestRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        enabled,
+        applyToInvites: true,
+      })
+      setM085Status({
+        type: 'success',
+        message: enabled ? 'تایید عضویت توسط ادمین (Join Request) فعال شد' : 'تایید عضویت غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.toggleJoinRequest' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
+  const handleM085ToggleJoinToSend = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleJoinToSendRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('toggleJoinToSend')
+    setM085Status(null)
+    try {
+      await window.guidegram.channelsToggleJoinToSendRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        enabled,
+      })
+      setM085Status({
+        type: 'success',
+        message: enabled ? 'اجبار عضویت قبل از ارسال پیام فعال شد' : 'اجبار عضویت غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.toggleJoinToSend' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
+  const handleM085ToggleParticipantsHidden = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleParticipantsHiddenRaw || !m085ChannelId.trim()) return
+    setM085LoadingOp('toggleParticipantsHidden')
+    setM085Status(null)
+    try {
+      await window.guidegram.channelsToggleParticipantsHiddenRaw(targetId, {
+        channelId: m085ChannelId.trim(),
+        enabled,
+      })
+      setM085Status({
+        type: 'success',
+        message: enabled ? 'مخفی‌سازی لیست اعضای گروه فعال شد' : 'لیست اعضا برای همه نمایان شد',
+      })
+    } catch (err: any) {
+      setM085Status({ type: 'error', message: err?.message || 'خطا در channels.toggleParticipantsHidden' })
+    } finally {
+      setM085LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -23352,6 +23515,244 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         >
                           تب استوری‌ها
                         </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Microphase 085: Channels Domain Suite Part 7 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۸۵: استیکر گروه، آنتی‌اسپم، ترجمه خودکار، فروم و حریم خصوصی اعضا (Channels Part 7)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    تنظیم پک استیکر، آنتی‌اسپم هوشمند، ترجمه خودکار، تبدیل به فروم (تاپیک)، تایید عضویت ادمین، اجبار عضویت برای پیام و مخفی‌سازی لیست اعضا:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m085Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between border ${
+                          m085Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m085Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m085Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM085Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال/گروه:</span>
+                    <input
+                      type="text"
+                      value={m085ChannelId}
+                      onChange={(e) => setM085ChannelId(e.target.value)}
+                      placeholder="مثال: -1001234567890 یا username..."
+                      className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                    />
+                  </div>
+
+                  {/* Honest Empty State */}
+                  {!m085ChannelId.trim() && (
+                    <div className="p-3 rounded-xl bg-dark-900/40 border border-dashed border-white/10 text-center">
+                      <p className="text-[11px] text-gray-500">
+                        برای اعمال تنظیمات سوپرگروه یا کانال، ابتدا شناسه عددی یا نام کاربری آن را وارد کنید.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Operations Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.setStickers */}
+                    <form onSubmit={handleM085SetStickers} className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. تنظیم استیکر گروه (setStickers)</span>
+                      <input
+                        type="text"
+                        value={m085StickersShortName}
+                        onChange={(e) => setM085StickersShortName(e.target.value)}
+                        placeholder="نام کوتاه پک (خالی = حذف)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m085LoadingOp === 'setStickers' || !m085ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m085LoadingOp === 'setStickers' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت پک استیکر'}
+                      </button>
+                    </form>
+
+                    {/* 2. channels.toggleAntiSpam */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. آنتی‌اسپم تهاجمی (toggleAntiSpam)</span>
+                      <p className="text-[10px] text-gray-500">فیلتر پیشرفته اسپم توسط هوش مصنوعی سرورهای تلگرام</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleAntiSpam(true)}
+                          disabled={m085LoadingOp === 'toggleAntiSpam' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          {m085LoadingOp === 'toggleAntiSpam' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'فعال'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleAntiSpam(false)}
+                          disabled={m085LoadingOp === 'toggleAntiSpam' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          غیرفعال
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. channels.toggleAutotranslation */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۳. ترجمه خودکار (toggleAutotranslation)</span>
+                      <p className="text-[10px] text-gray-500">نمایش ترجمه بلادرنگ پیام‌ها برای همه اعضای کانال</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleAutotranslation(true)}
+                          disabled={m085LoadingOp === 'toggleAutotranslation' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          {m085LoadingOp === 'toggleAutotranslation' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'فعال'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleAutotranslation(false)}
+                          disabled={m085LoadingOp === 'toggleAutotranslation' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          غیرفعال
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 4. channels.toggleForum */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۴. حالت تاپیک‌ها/فروم (toggleForum)</span>
+                      <p className="text-[10px] text-gray-500">تبدیل سوپرگروه به انجمن با امکان ساخت موضوعات مجزا</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleForum(true)}
+                          disabled={m085LoadingOp === 'toggleForum' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          {m085LoadingOp === 'toggleForum' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'فعال‌سازی فروم'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleForum(false)}
+                          disabled={m085LoadingOp === 'toggleForum' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 border border-gray-500/30 text-gray-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          حالت عادی
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 5. channels.toggleJoinRequest */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. تایید عضویت ادمین (toggleJoinRequest)</span>
+                      <p className="text-[10px] text-gray-500">نیاز به تایید مدیران برای ورود افراد جدید</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleJoinRequest(true)}
+                          disabled={m085LoadingOp === 'toggleJoinRequest' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          {m085LoadingOp === 'toggleJoinRequest' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'فعال'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM085ToggleJoinRequest(false)}
+                          disabled={m085LoadingOp === 'toggleJoinRequest' || !m085ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          غیرفعال
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 6. channels.toggleJoinToSend & 7. toggleParticipantsHidden */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶ و ۷. قوانین ارسال و پنهان‌سازی اعضا</span>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[11px] text-gray-400">
+                          <span>اجبار عضویت قبل از چت:</span>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleM085ToggleJoinToSend(true)}
+                              disabled={m085LoadingOp === 'toggleJoinToSend' || !m085ChannelId.trim()}
+                              className="px-2 py-0.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 cursor-pointer disabled:opacity-40"
+                            >
+                              فعال
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleM085ToggleJoinToSend(false)}
+                              disabled={m085LoadingOp === 'toggleJoinToSend' || !m085ChannelId.trim()}
+                              className="px-2 py-0.5 rounded-lg bg-gray-600/20 hover:bg-gray-600/30 text-gray-400 border border-gray-500/30 cursor-pointer disabled:opacity-40"
+                            >
+                              خاموش
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-white/5">
+                          <span>مخفی‌سازی لیست اعضا:</span>
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleM085ToggleParticipantsHidden(true)}
+                              disabled={m085LoadingOp === 'toggleParticipantsHidden' || !m085ChannelId.trim()}
+                              className="px-2 py-0.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 cursor-pointer disabled:opacity-40"
+                            >
+                              مخفی
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleM085ToggleParticipantsHidden(false)}
+                              disabled={m085LoadingOp === 'toggleParticipantsHidden' || !m085ChannelId.trim()}
+                              className="px-2 py-0.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 cursor-pointer disabled:opacity-40"
+                            >
+                              نمایان
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
