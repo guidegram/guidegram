@@ -15,6 +15,10 @@ import {
   Sparkles,
   SlidersHorizontal,
   Search,
+  Edit3,
+  Image as ImageIcon,
+  Repeat,
+  Wand2,
 } from 'lucide-react'
 import { StickerSetItem, StickerItem } from '../types/telegram'
 import lottie from 'lottie-web'
@@ -153,6 +157,14 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
 
   const [removeDocId, setRemoveDocId] = useState('')
 
+  // Microphase 106: Stickers Domain Suite Part 2 States
+  const [renameTitle, setRenameTitle] = useState('')
+  const [suggestingShortName, setSuggestingShortName] = useState(false)
+  const [thumbDocId, setThumbDocId] = useState('')
+  const [replaceOldDocId, setReplaceOldDocId] = useState('')
+  const [replaceNewDocId, setReplaceNewDocId] = useState('')
+  const [replaceEmoji, setReplaceEmoji] = useState('⭐')
+
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -230,6 +242,35 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
       console.warn('[StickerPickerDrawer] checkShortName error:', err)
       setShortNameStatus('error')
       setErrorMsg(err?.message || 'خطا در استعلام نام کوتاه استیکر')
+    }
+  }
+
+  // Microphase 106: 1. Suggest Short Name (stickers.suggestShortName)
+  const handleSuggestShortName = async () => {
+    if (!accountId || !createTitle.trim()) {
+      setErrorMsg('برای پیشنهاد نام کوتاه، لطفاً ابتدا عنوان پَک را وارد کنید')
+      return
+    }
+    setSuggestingShortName(true)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.stickersSuggestShortNameRaw?.(accountId, {
+        title: createTitle.trim(),
+      })
+      const suggested = res?.shortName || res?.short_name || (typeof res === 'string' ? res : '')
+      if (suggested) {
+        setCreateShortName(suggested)
+        setShortNameStatus('available')
+        setSuccessMsg(`نام کوتاه پیشنهادی تلگرام: "${suggested}"`)
+      } else {
+        setSuccessMsg('نام کوتاهی از سوی تلگرام پیشنهاد نشد؛ نام دستی وارد کنید')
+      }
+    } catch (err: any) {
+      console.warn('[StickerPickerDrawer] suggestShortName error:', err)
+      setErrorMsg(err?.message || 'خطا در دریافت نام کوتاه پیشنهادی')
+    } finally {
+      setSuggestingShortName(false)
     }
   }
 
@@ -408,6 +449,94 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
     } catch (err: any) {
       console.warn('[StickerPickerDrawer] deleteStickerSet error:', err)
       setErrorMsg(err?.message || 'خطا در حذف پَک استیکر')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 106: 2. Rename Sticker Set (stickers.renameStickerSet)
+  const handleRenameStickerSet = async () => {
+    if (!accountId || !activeSetTarget || !renameTitle.trim()) {
+      setErrorMsg('انتخاب پَک فعال و عنوان جدید الزامی است')
+      return
+    }
+    setLoadingOp('rename_set')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.stickersRenameStickerSetRaw?.(accountId, {
+        stickerset: activeSetTarget,
+        title: renameTitle.trim(),
+      })
+      setLastOpResult(res)
+      setSuccessMsg(`عنوان پَک به "${renameTitle.trim()}" تغییر یافت (stickers.renameStickerSet)`)
+      loadInstalledSets()
+      setRenameTitle('')
+    } catch (err: any) {
+      console.warn('[StickerPickerDrawer] renameStickerSet error:', err)
+      setErrorMsg(err?.message || 'خطا در تغییر نام پَک استیکر')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 106: 3. Set Sticker Set Thumb (stickers.setStickerSetThumb)
+  const handleSetStickerSetThumb = async () => {
+    if (!accountId || !activeSetTarget || !thumbDocId.trim()) {
+      setErrorMsg('انتخاب پَک فعال و شناسه سند کاور (Doc ID) الزامی است')
+      return
+    }
+    setLoadingOp('set_thumb')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.stickersSetStickerSetThumbRaw?.(accountId, {
+        stickerset: activeSetTarget,
+        thumb: { id: BigInt(thumbDocId.trim()) },
+      })
+      setLastOpResult(res)
+      setSuccessMsg('کاور/بندانگشتی پَک استیکر با موفقیت بروز شد (stickers.setStickerSetThumb)')
+      loadInstalledSets()
+      setThumbDocId('')
+    } catch (err: any) {
+      console.warn('[StickerPickerDrawer] setStickerSetThumb error:', err)
+      setErrorMsg(err?.message || 'خطا در تنظیم کاور پَک استیکر')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 106: 4. Replace Sticker (stickers.replaceSticker)
+  const handleReplaceSticker = async () => {
+    if (!accountId || !replaceOldDocId.trim() || !replaceNewDocId.trim()) {
+      setErrorMsg('شناسه استیکر فعلی و استیکر جایگزین هر دو الزامی هستند')
+      return
+    }
+    setLoadingOp('replace_sticker')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.stickersReplaceStickerRaw?.(accountId, {
+        sticker: { id: BigInt(replaceOldDocId.trim()) },
+        newSticker: {
+          document: { id: BigInt(replaceNewDocId.trim()) },
+          emoji: replaceEmoji.trim() || '⭐',
+        },
+      })
+      setLastOpResult(res)
+      setSuccessMsg('استیکر با موفقیت جایگزین شد (stickers.replaceSticker)')
+      if (activeSetId) {
+        setCachedSetDetails((prev) => {
+          const next = { ...prev }
+          delete next[activeSetId]
+          return next
+        })
+      }
+      setReplaceOldDocId('')
+      setReplaceNewDocId('')
+    } catch (err: any) {
+      console.warn('[StickerPickerDrawer] replaceSticker error:', err)
+      setErrorMsg(err?.message || 'خطا در جایگزینی استیکر')
     } finally {
       setLoadingOp(null)
     }
@@ -639,6 +768,20 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
                     )}
                     <span>استعلام</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleSuggestShortName}
+                    disabled={suggestingShortName}
+                    className="px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[11px] font-medium transition-colors cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1"
+                    title="پیشنهاد خودکار نام کوتاه از روی عنوان (stickers.suggestShortName)"
+                  >
+                    {suggestingShortName ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3 h-3" />
+                    )}
+                    <span>پیشنهاد</span>
+                  </button>
                 </div>
 
                 {shortNameStatus === 'available' && (
@@ -739,6 +882,66 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
                   ابتدا یک پَک استیکر را از نوار پایینی انتخاب کنید.
                 </div>
               )}
+
+              {/* Microphase 106: Rename Sticker Set */}
+              <div className="p-3 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
+                <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5 text-accent-cyan" />
+                  <span>تغییر عنوان پَک استیکر (stickers.renameStickerSet)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={renameTitle}
+                    onChange={(e) => setRenameTitle(e.target.value)}
+                    placeholder="عنوان جدید پَک..."
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRenameStickerSet}
+                    disabled={loadingOp === 'rename_set'}
+                    className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-medium transition-colors cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {loadingOp === 'rename_set' ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Check className="w-3 h-3" />
+                    )}
+                    <span>ثبت نام</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Microphase 106: Set Sticker Set Thumbnail */}
+              <div className="p-3 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
+                <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>تنظیم کاور پَک (stickers.setStickerSetThumb)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={thumbDocId}
+                    onChange={(e) => setThumbDocId(e.target.value)}
+                    placeholder="شناسه سند کاور (Doc ID)..."
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSetStickerSetThumb}
+                    disabled={loadingOp === 'set_thumb'}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-medium transition-colors cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {loadingOp === 'set_thumb' ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-3 h-3" />
+                    )}
+                    <span>ثبت کاور</span>
+                  </button>
+                </div>
+              </div>
 
               {/* 1. Add Sticker to Set */}
               <div className="p-3 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
@@ -863,6 +1066,52 @@ export const StickerPickerDrawer: React.FC<StickerPickerDrawerProps> = ({
                       <Trash2 className="w-3 h-3" />
                     )}
                     <span>حذف این استیکر از پَک (removeStickerFromSet)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Microphase 106: 4. Replace Sticker (stickers.replaceSticker) */}
+              <div className="p-3 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
+                <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                  <Repeat className="w-3.5 h-3.5 text-purple-400" />
+                  <span>جایگزینی مستقیم استیکر (stickers.replaceSticker)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <input
+                    type="text"
+                    value={replaceOldDocId}
+                    onChange={(e) => setReplaceOldDocId(e.target.value)}
+                    placeholder="شناسه فعلی (Old Doc ID)"
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                  />
+                  <input
+                    type="text"
+                    value={replaceNewDocId}
+                    onChange={(e) => setReplaceNewDocId(e.target.value)}
+                    placeholder="شناسه جدید (New Doc ID)"
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={replaceEmoji}
+                    onChange={(e) => setReplaceEmoji(e.target.value)}
+                    placeholder="ایموجی"
+                    className="w-20 px-2 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none text-center"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleReplaceSticker}
+                    disabled={loadingOp === 'replace_sticker'}
+                    className="flex-1 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                  >
+                    {loadingOp === 'replace_sticker' ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Repeat className="w-3 h-3" />
+                    )}
+                    <span>جایگزینی در پَک (replaceSticker)</span>
                   </button>
                 </div>
               </div>

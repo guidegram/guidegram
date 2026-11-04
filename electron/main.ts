@@ -10382,6 +10382,43 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Stickers Suite (Microphase 106)
+  ipcMain.handle('telegram:stickers:rename-sticker-set-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersRenameStickerSetRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersRenameStickerSetRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:replace-sticker-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersReplaceStickerRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersReplaceStickerRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:set-sticker-set-thumb-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersSetStickerSetThumbRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersSetStickerSetThumbRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:suggest-short-name-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersSuggestShortNameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersSuggestShortNameRaw error:', err)
+      throw err
+    }
+  })
+
 
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {

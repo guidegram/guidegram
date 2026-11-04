@@ -22600,6 +22600,48 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.stickers_removeStickerFromSet(holder as any, params?.sticker)
   }
+
+  // Layer 232 Stickers Suite (Microphase 106)
+  public async stickersRenameStickerSetRaw(
+    accountId: string,
+    params: { stickerset: any; title: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_renameStickerSet(holder as any, params?.stickerset, params?.title)
+  }
+
+  public async stickersReplaceStickerRaw(
+    accountId: string,
+    params: { sticker: any; newSticker: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_replaceSticker(holder as any, params?.sticker, params?.newSticker)
+  }
+
+  public async stickersSetStickerSetThumbRaw(
+    accountId: string,
+    params: { stickerset: any; thumb?: any; thumbDocumentId?: bigint | number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_setStickerSetThumb(
+      holder as any,
+      params?.stickerset,
+      params?.thumb,
+      params?.thumbDocumentId
+    )
+  }
+
+  public async stickersSuggestShortNameRaw(
+    accountId: string,
+    params: { title: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_suggestShortName(holder as any, params?.title)
+  }
 }
 
 

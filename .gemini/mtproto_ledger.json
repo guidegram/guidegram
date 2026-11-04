@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 76.64,
+  "overall_coverage_pct": 77.37,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -3228,7 +3228,7 @@
       ],
       "method_count": 4,
       "ui_component": "src/components/StickerPickerDrawer.tsx",
-      "status": "PENDING",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,

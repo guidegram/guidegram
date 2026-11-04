@@ -3142,6 +3142,15 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:stickers:delete-sticker-set-raw', { accountId, ...params }),
   stickersRemoveStickerFromSetRaw: (accountId: string, params: { sticker: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:stickers:remove-sticker-from-set-raw', { accountId, ...params }),
+  // Layer 232 Stickers Suite (Microphase 106)
+  stickersRenameStickerSetRaw: (accountId: string, params: { stickerset: any; title: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:rename-sticker-set-raw', { accountId, ...params }),
+  stickersReplaceStickerRaw: (accountId: string, params: { sticker: any; newSticker: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:replace-sticker-raw', { accountId, ...params }),
+  stickersSetStickerSetThumbRaw: (accountId: string, params: { stickerset: any; thumb?: any; thumbDocumentId?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:set-sticker-set-thumb-raw', { accountId, ...params }),
+  stickersSuggestShortNameRaw: (accountId: string, params: { title: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:suggest-short-name-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

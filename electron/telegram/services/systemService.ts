@@ -962,13 +962,26 @@ export class SystemService {
     }
   }
 
-  public async stickers_setStickerSetThumb(holder: RpcClientHolder, stickerset?: any, thumb?: any, thumbDocumentId?: bigint | number): Promise<any> {
+  public async stickers_setStickerSetThumb(
+    holder: RpcClientHolder,
+    stickersetOrParams?: any,
+    thumb?: any,
+    thumbDocumentId?: bigint | number
+  ): Promise<any> {
     try {
+      let set: any = stickersetOrParams
+      let th: any = thumb
+      let docId: any = thumbDocumentId
+      if (typeof stickersetOrParams === 'object' && stickersetOrParams !== null && !stickersetOrParams._ && stickersetOrParams.stickerset !== undefined) {
+        set = stickersetOrParams.stickerset
+        th = stickersetOrParams.thumb
+        docId = stickersetOrParams.thumbDocumentId ?? stickersetOrParams.thumb_document_id
+      }
       return await holder.client.call({
         _: 'stickers.setStickerSetThumb',
-        stickerset: this.toInputStickerSet(stickerset),
-        thumb: thumb ? this.toInputDocument(thumb) : undefined,
-        thumb_document_id: thumbDocumentId ? BigInt(thumbDocumentId) : undefined,
+        stickerset: this.toInputStickerSet(set),
+        thumb: th ? this.toInputDocument(th) : undefined,
+        thumb_document_id: docId !== undefined ? BigInt(docId) : undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.setStickerSetThumb error:', err)
@@ -991,11 +1004,14 @@ export class SystemService {
     }
   }
 
-  public async stickers_suggestShortName(holder: RpcClientHolder, title?: string): Promise<any> {
+  public async stickers_suggestShortName(holder: RpcClientHolder, titleOrParams?: any): Promise<any> {
     try {
+      const title = (typeof titleOrParams === 'object' && titleOrParams !== null && titleOrParams.title !== undefined)
+        ? titleOrParams.title
+        : titleOrParams
       return await holder.client.call({
         _: 'stickers.suggestShortName',
-        title: title || '',
+        title: String(title || ''),
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.suggestShortName error:', err)
@@ -1034,12 +1050,18 @@ export class SystemService {
     }
   }
 
-  public async stickers_renameStickerSet(holder: RpcClientHolder, stickerset?: any, title?: string): Promise<any> {
+  public async stickers_renameStickerSet(holder: RpcClientHolder, stickersetOrParams?: any, title?: string): Promise<any> {
     try {
+      let set: any = stickersetOrParams
+      let ttl: string = title || ''
+      if (typeof stickersetOrParams === 'object' && stickersetOrParams !== null && !stickersetOrParams._ && stickersetOrParams.stickerset !== undefined) {
+        set = stickersetOrParams.stickerset
+        ttl = stickersetOrParams.title || ''
+      }
       return await holder.client.call({
         _: 'stickers.renameStickerSet',
-        stickerset: this.toInputStickerSet(stickerset),
-        title: title || '',
+        stickerset: this.toInputStickerSet(set),
+        title: ttl,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.renameStickerSet error:', err)
@@ -1062,12 +1084,30 @@ export class SystemService {
     }
   }
 
-  public async stickers_replaceSticker(holder: RpcClientHolder, sticker?: any, newSticker?: any): Promise<any> {
+  public async stickers_replaceSticker(holder: RpcClientHolder, stickerOrParams?: any, newSticker?: any): Promise<any> {
     try {
+      let stk: any = stickerOrParams
+      let nStk: any = newSticker
+      if (typeof stickerOrParams === 'object' && stickerOrParams !== null && !stickerOrParams._ && stickerOrParams.sticker !== undefined) {
+        stk = stickerOrParams.sticker
+        nStk = stickerOrParams.newSticker ?? stickerOrParams.new_sticker
+      }
+
+      let resolvedItem: any = nStk
+      if (nStk && nStk._ !== 'inputStickerSetItem') {
+        resolvedItem = {
+          _: 'inputStickerSetItem',
+          document: this.toInputDocument(nStk.document || nStk),
+          emoji: nStk.emoji || nStk.emoticon || '⭐',
+          maskCoords: nStk.maskCoords,
+          keywords: nStk.keywords,
+        }
+      }
+
       return await holder.client.call({
         _: 'stickers.replaceSticker',
-        sticker: this.toInputDocument(sticker),
-        new_sticker: this.toInputDocument(newSticker),
+        sticker: this.toInputDocument(stk),
+        new_sticker: resolvedItem,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.replaceSticker error:', err)
