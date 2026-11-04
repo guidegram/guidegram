@@ -20612,6 +20612,13 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.upload_getFileHashes(holder as any, params?.location, params?.offset)
   }
+
+  // Layer 232 Upload Suite Part 2 (Microphase 074)
+  public async uploadSaveFilePartRaw(accountId: string, params: { fileId?: bigint | number | string; filePart?: number; bytes?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_saveFilePart(holder as any, params?.fileId, params?.filePart, params?.bytes)
+  }
 }
 
 

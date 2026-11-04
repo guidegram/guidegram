@@ -349,13 +349,13 @@ export class SystemService {
     }
   }
 
-  public async upload_saveFilePart(holder: RpcClientHolder, fileId?: bigint | number, filePart?: number, bytes?: any): Promise<any> {
+  public async upload_saveFilePart(holder: RpcClientHolder, fileId?: bigint | number | string, filePart?: number, bytes?: any): Promise<any> {
     try {
       return await holder.client.call({
         _: 'upload.saveFilePart',
-        'file_id': fileId,
-        'file_part': filePart,
-        'bytes': bytes,
+        fileId: fileId ? BigInt(fileId) : 0n,
+        filePart: filePart ?? 0,
+        bytes: this.toUint8Array(bytes),
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.saveFilePart error:', err)

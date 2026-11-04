@@ -2703,6 +2703,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:upload:get-cdn-file-hashes-raw', { accountId, ...params }),
   uploadGetFileHashesRaw: (accountId: string, params: { location?: any; offset?: bigint | number | string }): Promise<any> =>
     ipcRenderer.invoke('telegram:upload:get-file-hashes-raw', { accountId, ...params }),
+  uploadSaveFilePartRaw: (accountId: string, params: { fileId?: bigint | number | string; filePart?: number; bytes?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:save-file-part-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

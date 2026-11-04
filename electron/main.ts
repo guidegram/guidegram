@@ -8487,6 +8487,16 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 074 IPC Handler (Upload Domain Part 2)
+  ipcMain.handle('telegram:upload:save-file-part-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadSaveFilePartRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadSaveFilePartRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

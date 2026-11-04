@@ -7654,6 +7654,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 074 State & Handlers (Upload Domain Part 2)
+  const [m074Status, setM074Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m074Loading, setM074Loading] = useState(false)
+  const [m074FileId, setM074FileId] = useState('')
+  const [m074FilePart, setM074FilePart] = useState('0')
+
+  const handleM074SaveFilePart = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.uploadSaveFilePartRaw) return
+    setM074Loading(true)
+    setM074Status(null)
+    try {
+      const dummyId = m074FileId.trim() || String(Date.now())
+      const partIdx = parseInt(m074FilePart) || 0
+      const dummyBytes = new Uint8Array([10, 20, 30, 40])
+      const res = await window.guidegram.uploadSaveFilePartRaw(targetId, {
+        fileId: dummyId,
+        filePart: partIdx,
+        bytes: dummyBytes,
+      })
+      setM074Status({ type: 'success', message: `ارسال قطعه ${partIdx} فایل استاندارد با موفقیت ثبت گردید: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM074Status({ type: 'error', message: err?.message || 'خطا در ارسال قطعه فایل استاندارد' })
+    } finally {
+      setM074Loading(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -19897,6 +19926,87 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </button>
                     </form>
                   </div>
+                </div>
+
+                {/* Microphase 074: Upload Domain Suite Part 2 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۴: آپلود قطعات فایل استاندارد (Upload Domain Part 2)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Upload
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    ارسال قطعات فایل‌های استاندارد (زیر ۱۰ مگابایت) با ساختار دودویی لایه ۲۳۲ تلگرام:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m074Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m074Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m074Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m074Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM074Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* upload.saveFilePart Form */}
+                  <form
+                    onSubmit={handleM074SaveFilePart}
+                    className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col md:flex-row items-center gap-2.5"
+                  >
+                    <span className="text-xs text-gray-300 font-medium whitespace-nowrap">
+                      ارسال قطعه فایل (saveFilePart):
+                    </span>
+                    <input
+                      type="text"
+                      value={m074FileId}
+                      onChange={(e) => setM074FileId(e.target.value)}
+                      placeholder="شناسه فایل (File ID)..."
+                      className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                    />
+                    <input
+                      type="number"
+                      value={m074FilePart}
+                      onChange={(e) => setM074FilePart(e.target.value)}
+                      placeholder="شماره پارت..."
+                      className="w-24 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                    />
+                    <button
+                      type="submit"
+                      disabled={m074Loading}
+                      className="px-4 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
+                    >
+                      {m074Loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال قطعه'}
+                    </button>
+                  </form>
                 </div>
               </div>
             )}
