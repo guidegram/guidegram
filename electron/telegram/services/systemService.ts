@@ -2523,15 +2523,29 @@ export class SystemService {
     }
   }
 
-  public async folders_editPeerFolders(holder: RpcClientHolder, folderPeers?: any): Promise<any> {
+  public async folders_editPeerFolders(
+    holder: RpcClientHolder,
+    options?: {
+      folderPeers?: any[]
+    } | any[]
+  ): Promise<any> {
     try {
+      const rawPeers = Array.isArray(options) ? options : (options?.folderPeers ?? [])
+      const folderPeers = rawPeers.map((fp: any) => {
+        if (fp && fp._ === 'inputFolderPeer') return fp
+        return {
+          _: 'inputFolderPeer',
+          peer: fp?.peer || fp,
+          folder_id: fp?.folderId ?? fp?.folder_id ?? 0,
+        }
+      })
       return await holder.client.call({
         _: 'folders.editPeerFolders',
-        'folder_peers': folderPeers,
+        folder_peers: folderPeers,
       })
     } catch (err) {
       Logger.warn('[SystemService] folders.editPeerFolders error:', err)
-      return null
+      throw err
     }
   }
 

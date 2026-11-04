@@ -10856,6 +10856,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:folders:edit-peer-folders-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.foldersEditPeerFoldersRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] foldersEditPeerFoldersRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -71,6 +71,13 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
   const [m043EmojiGroupsHash, setM043EmojiGroupsHash] = useState('0')
   const [m043EmojiGroupsCount, setM043EmojiGroupsCount] = useState<number | null>(null)
 
+  // Microphase 115 Folders: folders.editPeerFolders
+  const [m115PeerTarget, setM115PeerTarget] = useState('')
+  const [m115FolderId, setM115FolderId] = useState('1')
+  const [m115Loading, setM115Loading] = useState(false)
+  const [m115Feedback, setM115Feedback] = useState<string | null>(null)
+  const [m115Success, setM115Success] = useState<boolean | null>(null)
+
   // Microphase 043 Handlers
   const handleGetDialogFiltersRaw = async () => {
     if (!accountId || !window.guidegram?.getDialogFiltersRaw) return
@@ -189,6 +196,42 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
       setM043EmojiGroupsFeedback(err?.message || 'Error querying emoji groups.')
     } finally {
       setM043EmojiGroupsLoading(false)
+    }
+  }
+
+  // Microphase 115: folders.editPeerFolders Handler
+  const handleEditPeerFolders = async () => {
+    if (!accountId) return
+    if (!m115PeerTarget.trim()) {
+      setM115Feedback('Please specify peer username, phone, or ID')
+      setM115Success(false)
+      return
+    }
+    setM115Loading(true)
+    setM115Feedback(null)
+    setM115Success(null)
+    try {
+      const folderNum = parseInt(m115FolderId.trim() || '0', 10)
+      const res = await window.guidegram?.foldersEditPeerFoldersRaw?.(accountId, {
+        folderPeers: [
+          {
+            peer: m115PeerTarget.trim(),
+            folderId: isNaN(folderNum) ? 0 : folderNum,
+          },
+        ],
+      })
+      if (res) {
+        setM115Success(true)
+        setM115Feedback(`Peer folder successfully updated (Updates: ${res._ || 'TypeUpdates'})`)
+      } else {
+        setM115Success(false)
+        setM115Feedback('No response received from Telegram server.')
+      }
+    } catch (err: any) {
+      setM115Success(false)
+      setM115Feedback(err?.message || 'Error executing folders.editPeerFolders')
+    } finally {
+      setM115Loading(false)
     }
   }
 
@@ -1091,6 +1134,62 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
                   }`}>
                     {m043EmojiGroupsCount !== null ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
                     <span>{m043EmojiGroupsFeedback}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 8. folders.editPeerFolders (Microphase 115) */}
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-accent-cyan/10 via-dark-800/80 to-dark-800/80 border border-accent-cyan/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-accent-cyan/20 text-accent-cyan flex items-center justify-center border border-accent-cyan/30">
+                      <Folder className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-white block">Batch Peer Folder Assignment</span>
+                      <span className="text-[10px] text-accent-cyan font-mono">folders.editPeerFolders (Microphase 115)</span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30">
+                    MTProto 232
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Assign or move any dialog peer directly to a designated cloud folder ID via native MTProto Layer 232 RPC.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={m115PeerTarget}
+                    onChange={(e) => setM115PeerTarget(e.target.value)}
+                    placeholder="Peer ID / @username / +phone"
+                    className="h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-accent-cyan font-mono"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={m115FolderId}
+                      onChange={(e) => setM115FolderId(e.target.value)}
+                      placeholder="Folder ID (0=main, 1=archived, >1=custom)"
+                      className="w-24 h-8 px-2.5 rounded-lg bg-dark-900 border border-white/10 text-white text-xs placeholder:text-gray-500 focus:outline-none focus:border-accent-cyan font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleEditPeerFolders}
+                      disabled={m115Loading}
+                      className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-accent-cyan/90 hover:bg-accent-cyan text-dark-950 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      {m115Loading && <RefreshCw className="w-3 h-3 animate-spin text-dark-950" />}
+                      <span className="font-bold text-dark-950">Update Folder</span>
+                    </button>
+                  </div>
+                </div>
+                {m115Feedback && (
+                  <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                    m115Success ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300' : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                  }`}>
+                    {m115Success ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span>{m115Feedback}</span>
                   </div>
                 )}
               </div>

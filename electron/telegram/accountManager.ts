@@ -23257,6 +23257,17 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.langpack_getStrings(holder as any, params)
   }
+
+  public async foldersEditPeerFoldersRaw(
+    accountId: string,
+    params: {
+      folderPeers?: any[]
+    } | any[]
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.folders_editPeerFolders(holder as any, params)
+  }
 }
 
 

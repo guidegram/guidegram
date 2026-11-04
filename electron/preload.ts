@@ -3252,6 +3252,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:langpack:get-languages-raw', { accountId, ...params }),
   langpackGetStringsRaw: (accountId: string, params: { langPack?: string; langCode?: string; keys: string[] }): Promise<any> =>
     ipcRenderer.invoke('telegram:langpack:get-strings-raw', { accountId, ...params }),
+  foldersEditPeerFoldersRaw: (accountId: string, params: { folderPeers: Array<{ peer: any; folderId: number }> }): Promise<any> =>
+    ipcRenderer.invoke('telegram:folders:edit-peer-folders-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (
