@@ -2938,6 +2938,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:bots:request-web-view-button-raw', { accountId, ...params }),
   botsResetBotCommandsRaw: (accountId: string, params?: { scope?: any; langCode?: string }): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bots:reset-bot-commands-raw', { accountId, ...params }),
+  // Microphase 092: Bots Domain Suite Part 5 (7 RPCs)
+  botsSendCustomRequestRaw: (accountId: string, params: { customMethod: string; params?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:send-custom-request-raw', { accountId, ...params }),
+  botsSetBotBroadcastDefaultAdminRightsRaw: (accountId: string, params: { adminRights?: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-bot-broadcast-default-admin-rights-raw', { accountId, ...params }),
+  botsSetBotCommandsRaw: (accountId: string, params: { commands: any[]; scope?: any; langCode?: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-bot-commands-raw', { accountId, ...params }),
+  botsSetBotGroupDefaultAdminRightsRaw: (accountId: string, params: { adminRights?: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-bot-group-default-admin-rights-raw', { accountId, ...params }),
+  botsSetBotInfoRaw: (accountId: string, params: { bot?: string | any; botId?: string | any; langCode?: string; name?: string; about?: string; description?: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-bot-info-raw', { accountId, ...params }),
+  botsSetBotMenuButtonRaw: (accountId: string, params: { userId?: string | any; botId?: string | any; button?: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-bot-menu-button-raw', { accountId, ...params }),
+  botsSetCustomVerificationRaw: (accountId: string, params: { botId?: string | any; bot?: string | any; peerId: string; customDescription?: string; enabled?: boolean }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-custom-verification-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -21447,6 +21447,98 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.botsService.resetBotCommands(holder as any, params)
   }
+
+  // Microphase 092: Bots Domain Suite Part 5 (7 RPCs)
+  public async botsSendCustomRequestRaw(
+    accountId: string,
+    params: {
+      customMethod: string
+      params?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.sendCustomRequest(holder as any, params)
+  }
+
+  public async botsSetBotBroadcastDefaultAdminRightsRaw(
+    accountId: string,
+    params: {
+      adminRights?: any
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotBroadcastDefaultAdminRights(holder as any, params)
+  }
+
+  public async botsSetBotCommandsRaw(
+    accountId: string,
+    params: {
+      commands: any[]
+      scope?: any
+      langCode?: string
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotCommands(holder as any, params)
+  }
+
+  public async botsSetBotGroupDefaultAdminRightsRaw(
+    accountId: string,
+    params: {
+      adminRights?: any
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotGroupDefaultAdminRights(holder as any, params)
+  }
+
+  public async botsSetBotInfoRaw(
+    accountId: string,
+    params: {
+      bot?: string | any
+      botId?: string | any
+      langCode?: string
+      name?: string
+      about?: string
+      description?: string
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotInfo(holder as any, accountId, params)
+  }
+
+  public async botsSetBotMenuButtonRaw(
+    accountId: string,
+    params: {
+      userId?: string | any
+      botId?: string | any
+      button?: any
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setBotMenuButton(holder as any, accountId, params)
+  }
+
+  public async botsSetCustomVerificationRaw(
+    accountId: string,
+    params: {
+      botId?: string | any
+      bot?: string | any
+      peerId: string
+      customDescription?: string
+      enabled?: boolean
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setCustomVerification(holder as any, accountId, params)
+  }
 }
 
 

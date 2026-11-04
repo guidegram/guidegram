@@ -59,18 +59,43 @@ export class BotsService {
     }
   }
 
-  public async setBotCommands(holder: RpcClientHolder, commands: any[], scope: any = { _: 'botCommandScopeDefault' }, langCode = ''): Promise<boolean> {
+  public async setBotCommands(
+    holder: RpcClientHolder,
+    commandsOrParams: { commands: any[]; scope?: any; langCode?: string } | any[],
+    scopeParam: any = { _: 'botCommandScopeDefault' },
+    langCodeParam = ''
+  ): Promise<boolean> {
     try {
+      let commands: any[] = []
+      let scope: any = { _: 'botCommandScopeDefault' }
+      let langCode = ''
+
+      if (commandsOrParams && typeof commandsOrParams === 'object' && !Array.isArray(commandsOrParams)) {
+        commands = Array.isArray(commandsOrParams.commands) ? commandsOrParams.commands : []
+        scope = commandsOrParams.scope || scope
+        langCode = commandsOrParams.langCode || ''
+      } else if (Array.isArray(commandsOrParams)) {
+        commands = commandsOrParams
+        scope = scopeParam || scope
+        langCode = langCodeParam || ''
+      }
+
+      const formattedCommands = commands.map((c) => ({
+        _: 'botCommand',
+        command: typeof c === 'string' ? c.replace(/^\//, '') : (c.command || '').replace(/^\//, ''),
+        description: typeof c === 'string' ? c : (c.description || ''),
+      }))
+
       const res = await holder.client.call({
         _: 'bots.setBotCommands',
         scope,
         langCode,
-        commands,
+        commands: formattedCommands,
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setBotCommands error:', err)
-      return false
+      throw err
     }
   }
 
@@ -97,9 +122,25 @@ export class BotsService {
     }
   }
 
-  public async setBotMenuButton(holder: RpcClientHolder, accountId: string, botId: string, button: any): Promise<boolean> {
+  public async setBotMenuButton(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { userId?: string | any; botId?: string | any; button?: any } | string,
+    buttonParam?: any
+  ): Promise<boolean> {
     try {
-      const userId = await this.toInputUser(accountId, botId)
+      let botId: any
+      let button: any
+
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.userId || paramsOrBotId.botId
+        button = paramsOrBotId.button || { _: 'botMenuButtonDefault' }
+      } else {
+        botId = paramsOrBotId
+        button = buttonParam || { _: 'botMenuButtonDefault' }
+      }
+
+      const userId = botId ? (typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId) : { _: 'inputUserSelf' }
       const res = await holder.client.call({
         _: 'bots.setBotMenuButton',
         userId,
@@ -108,7 +149,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setBotMenuButton error:', err)
-      return false
+      throw err
     }
   }
 
@@ -129,14 +170,34 @@ export class BotsService {
   public async setBotInfo(
     holder: RpcClientHolder,
     accountId: string,
-    botId?: string,
-    langCode = '',
-    name?: string,
-    about?: string,
-    description?: string
+    paramsOrBotId?: { bot?: string | any; botId?: string | any; langCode?: string; name?: string; about?: string; description?: string } | string,
+    langCodeParam = '',
+    nameParam?: string,
+    aboutParam?: string,
+    descriptionParam?: string
   ): Promise<boolean> {
     try {
-      const bot = botId ? await this.toInputUser(accountId, botId) : undefined
+      let bot: any
+      let langCode = ''
+      let name: string | undefined
+      let about: string | undefined
+      let description: string | undefined
+
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        const rawBot = paramsOrBotId.bot || paramsOrBotId.botId
+        bot = rawBot ? (typeof rawBot === 'string' ? await this.toInputUser(accountId, rawBot) : rawBot) : undefined
+        langCode = paramsOrBotId.langCode || ''
+        name = paramsOrBotId.name
+        about = paramsOrBotId.about
+        description = paramsOrBotId.description
+      } else if (typeof paramsOrBotId === 'string') {
+        bot = await this.toInputUser(accountId, paramsOrBotId)
+        langCode = langCodeParam || ''
+        name = nameParam
+        about = aboutParam
+        description = descriptionParam
+      }
+
       const res = await holder.client.call({
         _: 'bots.setBotInfo',
         bot,
@@ -148,7 +209,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setBotInfo error:', err)
-      return false
+      throw err
     }
   }
 
@@ -179,29 +240,81 @@ export class BotsService {
     }
   }
 
-  public async setBotBroadcastDefaultAdminRights(holder: RpcClientHolder, adminRights: any): Promise<boolean> {
+  public async setBotBroadcastDefaultAdminRights(
+    holder: RpcClientHolder,
+    paramsOrRights: { adminRights?: any } | any
+  ): Promise<boolean> {
     try {
+      const adminRights = (typeof paramsOrRights === 'object' && paramsOrRights !== null && 'adminRights' in paramsOrRights)
+        ? paramsOrRights.adminRights
+        : paramsOrRights
+
+      const rightsObj = adminRights?._ ? adminRights : {
+        _: 'chatAdminRights',
+        changeInfo: Boolean(adminRights?.changeInfo),
+        postMessages: Boolean(adminRights?.postMessages),
+        editMessages: Boolean(adminRights?.editMessages),
+        deleteMessages: Boolean(adminRights?.deleteMessages),
+        banUsers: Boolean(adminRights?.banUsers),
+        inviteUsers: Boolean(adminRights?.inviteUsers),
+        pinMessages: Boolean(adminRights?.pinMessages),
+        addAdmins: Boolean(adminRights?.addAdmins),
+        anonymous: Boolean(adminRights?.anonymous),
+        manageCall: Boolean(adminRights?.manageCall),
+        other: Boolean(adminRights?.other),
+        manageTopics: Boolean(adminRights?.manageTopics),
+        postStories: Boolean(adminRights?.postStories),
+        editStories: Boolean(adminRights?.editStories),
+        deleteStories: Boolean(adminRights?.deleteStories),
+      }
+
       const res = await holder.client.call({
         _: 'bots.setBotBroadcastDefaultAdminRights',
-        adminRights,
+        adminRights: rightsObj,
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setBotBroadcastDefaultAdminRights error:', err)
-      return false
+      throw err
     }
   }
 
-  public async setBotGroupDefaultAdminRights(holder: RpcClientHolder, adminRights: any): Promise<boolean> {
+  public async setBotGroupDefaultAdminRights(
+    holder: RpcClientHolder,
+    paramsOrRights: { adminRights?: any } | any
+  ): Promise<boolean> {
     try {
+      const adminRights = (typeof paramsOrRights === 'object' && paramsOrRights !== null && 'adminRights' in paramsOrRights)
+        ? paramsOrRights.adminRights
+        : paramsOrRights
+
+      const rightsObj = adminRights?._ ? adminRights : {
+        _: 'chatAdminRights',
+        changeInfo: Boolean(adminRights?.changeInfo),
+        postMessages: Boolean(adminRights?.postMessages),
+        editMessages: Boolean(adminRights?.editMessages),
+        deleteMessages: Boolean(adminRights?.deleteMessages),
+        banUsers: Boolean(adminRights?.banUsers),
+        inviteUsers: Boolean(adminRights?.inviteUsers),
+        pinMessages: Boolean(adminRights?.pinMessages),
+        addAdmins: Boolean(adminRights?.addAdmins),
+        anonymous: Boolean(adminRights?.anonymous),
+        manageCall: Boolean(adminRights?.manageCall),
+        other: Boolean(adminRights?.other),
+        manageTopics: Boolean(adminRights?.manageTopics),
+        postStories: Boolean(adminRights?.postStories),
+        editStories: Boolean(adminRights?.editStories),
+        deleteStories: Boolean(adminRights?.deleteStories),
+      }
+
       const res = await holder.client.call({
         _: 'bots.setBotGroupDefaultAdminRights',
-        adminRights,
+        adminRights: rightsObj,
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setBotGroupDefaultAdminRights error:', err)
-      return false
+      throw err
     }
   }
 
@@ -268,9 +381,25 @@ export class BotsService {
     }
   }
 
-  public async sendCustomRequest(holder: RpcClientHolder, customMethod: string, params: any): Promise<any> {
+  public async sendCustomRequest(
+    holder: RpcClientHolder,
+    paramsOrCustomMethod: { customMethod: string; params?: any } | string,
+    paramsArg?: any
+  ): Promise<any> {
     try {
-      const dataJson = typeof params === 'string' ? { _: 'dataJSON', data: params } : { _: 'dataJSON', data: JSON.stringify(params) }
+      let customMethod = ''
+      let rawParams: any
+      if (typeof paramsOrCustomMethod === 'object' && paramsOrCustomMethod !== null) {
+        customMethod = paramsOrCustomMethod.customMethod
+        rawParams = paramsOrCustomMethod.params
+      } else {
+        customMethod = paramsOrCustomMethod
+        rawParams = paramsArg
+      }
+      const dataJson = typeof rawParams === 'string'
+        ? { _: 'dataJSON', data: rawParams }
+        : { _: 'dataJSON', data: JSON.stringify(rawParams ?? {}) }
+
       return await holder.client.call({
         _: 'bots.sendCustomRequest',
         customMethod,
@@ -278,7 +407,7 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] sendCustomRequest error:', err)
-      return null
+      throw err
     }
   }
 
@@ -613,13 +742,30 @@ export class BotsService {
   public async setCustomVerification(
     holder: RpcClientHolder,
     accountId: string,
-    botId: string,
-    peerId: string,
-    customDescription?: string,
-    enabled = true
+    paramsOrBotId: { botId?: string | any; bot?: string | any; peerId: string; customDescription?: string; enabled?: boolean } | string,
+    peerIdParam?: string,
+    customDescriptionParam?: string,
+    enabledParam = true
   ): Promise<boolean> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let peerId = ''
+      let customDescription: string | undefined
+      let enabled = true
+
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId || paramsOrBotId.bot
+        peerId = paramsOrBotId.peerId
+        customDescription = paramsOrBotId.customDescription
+        enabled = paramsOrBotId.enabled ?? true
+      } else {
+        botId = paramsOrBotId
+        peerId = peerIdParam || ''
+        customDescription = customDescriptionParam
+        enabled = enabledParam
+      }
+
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const peer = await this.resolveInputPeer(accountId, peerId)
       const res = await holder.client.call({
         _: 'bots.setCustomVerification',
@@ -631,7 +777,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setCustomVerification error:', err)
-      return false
+      throw err
     }
   }
 

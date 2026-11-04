@@ -9513,6 +9513,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 092: Bots Domain Suite Part 5 (7 RPCs)
+  ipcMain.handle('telegram:bots:send-custom-request-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSendCustomRequestRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSendCustomRequestRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:set-bot-broadcast-default-admin-rights-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetBotBroadcastDefaultAdminRightsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetBotBroadcastDefaultAdminRightsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:set-bot-commands-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetBotCommandsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetBotCommandsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:set-bot-group-default-admin-rights-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetBotGroupDefaultAdminRightsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetBotGroupDefaultAdminRightsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:set-bot-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetBotInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetBotInfoRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:set-bot-menu-button-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetBotMenuButtonRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetBotMenuButtonRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:set-custom-verification-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetCustomVerificationRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetCustomVerificationRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

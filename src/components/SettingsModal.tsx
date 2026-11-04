@@ -85,6 +85,8 @@ import {
   Smile,
   Star,
   Trophy,
+  Info,
+  CheckCircle,
 } from 'lucide-react'
 import {
   AppConfig,
@@ -10149,6 +10151,248 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setM091Status({ type: 'error', message: err?.message || 'خطا در استعلام دکمه وب‌ویو (bots.getRequestedWebViewButton)' })
     } finally {
       setM091LoadingOp(null)
+    }
+  }
+
+  // --- Microphase 092 State: Bots Domain Suite Part 5 (7 RPCs) ---
+  const [m092Status, setM092Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m092LoadingOp, setM092LoadingOp] = useState<string | null>(null)
+  const [m092BotId, setM092BotId] = useState('')
+  const [m092CustomMethod, setM092CustomMethod] = useState('')
+  const [m092CustomParams, setM092CustomParams] = useState('{}')
+  const [m092CustomResult, setM092CustomResult] = useState<any | null>(null)
+  const [m092CommandsText, setM092CommandsText] = useState('start - شروع و راهنمای اولیه ربات\nhelp - فهرست دستورات و راهنما\nsettings - تنظیمات اختصاصی')
+  const [m092CommandsLang, setM092CommandsLang] = useState('fa')
+  const [m092BotName, setM092BotName] = useState('')
+  const [m092BotAbout, setM092BotAbout] = useState('')
+  const [m092BotDescription, setM092BotDescription] = useState('')
+  const [m092MenuButtonType, setM092MenuButtonType] = useState<'default' | 'commands' | 'webApp'>('default')
+  const [m092MenuButtonText, setM092MenuButtonText] = useState('ورود به اپ')
+  const [m092MenuButtonUrl, setM092MenuButtonUrl] = useState('https://app.guidegram.io')
+  const [m092VerifyPeerId, setM092VerifyPeerId] = useState('')
+  const [m092VerifyDesc, setM092VerifyDesc] = useState('تایید اصالت راهنماگرام')
+  const [m092VerifyEnabled, setM092VerifyEnabled] = useState(true)
+  const [m092AdminPostMessages, setM092AdminPostMessages] = useState(true)
+  const [m092AdminEditMessages, setM092AdminEditMessages] = useState(true)
+  const [m092AdminDeleteMessages, setM092AdminDeleteMessages] = useState(true)
+  const [m092AdminBanUsers, setM092AdminBanUsers] = useState(true)
+
+  const handleM092SendCustomRequest = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m092CustomMethod.trim()) {
+      setM092Status({ type: 'error', message: 'نام متد سفارشی (customMethod) الزامی است.' })
+      return
+    }
+    setM092LoadingOp('sendCustomRequest')
+    setM092Status(null)
+    try {
+      let parsedParams = {}
+      try {
+        parsedParams = JSON.parse(m092CustomParams)
+      } catch (_) {
+        parsedParams = { raw: m092CustomParams }
+      }
+      const res = await (window as any).guidegramAPI?.botsSendCustomRequestRaw(targetId, {
+        customMethod: m092CustomMethod.trim(),
+        params: parsedParams,
+      })
+      setM092CustomResult(res)
+      setM092Status({
+        type: 'success',
+        message: `درخواست سفارشی ${m092CustomMethod.trim()} با موفقیت ارسال و نتیجه دریافت شد.`,
+      })
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در ارسال درخواست سفارشی (bots.sendCustomRequest)' })
+    } finally {
+      setM092LoadingOp(null)
+    }
+  }
+
+  const handleM092SetBotCommands = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM092LoadingOp('setBotCommands')
+    setM092Status(null)
+    try {
+      const parsedCommands = m092CommandsText
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => {
+          const [cmd, ...descParts] = l.split('-')
+          return {
+            command: (cmd || '').trim().replace(/^\//, ''),
+            description: (descParts.join('-') || cmd || '').trim(),
+          }
+        })
+      const res = await (window as any).guidegramAPI?.botsSetBotCommandsRaw(targetId, {
+        commands: parsedCommands,
+        langCode: m092CommandsLang.trim(),
+      })
+      if (res) {
+        setM092Status({
+          type: 'success',
+          message: `${parsedCommands.length} دستور ربات با موفقیت در لایه ۲۳۲ تلگرام ثبت شد.`,
+        })
+      } else {
+        setM092Status({ type: 'error', message: 'پاسخ ناموفق در ثبت دستورات ربات.' })
+      }
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در ثبت دستورات ربات (bots.setBotCommands)' })
+    } finally {
+      setM092LoadingOp(null)
+    }
+  }
+
+  const handleM092SetBotInfo = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM092LoadingOp('setBotInfo')
+    setM092Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.botsSetBotInfoRaw(targetId, {
+        botId: m092BotId.trim() || undefined,
+        langCode: m092CommandsLang.trim(),
+        name: m092BotName.trim() || undefined,
+        about: m092BotAbout.trim() || undefined,
+        description: m092BotDescription.trim() || undefined,
+      })
+      if (res) {
+        setM092Status({
+          type: 'success',
+          message: `اطلاعات ربات با موفقیت بروزرسانی شد.`,
+        })
+      } else {
+        setM092Status({ type: 'error', message: 'پاسخ ناموفق در تنظیم اطلاعات ربات.' })
+      }
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در ثبت اطلاعات ربات (bots.setBotInfo)' })
+    } finally {
+      setM092LoadingOp(null)
+    }
+  }
+
+  const handleM092SetBotMenuButton = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM092LoadingOp('setBotMenuButton')
+    setM092Status(null)
+    try {
+      let buttonObj: any = { _: 'botMenuButtonDefault' }
+      if (m092MenuButtonType === 'commands') {
+        buttonObj = { _: 'botMenuButtonCommands' }
+      } else if (m092MenuButtonType === 'webApp') {
+        buttonObj = {
+          _: 'botMenuButton',
+          text: m092MenuButtonText.trim(),
+          url: m092MenuButtonUrl.trim(),
+        }
+      }
+      const res = await (window as any).guidegramAPI?.botsSetBotMenuButtonRaw(targetId, {
+        userId: m092BotId.trim() || undefined,
+        button: buttonObj,
+      })
+      if (res) {
+        setM092Status({
+          type: 'success',
+          message: `دکمه منوی ربات (${m092MenuButtonType}) با موفقیت اعمال شد.`,
+        })
+      } else {
+        setM092Status({ type: 'error', message: 'پاسخ ناموفق در تنظیم دکمه منوی ربات.' })
+      }
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در تنظیم دکمه منوی ربات (bots.setBotMenuButton)' })
+    } finally {
+      setM092LoadingOp(null)
+    }
+  }
+
+  const handleM092SetBroadcastDefaultAdminRights = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM092LoadingOp('setBroadcastAdminRights')
+    setM092Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.botsSetBotBroadcastDefaultAdminRightsRaw(targetId, {
+        adminRights: {
+          _: 'chatAdminRights',
+          postMessages: m092AdminPostMessages,
+          editMessages: m092AdminEditMessages,
+          deleteMessages: m092AdminDeleteMessages,
+        },
+      })
+      if (res) {
+        setM092Status({
+          type: 'success',
+          message: 'دسترسی‌های پیش‌فرض کانال برای ربات با موفقیت تنظیم شد.',
+        })
+      } else {
+        setM092Status({ type: 'error', message: 'پاسخ ناموفق در تنظیم دسترسی‌های پیش‌فرض کانال.' })
+      }
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در ثبت دسترسی‌های پیش‌فرض کانال (bots.setBotBroadcastDefaultAdminRights)' })
+    } finally {
+      setM092LoadingOp(null)
+    }
+  }
+
+  const handleM092SetGroupDefaultAdminRights = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM092LoadingOp('setGroupAdminRights')
+    setM092Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.botsSetBotGroupDefaultAdminRightsRaw(targetId, {
+        adminRights: {
+          _: 'chatAdminRights',
+          banUsers: m092AdminBanUsers,
+          deleteMessages: m092AdminDeleteMessages,
+        },
+      })
+      if (res) {
+        setM092Status({
+          type: 'success',
+          message: 'دسترسی‌های پیش‌فرض گروه برای ربات با موفقیت تنظیم شد.',
+        })
+      } else {
+        setM092Status({ type: 'error', message: 'پاسخ ناموفق در تنظیم دسترسی‌های پیش‌فرض گروه.' })
+      }
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در ثبت دسترسی‌های پیش‌فرض گروه (bots.setBotGroupDefaultAdminRights)' })
+    } finally {
+      setM092LoadingOp(null)
+    }
+  }
+
+  const handleM092SetCustomVerification = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m092BotId.trim() || !m092VerifyPeerId.trim()) {
+      setM092Status({ type: 'error', message: 'شناسه ربات و شناسه مخاطب/چت جهت اعتبارسنجی الزامی است.' })
+      return
+    }
+    setM092LoadingOp('setCustomVerification')
+    setM092Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.botsSetCustomVerificationRaw(targetId, {
+        botId: m092BotId.trim(),
+        peerId: m092VerifyPeerId.trim(),
+        customDescription: m092VerifyDesc.trim() || undefined,
+        enabled: m092VerifyEnabled,
+      })
+      if (res) {
+        setM092Status({
+          type: 'success',
+          message: `وضعیت اعتبارسنجی سفارشی (${m092VerifyEnabled ? 'فعال' : 'غیرفعال'}) برای ${m092VerifyPeerId.trim()} ثبت شد.`,
+        })
+      } else {
+        setM092Status({ type: 'error', message: 'پاسخ ناموفق در ثبت اعتبارسنجی سفارشی.' })
+      }
+    } catch (err: any) {
+      setM092Status({ type: 'error', message: err?.message || 'خطا در ثبت اعتبارسنجی سفارشی (bots.setCustomVerification)' })
+    } finally {
+      setM092LoadingOp(null)
     }
   }
 
@@ -25855,6 +26099,377 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setM091Status(null)}
+                          className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                        >
+                          تلاش مجدد
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Microphase 092: Bots Domain Suite Part 5 (7 RPCs) */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-950/20 via-dark-850 to-dark-900 border border-cyan-500/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          پیکربندی هویت، دستورات، دکمه‌ها و اعتبارسنجی ربات (Bots Part 5)
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+                            7 RPCs
+                          </span>
+                        </h4>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          مدیریت متدهای Layer 232 شامل دستورات، منو، اطلاعات هویتی، دسترسی‌های پیش‌فرض، اعتبارسنجی و درخواست‌های سفارشی
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Common Bot Target Input */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                        شناسه ربات (Bot Peer ID / Username)
+                      </label>
+                      <input
+                        type="text"
+                        value={m092BotId}
+                        onChange={(e) => setM092BotId(e.target.value)}
+                        placeholder="اختیاری: @my_bot یا خالی برای خود اکانت ربات"
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-300 mb-1">
+                        کد زبان دستورات و اطلاعات (Language Code)
+                      </label>
+                      <input
+                        type="text"
+                        value={m092CommandsLang}
+                        onChange={(e) => setM092CommandsLang(e.target.value)}
+                        placeholder="fa یا en (خالی برای همه زبان‌ها)"
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 1: Set Bot Commands */}
+                  <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <Terminal className="w-3.5 h-3.5" />
+                        ثبت و بروزرسانی دستورات ربات (bots.setBotCommands)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleM092SetBotCommands}
+                        disabled={m092LoadingOp === 'setBotCommands'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'setBotCommands' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>ثبت دستورات</span>
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">
+                        لیست دستورات (هر سطر یک دستور در قالب `command - description`):
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={m092CommandsText}
+                        onChange={(e) => setM092CommandsText(e.target.value)}
+                        placeholder="start - شروع ربات&#10;help - راهنما"
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 font-mono resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 2: Set Bot Info (Name, About, Description) */}
+                  <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5" />
+                        تنظیم مشخصات هویتی ربات (bots.setBotInfo)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleM092SetBotInfo}
+                        disabled={m092LoadingOp === 'setBotInfo'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'setBotInfo' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>بروزرسانی مشخصات</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={m092BotName}
+                        onChange={(e) => setM092BotName(e.target.value)}
+                        placeholder="نام نمایشی ربات (Name)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m092BotAbout}
+                        onChange={(e) => setM092BotAbout(e.target.value)}
+                        placeholder="درباره ربات (About)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m092BotDescription}
+                        onChange={(e) => setM092BotDescription(e.target.value)}
+                        placeholder="توضیحات قبل از شروع (Description)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Set Bot Menu Button */}
+                  <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5" />
+                        دکمه منوی اختصاصی ربات (bots.setBotMenuButton)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleM092SetBotMenuButton}
+                        disabled={m092LoadingOp === 'setBotMenuButton'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'setBotMenuButton' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>تنظیم دکمه منو</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <select
+                        value={m092MenuButtonType}
+                        onChange={(e) => setM092MenuButtonType(e.target.value as any)}
+                        className="px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500/50"
+                      >
+                        <option value="default">منوی پیش‌فرض (Default)</option>
+                        <option value="commands">فهرست دستورات (Commands)</option>
+                        <option value="webApp">مینی‌اپ وب‌ویو (Web App)</option>
+                      </select>
+                      {m092MenuButtonType === 'webApp' && (
+                        <>
+                          <input
+                            type="text"
+                            value={m092MenuButtonText}
+                            onChange={(e) => setM092MenuButtonText(e.target.value)}
+                            placeholder="متن روی دکمه"
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                          />
+                          <input
+                            type="text"
+                            value={m092MenuButtonUrl}
+                            onChange={(e) => setM092MenuButtonUrl(e.target.value)}
+                            placeholder="آدرس اینترنتی وب‌اپ (HTTPS)"
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section 4: Default Admin Rights for Channels & Groups */}
+                  <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 space-y-2.5">
+                    <span className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5" />
+                      دسترسی‌های پیش‌فرض ادمین ربات (Admin Rights)
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-300">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m092AdminPostMessages}
+                          onChange={(e) => setM092AdminPostMessages(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-cyan-500"
+                        />
+                        <span>ارسال پیام</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m092AdminEditMessages}
+                          onChange={(e) => setM092AdminEditMessages(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-cyan-500"
+                        />
+                        <span>ویرایش پیام</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m092AdminDeleteMessages}
+                          onChange={(e) => setM092AdminDeleteMessages(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-cyan-500"
+                        />
+                        <span>حذف پیام</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m092AdminBanUsers}
+                          onChange={(e) => setM092AdminBanUsers(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-cyan-500"
+                        />
+                        <span>مسدودسازی کاربر</span>
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleM092SetBroadcastDefaultAdminRights}
+                        disabled={m092LoadingOp === 'setBroadcastAdminRights'}
+                        className="px-3 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 border border-cyan-500/30 text-cyan-200 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'setBroadcastAdminRights' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-cyan-300/20 border-t-cyan-300 rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>تنظیم پیش‌فرض کانال‌ها (Broadcast)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleM092SetGroupDefaultAdminRights}
+                        disabled={m092LoadingOp === 'setGroupAdminRights'}
+                        className="px-3 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 border border-cyan-500/30 text-cyan-200 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'setGroupAdminRights' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-cyan-300/20 border-t-cyan-300 rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>تنظیم پیش‌فرض گروه‌ها (Group)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Section 5: Custom Verification */}
+                  <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        اعتبارسنجی و تایید سفارشی ربات (bots.setCustomVerification)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleM092SetCustomVerification}
+                        disabled={m092LoadingOp === 'setCustomVerification'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'setCustomVerification' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>اعمال اعتبارسنجی</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={m092VerifyPeerId}
+                        onChange={(e) => setM092VerifyPeerId(e.target.value)}
+                        placeholder="شناسه کاربر یا چت هدف (Peer ID)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                      <input
+                        type="text"
+                        value={m092VerifyDesc}
+                        onChange={(e) => setM092VerifyDesc(e.target.value)}
+                        placeholder="شرح اعتبارسنجی سفارشی"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50"
+                      />
+                      <label className="flex items-center gap-2 text-xs text-gray-300 px-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m092VerifyEnabled}
+                          onChange={(e) => setM092VerifyEnabled(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-cyan-500"
+                        />
+                        <span>وضعیت تایید فعال باشد</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Section 6: Send Custom Request */}
+                  <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <Send className="w-3.5 h-3.5" />
+                        ارسال درخواست سفارشی به تلگرام (bots.sendCustomRequest)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleM092SendCustomRequest}
+                        disabled={m092LoadingOp === 'sendCustomRequest'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        {m092LoadingOp === 'sendCustomRequest' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                        <span>ارسال متد سفارشی</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={m092CustomMethod}
+                        onChange={(e) => setM092CustomMethod(e.target.value)}
+                        placeholder="نام متد سفارشی مانند my_custom_api_method"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 font-mono"
+                      />
+                      <input
+                        type="text"
+                        value={m092CustomParams}
+                        onChange={(e) => setM092CustomParams(e.target.value)}
+                        placeholder='پارامترها به صورت JSON: {"key": "value"}'
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-dark-900/60 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 font-mono"
+                      />
+                    </div>
+                    {m092CustomResult && (
+                      <div className="p-2.5 rounded-lg bg-black/40 border border-cyan-500/20 text-xs font-mono text-cyan-200 overflow-x-auto max-h-36">
+                        <pre>{JSON.stringify(m092CustomResult, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feedback Status / Error / Success / Retry */}
+                  {m092Status && (
+                    <div
+                      className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                        m092Status.type === 'success'
+                          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                          : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                      }`}
+                    >
+                      <span>{m092Status.message}</span>
+                      {m092Status.type === 'error' && (
+                        <button
+                          type="button"
+                          onClick={() => setM092Status(null)}
                           className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                         >
                           تلاش مجدد
