@@ -2807,6 +2807,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:get-full-channel-raw', { accountId, ...params }),
   channelsGetGroupsForDiscussionRaw: (accountId: string): Promise<any[]> =>
     ipcRenderer.invoke('telegram:channels:get-groups-for-discussion-raw', { accountId }),
+  channelsGetInactiveChannelsRaw: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-inactive-channels-raw', { accountId }),
+  channelsGetLeftChannelsRaw: (accountId: string, params?: { offset?: number }): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-left-channels-raw', { accountId, ...params }),
+  channelsGetMessageAuthorRaw: (accountId: string, params: { channelId: string; id: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:get-message-author-raw', { accountId, ...params }),
+  channelsGetMessagesRaw: (accountId: string, params: { channelId: string; id: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:get-messages-raw', { accountId, ...params }),
+  channelsGetParticipantRaw: (accountId: string, params: { channelId: string; participantId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:get-participant-raw', { accountId, ...params }),
+  channelsGetParticipantsRaw: (accountId: string, params: { channelId: string; filterName?: string; offset?: number; limit?: number; hash?: bigint }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:get-participants-raw', { accountId, ...params }),
+  channelsGetSendAsRaw: (accountId: string, params: { peerId: string }): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-send-as-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

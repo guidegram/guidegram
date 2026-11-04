@@ -8918,6 +8918,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 082 IPC Handlers (Channels Domain Part 4)
+  ipcMain.handle('telegram:channels:get-inactive-channels-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.channelsGetInactiveChannelsRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetInactiveChannelsRaw error:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:channels:get-left-channels-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsGetLeftChannelsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetLeftChannelsRaw error:', err)
+      return []
+    }
+  })
+
+  ipcMain.handle('telegram:channels:get-message-author-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsGetMessageAuthorRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetMessageAuthorRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:get-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsGetMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetMessagesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:get-participant-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsGetParticipantRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetParticipantRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:get-participants-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsGetParticipantsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetParticipantsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:get-send-as-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsGetSendAsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsGetSendAsRaw error:', err)
+      return []
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

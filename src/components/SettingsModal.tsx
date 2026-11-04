@@ -8646,6 +8646,163 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 082 State & Handlers (Channels Domain Part 4)
+  const [m082Status, setM082Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m082LoadingOp, setM082LoadingOp] = useState<string | null>(null)
+  const [m082ChannelId, setM082ChannelId] = useState('')
+  const [m082ParticipantId, setM082ParticipantId] = useState('')
+  const [m082MsgId, setM082MsgId] = useState('')
+  const [m082InactiveChats, setM082InactiveChats] = useState<any[] | null>(null)
+  const [m082LeftChats, setM082LeftChats] = useState<any[] | null>(null)
+  const [m082AuthorUser, setM082AuthorUser] = useState<any | null>(null)
+  const [m082ParticipantInfo, setM082ParticipantInfo] = useState<any | null>(null)
+  const [m082ParticipantsList, setM082ParticipantsList] = useState<any[] | null>(null)
+  const [m082SendAsPeers, setM082SendAsPeers] = useState<any[] | null>(null)
+
+  const handleM082GetInactiveChannels = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetInactiveChannelsRaw) return
+    setM082LoadingOp('getInactiveChannels')
+    setM082Status(null)
+    setM082InactiveChats(null)
+    try {
+      const chats = await window.guidegram.channelsGetInactiveChannelsRaw(targetId)
+      setM082InactiveChats(chats)
+      setM082Status({
+        type: 'success',
+        message: `تعداد ${chats.length} کانال غیرفعال دریافت گردید`,
+      })
+    } catch (err: any) {
+      setM082Status({ type: 'error', message: err?.message || 'خطا در channels.getInactiveChannels' })
+    } finally {
+      setM082LoadingOp(null)
+    }
+  }
+
+  const handleM082GetLeftChannels = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetLeftChannelsRaw) return
+    setM082LoadingOp('getLeftChannels')
+    setM082Status(null)
+    setM082LeftChats(null)
+    try {
+      const chats = await window.guidegram.channelsGetLeftChannelsRaw(targetId, { offset: 0 })
+      setM082LeftChats(chats)
+      setM082Status({
+        type: 'success',
+        message: `تعداد ${chats.length} کانال ترک‌شده دریافت شد`,
+      })
+    } catch (err: any) {
+      setM082Status({ type: 'error', message: err?.message || 'خطا در channels.getLeftChannels' })
+    } finally {
+      setM082LoadingOp(null)
+    }
+  }
+
+  const handleM082GetMessageAuthor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const msgIdNum = parseInt(m082MsgId.trim(), 10)
+    if (!targetId || !window.guidegram?.channelsGetMessageAuthorRaw || !m082ChannelId.trim() || isNaN(msgIdNum)) return
+    setM082LoadingOp('getMessageAuthor')
+    setM082Status(null)
+    setM082AuthorUser(null)
+    try {
+      const user = await window.guidegram.channelsGetMessageAuthorRaw(targetId, {
+        channelId: m082ChannelId.trim(),
+        id: msgIdNum,
+      })
+      if (user) {
+        setM082AuthorUser(user)
+        setM082Status({
+          type: 'success',
+          message: `نویسنده پیام: ${user.firstName || ''} ${user.lastName || ''} (@${user.username || 'ندارد'})`,
+        })
+      } else {
+        setM082Status({ type: 'error', message: 'اطلاعات نویسنده برای این پیام یافت نشد' })
+      }
+    } catch (err: any) {
+      setM082Status({ type: 'error', message: err?.message || 'خطا در channels.getMessageAuthor' })
+    } finally {
+      setM082LoadingOp(null)
+    }
+  }
+
+  const handleM082GetParticipant = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetParticipantRaw || !m082ChannelId.trim() || !m082ParticipantId.trim()) return
+    setM082LoadingOp('getParticipant')
+    setM082Status(null)
+    setM082ParticipantInfo(null)
+    try {
+      const res = await window.guidegram.channelsGetParticipantRaw(targetId, {
+        channelId: m082ChannelId.trim(),
+        participantId: m082ParticipantId.trim(),
+      })
+      if (res) {
+        setM082ParticipantInfo(res)
+        setM082Status({
+          type: 'success',
+          message: `اطلاعات عضویت با نقش: ${res.participant?._ || 'عضو عادی'} واکشی شد`,
+        })
+      } else {
+        setM082Status({ type: 'error', message: 'کاربر مورد نظر در این کانال یافت نشد' })
+      }
+    } catch (err: any) {
+      setM082Status({ type: 'error', message: err?.message || 'خطا در channels.getParticipant' })
+    } finally {
+      setM082LoadingOp(null)
+    }
+  }
+
+  const handleM082GetParticipants = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetParticipantsRaw || !m082ChannelId.trim()) return
+    setM082LoadingOp('getParticipants')
+    setM082Status(null)
+    setM082ParticipantsList(null)
+    try {
+      const res = await window.guidegram.channelsGetParticipantsRaw(targetId, {
+        channelId: m082ChannelId.trim(),
+        filterName: 'recent',
+        limit: 30,
+      })
+      const list = Array.isArray(res?.participants) ? res.participants : []
+      setM082ParticipantsList(list)
+      setM082Status({
+        type: 'success',
+        message: `تعداد ${list.length} عضو از لیست کانال واکشی شد`,
+      })
+    } catch (err: any) {
+      setM082Status({ type: 'error', message: err?.message || 'خطا در channels.getParticipants' })
+    } finally {
+      setM082LoadingOp(null)
+    }
+  }
+
+  const handleM082GetSendAs = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetSendAsRaw || !m082ChannelId.trim()) return
+    setM082LoadingOp('getSendAs')
+    setM082Status(null)
+    setM082SendAsPeers(null)
+    try {
+      const peers = await window.guidegram.channelsGetSendAsRaw(targetId, {
+        peerId: m082ChannelId.trim(),
+      })
+      setM082SendAsPeers(peers)
+      setM082Status({
+        type: 'success',
+        message: `تعداد ${peers.length} هویت مجاز جهت ارسال پیام (Send As) دریافت شد`,
+      })
+    } catch (err: any) {
+      setM082Status({ type: 'error', message: err?.message || 'خطا در channels.getSendAs' })
+    } finally {
+      setM082LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -22188,6 +22345,201 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                       >
                         {m081LoadingOp === 'getGroupsForDiscussion' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی سوپرگروه‌های مباحثه'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Microphase 082: Channels Domain Suite Part 4 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۸۲: کانال‌های غیرفعال، نویسنده پیام، اعضا و ارسال به عنوان هویت (Channels Part 4)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    مدیریت کانال‌های غیرفعال و ترک‌شده، شناسایی نویسنده پیام، استعلام اعضا و نقش‌ها، و دریافت هویت‌های مجاز ارسال:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m082Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m082Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m082Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m082Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM082Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال هدف:</span>
+                    <input
+                      type="text"
+                      value={m082ChannelId}
+                      onChange={(e) => setM082ChannelId(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال (مثلاً 123456789 یا @mychannel)..."
+                      className="w-full bg-transparent text-xs text-cyan-300 placeholder-gray-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.getInactiveChannels */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. کانال‌های غیرفعال (getInactiveChannels)</span>
+                      <p className="text-[10px] text-gray-400">فهرست کانال‌هایی که فعالیت کمی داشته و می‌توان ترک کرد</p>
+                      {m082InactiveChats && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          تعداد: {m082InactiveChats.length} کانال
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM082GetInactiveChannels}
+                        disabled={m082LoadingOp === 'getInactiveChannels'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m082LoadingOp === 'getInactiveChannels' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی کانال‌های غیرفعال'}
+                      </button>
+                    </div>
+
+                    {/* 2. channels.getLeftChannels */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. کانال‌های ترک‌شده (getLeftChannels)</span>
+                      <p className="text-[10px] text-gray-400">کانال‌هایی که قبلاً در آن‌ها عضو بودید و خارج شدید</p>
+                      {m082LeftChats && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          کانال‌های ترک‌شده: {m082LeftChats.length}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM082GetLeftChannels}
+                        disabled={m082LoadingOp === 'getLeftChannels'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m082LoadingOp === 'getLeftChannels' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی کانال‌های ترک‌شده'}
+                      </button>
+                    </div>
+
+                    {/* 3. channels.getMessageAuthor */}
+                    <form
+                      onSubmit={handleM082GetMessageAuthor}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. نویسنده پیام (getMessageAuthor)</span>
+                      <input
+                        type="number"
+                        value={m082MsgId}
+                        onChange={(e) => setM082MsgId(e.target.value)}
+                        placeholder="شماره پیام (Message ID)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      {m082AuthorUser && (
+                        <div className="text-[10px] text-cyan-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5 truncate">
+                          نویسنده: {m082AuthorUser.firstName || ''} (@{m082AuthorUser.username || 'بی‌نام'})
+                        </div>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={m082LoadingOp === 'getMessageAuthor' || !m082ChannelId.trim() || !m082MsgId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m082LoadingOp === 'getMessageAuthor' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'یافتن نویسنده'}
+                      </button>
+                    </form>
+
+                    {/* 4. channels.getParticipant */}
+                    <form
+                      onSubmit={handleM082GetParticipant}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۴. استعلام نقش عضو (getParticipant)</span>
+                      <input
+                        type="text"
+                        value={m082ParticipantId}
+                        onChange={(e) => setM082ParticipantId(e.target.value)}
+                        placeholder="شناسه یا یوزرنیم کاربر..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      {m082ParticipantInfo && (
+                        <div className="text-[10px] text-cyan-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5 truncate">
+                          نقش: {m082ParticipantInfo.participant?._ || 'عضو عادی'}
+                        </div>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={m082LoadingOp === 'getParticipant' || !m082ChannelId.trim() || !m082ParticipantId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m082LoadingOp === 'getParticipant' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام وضعیت عضو'}
+                      </button>
+                    </form>
+
+                    {/* 5. channels.getParticipants */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. فهرست اعضای کانال (getParticipants)</span>
+                      <p className="text-[10px] text-gray-400">واکشی ۳۰ عضو اخیر کانال یا سوپرگروه</p>
+                      {m082ParticipantsList && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          تعداد اعضای واکشی‌شده: {m082ParticipantsList.length}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM082GetParticipants}
+                        disabled={m082LoadingOp === 'getParticipants' || !m082ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m082LoadingOp === 'getParticipants' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی فهرست اعضا'}
+                      </button>
+                    </div>
+
+                    {/* 6. channels.getSendAs */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶. هویت‌های مجاز ارسال (getSendAs)</span>
+                      <p className="text-[10px] text-gray-400">کانال‌ها یا پروفایل‌هایی که می‌توانید به عنوان آن‌ها پیام بفرستید</p>
+                      {m082SendAsPeers && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          تعداد هویت‌های مجاز: {m082SendAsPeers.length}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM082GetSendAs}
+                        disabled={m082LoadingOp === 'getSendAs' || !m082ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m082LoadingOp === 'getSendAs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی هویت‌های Send As'}
                       </button>
                     </div>
                   </div>

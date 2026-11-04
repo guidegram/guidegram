@@ -20920,6 +20920,49 @@ export class AccountManager {
     if (!holder?.client) return []
     return this.channelsService.getGroupsForDiscussion(holder as any)
   }
+
+  // Layer 232 Channels Domain Part 4 (Microphase 082)
+  public async channelsGetInactiveChannelsRaw(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getInactiveChannels(holder as any)
+  }
+
+  public async channelsGetLeftChannelsRaw(accountId: string, params?: { offset?: number }): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getLeftChannels(holder as any, params?.offset || 0)
+  }
+
+  public async channelsGetMessageAuthorRaw(accountId: string, params: { channelId: string; id: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getMessageAuthor(holder as any, accountId, params.channelId, params.id)
+  }
+
+  public async channelsGetMessagesRaw(accountId: string, params: { channelId: string; id: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getMessages(holder as any, accountId, params.channelId, params.id)
+  }
+
+  public async channelsGetParticipantRaw(accountId: string, params: { channelId: string; participantId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getParticipant(holder as any, accountId, params.channelId, params.participantId)
+  }
+
+  public async channelsGetParticipantsRaw(accountId: string, params: { channelId: string; filterName?: string; offset?: number; limit?: number; hash?: bigint }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getParticipants(holder as any, accountId, params.channelId, params.filterName, params.offset, params.limit, params.hash)
+  }
+
+  public async channelsGetSendAsRaw(accountId: string, params: { peerId: string }): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getSendAs(holder as any, accountId, params.peerId)
+  }
 }
 
 
