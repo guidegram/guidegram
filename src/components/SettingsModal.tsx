@@ -11269,6 +11269,229 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 097: Payments Domain Suite Part 4 (7 RPCs)
+  const [m097Status, setM097Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m097LoadingOp, setM097LoadingOp] = useState<string | null>(null)
+  const [m097CardNumber, setM097CardNumber] = useState('')
+  const [m097BotRefPeerId, setM097BotRefPeerId] = useState('')
+  const [m097BotRefBotId, setM097BotRefBotId] = useState('')
+  const [m097BotsPeerId, setM097BotsPeerId] = useState('')
+  const [m097BotsLimit, setM097BotsLimit] = useState('50')
+  const [m097CraftGiftId, setM097CraftGiftId] = useState('')
+  const [m097CraftLimit, setM097CraftLimit] = useState('50')
+  const [m097GiveawayPeerId, setM097GiveawayPeerId] = useState('')
+  const [m097GiveawayMsgId, setM097GiveawayMsgId] = useState('')
+  const [m097OnrampProvider, setM097OnrampProvider] = useState('neocrypto')
+  const [m097OnrampCrypto, setM097OnrampCrypto] = useState('TON')
+  const [m097OnrampBase, setM097OnrampBase] = useState('USD')
+  const [m097OpResult, setM097OpResult] = useState<any | null>(null)
+
+  const handleM097GetBankCardData = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m097CardNumber.trim()) {
+      setM097Status({ type: 'error', message: 'لطفاً شماره کارت بانکی را وارد کنید.' })
+      return
+    }
+    setM097LoadingOp('getBankCardData')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetBankCardDataRaw(targetId, {
+        number: m097CardNumber.trim(),
+      })
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'اطلاعات کارت بانکی با موفقیت استعلام شد (payments.getBankCardData).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در استعلام کارت بانکی.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getBankCardData' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
+  const handleM097GetConnectedStarRefBot = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m097BotRefPeerId.trim() || !m097BotRefBotId.trim()) {
+      setM097Status({ type: 'error', message: 'شناسه چت مالک و شناسه ربات را وارد کنید.' })
+      return
+    }
+    setM097LoadingOp('getConnectedStarRefBot')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetConnectedStarRefBotRaw(targetId, {
+        peerId: m097BotRefPeerId.trim(),
+        botId: m097BotRefBotId.trim(),
+      })
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'اطلاعات ربات ارجاع متصل استعلام شد (payments.getConnectedStarRefBot).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در استعلام ربات ارجاع متصل.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getConnectedStarRefBot' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
+  const handleM097GetConnectedStarRefBots = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM097LoadingOp('getConnectedStarRefBots')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetConnectedStarRefBotsRaw(targetId, {
+        peerId: m097BotsPeerId.trim() || 'me',
+        limit: Number(m097BotsLimit) || 50,
+      })
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'لیست ربات‌های ارجاع متصل دریافت شد (payments.getConnectedStarRefBots).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در دریافت لیست ربات‌ها.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getConnectedStarRefBots' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
+  const handleM097GetCraftStarGifts = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m097CraftGiftId.trim()) {
+      setM097Status({ type: 'error', message: 'شناسه گیفت ستاره‌ای برای کرفت را وارد کنید.' })
+      return
+    }
+    setM097LoadingOp('getCraftStarGifts')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetCraftStarGiftsRaw(targetId, {
+        giftId: m097CraftGiftId.trim(),
+        limit: Number(m097CraftLimit) || 50,
+      })
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'اطلاعات گیفت‌های قابل کرفت استعلام شد (payments.getCraftStarGifts).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در استعلام کرفت گیفت.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getCraftStarGifts' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
+  const handleM097GetCurrencyRates = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM097LoadingOp('getCurrencyRates')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetCurrencyRatesRaw(targetId)
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'نرخ لحظه‌ای ارزها و ستاره‌ها دریافت شد (payments.getCurrencyRates).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در دریافت نرخ ارزها.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getCurrencyRates' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
+  const handleM097GetGiveawayInfo = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m097GiveawayPeerId.trim() || !m097GiveawayMsgId.trim()) {
+      setM097Status({ type: 'error', message: 'شناسه چت و شناسه پیام گیووی را وارد کنید.' })
+      return
+    }
+    setM097LoadingOp('getGiveawayInfo')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetGiveawayInfoRaw(targetId, {
+        peerId: m097GiveawayPeerId.trim(),
+        msgId: Number(m097GiveawayMsgId) || 0,
+      })
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'اطلاعات قرعه‌کشی و گیووی دریافت شد (payments.getGiveawayInfo).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در دریافت اطلاعات گیووی.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getGiveawayInfo' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
+  const handleM097GetOnrampAvailability = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m097OnrampProvider.trim() || !m097OnrampCrypto.trim()) {
+      setM097Status({ type: 'error', message: 'نام ارائه‌دهنده و نوع رمزارز را مشخص کنید.' })
+      return
+    }
+    setM097LoadingOp('getOnrampAvailability')
+    setM097Status(null)
+    setM097OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetOnrampAvailabilityRaw(targetId, {
+        provider: m097OnrampProvider.trim(),
+        cryptoCurrency: m097OnrampCrypto.trim(),
+        baseCurrency: m097OnrampBase.trim() || undefined,
+      })
+      if (res !== undefined && res !== null) {
+        setM097OpResult(res)
+        setM097Status({
+          type: 'success',
+          message: 'دسترسی‌پذیری درگاه خرید کریپتو استعلام شد (payments.getOnrampAvailability).',
+        })
+      } else {
+        setM097Status({ type: 'error', message: 'پاسخ ناموفق در استعلام درگاه Onramp.' })
+      }
+    } catch (err: any) {
+      setM097Status({ type: 'error', message: err?.message || 'خطا در payments.getOnrampAvailability' })
+    } finally {
+      setM097LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -28457,6 +28680,323 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setM096Status(null)}
+                            className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                          >
+                            تلاش مجدد
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Microphase 097: Payments Domain Suite Part 4 (7 RPCs) */}
+                <div className="bg-dark-800/60 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                        <span>💳</span>
+                        <span>مدیریت پیشرفته پرداخت و ستاره‌ها (فاز ۴) - کارت بانکی، ربات‌های ارجاع، کرفت، نرخ ارزها، گیووی و Onramp</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        متدهای MTProto لایه ۲۳۲ تلگرام: استعلام کارت بانکی، ربات‌های ارجاع متصل، گیفت‌های قابل کرفت، نرخ لحظه‌ای ارزها، جزئیات گیووی و درگاه خرید Onramp
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                      Phase 097 / Layer 232
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* RPC 1: payments.getBankCardData */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۱. استعلام کارت بانکی (payments.getBankCardData)</span>
+                        <span className="text-[10px] text-gray-400">Card Metadata</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شماره کارت بانکی (یا پیش‌شماره)</label>
+                          <input
+                            type="text"
+                            value={m097CardNumber}
+                            onChange={(e) => setM097CardNumber(e.target.value)}
+                            placeholder="مثال: 411111111111"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetBankCardData}
+                          disabled={m097LoadingOp === 'getBankCardData'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getBankCardData' ? 'در حال استعلام...' : 'استعلام اطلاعات کارت'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 2: payments.getConnectedStarRefBot */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۲. استعلام ربات ارجاع متصل (payments.getConnectedStarRefBot)</span>
+                        <span className="text-[10px] text-gray-400">Single Ref Bot</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه چت مالک (کانال یا کاربر)</label>
+                          <input
+                            type="text"
+                            value={m097BotRefPeerId}
+                            onChange={(e) => setM097BotRefPeerId(e.target.value)}
+                            placeholder="مثال: me یا username کانال"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه ربات ارجاع (botId)</label>
+                          <input
+                            type="text"
+                            value={m097BotRefBotId}
+                            onChange={(e) => setM097BotRefBotId(e.target.value)}
+                            placeholder="مثال: 123456789"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetConnectedStarRefBot}
+                          disabled={m097LoadingOp === 'getConnectedStarRefBot'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getConnectedStarRefBot' ? 'در حال دریافت...' : 'استعلام ربات ارجاع'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 3: payments.getConnectedStarRefBots */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۳. لیست ربات‌های ارجاع متصل (payments.getConnectedStarRefBots)</span>
+                        <span className="text-[10px] text-gray-400">All Connected Bots</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه چت (peerId)</label>
+                          <input
+                            type="text"
+                            value={m097BotsPeerId}
+                            onChange={(e) => setM097BotsPeerId(e.target.value)}
+                            placeholder="پیش‌فرض: me یا شناسه کانال"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">حداکثر تعداد (Limit)</label>
+                          <input
+                            type="number"
+                            value={m097BotsLimit}
+                            onChange={(e) => setM097BotsLimit(e.target.value)}
+                            placeholder="50"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetConnectedStarRefBots}
+                          disabled={m097LoadingOp === 'getConnectedStarRefBots'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getConnectedStarRefBots' ? 'در حال دریافت...' : 'دریافت لیست ربات‌ها'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 4: payments.getCraftStarGifts */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۴. استعلام گیفت‌های قابل کرفت (payments.getCraftStarGifts)</span>
+                        <span className="text-[10px] text-gray-400">Crafting List</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه گیفت ستاره‌ای (giftId)</label>
+                          <input
+                            type="text"
+                            value={m097CraftGiftId}
+                            onChange={(e) => setM097CraftGiftId(e.target.value)}
+                            placeholder="شناسه گیفت مبدا"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">حداکثر تعداد (Limit)</label>
+                          <input
+                            type="number"
+                            value={m097CraftLimit}
+                            onChange={(e) => setM097CraftLimit(e.target.value)}
+                            placeholder="50"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetCraftStarGifts}
+                          disabled={m097LoadingOp === 'getCraftStarGifts'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getCraftStarGifts' ? 'در حال استعلام...' : 'استعلام کرفت گیفت‌ها'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 5: payments.getCurrencyRates */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۵. استعلام نرخ لحظه‌ای ارزها و ستاره‌ها (payments.getCurrencyRates)</span>
+                        <span className="text-[10px] text-gray-400">Live Rates</span>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        دریافت آخرین نرخ‌های برابری رسمی تلگرام برای ارزهای فیات، ستاره‌ها (Stars) و رمزارز TON.
+                      </p>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetCurrencyRates}
+                          disabled={m097LoadingOp === 'getCurrencyRates'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getCurrencyRates' ? 'در حال استعلام نرخ‌ها...' : 'دریافت نرخ لحظه‌ای ارزها'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 6: payments.getGiveawayInfo */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۶. اطلاعات و نتایج گیووی (payments.getGiveawayInfo)</span>
+                        <span className="text-[10px] text-gray-400">Giveaway Details</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه چت ناشر (peerId)</label>
+                          <input
+                            type="text"
+                            value={m097GiveawayPeerId}
+                            onChange={(e) => setM097GiveawayPeerId(e.target.value)}
+                            placeholder="شناسه کانال یا گروه گیووی"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه پیام گیووی (msgId)</label>
+                          <input
+                            type="number"
+                            value={m097GiveawayMsgId}
+                            onChange={(e) => setM097GiveawayMsgId(e.target.value)}
+                            placeholder="شناسه عددی پیام"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetGiveawayInfo}
+                          disabled={m097LoadingOp === 'getGiveawayInfo'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getGiveawayInfo' ? 'در حال دریافت...' : 'دریافت وضعیت گیووی'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 7: payments.getOnrampAvailability */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۷. بررسی درگاه خرید رمزارز (payments.getOnrampAvailability)</span>
+                        <span className="text-[10px] text-gray-400">Onramp Status</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">ارائه‌دهنده (Provider)</label>
+                          <input
+                            type="text"
+                            value={m097OnrampProvider}
+                            onChange={(e) => setM097OnrampProvider(e.target.value)}
+                            placeholder="مثال: neocrypto"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">رمزارز درخواستی</label>
+                          <input
+                            type="text"
+                            value={m097OnrampCrypto}
+                            onChange={(e) => setM097OnrampCrypto(e.target.value)}
+                            placeholder="مثال: TON"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">ارز پایه (اختیاری)</label>
+                          <input
+                            type="text"
+                            value={m097OnrampBase}
+                            onChange={(e) => setM097OnrampBase(e.target.value)}
+                            placeholder="مثال: USD"
+                            className="w-full bg-dark-900/80 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM097GetOnrampAvailability}
+                          disabled={m097LoadingOp === 'getOnrampAvailability'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m097LoadingOp === 'getOnrampAvailability' ? 'در حال استعلام...' : 'استعلام درگاه خرید'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Honest Empty State */}
+                    {!m097OpResult && !m097Status && (
+                      <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl text-center text-xs text-gray-500">
+                        هیچ عملیاتی در ماژول پرداخت ۴ اجرا نشده است. برای فراخوانی یا تست یکی از متدهای بالا را اجرا کنید.
+                      </div>
+                    )}
+
+                    {/* Structured Operation Output Box */}
+                    {m097OpResult && (
+                      <div className="bg-black/30 p-2.5 rounded-lg border border-amber-500/20 text-[11px] font-mono text-amber-300 text-left overflow-x-auto max-h-36">
+                        <pre>{JSON.stringify(m097OpResult, null, 2)}</pre>
+                      </div>
+                    )}
+
+                    {/* Status Feedback / Error with Retry */}
+                    {m097Status && (
+                      <div
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                          m097Status.type === 'success'
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                            : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                        }`}
+                      >
+                        <span>{m097Status.message}</span>
+                        {m097Status.type === 'error' && (
+                          <button
+                            type="button"
+                            onClick={() => setM097Status(null)}
                             className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                           >
                             تلاش مجدد

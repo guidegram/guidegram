@@ -3009,6 +3009,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:export-invoice-raw', { accountId, ...params }),
   paymentsFulfillStarsSubscriptionRaw: (accountId: string, params: { peerId: string; subscriptionId: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:fulfill-stars-subscription-raw', { accountId, ...params }),
+  // Microphase 097: Payments Domain Suite Part 4 (7 RPCs)
+  paymentsGetBankCardDataRaw: (accountId: string, params: { number: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-bank-card-data-raw', { accountId, ...params }),
+  paymentsGetConnectedStarRefBotRaw: (accountId: string, params: { peerId: string; botId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-connected-star-ref-bot-raw', { accountId, ...params }),
+  paymentsGetConnectedStarRefBotsRaw: (accountId: string, params: { peerId: string; offsetDate?: number; offsetLink?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-connected-star-ref-bots-raw', { accountId, ...params }),
+  paymentsGetCraftStarGiftsRaw: (accountId: string, params: { giftId: bigint | number | string; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-craft-star-gifts-raw', { accountId, ...params }),
+  paymentsGetCurrencyRatesRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-currency-rates-raw', { accountId }),
+  paymentsGetGiveawayInfoRaw: (accountId: string, params: { peerId: string; msgId: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-giveaway-info-raw', { accountId, ...params }),
+  paymentsGetOnrampAvailabilityRaw: (accountId: string, params: { provider: string; cryptoCurrency: string; baseCurrency?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-onramp-availability-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

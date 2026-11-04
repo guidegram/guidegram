@@ -21816,6 +21816,76 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.fulfillStarsSubscription(holder as any, accountId, params.peerId, params.subscriptionId)
   }
+
+  // Microphase 097: Payments Domain Suite Part 4 Raw Wrappers
+  public async paymentsGetBankCardDataRaw(
+    accountId: string,
+    params: { number: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getBankCardData(holder as any, params.number)
+  }
+
+  public async paymentsGetConnectedStarRefBotRaw(
+    accountId: string,
+    params: { peerId: string; botId: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getConnectedStarRefBot(holder as any, accountId, params.peerId, params.botId)
+  }
+
+  public async paymentsGetConnectedStarRefBotsRaw(
+    accountId: string,
+    params: { peerId: string; offsetDate?: number; offsetLink?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getConnectedStarRefBots(
+      holder as any,
+      accountId,
+      params.peerId,
+      params.offsetDate,
+      params.offsetLink,
+      params.limit
+    )
+  }
+
+  public async paymentsGetCraftStarGiftsRaw(
+    accountId: string,
+    params: { giftId: bigint | number | string; offset?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getCraftStarGifts(holder as any, params.giftId, params.offset, params.limit)
+  }
+
+  public async paymentsGetCurrencyRatesRaw(
+    accountId: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getCurrencyRates(holder as any)
+  }
+
+  public async paymentsGetGiveawayInfoRaw(
+    accountId: string,
+    params: { peerId: string; msgId: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getGiveawayInfo(holder as any, accountId, params.peerId, params.msgId)
+  }
+
+  public async paymentsGetOnrampAvailabilityRaw(
+    accountId: string,
+    params: { provider: string; cryptoCurrency: string; baseCurrency?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getOnrampAvailability(holder as any, params.provider, params.cryptoCurrency, params.baseCurrency)
+  }
 }
 
 

@@ -131,11 +131,11 @@ export class PaymentsService {
     try {
       return await holder.client.call({
         _: 'payments.getBankCardData',
-        number,
+        number: String(number || '').trim(),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getBankCardData error:', err)
-      return null
+      throw err
     }
   }
 
@@ -210,14 +210,15 @@ export class PaymentsService {
 
   public async getGiveawayInfo(holder: RpcClientHolder, accountId: string, peerId: string, msgId: number): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getGiveawayInfo',
-        peer, msgId,
+        peer,
+        msgId: Number(msgId || 0),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getGiveawayInfo error:', err)
-      return null
+      throw err
     }
   }
 
@@ -484,27 +485,32 @@ export class PaymentsService {
 
   public async getConnectedStarRefBots(holder: RpcClientHolder, accountId: string, peerId: string, offsetDate = 0, offsetLink = '', limit = 50): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getConnectedStarRefBots',
-        peer, offsetDate, offsetLink, limit,
+        peer,
+        offsetDate: Number(offsetDate || 0),
+        offsetLink: String(offsetLink || '').trim(),
+        limit: Number(limit || 50),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getConnectedStarRefBots error:', err)
-      return null
+      throw err
     }
   }
 
   public async getConnectedStarRefBot(holder: RpcClientHolder, accountId: string, peerId: string, botId: string): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+      const bot = botId ? await this.toInputUser(accountId, botId) : { _: 'inputUserEmpty' }
       return await holder.client.call({
         _: 'payments.getConnectedStarRefBot',
-        peer, bot: await this.toInputUser(accountId, botId),
+        peer,
+        bot,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getConnectedStarRefBot error:', err)
-      return null
+      throw err
     }
   }
 
@@ -877,15 +883,18 @@ export class PaymentsService {
     }
   }
 
-  public async getCraftStarGifts(holder: RpcClientHolder, giftId: bigint, offset = '', limit = 50): Promise<any> {
+  public async getCraftStarGifts(holder: RpcClientHolder, giftId: bigint | number | string, offset = '', limit = 50): Promise<any> {
     try {
+      const gId = typeof giftId === 'bigint' ? giftId : BigInt(giftId || 0)
       return await holder.client.call({
         _: 'payments.getCraftStarGifts',
-        giftId, offset, limit,
+        giftId: gId,
+        offset: String(offset || ''),
+        limit: Number(limit || 50),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getCraftStarGifts error:', err)
-      return null
+      throw err
     }
   }
 
@@ -914,7 +923,7 @@ export class PaymentsService {
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getCurrencyRates error:', err)
-      return null
+      throw err
     }
   }
 
@@ -940,15 +949,17 @@ export class PaymentsService {
     }
   }
 
-  public async getOnrampAvailability(holder: RpcClientHolder, provider: string, currency: string): Promise<any> {
+  public async getOnrampAvailability(holder: RpcClientHolder, provider: string, cryptoCurrency: string, baseCurrency?: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getOnrampAvailability',
-        provider, currency,
-      })
+        provider: String(provider || '').trim(),
+        cryptoCurrency: String(cryptoCurrency || '').trim(),
+        baseCurrency: baseCurrency ? String(baseCurrency).trim() : undefined,
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getOnrampAvailability error:', err)
-      return null
+      throw err
     }
   }
 
