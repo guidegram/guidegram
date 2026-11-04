@@ -9046,6 +9046,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 084 IPC Handlers (Channels Domain Part 6)
+  ipcMain.handle('telegram:channels:report-spam-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsReportSpamRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsReportSpamRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:restrict-sponsored-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsRestrictSponsoredMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsRestrictSponsoredMessagesRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:search-posts-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsSearchPostsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsSearchPostsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:set-boosts-to-unblock-restrictions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsSetBoostsToUnblockRestrictionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsSetBoostsToUnblockRestrictionsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:set-discussion-group-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsSetDiscussionGroupRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsSetDiscussionGroupRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:set-emoji-stickers-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsSetEmojiStickersRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsSetEmojiStickersRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:set-main-profile-tab-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsSetMainProfileTabRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsSetMainProfileTabRaw error:', err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

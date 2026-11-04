@@ -2835,6 +2835,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:reorder-usernames-raw', { accountId, ...params }),
   channelsReportAntiSpamFalsePositiveRaw: (accountId: string, params: { channelId: string; msgId: number }): Promise<boolean> =>
     ipcRenderer.invoke('telegram:channels:report-anti-spam-false-positive-raw', { accountId, ...params }),
+  channelsReportSpamRaw: (accountId: string, params: { channelId: string; participantId: string; id: number[] }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:report-spam-raw', { accountId, ...params }),
+  channelsRestrictSponsoredMessagesRaw: (accountId: string, params: { channelId: string; restricted: boolean }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:restrict-sponsored-messages-raw', { accountId, ...params }),
+  channelsSearchPostsRaw: (accountId: string, params: { query: string; hashtag?: string; offsetId?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:search-posts-raw', { accountId, ...params }),
+  channelsSetBoostsToUnblockRestrictionsRaw: (accountId: string, params: { channelId: string; boosts: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:set-boosts-to-unblock-restrictions-raw', { accountId, ...params }),
+  channelsSetDiscussionGroupRaw: (accountId: string, params: { broadcastId: string; groupId: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:set-discussion-group-raw', { accountId, ...params }),
+  channelsSetEmojiStickersRaw: (accountId: string, params: { channelId: string; stickerset?: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:set-emoji-stickers-raw', { accountId, ...params }),
+  channelsSetMainProfileTabRaw: (accountId: string, params: { channelId: string; tabName?: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:set-main-profile-tab-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -8984,6 +8984,200 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 084 State & Handlers (Channels Domain Part 6)
+  const [m084Status, setM084Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m084LoadingOp, setM084LoadingOp] = useState<string | null>(null)
+  const [m084ChannelId, setM084ChannelId] = useState('')
+  const [m084ParticipantId, setM084ParticipantId] = useState('')
+  const [m084SpamMsgIds, setM084SpamMsgIds] = useState('')
+  const [m084SearchQuery, setM084SearchQuery] = useState('')
+  const [m084Hashtag, setM084Hashtag] = useState('')
+  const [m084Boosts, setM084Boosts] = useState('4')
+  const [m084GroupId, setM084GroupId] = useState('')
+  const [m084StickerSetShortName, setM084StickerSetShortName] = useState('')
+  const [m084ProfileTab, setM084ProfileTab] = useState<'posts' | 'stories'>('posts')
+
+  const handleM084ReportSpam = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const msgIds = m084SpamMsgIds.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    if (!targetId || !window.guidegram?.channelsReportSpamRaw || !m084ChannelId.trim() || !m084ParticipantId.trim() || msgIds.length === 0) return
+    setM084LoadingOp('reportSpam')
+    setM084Status(null)
+    try {
+      const ok = await window.guidegram.channelsReportSpamRaw(targetId, {
+        channelId: m084ChannelId.trim(),
+        participantId: m084ParticipantId.trim(),
+        id: msgIds,
+      })
+      if (ok) {
+        setM084Status({
+          type: 'success',
+          message: `گزارش اسپم برای ${msgIds.length} پیام با موفقیت به تلگرام ارسال شد`,
+        })
+      } else {
+        setM084Status({ type: 'error', message: 'عدم موفقیت در ارسال گزارش اسپم' })
+      }
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.reportSpam' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
+  const handleM084RestrictSponsored = async (restricted: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsRestrictSponsoredMessagesRaw || !m084ChannelId.trim()) return
+    setM084LoadingOp('restrictSponsored')
+    setM084Status(null)
+    try {
+      const ok = await window.guidegram.channelsRestrictSponsoredMessagesRaw(targetId, {
+        channelId: m084ChannelId.trim(),
+        restricted,
+      })
+      if (ok) {
+        setM084Status({
+          type: 'success',
+          message: restricted ? 'تبلیغات اسپانسری در کانال غیرفعال شد' : 'نمایش تبلیغات اسپانسری فعال گردید',
+        })
+      } else {
+        setM084Status({ type: 'error', message: 'عدم موفقیت در تغییر وضعیت پیام‌های اسپانسری' })
+      }
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.restrictSponsoredMessages' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
+  const handleM084SearchPosts = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsSearchPostsRaw || (!m084SearchQuery.trim() && !m084Hashtag.trim())) return
+    setM084LoadingOp('searchPosts')
+    setM084Status(null)
+    try {
+      const res = await window.guidegram.channelsSearchPostsRaw(targetId, {
+        query: m084SearchQuery.trim(),
+        hashtag: m084Hashtag.trim() || undefined,
+        limit: 20,
+      })
+      const count = res?.messages?.length ?? 0
+      setM084Status({
+        type: 'success',
+        message: `جستجوی سراسری پست‌ها انجام شد (${count} پست یافت شد)`,
+      })
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.searchPosts' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
+  const handleM084SetBoosts = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const boosts = parseInt(m084Boosts.trim(), 10)
+    if (!targetId || !window.guidegram?.channelsSetBoostsToUnblockRestrictionsRaw || !m084ChannelId.trim() || isNaN(boosts)) return
+    setM084LoadingOp('setBoosts')
+    setM084Status(null)
+    try {
+      await window.guidegram.channelsSetBoostsToUnblockRestrictionsRaw(targetId, {
+        channelId: m084ChannelId.trim(),
+        boosts,
+      })
+      setM084Status({
+        type: 'success',
+        message: `تعداد بوست‌های لازم برای رفع محدودیت روی ${boosts} تنظیم شد`,
+      })
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.setBoostsToUnblockRestrictions' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
+  const handleM084SetDiscussionGroup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsSetDiscussionGroupRaw || !m084ChannelId.trim() || !m084GroupId.trim()) return
+    setM084LoadingOp('setDiscussionGroup')
+    setM084Status(null)
+    try {
+      const ok = await window.guidegram.channelsSetDiscussionGroupRaw(targetId, {
+        broadcastId: m084ChannelId.trim(),
+        groupId: m084GroupId.trim(),
+      })
+      if (ok) {
+        setM084Status({
+          type: 'success',
+          message: `گروه بحث و تبادل نظر با موفقیت به کانال متصل شد`,
+        })
+      } else {
+        setM084Status({ type: 'error', message: 'عدم موفقیت در اتصال گروه بحث' })
+      }
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.setDiscussionGroup' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
+  const handleM084SetEmojiStickers = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsSetEmojiStickersRaw || !m084ChannelId.trim()) return
+    setM084LoadingOp('setEmojiStickers')
+    setM084Status(null)
+    try {
+      const stickerset = m084StickerSetShortName.trim()
+        ? { _: 'inputStickerSetShortName', shortName: m084StickerSetShortName.trim() }
+        : { _: 'inputStickerSetEmpty' }
+      const ok = await window.guidegram.channelsSetEmojiStickersRaw(targetId, {
+        channelId: m084ChannelId.trim(),
+        stickerset,
+      })
+      if (ok) {
+        setM084Status({
+          type: 'success',
+          message: m084StickerSetShortName.trim() ? `پک استیکر ایموجی کانال تنظیم شد` : `پک استیکر ایموجی کانال حذف شد`,
+        })
+      } else {
+        setM084Status({ type: 'error', message: 'عدم موفقیت در تنظیم پک ایموجی' })
+      }
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.setEmojiStickers' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
+  const handleM084SetMainProfileTab = async (tab: 'posts' | 'stories') => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsSetMainProfileTabRaw || !m084ChannelId.trim()) return
+    setM084LoadingOp('setMainProfileTab')
+    setM084Status(null)
+    try {
+      const ok = await window.guidegram.channelsSetMainProfileTabRaw(targetId, {
+        channelId: m084ChannelId.trim(),
+        tabName: tab,
+      })
+      if (ok) {
+        setM084ProfileTab(tab)
+        setM084Status({
+          type: 'success',
+          message: `تب پیش‌فرض پروفایل کانال روی ${tab === 'posts' ? 'پست‌ها' : 'استوری‌ها'} تنظیم شد`,
+        })
+      } else {
+        setM084Status({ type: 'error', message: 'عدم موفقیت در تغییر تب پیش‌فرض' })
+      }
+    } catch (err: any) {
+      setM084Status({ type: 'error', message: err?.message || 'خطا در channels.setMainProfileTab' })
+    } finally {
+      setM084LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -22922,6 +23116,244 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m083LoadingOp === 'reportAntiSpamFalsePositive' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال گزارش به تلگرام'}
                       </button>
                     </form>
+                  </div>
+                </div>
+
+                {/* Microphase 084: Channels Domain Suite Part 6 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۸۴: گزارش اسپم، تبلیغات اسپانسری، جستجو، بوست، گروه بحث و استیکر (Channels Part 6)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    گزارش اسپم، مدیریت تبلیغات، جستجوی سراسری پست‌ها، تعیین بوست رفع محدودیت، پیوند گروه بحث، استیکر ایموجی و تب پیش‌فرض پروفایل:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m084Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m084Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m084Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m084Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM084Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال هدف:</span>
+                    <input
+                      type="text"
+                      value={m084ChannelId}
+                      onChange={(e) => setM084ChannelId(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال (مثلاً 123456789 یا @mychannel)..."
+                      className="w-full bg-transparent text-xs text-cyan-300 placeholder-gray-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.reportSpam */}
+                    <form
+                      onSubmit={handleM084ReportSpam}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. گزارش اسپم کاربر (reportSpam)</span>
+                      <input
+                        type="text"
+                        value={m084ParticipantId}
+                        onChange={(e) => setM084ParticipantId(e.target.value)}
+                        placeholder="شناسه یا یوزرنیم فرستنده اسپم..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <input
+                        type="text"
+                        value={m084SpamMsgIds}
+                        onChange={(e) => setM084SpamMsgIds(e.target.value)}
+                        placeholder="شناسه‌های پیام اسپم با کاما (مثلاً 12, 13)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m084LoadingOp === 'reportSpam' || !m084ChannelId.trim() || !m084ParticipantId.trim() || !m084SpamMsgIds.trim()}
+                        className="w-full py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m084LoadingOp === 'reportSpam' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال گزارش اسپم'}
+                      </button>
+                    </form>
+
+                    {/* 2. channels.restrictSponsoredMessages */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. تبلیغات اسپانسری (restrictSponsored)</span>
+                      <p className="text-[10px] text-gray-400">محدود کردن تبلیغات تلگرام در کانال بوست‌شده</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM084RestrictSponsored(true)}
+                          disabled={m084LoadingOp === 'restrictSponsored' || !m084ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m084LoadingOp === 'restrictSponsored' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف تبلیغات'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM084RestrictSponsored(false)}
+                          disabled={m084LoadingOp === 'restrictSponsored' || !m084ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          فعال‌سازی
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. channels.searchPosts */}
+                    <form
+                      onSubmit={handleM084SearchPosts}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. جستجوی سراسری پست‌ها (searchPosts)</span>
+                      <input
+                        type="text"
+                        value={m084SearchQuery}
+                        onChange={(e) => setM084SearchQuery(e.target.value)}
+                        placeholder="عبارت جستجو..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <input
+                        type="text"
+                        value={m084Hashtag}
+                        onChange={(e) => setM084Hashtag(e.target.value)}
+                        placeholder="هشتگ اختیاری (مثلاً crypto#)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m084LoadingOp === 'searchPosts' || (!m084SearchQuery.trim() && !m084Hashtag.trim())}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m084LoadingOp === 'searchPosts' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'جستجو در کانال‌ها'}
+                      </button>
+                    </form>
+
+                    {/* 4. channels.setBoostsToUnblockRestrictions */}
+                    <form
+                      onSubmit={handleM084SetBoosts}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۴. سطح بوست رفع محدودیت (setBoosts)</span>
+                      <input
+                        type="number"
+                        value={m084Boosts}
+                        onChange={(e) => setM084Boosts(e.target.value)}
+                        placeholder="تعداد بوست (مثلاً 4)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m084LoadingOp === 'setBoosts' || !m084ChannelId.trim() || !m084Boosts.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m084LoadingOp === 'setBoosts' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم سطح بوست'}
+                      </button>
+                    </form>
+
+                    {/* 5. channels.setDiscussionGroup */}
+                    <form
+                      onSubmit={handleM084SetDiscussionGroup}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۵. اتصال گروه بحث (setDiscussionGroup)</span>
+                      <input
+                        type="text"
+                        value={m084GroupId}
+                        onChange={(e) => setM084GroupId(e.target.value)}
+                        placeholder="شناسه یا یوزرنیم سوپرگروه..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m084LoadingOp === 'setDiscussionGroup' || !m084ChannelId.trim() || !m084GroupId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m084LoadingOp === 'setDiscussionGroup' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اتصال به کانال'}
+                      </button>
+                    </form>
+
+                    {/* 6. channels.setEmojiStickers & setMainProfileTab */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶ و ۷. استیکر ایموجی و تب پروفایل</span>
+                      <form onSubmit={handleM084SetEmojiStickers} className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={m084StickerSetShortName}
+                          onChange={(e) => setM084StickerSetShortName(e.target.value)}
+                          placeholder="نام کوتاه پک ایموجی (خالی = حذف)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m084LoadingOp === 'setEmojiStickers' || !m084ChannelId.trim()}
+                          className="py-1 px-2.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-xl cursor-pointer disabled:opacity-40"
+                        >
+                          {m084LoadingOp === 'setEmojiStickers' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت'}
+                        </button>
+                      </form>
+                      <div className="flex gap-2 pt-1 border-t border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => handleM084SetMainProfileTab('posts')}
+                          disabled={m084LoadingOp === 'setMainProfileTab' || !m084ChannelId.trim()}
+                          className={`flex-1 py-1 text-xs rounded-xl border transition-all cursor-pointer ${
+                            m084ProfileTab === 'posts'
+                              ? 'bg-cyan-600/30 border-cyan-500/50 text-cyan-200'
+                              : 'bg-dark-900/40 border-white/5 text-gray-400 hover:text-gray-200'
+                          }`}
+                        >
+                          تب پست‌ها
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM084SetMainProfileTab('stories')}
+                          disabled={m084LoadingOp === 'setMainProfileTab' || !m084ChannelId.trim()}
+                          className={`flex-1 py-1 text-xs rounded-xl border transition-all cursor-pointer ${
+                            m084ProfileTab === 'stories'
+                              ? 'bg-cyan-600/30 border-cyan-500/50 text-cyan-200'
+                              : 'bg-dark-900/40 border-white/5 text-gray-400 hover:text-gray-200'
+                          }`}
+                        >
+                          تب استوری‌ها
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

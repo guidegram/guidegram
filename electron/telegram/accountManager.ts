@@ -21006,6 +21006,50 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.channelsService.reportAntiSpamFalsePositive(holder as any, accountId, params.channelId, params.msgId)
   }
+
+  // Layer 232 Channels Domain Part 6 (Microphase 084)
+  public async channelsReportSpamRaw(accountId: string, params: { channelId: string; participantId: string; id: number[] }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.reportSpam(holder as any, accountId, params.channelId, params.participantId, params.id)
+  }
+
+  public async channelsRestrictSponsoredMessagesRaw(accountId: string, params: { channelId: string; restricted: boolean }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.restrictSponsoredMessages(holder as any, accountId, params.channelId, params.restricted)
+  }
+
+  public async channelsSearchPostsRaw(accountId: string, params: { query: string; hashtag?: string; offsetId?: number; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.searchPosts(holder as any, accountId, params.query, params.hashtag, params.offsetId, params.limit)
+  }
+
+  public async channelsSetBoostsToUnblockRestrictionsRaw(accountId: string, params: { channelId: string; boosts: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.setBoostsToUnblockRestrictions(holder as any, accountId, params.channelId, params.boosts)
+  }
+
+  public async channelsSetDiscussionGroupRaw(accountId: string, params: { broadcastId: string; groupId: string }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.setDiscussionGroup(holder as any, accountId, params.broadcastId, params.groupId)
+  }
+
+  public async channelsSetEmojiStickersRaw(accountId: string, params: { channelId: string; stickerset?: any }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    const stickerset = params.stickerset || { _: 'inputStickerSetEmpty' }
+    return this.channelsService.setEmojiStickers(holder as any, accountId, params.channelId, stickerset)
+  }
+
+  public async channelsSetMainProfileTabRaw(accountId: string, params: { channelId: string; tabName?: string }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.setMainProfileTab(holder as any, accountId, params.channelId, params.tabName)
+  }
 }
 
 
