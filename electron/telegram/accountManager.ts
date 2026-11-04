@@ -21150,6 +21150,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.channelsService.updateUsername(holder as any, accountId, params.channelId, params.username)
   }
+
+  // Microphase 088 Bots Domain Suite Part 1 (7 RPCs)
+  public async botsAddPreviewMediaRaw(accountId: string, params: { botId: string; media: any; langCode?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.addPreviewMedia(holder as any, accountId, params.botId, params.media, params.langCode || '')
+  }
+
+  public async botsAddUsernameRaw(accountId: string, params: { botId: string; username: string }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.addUsername(holder as any, accountId, params.botId, params.username)
+  }
+
+  public async botsAllowSendMessageRaw(accountId: string, params: { botId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.allowSendMessage(holder as any, accountId, params.botId)
+  }
+
+  public async botsAnswerWebhookJSONQueryRaw(accountId: string, params: { queryId: bigint | number | Long | string; data: any }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.answerWebhookJSONQuery(holder as any, params.queryId as any, params.data)
+  }
+
+  public async botsCanSendMessageRaw(accountId: string, params: { botId: string }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.canSendMessage(holder as any, accountId, params.botId)
+  }
+
+  public async botsCheckDownloadFileParamsRaw(accountId: string, params: { botId: string; fileName: string; url: string }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.checkDownloadFileParams(holder as any, accountId, params.botId, params.fileName, params.url)
+  }
+
+  public async botsCheckUsernameRaw(accountId: string, params: { username: string; additional?: boolean }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.checkUsername(holder as any, params.username, params.additional)
+  }
 }
 
 

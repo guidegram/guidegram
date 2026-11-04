@@ -9257,6 +9257,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 088 IPC Handlers (Bots Domain Part 1)
+  ipcMain.handle('telegram:bots:add-preview-media-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsAddPreviewMediaRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsAddPreviewMediaRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:add-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsAddUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsAddUsernameRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:allow-send-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsAllowSendMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsAllowSendMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:answer-webhook-json-query-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsAnswerWebhookJSONQueryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsAnswerWebhookJSONQueryRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:can-send-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsCanSendMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsCanSendMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:check-download-file-params-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsCheckDownloadFileParamsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsCheckDownloadFileParamsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:check-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsCheckUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsCheckUsernameRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

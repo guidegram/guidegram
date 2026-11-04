@@ -2881,6 +2881,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:update-paid-messages-price-raw', { accountId, ...params }),
   channelsUpdateUsernameRaw: (accountId: string, params: { channelId: string; username: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:channels:update-username-raw', { accountId, ...params }),
+  botsAddPreviewMediaRaw: (accountId: string, params: { botId: string; media: any; langCode?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:add-preview-media-raw', { accountId, ...params }),
+  botsAddUsernameRaw: (accountId: string, params: { botId: string; username: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:add-username-raw', { accountId, ...params }),
+  botsAllowSendMessageRaw: (accountId: string, params: { botId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:allow-send-message-raw', { accountId, ...params }),
+  botsAnswerWebhookJSONQueryRaw: (accountId: string, params: { queryId: bigint | number | string; data: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:answer-webhook-json-query-raw', { accountId, ...params }),
+  botsCanSendMessageRaw: (accountId: string, params: { botId: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:can-send-message-raw', { accountId, ...params }),
+  botsCheckDownloadFileParamsRaw: (accountId: string, params: { botId: string; fileName: string; url: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:check-download-file-params-raw', { accountId, ...params }),
+  botsCheckUsernameRaw: (accountId: string, params: { username: string; additional?: boolean }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:check-username-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -9561,6 +9561,149 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 088 State & Handlers (Bots Domain Part 1 - 7 RPCs)
+  const [m088Status, setM088Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m088LoadingOp, setM088LoadingOp] = useState<string | null>(null)
+  const [m088BotId, setM088BotId] = useState('')
+  const [m088CheckUsernameVal, setM088CheckUsernameVal] = useState('')
+  const [m088AdditionalUsername, setM088AdditionalUsername] = useState('')
+  const [m088DownloadFileName, setM088DownloadFileName] = useState('')
+  const [m088DownloadUrl, setM088DownloadUrl] = useState('')
+  const [m088WebhookQueryId, setM088WebhookQueryId] = useState('')
+  const [m088WebhookData, setM088WebhookData] = useState('{"status":"ok"}')
+
+  const handleM088CheckUsername = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsCheckUsernameRaw || !m088CheckUsernameVal.trim()) return
+    setM088LoadingOp('checkUsername')
+    setM088Status(null)
+    try {
+      const isAvailable = await window.guidegram.botsCheckUsernameRaw(targetId, {
+        username: m088CheckUsernameVal.trim(),
+      })
+      setM088Status({
+        type: 'success',
+        message: isAvailable
+          ? `نام کاربری ربات @${m088CheckUsernameVal.replace(/^@/, '')} در دسترس و معتبر است.`
+          : `نام کاربری ربات @${m088CheckUsernameVal.replace(/^@/, '')} اشغال یا نامعتبر است.`,
+      })
+    } catch (err: any) {
+      setM088Status({ type: 'error', message: err?.message || 'خطا در bots.checkUsername' })
+    } finally {
+      setM088LoadingOp(null)
+    }
+  }
+
+  const handleM088CanSendMessage = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsCanSendMessageRaw || !m088BotId.trim()) return
+    setM088LoadingOp('canSendMessage')
+    setM088Status(null)
+    try {
+      const allowed = await window.guidegram.botsCanSendMessageRaw(targetId, {
+        botId: m088BotId.trim(),
+      })
+      setM088Status({
+        type: 'success',
+        message: allowed
+          ? `ارسال پیام به ربات مجاز است.`
+          : `ارسال پیام به این ربات در حال حاضر محدود است.`,
+      })
+    } catch (err: any) {
+      setM088Status({ type: 'error', message: err?.message || 'خطا در bots.canSendMessage' })
+    } finally {
+      setM088LoadingOp(null)
+    }
+  }
+
+  const handleM088AllowSendMessage = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsAllowSendMessageRaw || !m088BotId.trim()) return
+    setM088LoadingOp('allowSendMessage')
+    setM088Status(null)
+    try {
+      await window.guidegram.botsAllowSendMessageRaw(targetId, {
+        botId: m088BotId.trim(),
+      })
+      setM088Status({
+        type: 'success',
+        message: `مجوز ارسال پیام به ربات با موفقیت فعال شد.`,
+      })
+    } catch (err: any) {
+      setM088Status({ type: 'error', message: err?.message || 'خطا در bots.allowSendMessage' })
+    } finally {
+      setM088LoadingOp(null)
+    }
+  }
+
+  const handleM088AddUsername = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsAddUsernameRaw || !m088BotId.trim() || !m088AdditionalUsername.trim()) return
+    setM088LoadingOp('addUsername')
+    setM088Status(null)
+    try {
+      const res = await window.guidegram.botsAddUsernameRaw(targetId, {
+        botId: m088BotId.trim(),
+        username: m088AdditionalUsername.trim(),
+      })
+      setM088Status({
+        type: 'success',
+        message: res
+          ? `نام کاربری فرعی @${m088AdditionalUsername.replace(/^@/, '')} به ربات افزوده شد.`
+          : `افزودن نام کاربری فرعی به ربات انجام نشد.`,
+      })
+    } catch (err: any) {
+      setM088Status({ type: 'error', message: err?.message || 'خطا در bots.addUsername' })
+    } finally {
+      setM088LoadingOp(null)
+    }
+  }
+
+  const handleM088CheckDownloadFileParams = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsCheckDownloadFileParamsRaw || !m088BotId.trim() || !m088DownloadUrl.trim()) return
+    setM088LoadingOp('checkDownloadFileParams')
+    setM088Status(null)
+    try {
+      const valid = await window.guidegram.botsCheckDownloadFileParamsRaw(targetId, {
+        botId: m088BotId.trim(),
+        fileName: m088DownloadFileName.trim() || 'file.bin',
+        url: m088DownloadUrl.trim(),
+      })
+      setM088Status({
+        type: 'success',
+        message: valid
+          ? `پارامترهای دانلود فایل از ربات معتبر و مورد تأیید است.`
+          : `پارامترهای دانلود فایل نامعتبر هستند.`,
+      })
+    } catch (err: any) {
+      setM088Status({ type: 'error', message: err?.message || 'خطا در bots.checkDownloadFileParams' })
+    } finally {
+      setM088LoadingOp(null)
+    }
+  }
+
+  const handleM088AnswerWebhook = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsAnswerWebhookJSONQueryRaw || !m088WebhookQueryId.trim()) return
+    setM088LoadingOp('answerWebhook')
+    setM088Status(null)
+    try {
+      await window.guidegram.botsAnswerWebhookJSONQueryRaw(targetId, {
+        queryId: m088WebhookQueryId.trim(),
+        data: m088WebhookData,
+      })
+      setM088Status({
+        type: 'success',
+        message: `پاسخ وب‌هوک JSON با موفقیت به تلگرام ارسال گردید.`,
+      })
+    } catch (err: any) {
+      setM088Status({ type: 'error', message: err?.message || 'خطا در bots.answerWebhookJSONQuery' })
+    } finally {
+      setM088LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -24358,6 +24501,206 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       >
                         به‌روزرسانی نام‌کاربری کانال
                       </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Microphase 088 UI Card: Bots Domain Suite Part 1 (7 RPCs) */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4 text-right" dir="rtl">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                      <h4 className="text-sm font-bold text-white">میکروفاز ۰۸۸: مدیریت پیشرفته ربات‌ها - بخش ۱ (Bots Domain Part 1)</h4>
+                    </div>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      MTProto Layer 232 • 7 RPCs
+                    </span>
+                  </div>
+
+                  {/* Bot ID & Username Validation Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">شناسه یا یوزرنیم ربات (Bot ID / Username):</label>
+                      <input
+                        type="text"
+                        value={m088BotId}
+                        onChange={(e) => setM088BotId(e.target.value)}
+                        placeholder="مثال: 123456789 یا @mybot"
+                        className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400">بررسی دسترسی یوزرنیم ربات (Check Username):</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m088CheckUsernameVal}
+                          onChange={(e) => setM088CheckUsernameVal(e.target.value)}
+                          placeholder="یوزرنیم ربات..."
+                          className="flex-1 bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM088CheckUsername}
+                          disabled={m088LoadingOp === 'checkUsername' || !m088CheckUsernameVal.trim()}
+                          className="px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                        >
+                          بررسی
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4-State Indicators */}
+                  {m088LoadingOp && (
+                    <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs flex items-center gap-2 backdrop-blur-sm">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                      <span>در حال ارسال درخواست به لایه تلگرام ({m088LoadingOp})...</span>
+                    </div>
+                  )}
+
+                  {!m088BotId.trim() && !m088CheckUsernameVal.trim() && !m088LoadingOp && (
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-gray-400 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>برای تعامل با متدهای ربات، شناسه یا نام کاربری ربات را وارد نمایید.</span>
+                    </div>
+                  )}
+
+                  {m088Status && (
+                    <div
+                      className={`p-3 rounded-xl text-xs flex items-start justify-between gap-2 backdrop-blur-sm border ${
+                        m088Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m088Status.type === 'success' ? (
+                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                        )}
+                        <span>{m088Status.message}</span>
+                      </div>
+                      {m088Status.type === 'error' && (
+                        <button
+                          type="button"
+                          onClick={() => setM088Status(null)}
+                          className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[11px] text-white shrink-0 cursor-pointer"
+                        >
+                          تلاش مجدد
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Messaging Permissions */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-200">مجوزهای ارسال پیام ربات (Messaging Permissions)</div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleM088CanSendMessage}
+                          disabled={m088LoadingOp === 'canSendMessage' || !m088BotId.trim()}
+                          className="flex-1 py-1.5 bg-white/10 hover:bg-white/15 border border-white/10 text-gray-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          بررسی امکان ارسال
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleM088AllowSendMessage}
+                          disabled={m088LoadingOp === 'allowSendMessage' || !m088BotId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          اعطای مجوز پیام
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Add Secondary Username */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-200">افزودن نام‌کاربری فرعی به ربات (Add Username)</div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m088AdditionalUsername}
+                          onChange={(e) => setM088AdditionalUsername(e.target.value)}
+                          placeholder="یوزرنیم جدید بدون @..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-xs text-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM088AddUsername}
+                          disabled={m088LoadingOp === 'addUsername' || !m088BotId.trim() || !m088AdditionalUsername.trim()}
+                          className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          افزودن
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Check Download File Params */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-200">اعتبارسنجی دانلود فایل ربات (Check File Params)</div>
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={m088DownloadUrl}
+                          onChange={(e) => setM088DownloadUrl(e.target.value)}
+                          placeholder="آدرس دانلود (URL)..."
+                          className="w-full bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-xs text-gray-200"
+                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m088DownloadFileName}
+                            onChange={(e) => setM088DownloadFileName(e.target.value)}
+                            placeholder="نام فایل (اختیاری)..."
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-xs text-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleM088CheckDownloadFileParams}
+                            disabled={m088LoadingOp === 'checkDownloadFileParams' || !m088BotId.trim() || !m088DownloadUrl.trim()}
+                            className="px-3 py-1 bg-white/10 hover:bg-white/15 text-gray-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            بررسی
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Webhook JSON Query Answer */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-200">پاسخ وب‌هوک JSON ربات (Answer Webhook)</div>
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={m088WebhookQueryId}
+                            onChange={(e) => setM088WebhookQueryId(e.target.value)}
+                            placeholder="شناسه کوئری (Query ID)..."
+                            className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-xs text-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleM088AnswerWebhook}
+                            disabled={m088LoadingOp === 'answerWebhook' || !m088WebhookQueryId.trim()}
+                            className="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            ارسال پاسخ
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={m088WebhookData}
+                          onChange={(e) => setM088WebhookData(e.target.value)}
+                          placeholder='دیتا (JSON string)...'
+                          className="w-full bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-[11px] font-mono text-gray-300"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

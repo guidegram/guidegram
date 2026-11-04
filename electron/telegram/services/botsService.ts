@@ -1,4 +1,5 @@
 import { Logger } from '../logger'
+import { Long } from '@mtcute/core'
 
 export interface RpcClientHolder {
   client: {
@@ -182,7 +183,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] canSendMessage error:', err)
-      return false
+      throw err
     }
   }
 
@@ -195,7 +196,7 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] allowSendMessage error:', err)
-      return null
+      throw err
     }
   }
 
@@ -235,18 +236,19 @@ export class BotsService {
     }
   }
 
-  public async answerWebhookJSONQuery(holder: RpcClientHolder, queryId: bigint, data: any): Promise<boolean> {
+  public async answerWebhookJSONQuery(holder: RpcClientHolder, queryId: bigint | number | Long | string, data: any): Promise<boolean> {
     try {
-      const dataJson = typeof data === 'string' ? { _: 'dataJSON', data } : { _: 'dataJSON', data: JSON.stringify(data) }
+      const normalizedQueryId = typeof queryId === 'bigint' ? queryId : (Long.isLong(queryId) ? queryId : Long.fromValue(queryId as any))
+      const dataJson = typeof data === 'string' ? { _: 'dataJSON', data } : { _: 'dataJSON', data: JSON.stringify(data || {}) }
       const res = await holder.client.call({
         _: 'bots.answerWebhookJSONQuery',
-        queryId,
+        queryId: normalizedQueryId as any,
         data: dataJson,
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] answerWebhookJSONQuery error:', err)
-      return false
+      throw err
     }
   }
 
@@ -256,13 +258,13 @@ export class BotsService {
       const res = await holder.client.call({
         _: 'bots.checkDownloadFileParams',
         bot,
-        fileName,
-        url,
+        fileName: String(fileName || '').trim(),
+        url: String(url || '').trim(),
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] checkDownloadFileParams error:', err)
-      return false
+      throw err
     }
   }
 
@@ -272,12 +274,12 @@ export class BotsService {
       return await holder.client.call({
         _: 'bots.addPreviewMedia',
         bot,
-        langCode,
+        langCode: String(langCode || '').trim(),
         media,
       })
     } catch (err) {
       Logger.warn('[BotsService] addPreviewMedia error:', err)
-      return null
+      throw err
     }
   }
 
@@ -485,16 +487,17 @@ export class BotsService {
     }
   }
 
-  public async checkUsername(holder: RpcClientHolder, username: string): Promise<boolean> {
+  public async checkUsername(holder: RpcClientHolder, username: string, additional?: boolean): Promise<boolean> {
     try {
       const res = await holder.client.call({
         _: 'bots.checkUsername',
-        username,
+        username: String(username || '').replace(/^@/, '').trim(),
+        additional: Boolean(additional),
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] checkUsername error:', err)
-      return false
+      throw err
     }
   }
 
@@ -504,12 +507,12 @@ export class BotsService {
       const res = await holder.client.call({
         _: 'bots.addUsername',
         bot,
-        username,
+        username: String(username || '').replace(/^@/, '').trim(),
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] addUsername error:', err)
-      return false
+      throw err
     }
   }
 
