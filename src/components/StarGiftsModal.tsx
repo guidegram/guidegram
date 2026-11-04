@@ -63,7 +63,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways' | 'checkout_offers'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways' | 'checkout_offers' | 'gift_management'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
@@ -173,6 +173,39 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   const [m103LoadingOp, setM103LoadingOp] = useState<string | null>(null)
   const [m103Error, setM103Error] = useState<string | null>(null)
   const [m103SuccessMessage, setM103SuccessMessage] = useState<string | null>(null)
+
+  // Microphase 104: Payments Domain Suite Part 11 (Gift Management, Collections, Pricing, Upgrade, Validation & Withdrawal)
+  const [m104TransferGiftSlug, setM104TransferGiftSlug] = useState<string>('')
+  const [m104TransferToPeer, setM104TransferToPeer] = useState<string>('')
+  const [m104TransferResult, setM104TransferResult] = useState<any | null>(null)
+
+  const [m104CollectionPeerId, setM104CollectionPeerId] = useState<string>(peerId || '')
+  const [m104CollectionId, setM104CollectionId] = useState<string>('1')
+  const [m104CollectionTitle, setM104CollectionTitle] = useState<string>('')
+  const [m104CollectionAddGifts, setM104CollectionAddGifts] = useState<string>('')
+  const [m104CollectionResult, setM104CollectionResult] = useState<any | null>(null)
+
+  const [m104PriceGiftSlug, setM104PriceGiftSlug] = useState<string>('')
+  const [m104PriceAmountStars, setM104PriceAmountStars] = useState<string>('250')
+  const [m104PriceResult, setM104PriceResult] = useState<any | null>(null)
+
+  const [m104UpgradeGiftSlug, setM104UpgradeGiftSlug] = useState<string>('')
+  const [m104UpgradeKeepDetails, setM104UpgradeKeepDetails] = useState<boolean>(true)
+  const [m104UpgradeResult, setM104UpgradeResult] = useState<any | null>(null)
+
+  const [m104ValidateInvoiceJson, setM104ValidateInvoiceJson] = useState<string>('')
+  const [m104ValidateInfoJson, setM104ValidateInfoJson] = useState<string>('')
+  const [m104ValidateSave, setM104ValidateSave] = useState<boolean>(false)
+  const [m104ValidateResult, setM104ValidateResult] = useState<any | null>(null)
+
+  const [m104WithdrawGiftSlug, setM104WithdrawGiftSlug] = useState<string>('')
+  const [m104WithdrawKeepProfile, setM104WithdrawKeepProfile] = useState<boolean>(false)
+  const [m104WithdrawPassword, setM104WithdrawPassword] = useState<string>('')
+  const [m104WithdrawResult, setM104WithdrawResult] = useState<any | null>(null)
+
+  const [m104LoadingOp, setM104LoadingOp] = useState<string | null>(null)
+  const [m104Error, setM104Error] = useState<string | null>(null)
+  const [m104SuccessMessage, setM104SuccessMessage] = useState<string | null>(null)
 
   const loadM101StarsStatus = async () => {
     if (!accountId) return
@@ -667,6 +700,184 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
       setM103Error(err?.message || 'خطا در تغییر پین گیفت در بالای پروفایل')
     } finally {
       setM103LoadingOp(null)
+    }
+  }
+
+  // Microphase 104 Handlers
+  const executeTransferStarGift = async () => {
+    if (!accountId || !m104TransferGiftSlug.trim() || !m104TransferToPeer.trim()) {
+      setM104Error('اسلاگ یا شناسه گیفت و شناسه مقصد الزامی است')
+      return
+    }
+    setM104LoadingOp('transfer_gift')
+    setM104Error(null)
+    setM104SuccessMessage(null)
+    try {
+      const isNum = /^\d+$/.test(m104TransferGiftSlug.trim())
+      const stargift = isNum
+        ? { _: 'inputSavedStarGiftUser', msgId: Number(m104TransferGiftSlug.trim()) }
+        : { _: 'inputSavedStarGiftSlug', slug: m104TransferGiftSlug.trim() }
+      const res = await (window as any).guidegramAPI?.paymentsTransferStarGiftRaw?.(accountId, {
+        stargift,
+        toPeerId: m104TransferToPeer.trim(),
+      })
+      setM104TransferResult(res)
+      setM104SuccessMessage('گیفت ستاره‌ای با موفقیت انتقال یافت (payments.transferStarGift)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeTransferStarGift error:', err)
+      setM104Error(err?.message || 'خطا در انتقال گیفت ستاره‌ای')
+    } finally {
+      setM104LoadingOp(null)
+    }
+  }
+
+  const executeUpdateStarGiftCollection = async () => {
+    if (!accountId) return
+    setM104LoadingOp('update_collection')
+    setM104Error(null)
+    setM104SuccessMessage(null)
+    try {
+      const cId = Number(m104CollectionId.trim()) || 1
+      const addGifts = m104CollectionAddGifts.trim()
+        ? m104CollectionAddGifts.split(',').map(s => s.trim()).filter(Boolean).map(s => {
+            return /^\d+$/.test(s) ? { _: 'inputSavedStarGiftUser', msgId: Number(s) } : { _: 'inputSavedStarGiftSlug', slug: s }
+          })
+        : undefined
+
+      const res = await (window as any).guidegramAPI?.paymentsUpdateStarGiftCollectionRaw?.(accountId, {
+        peerId: m104CollectionPeerId.trim() || undefined,
+        collectionId: cId,
+        title: m104CollectionTitle.trim() || undefined,
+        addStargift: addGifts,
+      })
+      setM104CollectionResult(res)
+      setM104SuccessMessage('کالکشن گیفت ستاره‌ای بروزرسانی شد (payments.updateStarGiftCollection)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeUpdateStarGiftCollection error:', err)
+      setM104Error(err?.message || 'خطا در بروزرسانی کالکشن گیفت')
+    } finally {
+      setM104LoadingOp(null)
+    }
+  }
+
+  const executeUpdateStarGiftPrice = async () => {
+    if (!accountId || !m104PriceGiftSlug.trim()) {
+      setM104Error('اسلاگ یا شناسه گیفت ستاره‌ای الزامی است')
+      return
+    }
+    setM104LoadingOp('update_price')
+    setM104Error(null)
+    setM104SuccessMessage(null)
+    try {
+      const isNum = /^\d+$/.test(m104PriceGiftSlug.trim())
+      const stargift = isNum
+        ? { _: 'inputSavedStarGiftUser', msgId: Number(m104PriceGiftSlug.trim()) }
+        : { _: 'inputSavedStarGiftSlug', slug: m104PriceGiftSlug.trim() }
+      const amountStars = Number(m104PriceAmountStars.trim()) || 0
+      const resellAmount = { _: 'starsAmount', amount: BigInt(amountStars) }
+      const res = await (window as any).guidegramAPI?.paymentsUpdateStarGiftPriceRaw?.(accountId, {
+        stargift,
+        resellAmount,
+      })
+      setM104PriceResult(res)
+      setM104SuccessMessage('قیمت فروش مجدد گیفت ستاره‌ای ثبت شد (payments.updateStarGiftPrice)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeUpdateStarGiftPrice error:', err)
+      setM104Error(err?.message || 'خطا در بروزرسانی قیمت فروش مجدد گیفت')
+    } finally {
+      setM104LoadingOp(null)
+    }
+  }
+
+  const executeUpgradeStarGift = async () => {
+    if (!accountId || !m104UpgradeGiftSlug.trim()) {
+      setM104Error('اسلاگ یا شناسه گیفت ستاره‌ای الزامی است')
+      return
+    }
+    setM104LoadingOp('upgrade_gift')
+    setM104Error(null)
+    setM104SuccessMessage(null)
+    try {
+      const isNum = /^\d+$/.test(m104UpgradeGiftSlug.trim())
+      const stargift = isNum
+        ? { _: 'inputSavedStarGiftUser', msgId: Number(m104UpgradeGiftSlug.trim()) }
+        : { _: 'inputSavedStarGiftSlug', slug: m104UpgradeGiftSlug.trim() }
+      const res = await (window as any).guidegramAPI?.paymentsUpgradeStarGiftRaw?.(accountId, {
+        stargift,
+        keepOriginalDetails: m104UpgradeKeepDetails,
+      })
+      setM104UpgradeResult(res)
+      setM104SuccessMessage('ارتقای گیفت ستاره‌ای به کالکشن یونیک ثبت شد (payments.upgradeStarGift)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeUpgradeStarGift error:', err)
+      setM104Error(err?.message || 'خطا در ارتقای گیفت ستاره‌ای')
+    } finally {
+      setM104LoadingOp(null)
+    }
+  }
+
+  const executeValidateRequestedInfo = async () => {
+    if (!accountId) return
+    setM104LoadingOp('validate_info')
+    setM104Error(null)
+    setM104SuccessMessage(null)
+    try {
+      let invoice: any = undefined
+      if (m104ValidateInvoiceJson.trim()) {
+        try {
+          invoice = JSON.parse(m104ValidateInvoiceJson.trim())
+        } catch {
+          invoice = { _: 'inputInvoiceSlug', slug: m104ValidateInvoiceJson.trim() }
+        }
+      }
+      let info: any = undefined
+      if (m104ValidateInfoJson.trim()) {
+        try {
+          info = JSON.parse(m104ValidateInfoJson.trim())
+        } catch {
+          info = { _: 'paymentRequestedInfo' }
+        }
+      }
+      const res = await (window as any).guidegramAPI?.paymentsValidateRequestedInfoRaw?.(accountId, {
+        invoice,
+        info,
+        save: m104ValidateSave,
+      })
+      setM104ValidateResult(res)
+      setM104SuccessMessage('اطلاعات درخواستی پرداخت با موفقیت اعتبارسنجی شد (payments.validateRequestedInfo)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeValidateRequestedInfo error:', err)
+      setM104Error(err?.message || 'خطا در اعتبارسنجی اطلاعات پرداخت')
+    } finally {
+      setM104LoadingOp(null)
+    }
+  }
+
+  const executeWithdrawStarGift = async () => {
+    if (!accountId || !m104WithdrawGiftSlug.trim()) {
+      setM104Error('اسلاگ یا شناسه گیفت ستاره‌ای الزامی است')
+      return
+    }
+    setM104LoadingOp('withdraw_gift')
+    setM104Error(null)
+    setM104SuccessMessage(null)
+    try {
+      const isNum = /^\d+$/.test(m104WithdrawGiftSlug.trim())
+      const stargift = isNum
+        ? { _: 'inputSavedStarGiftUser', msgId: Number(m104WithdrawGiftSlug.trim()) }
+        : { _: 'inputSavedStarGiftSlug', slug: m104WithdrawGiftSlug.trim() }
+      const res = await (window as any).guidegramAPI?.paymentsWithdrawStarGiftRaw?.(accountId, {
+        stargift,
+        keepOnProfile: m104WithdrawKeepProfile,
+        tmpPassword: m104WithdrawPassword.trim() || undefined,
+      })
+      setM104WithdrawResult(res)
+      setM104SuccessMessage('درخواست برداشت گیفت به بلاکچین با موفقیت ثبت شد (payments.withdrawStarGift)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeWithdrawStarGift error:', err)
+      setM104Error(err?.message || 'خطا در برداشت گیفت ستاره‌ای')
+    } finally {
+      setM104LoadingOp(null)
     }
   }
 
@@ -1536,6 +1747,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Offers & Forms (M103)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('gift_management')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'gift_management'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Management & Upgrades (M104)</span>
               </button>
             </div>
 
@@ -3382,6 +3605,390 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     </div>
                   </div>
                 </div>
+              ) : activeTab === 'gift_management' ? (
+                /* ============================================================== */
+                /* VIEW 8: MANAGEMENT & UPGRADES (Microphase 104 - 6 RPCs)        */
+                /* ============================================================== */
+                <div className="p-6 space-y-6">
+                  {/* Status Banners */}
+                  {m104Error && (
+                    <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        <span>{m104Error}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM104Error(null)}
+                        className="text-[10px] text-rose-400/80 hover:text-rose-200 cursor-pointer"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {m104SuccessMessage && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                        <span>{m104SuccessMessage}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM104SuccessMessage(null)}
+                        className="text-[10px] text-emerald-400/80 hover:text-emerald-200 cursor-pointer"
+                      >
+                        تایید
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Header Intro */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                      <h4 className="text-sm font-bold text-neutral-100">
+                        مدیریت پیشرفته گیفت‌های ستاره‌ای و ارتقای NFT (Microphase 104)
+                      </h4>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      پشتیبانی بومی از ۶ متد رسمی MTProto لایه ۲۳۲ تلگرام برای انتقال گیفت، کالکشن‌ها، قیمت‌گذاری، ارتقا و برداشت.
+                    </p>
+                  </div>
+
+                  {/* 6 RPC Functional Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 1. payments.transferStarGift */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Send className="w-4 h-4 text-cyan-400" />
+                          <span>انتقال گیفت ستاره‌ای</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          انتقال مستقیم یک گیفت ذخیره‌شده به کاربری دیگر (payments.transferStarGift).
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m104TransferGiftSlug}
+                            onChange={(e) => setM104TransferGiftSlug(e.target.value)}
+                            placeholder="شناسه پیام یا اسلاگ گیفت (Slug / MsgId)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={m104TransferToPeer}
+                            onChange={(e) => setM104TransferToPeer(e.target.value)}
+                            placeholder="شناسه مقصد (Recipient Peer ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeTransferStarGift}
+                          disabled={m104LoadingOp === 'transfer_gift'}
+                          className="w-full py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m104LoadingOp === 'transfer_gift' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Send className="w-3.5 h-3.5" />
+                          )}
+                          <span>انتقال گیفت به کاربر</span>
+                        </button>
+                        {m104TransferResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m104TransferResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. payments.updateStarGiftCollection */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Layers className="w-4 h-4 text-purple-400" />
+                          <span>مدیریت کالکشن گیفت‌ها</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          بروزرسانی یا تغییر عنوان و اعضای کالکشن گیفت‌های پروفایل (payments.updateStarGiftCollection).
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <input
+                              type="text"
+                              value={m104CollectionPeerId}
+                              onChange={(e) => setM104CollectionPeerId(e.target.value)}
+                              placeholder="شناسه کاربر (Peer ID)"
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                            />
+                            <input
+                              type="number"
+                              value={m104CollectionId}
+                              onChange={(e) => setM104CollectionId(e.target.value)}
+                              placeholder="شناسه کالکشن"
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={m104CollectionTitle}
+                            onChange={(e) => setM104CollectionTitle(e.target.value)}
+                            placeholder="عنوان جدید کالکشن (اختیاری)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={m104CollectionAddGifts}
+                            onChange={(e) => setM104CollectionAddGifts(e.target.value)}
+                            placeholder="گیفت‌ها جهت افزودن (اسلاگ‌ها با کاما)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeUpdateStarGiftCollection}
+                          disabled={m104LoadingOp === 'update_collection'}
+                          className="w-full py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m104LoadingOp === 'update_collection' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Layers className="w-3.5 h-3.5" />
+                          )}
+                          <span>بروزرسانی کالکشن</span>
+                        </button>
+                        {m104CollectionResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m104CollectionResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 3. payments.updateStarGiftPrice */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Coins className="w-4 h-4 text-amber-400" />
+                          <span>قیمت‌گذاری فروش مجدد</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          تنظیم یا ویرایش قیمت فروش گیفت نایاب در بازار داخلی (payments.updateStarGiftPrice).
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m104PriceGiftSlug}
+                            onChange={(e) => setM104PriceGiftSlug(e.target.value)}
+                            placeholder="شناسه پیام یا اسلاگ گیفت (Slug / MsgId)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="number"
+                            value={m104PriceAmountStars}
+                            onChange={(e) => setM104PriceAmountStars(e.target.value)}
+                            placeholder="قیمت به ستاره (Stars Amount)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeUpdateStarGiftPrice}
+                          disabled={m104LoadingOp === 'update_price'}
+                          className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m104LoadingOp === 'update_price' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Coins className="w-3.5 h-3.5" />
+                          )}
+                          <span>ثبت قیمت فروش مجدد</span>
+                        </button>
+                        {m104PriceResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m104PriceResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 4. payments.upgradeStarGift */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Sparkles className="w-4 h-4 text-emerald-400" />
+                          <span>ارتقا به NFT یونیک</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          تبدیل گیفت ستاره‌ای معمولی به یک آیتم کلکسیونی یونیک آن‌چین (payments.upgradeStarGift).
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m104UpgradeGiftSlug}
+                            onChange={(e) => setM104UpgradeGiftSlug(e.target.value)}
+                            placeholder="شناسه پیام یا اسلاگ گیفت (Slug / MsgId)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <label className="flex items-center gap-2 text-[11px] text-neutral-300 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={m104UpgradeKeepDetails}
+                              onChange={(e) => setM104UpgradeKeepDetails(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-0"
+                            />
+                            <span>حفظ جزئیات اولیه پیام (Keep Original Details)</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeUpgradeStarGift}
+                          disabled={m104LoadingOp === 'upgrade_gift'}
+                          className="w-full py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m104LoadingOp === 'upgrade_gift' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3.5 h-3.5" />
+                          )}
+                          <span>ارتقای رسمی به گیفت نایاب</span>
+                        </button>
+                        {m104UpgradeResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m104UpgradeResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 5. payments.validateRequestedInfo */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                          <span>اعتبارسنجی اطلاعات تسویه</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          بررسی صحت داده‌های صورتحساب و فرم سفارش پیش از پرداخت (payments.validateRequestedInfo).
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m104ValidateInvoiceJson}
+                            onChange={(e) => setM104ValidateInvoiceJson(e.target.value)}
+                            placeholder="اطلاعات فاکتور (Invoice JSON یا Slug)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono text-[11px]"
+                          />
+                          <input
+                            type="text"
+                            value={m104ValidateInfoJson}
+                            onChange={(e) => setM104ValidateInfoJson(e.target.value)}
+                            placeholder="اطلاعات درخواستی کاربر (Info JSON - اختیاری)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono text-[11px]"
+                          />
+                          <label className="flex items-center gap-2 text-[11px] text-neutral-300 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={m104ValidateSave}
+                              onChange={(e) => setM104ValidateSave(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-blue-500 focus:ring-0"
+                            />
+                            <span>ذخیره اطلاعات برای سفارش‌های بعدی (Save)</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeValidateRequestedInfo}
+                          disabled={m104LoadingOp === 'validate_info'}
+                          className="w-full py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m104LoadingOp === 'validate_info' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>اعتبارسنجی اطلاعات صورتحساب</span>
+                        </button>
+                        {m104ValidateResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m104ValidateResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 6. payments.withdrawStarGift */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <ExternalLink className="w-4 h-4 text-rose-400" />
+                          <span>برداشت گیفت به بلاکچین</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          برداشت رسمی گیفت کلکسیونی به پلتفرم فرگمنت بر بستر شبکه TON (payments.withdrawStarGift).
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m104WithdrawGiftSlug}
+                            onChange={(e) => setM104WithdrawGiftSlug(e.target.value)}
+                            placeholder="شناسه پیام یا اسلاگ گیفت (Slug / MsgId)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="password"
+                            value={m104WithdrawPassword}
+                            onChange={(e) => setM104WithdrawPassword(e.target.value)}
+                            placeholder="رمزعبور تایید دومرحله‌ای 2FA (اختیاری)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <label className="flex items-center gap-2 text-[11px] text-neutral-300 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={m104WithdrawKeepProfile}
+                              onChange={(e) => setM104WithdrawKeepProfile(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                            />
+                            <span>نمایش نماد گیفت در پروفایل پس از برداشت</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeWithdrawStarGift}
+                          disabled={m104LoadingOp === 'withdraw_gift'}
+                          className="w-full py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m104LoadingOp === 'withdraw_gift' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          )}
+                          <span>ثبت درخواست برداشت به فرگمنت</span>
+                        </button>
+                        {m104WithdrawResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m104WithdrawResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : null}
             </div>
 
@@ -3400,7 +4007,9 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ? 'Telegram MTProto payments.getStarGiftCollections, Upgrades & Giveaways'
                     : activeTab === 'unique_giveaways'
                     ? 'Telegram MTProto payments.getUniqueStarGift, TransactionsByID, RefBots & Giveaways'
-                    : 'Telegram MTProto payments.getStarsStatus, RevenueStats, TopupOptions & Transactions'}
+                    : activeTab === 'checkout_offers'
+                    ? 'Telegram MTProto payments.saveStarGift, sendStarGiftOffer, payment forms & chat notifs'
+                    : 'Telegram MTProto payments.transferStarGift, collections, price, upgrade & withdrawal'}
                 </span>
               </div>
               <button

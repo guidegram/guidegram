@@ -89,15 +89,50 @@ export class PaymentsService {
     }
   }
 
-  public async validateRequestedInfo(holder: RpcClientHolder, invoice: any, info: any, save = false): Promise<any> {
+  public async validateRequestedInfo(
+    holder: RpcClientHolder,
+    accountId: string,
+    invoiceOrParams: any,
+    info?: any,
+    save = false
+  ): Promise<any> {
     try {
+      let invoice: any
+      let paymentInfo: any = info
+      let doSave = save
+
+      if (typeof invoiceOrParams === 'object' && invoiceOrParams !== null && !invoiceOrParams._) {
+        if (invoiceOrParams.invoice !== undefined) {
+          invoice = invoiceOrParams.invoice
+          paymentInfo = invoiceOrParams.info !== undefined ? invoiceOrParams.info : paymentInfo
+          doSave = invoiceOrParams.save !== undefined ? !!invoiceOrParams.save : doSave
+        } else {
+          invoice = invoiceOrParams
+        }
+      } else {
+        invoice = invoiceOrParams
+      }
+
+      let resolvedInvoice: any = invoice
+      if (typeof invoice === 'string') {
+        resolvedInvoice = { _: 'inputInvoiceSlug', slug: invoice }
+      } else if (invoice && !invoice._ && invoice.peerId && invoice.msgId) {
+        resolvedInvoice = {
+          _: 'inputInvoiceMessage',
+          peer: await this.resolveInputPeer(accountId, invoice.peerId),
+          msgId: Number(invoice.msgId),
+        }
+      }
+
       return await holder.client.call({
         _: 'payments.validateRequestedInfo',
-        invoice, info, save,
+        save: doSave,
+        invoice: resolvedInvoice,
+        info: paymentInfo || { _: 'paymentRequestedInfo' },
       })
     } catch (err) {
       Logger.warn('[PaymentsService] validateRequestedInfo error:', err)
-      return null
+      throw err
     }
   }
 
@@ -260,17 +295,39 @@ export class PaymentsService {
   public async launchPrepaidGiveaway(
     holder: RpcClientHolder,
     accountId: string,
-    peerId: string,
-    giveawayId: bigint | number | Long | string,
+    peerIdOrParams: string | any,
+    giveawayId?: bigint | number | Long | string,
     purpose?: any
   ): Promise<any> {
     try {
+      let peerId: string
+      let gId: any
+      let p: any
+
+      if (typeof peerIdOrParams === 'object' && peerIdOrParams !== null && !peerIdOrParams._) {
+        peerId = peerIdOrParams.peerId
+        gId = peerIdOrParams.giveawayId
+        p = peerIdOrParams.purpose
+      } else {
+        peerId = peerIdOrParams
+        gId = giveawayId
+        p = purpose
+      }
+
       const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+      let resolvedPurpose: any = p
+      if (!resolvedPurpose || !resolvedPurpose._) {
+        resolvedPurpose = {
+          _: 'inputStorePaymentStarsGiveaway',
+          stars: 100,
+        }
+      }
+
       return await holder.client.call({
         _: 'payments.launchPrepaidGiveaway',
         peer,
-        giveawayId: toLong(giveawayId),
-        purpose: purpose || { _: 'inputStorePaymentStarsGiveaway', stars: 100 },
+        giveawayId: toLong(gId) as any,
+        purpose: resolvedPurpose,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] launchPrepaidGiveaway error:', err)
@@ -723,29 +780,89 @@ export class PaymentsService {
     }
   }
 
-  public async upgradeStarGift(holder: RpcClientHolder, stargift: any, keepOriginalDetails = false): Promise<any> {
+  public async resolveInputSavedStarGift(accountId: string, stargift: any): Promise<any> {
+    if (!stargift) return { _: 'inputSavedStarGiftUser', msgId: 0 }
+    if (typeof stargift === 'number') return { _: 'inputSavedStarGiftUser', msgId: stargift }
+    if (typeof stargift === 'string') {
+      const num = Number(stargift)
+      if (!isNaN(num)) return { _: 'inputSavedStarGiftUser', msgId: num }
+    }
+    if (stargift._ === 'inputSavedStarGiftUser' || stargift._ === 'inputSavedStarGiftChat') return stargift
+    if (stargift.peerId && stargift.savedId !== undefined) {
+      const peer = await this.resolveInputPeer(accountId, stargift.peerId)
+      return {
+        _: 'inputSavedStarGiftChat',
+        peer,
+        savedId: toLong(stargift.savedId) as any,
+      }
+    }
+    if (stargift.msgId !== undefined) {
+      return { _: 'inputSavedStarGiftUser', msgId: Number(stargift.msgId) }
+    }
+    return stargift
+  }
+
+  public async upgradeStarGift(
+    holder: RpcClientHolder,
+    accountId: string,
+    stargiftOrParams: any,
+    keepOriginalDetails = false
+  ): Promise<any> {
     try {
+      let stargift: any = stargiftOrParams
+      let keepDetails = keepOriginalDetails
+
+      if (typeof stargiftOrParams === 'object' && stargiftOrParams !== null && !stargiftOrParams._) {
+        if (stargiftOrParams.stargift !== undefined) {
+          stargift = stargiftOrParams.stargift
+          keepDetails = stargiftOrParams.keepOriginalDetails !== undefined ? !!stargiftOrParams.keepOriginalDetails : keepDetails
+        }
+      }
+
+      const resolvedGift = await this.resolveInputSavedStarGift(accountId, stargift)
+
       return await holder.client.call({
         _: 'payments.upgradeStarGift',
-        stargift, keepOriginalDetails,
+        keepOriginalDetails: keepDetails,
+        stargift: resolvedGift,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] upgradeStarGift error:', err)
-      return null
+      throw err
     }
   }
 
-  public async transferStarGift(holder: RpcClientHolder, accountId: string, stargift: any, toPeerId: string): Promise<any> {
+  public async transferStarGift(
+    holder: RpcClientHolder,
+    accountId: string,
+    stargiftOrParams: any,
+    toPeerId?: string
+  ): Promise<any> {
     try {
+      let stargift: any = stargiftOrParams
+      let targetPeer: string = toPeerId || ''
+
+      if (typeof stargiftOrParams === 'object' && stargiftOrParams !== null && !stargiftOrParams._) {
+        if (stargiftOrParams.stargift !== undefined) {
+          stargift = stargiftOrParams.stargift
+          targetPeer = stargiftOrParams.toPeerId || stargiftOrParams.toId || targetPeer
+        }
+      }
+
+      const resolvedGift = await this.resolveInputSavedStarGift(accountId, stargift)
+      const toId = await this.resolveInputPeer(accountId, targetPeer)
+
       return await holder.client.call({
         _: 'payments.transferStarGift',
-        stargift, toId: await this.resolveInputPeer(accountId, toPeerId),
+        stargift: resolvedGift,
+        toId,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] transferStarGift error:', err)
-      return null
+      throw err
     }
   }
+
 
   public async getUniqueStarGift(holder: RpcClientHolder, slug: string): Promise<any> {
     try {
@@ -896,15 +1013,44 @@ export class PaymentsService {
     }
   }
 
-  public async updateStarGiftPrice(holder: RpcClientHolder, stargift: any, resellAmount: any): Promise<any> {
+  public async updateStarGiftPrice(
+    holder: RpcClientHolder,
+    accountId: string,
+    stargiftOrParams: any,
+    resellAmount?: any
+  ): Promise<any> {
     try {
+      let stargift: any = stargiftOrParams
+      let amount: any = resellAmount
+
+      if (typeof stargiftOrParams === 'object' && stargiftOrParams !== null && !stargiftOrParams._) {
+        if (stargiftOrParams.stargift !== undefined) {
+          stargift = stargiftOrParams.stargift
+          amount = stargiftOrParams.resellAmount !== undefined ? stargiftOrParams.resellAmount : amount
+        }
+      }
+
+      const resolvedGift = await this.resolveInputSavedStarGift(accountId, stargift)
+      let resolvedAmount: any
+      if (typeof amount === 'object' && amount !== null && amount._ === 'starsAmount') {
+        resolvedAmount = amount
+      } else {
+        const val = typeof amount === 'number' || typeof amount === 'string' ? amount : (amount?.amount || 0)
+        resolvedAmount = {
+          _: 'starsAmount',
+          amount: toLong(val) as any,
+          nanos: amount?.nanos || 0,
+        }
+      }
+
       return await holder.client.call({
         _: 'payments.updateStarGiftPrice',
-        stargift, resellAmount,
+        stargift: resolvedGift,
+        resellAmount: resolvedAmount,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] updateStarGiftPrice error:', err)
-      return null
+      throw err
     }
   }
 
@@ -946,16 +1092,50 @@ export class PaymentsService {
     }
   }
 
-  public async updateStarGiftCollection(holder: RpcClientHolder, accountId: string, peerId: string, collectionId: number, options: any = {}): Promise<any> {
+  public async updateStarGiftCollection(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerIdOrParams: string | any,
+    collectionId?: number,
+    options: any = {}
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
-      return await holder.client.call({
+      let peerId: string
+      let cId: number
+      let opts: any = {}
+
+      if (typeof peerIdOrParams === 'object' && peerIdOrParams !== null && !peerIdOrParams._) {
+        peerId = peerIdOrParams.peerId
+        cId = Number(peerIdOrParams.collectionId)
+        opts = peerIdOrParams
+      } else {
+        peerId = peerIdOrParams
+        cId = Number(collectionId)
+        opts = options || {}
+      }
+
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+
+      const mapGifts = async (list?: any[]) => {
+        if (!list || !Array.isArray(list)) return undefined
+        return Promise.all(list.map(g => this.resolveInputSavedStarGift(accountId, g)))
+      }
+
+      const callParams: any = {
         _: 'payments.updateStarGiftCollection',
-        peer, collectionId, ...options,
-      })
+        peer,
+        collectionId: cId,
+      }
+
+      if (opts.title !== undefined) callParams.title = opts.title
+      if (opts.deleteStargift) callParams.deleteStargift = await mapGifts(opts.deleteStargift)
+      if (opts.addStargift) callParams.addStargift = await mapGifts(opts.addStargift)
+      if (opts.order) callParams.order = await mapGifts(opts.order)
+
+      return await holder.client.call(callParams)
     } catch (err) {
       Logger.warn('[PaymentsService] updateStarGiftCollection error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1310,15 +1490,47 @@ export class PaymentsService {
     }
   }
 
-  public async withdrawStarGift(holder: RpcClientHolder, stargift: any, destination: string): Promise<any> {
+  public async withdrawStarGift(
+    holder: RpcClientHolder,
+    accountId: string,
+    stargiftOrParams: any,
+    tmpPasswordOrOptions?: any
+  ): Promise<any> {
     try {
+      let stargift: any = stargiftOrParams
+      let keepOnProfile = false
+      let tmpPassword: any = new Uint8Array(0)
+
+      if (typeof stargiftOrParams === 'object' && stargiftOrParams !== null && !stargiftOrParams._) {
+        stargift = stargiftOrParams.stargift
+        keepOnProfile = !!stargiftOrParams.keepOnProfile
+        tmpPassword = stargiftOrParams.tmpPassword !== undefined ? stargiftOrParams.tmpPassword : tmpPassword
+      } else if (tmpPasswordOrOptions !== undefined) {
+        if (typeof tmpPasswordOrOptions === 'object' && !(tmpPasswordOrOptions instanceof Uint8Array) && !Buffer.isBuffer(tmpPasswordOrOptions)) {
+          keepOnProfile = !!tmpPasswordOrOptions.keepOnProfile
+          tmpPassword = tmpPasswordOrOptions.tmpPassword !== undefined ? tmpPasswordOrOptions.tmpPassword : tmpPassword
+        } else {
+          tmpPassword = tmpPasswordOrOptions
+        }
+      }
+
+      if (typeof tmpPassword === 'string') {
+        tmpPassword = Buffer.from(tmpPassword, 'utf-8')
+      } else if (Array.isArray(tmpPassword)) {
+        tmpPassword = new Uint8Array(tmpPassword)
+      }
+
+      const resolvedGift = await this.resolveInputSavedStarGift(accountId, stargift)
+
       return await holder.client.call({
         _: 'payments.withdrawStarGift',
-        stargift, destination,
+        keepOnProfile,
+        stargift: resolvedGift,
+        tmpPassword,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] withdrawStarGift error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1535,6 +1747,18 @@ export class PaymentsService {
       })
     } catch (err) {
       Logger.warn('[PaymentsService] fulfillStarsSubscription error:', err)
+      throw err
+    }
+  }
+
+  public async canPurchasePremium(holder: RpcClientHolder, purpose?: any): Promise<boolean> {
+    try {
+      return await holder.client.call({
+        _: 'payments.canPurchasePremium',
+        purpose: purpose || { _: 'inputStorePaymentPurposeStars', currency: 'XTR', amount: 1 },
+      })
+    } catch (err) {
+      Logger.warn('[PaymentsService] canPurchasePremium error:', err)
       throw err
     }
   }

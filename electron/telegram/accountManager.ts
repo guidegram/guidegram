@@ -22416,6 +22416,110 @@ export class AccountManager {
       params?.allowPaidStars
     )
   }
+
+  public async paymentsCanPurchasePremiumRaw(
+    accountId: string,
+    params: { purpose: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.canPurchasePremium(holder as any, params?.purpose)
+  }
+
+  public async paymentsUpdateStarGiftCollectionRaw(
+    accountId: string,
+    params: {
+      peerId: string
+      collectionId: number
+      title?: string
+      deleteStargift?: any[]
+      addStargift?: any[]
+      order?: any[]
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.updateStarGiftCollection(
+      holder as any,
+      accountId,
+      params
+    )
+  }
+
+  public async paymentsWithdrawStarGiftRaw(
+    accountId: string,
+    params: {
+      stargift: any
+      keepOnProfile?: boolean
+      tmpPassword?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.withdrawStarGift(
+      holder as any,
+      accountId,
+      params
+    )
+  }
+
+  // Layer 232 Payments Suite (Microphase 104)
+  public async paymentsTransferStarGiftRaw(
+    accountId: string,
+    params: { stargift: any; toPeerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.transferStarGift(
+      holder as any,
+      accountId,
+      params?.stargift,
+      params?.toPeerId
+    )
+  }
+
+  public async paymentsUpdateStarGiftPriceRaw(
+    accountId: string,
+    params: { stargift: any; resellAmount?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.updateStarGiftPrice(
+      holder as any,
+      accountId,
+      params?.stargift,
+      params?.resellAmount
+    )
+  }
+
+  public async paymentsUpgradeStarGiftRaw(
+    accountId: string,
+    params: { stargift: any; keepOriginalDetails?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.upgradeStarGift(
+      holder as any,
+      accountId,
+      params?.stargift,
+      params?.keepOriginalDetails
+    )
+  }
+
+  public async paymentsValidateRequestedInfoRaw(
+    accountId: string,
+    params: { invoice: any; info?: any; save?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.validateRequestedInfo(
+      holder as any,
+      accountId,
+      params?.invoice,
+      params?.info,
+      params?.save
+    )
+  }
 }
 
 

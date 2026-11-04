@@ -3114,6 +3114,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:toggle-chat-star-gift-notifications-raw', { accountId, ...params }),
   paymentsToggleStarGiftsPinnedToTopRaw: (accountId: string, params: { peerId: string; stargift: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:toggle-star-gifts-pinned-to-top-raw', { accountId, ...params }),
+  // Layer 232 Payments Suite (Microphase 104)
+  paymentsTransferStarGiftRaw: (accountId: string, params: { stargift: any; toPeerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:transfer-star-gift-raw', { accountId, ...params }),
+  paymentsUpdateStarGiftCollectionRaw: (accountId: string, params: { peerId: string; collectionId: number; title?: string; deleteStargift?: any[]; addStargift?: any[]; order?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:update-star-gift-collection-raw', { accountId, ...params }),
+  paymentsUpdateStarGiftPriceRaw: (accountId: string, params: { stargift: any; resellAmount?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:update-star-gift-price-raw', { accountId, ...params }),
+  paymentsUpgradeStarGiftRaw: (accountId: string, params: { stargift: any; keepOriginalDetails?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:upgrade-star-gift-raw', { accountId, ...params }),
+  paymentsValidateRequestedInfoRaw: (accountId: string, params: { invoice: any; info?: any; save?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:validate-requested-info-raw', { accountId, ...params }),
+  paymentsWithdrawStarGiftRaw: (accountId: string, params: { stargift: any; keepOnProfile?: boolean; tmpPassword?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:withdraw-star-gift-raw', { accountId, ...params }),
+
 
   setEmojiStatus: (
     accountId: string,
