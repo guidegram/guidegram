@@ -9687,6 +9687,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 095: Payments Domain Suite Part 2 (7 RPCs)
+  ipcMain.handle('telegram:payments:check-gift-code-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsCheckGiftCodeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsCheckGiftCodeRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:clear-saved-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsClearSavedInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsClearSavedInfoRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:connect-star-ref-bot-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsConnectStarRefBotRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsConnectStarRefBotRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:convert-star-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsConvertStarGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsConvertStarGiftRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:craft-star-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsCraftStarGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsCraftStarGiftRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:create-onramp-session-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsCreateOnrampSessionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsCreateOnrampSessionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:create-star-gift-collection-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsCreateStarGiftCollectionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsCreateStarGiftCollectionRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

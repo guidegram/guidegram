@@ -21676,7 +21676,84 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.checkCanSendGift(holder as any, params.giftId)
   }
+
+  // Microphase 095: Payments Domain Suite Part 2 (7 RPCs)
+  public async paymentsCheckGiftCodeRaw(
+    accountId: string,
+    params: { slug: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.checkGiftCode(holder as any, params.slug)
+  }
+
+  public async paymentsClearSavedInfoRaw(
+    accountId: string,
+    params?: { credentials?: boolean; info?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.clearSavedInfo(holder as any, params)
+  }
+
+  public async paymentsConnectStarRefBotRaw(
+    accountId: string,
+    params: { peerId: string; botId: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.connectStarRefBot(holder as any, accountId, params)
+  }
+
+  public async paymentsConvertStarGiftRaw(
+    accountId: string,
+    params: { stargift: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.convertStarGift(holder as any, params.stargift)
+  }
+
+  public async paymentsCraftStarGiftRaw(
+    accountId: string,
+    params: { stargift: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.craftStarGift(holder as any, params.stargift)
+  }
+
+  public async paymentsCreateOnrampSessionRaw(
+    accountId: string,
+    params: {
+      provider: string
+      cryptoCurrency?: string
+      address?: string
+      paymentMethod?: string
+      baseCurrency?: string
+      baseAmount?: string
+      memo?: string
+      theme?: string
+      successReturnUrl?: string
+      failReturnUrl?: string
+      cryptoAmount?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.createOnrampSession(holder as any, params)
+  }
+
+  public async paymentsCreateStarGiftCollectionRaw(
+    accountId: string,
+    params: { peerId: string; title: string; stargift?: any[] }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.createStarGiftCollection(holder as any, accountId, params)
+  }
 }
+
 
 
 

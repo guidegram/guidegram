@@ -102,15 +102,28 @@ export class PaymentsService {
     }
   }
 
-  public async clearSavedInfo(holder: RpcClientHolder, credentials = true, info = true): Promise<any> {
+  public async clearSavedInfo(
+    holder: RpcClientHolder,
+    credentialsOrParams?: boolean | { credentials?: boolean; info?: boolean },
+    info = true
+  ): Promise<any> {
     try {
+      let credentials = true
+      let inf = info
+      if (typeof credentialsOrParams === 'object' && credentialsOrParams !== null) {
+        credentials = credentialsOrParams.credentials ?? true
+        inf = credentialsOrParams.info ?? true
+      } else if (typeof credentialsOrParams === 'boolean') {
+        credentials = credentialsOrParams
+      }
       return await holder.client.call({
         _: 'payments.clearSavedInfo',
-        credentials, info,
+        credentials,
+        info: inf,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] clearSavedInfo error:', err)
-      return null
+      throw err
     }
   }
 
@@ -183,13 +196,14 @@ export class PaymentsService {
 
   public async checkGiftCode(holder: RpcClientHolder, slug: string): Promise<any> {
     try {
+      const cleanSlug = String(slug || '').replace(/^https?:\/\/t\.me\/giftcode\//i, '').trim()
       return await holder.client.call({
         _: 'payments.checkGiftCode',
-        slug,
+        slug: cleanSlug,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] checkGiftCode error:', err)
-      return null
+      throw err
     }
   }
 
@@ -433,13 +447,29 @@ export class PaymentsService {
 
   public async convertStarGift(holder: RpcClientHolder, stargift: any): Promise<any> {
     try {
+      let inputStarGift: any = stargift
+      if (typeof stargift === 'string') {
+        inputStarGift = { _: 'inputSavedStarGiftSlug', slug: stargift }
+      } else if (typeof stargift === 'number') {
+        inputStarGift = { _: 'inputSavedStarGiftUser', msgId: stargift }
+      } else if (stargift && typeof stargift === 'object') {
+        if (!stargift._) {
+          if (stargift.slug) {
+            inputStarGift = { _: 'inputSavedStarGiftSlug', slug: stargift.slug }
+          } else if (stargift.msgId) {
+            inputStarGift = { _: 'inputSavedStarGiftUser', msgId: Number(stargift.msgId) }
+          } else if (stargift.peer && stargift.savedId) {
+            inputStarGift = { _: 'inputSavedStarGiftChat', peer: stargift.peer, savedId: toLong(stargift.savedId) }
+          }
+        }
+      }
       return await holder.client.call({
         _: 'payments.convertStarGift',
-        stargift,
+        stargift: inputStarGift,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] convertStarGift error:', err)
-      return null
+      throw err
     }
   }
 
@@ -516,16 +546,32 @@ export class PaymentsService {
     }
   }
 
-  public async connectStarRefBot(holder: RpcClientHolder, accountId: string, peerId: string, botId: string): Promise<any> {
+  public async connectStarRefBot(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerIdOrParams: string | { peerId: string; botId: string },
+    botId?: string
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      let pId: string
+      let bId: string
+      if (typeof peerIdOrParams === 'object' && peerIdOrParams !== null) {
+        pId = peerIdOrParams.peerId
+        bId = peerIdOrParams.botId
+      } else {
+        pId = peerIdOrParams
+        bId = botId || ''
+      }
+      const peer = pId ? await this.resolveInputPeer(accountId, pId) : { _: 'inputPeerEmpty' }
+      const bot = await this.toInputUser(accountId, bId)
       return await holder.client.call({
         _: 'payments.connectStarRefBot',
-        peer, bot: await this.toInputUser(accountId, botId),
+        peer,
+        bot,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] connectStarRefBot error:', err)
-      return null
+      throw err
     }
   }
 
@@ -695,16 +741,41 @@ export class PaymentsService {
     }
   }
 
-  public async createStarGiftCollection(holder: RpcClientHolder, accountId: string, peerId: string, title: string, stargift: any): Promise<any> {
+  public async createStarGiftCollection(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerIdOrParams: string | { peerId: string; title: string; stargift?: any[] },
+    title?: string,
+    stargift?: any
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      let pId: string
+      let t: string
+      let gifts: any[] = []
+      if (typeof peerIdOrParams === 'object' && peerIdOrParams !== null) {
+        pId = peerIdOrParams.peerId
+        t = peerIdOrParams.title
+        gifts = Array.isArray(peerIdOrParams.stargift) ? peerIdOrParams.stargift : []
+      } else {
+        pId = peerIdOrParams
+        t = title || ''
+        gifts = Array.isArray(stargift) ? stargift : (stargift ? [stargift] : [])
+      }
+      const peer = pId ? await this.resolveInputPeer(accountId, pId) : { _: 'inputPeerEmpty' }
+      const resolvedGifts = gifts.map((g: any) => {
+        if (typeof g === 'string') return { _: 'inputSavedStarGiftSlug', slug: g }
+        if (typeof g === 'number') return { _: 'inputSavedStarGiftUser', msgId: g }
+        return g
+      })
       return await holder.client.call({
         _: 'payments.createStarGiftCollection',
-        peer, title, stargift,
+        peer,
+        title: t,
+        stargift: resolvedGifts,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] createStarGiftCollection error:', err)
-      return null
+      throw err
     }
   }
 
@@ -871,13 +942,19 @@ export class PaymentsService {
 
   public async craftStarGift(holder: RpcClientHolder, stargift: any): Promise<any> {
     try {
+      const gifts = Array.isArray(stargift) ? stargift : (stargift ? [stargift] : [])
+      const resolvedGifts = gifts.map((g: any) => {
+        if (typeof g === 'string') return { _: 'inputSavedStarGiftSlug', slug: g }
+        if (typeof g === 'number') return { _: 'inputSavedStarGiftUser', msgId: g }
+        return g
+      })
       return await holder.client.call({
         _: 'payments.craftStarGift',
-        stargift,
+        stargift: resolvedGifts,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] craftStarGift error:', err)
-      return null
+      throw err
     }
   }
 
@@ -950,15 +1027,51 @@ export class PaymentsService {
     }
   }
 
-  public async createOnrampSession(holder: RpcClientHolder, provider: string, amount: number, fromCurrency: string, toCurrency: string): Promise<any> {
+  public async createOnrampSession(
+    holder: RpcClientHolder,
+    providerOrParams: string | {
+      provider: string
+      cryptoCurrency?: string
+      address?: string
+      paymentMethod?: string
+      baseCurrency?: string
+      baseAmount?: string
+      memo?: string
+      theme?: string
+      successReturnUrl?: string
+      failReturnUrl?: string
+      cryptoAmount?: string
+    },
+    amountOrCryptoCurrency?: any,
+    fromCurrencyOrAddress?: any,
+    toCurrency?: any
+  ): Promise<any> {
     try {
+      if (typeof providerOrParams === 'object' && providerOrParams !== null) {
+        return await holder.client.call({
+          _: 'payments.createOnrampSession',
+          provider: providerOrParams.provider,
+          cryptoCurrency: providerOrParams.cryptoCurrency || 'TON',
+          address: providerOrParams.address || '',
+          paymentMethod: providerOrParams.paymentMethod,
+          baseCurrency: providerOrParams.baseCurrency,
+          baseAmount: providerOrParams.baseAmount,
+          memo: providerOrParams.memo,
+          theme: providerOrParams.theme,
+          successReturnUrl: providerOrParams.successReturnUrl,
+          failReturnUrl: providerOrParams.failReturnUrl,
+          cryptoAmount: providerOrParams.cryptoAmount,
+        })
+      }
       return await holder.client.call({
         _: 'payments.createOnrampSession',
-        provider, amount, fromCurrency, toCurrency,
+        provider: providerOrParams,
+        cryptoCurrency: String(toCurrency || amountOrCryptoCurrency || 'TON'),
+        address: String(fromCurrencyOrAddress || ''),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] createOnrampSession error:', err)
-      return null
+      throw err
     }
   }
 

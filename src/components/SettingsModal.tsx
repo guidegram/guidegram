@@ -10799,6 +10799,240 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 095: Payments Domain Suite Part 2 (7 RPCs)
+  const [m095Status, setM095Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m095LoadingOp, setM095LoadingOp] = useState<string | null>(null)
+  const [m095CheckGiftSlug, setM095CheckGiftSlug] = useState('')
+  const [m095ClearCredentials, setM095ClearCredentials] = useState(true)
+  const [m095ClearInfo, setM095ClearInfo] = useState(true)
+  const [m095RefPeerId, setM095RefPeerId] = useState('')
+  const [m095RefBotId, setM095RefBotId] = useState('')
+  const [m095ConvertStarGiftInput, setM095ConvertStarGiftInput] = useState('')
+  const [m095CraftGiftsInput, setM095CraftGiftsInput] = useState('')
+  const [m095OnrampProvider, setM095OnrampProvider] = useState('fragment')
+  const [m095OnrampCryptoCurrency, setM095OnrampCryptoCurrency] = useState('TON')
+  const [m095OnrampAddress, setM095OnrampAddress] = useState('')
+  const [m095CollecPeerId, setM095CollecPeerId] = useState('')
+  const [m095CollecTitle, setM095CollecTitle] = useState('')
+  const [m095CollecGifts, setM095CollecGifts] = useState('')
+  const [m095OpResult, setM095OpResult] = useState<any | null>(null)
+
+  const handleM095CheckGiftCode = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m095CheckGiftSlug.trim()) {
+      setM095Status({ type: 'error', message: 'لطفاً اسلاگ یا کد هدیه را وارد کنید.' })
+      return
+    }
+    setM095LoadingOp('checkGiftCode')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsCheckGiftCodeRaw(targetId, {
+        slug: m095CheckGiftSlug.trim(),
+      })
+      if (res) {
+        setM095OpResult(res)
+        setM095Status({
+          type: 'success',
+          message: 'استعلام اطلاعات کد هدیه با موفقیت دریافت شد.',
+        })
+      } else {
+        setM095Status({ type: 'error', message: 'پاسخ نامعتبر در استعلام کد هدیه.' })
+      }
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.checkGiftCode' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
+  const handleM095ClearSavedInfo = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM095LoadingOp('clearSavedInfo')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsClearSavedInfoRaw(targetId, {
+        credentials: m095ClearCredentials,
+        info: m095ClearInfo,
+      })
+      setM095OpResult(res ?? { cleared: true })
+      setM095Status({
+        type: 'success',
+        message: 'اطلاعات ذخیره شده پرداخت و صورتحساب با موفقیت پاکسازی شد.',
+      })
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.clearSavedInfo' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
+  const handleM095ConnectStarRefBot = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m095RefPeerId.trim() || !m095RefBotId.trim()) {
+      setM095Status({ type: 'error', message: 'شناسه مقصد و شناسه ربات را وارد کنید.' })
+      return
+    }
+    setM095LoadingOp('connectStarRefBot')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsConnectStarRefBotRaw(targetId, {
+        peerId: m095RefPeerId.trim(),
+        botId: m095RefBotId.trim(),
+      })
+      if (res) {
+        setM095OpResult(res)
+        setM095Status({
+          type: 'success',
+          message: 'ربات ارجاع ستاره‌ها با موفقیت متصل شد.',
+        })
+      } else {
+        setM095Status({ type: 'error', message: 'پاسخ نامعتبر در اتصال ربات ستاره‌ها.' })
+      }
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.connectStarRefBot' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
+  const handleM095ConvertStarGift = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m095ConvertStarGiftInput.trim()) {
+      setM095Status({ type: 'error', message: 'لطفاً شناسه پیام یا اسلاگ گیفت را وارد کنید.' })
+      return
+    }
+    setM095LoadingOp('convertStarGift')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const inputVal = m095ConvertStarGiftInput.trim()
+      const giftParam = /^\d+$/.test(inputVal) ? Number(inputVal) : inputVal
+      const res = await (window as any).guidegramAPI?.paymentsConvertStarGiftRaw(targetId, {
+        stargift: giftParam,
+      })
+      setM095OpResult(res ?? { converted: true })
+      setM095Status({
+        type: 'success',
+        message: 'تبدیل هدیه ستاره به استارز با موفقیت ثبت شد.',
+      })
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.convertStarGift' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
+  const handleM095CraftStarGift = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m095CraftGiftsInput.trim()) {
+      setM095Status({ type: 'error', message: 'شناسه‌های گیفت جهت ساخت هدیه ترکیبی را وارد کنید.' })
+      return
+    }
+    setM095LoadingOp('craftStarGift')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const items = m095CraftGiftsInput
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => (/^\d+$/.test(s) ? Number(s) : s))
+      const res = await (window as any).guidegramAPI?.paymentsCraftStarGiftRaw(targetId, {
+        stargift: items,
+      })
+      if (res) {
+        setM095OpResult(res)
+        setM095Status({
+          type: 'success',
+          message: 'ساخت و ارتقای گیفت ترکیبی (Crafting) با موفقیت انجام شد.',
+        })
+      } else {
+        setM095Status({ type: 'error', message: 'پاسخ ناموفق در کرافت گیفت ستاره.' })
+      }
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.craftStarGift' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
+  const handleM095CreateOnrampSession = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m095OnrampAddress.trim()) {
+      setM095Status({ type: 'error', message: 'لطفاً آدرس کیف‌پول مقصد را وارد کنید.' })
+      return
+    }
+    setM095LoadingOp('createOnrampSession')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsCreateOnrampSessionRaw(targetId, {
+        provider: m095OnrampProvider.trim() || 'fragment',
+        cryptoCurrency: m095OnrampCryptoCurrency.trim() || 'TON',
+        address: m095OnrampAddress.trim(),
+      })
+      if (res) {
+        setM095OpResult(res)
+        setM095Status({
+          type: 'success',
+          message: 'نشست خرید مستقیم رمزارز (Onramp Session) با موفقیت ایجاد شد.',
+        })
+      } else {
+        setM095Status({ type: 'error', message: 'پاسخ نامعتبر در ایجاد جلسه Onramp.' })
+      }
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.createOnrampSession' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
+  const handleM095CreateStarGiftCollection = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m095CollecPeerId.trim() || !m095CollecTitle.trim()) {
+      setM095Status({ type: 'error', message: 'شناسه چت و عنوان کلکسیون را وارد کنید.' })
+      return
+    }
+    setM095LoadingOp('createStarGiftCollection')
+    setM095Status(null)
+    setM095OpResult(null)
+    try {
+      const items = m095CollecGifts
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => (/^\d+$/.test(s) ? Number(s) : s))
+      const res = await (window as any).guidegramAPI?.paymentsCreateStarGiftCollectionRaw(targetId, {
+        peerId: m095CollecPeerId.trim(),
+        title: m095CollecTitle.trim(),
+        stargift: items,
+      })
+      if (res) {
+        setM095OpResult(res)
+        setM095Status({
+          type: 'success',
+          message: `کلکسیون گیفت «${m095CollecTitle.trim()}» با موفقیت ساخته شد.`,
+        })
+      } else {
+        setM095Status({ type: 'error', message: 'پاسخ ناموفق در ایجاد کلکسیون گیفت.' })
+      }
+    } catch (err: any) {
+      setM095Status({ type: 'error', message: err?.message || 'خطا در payments.createStarGiftCollection' })
+    } finally {
+      setM095LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -27408,6 +27642,291 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setM094Status(null)}
+                            className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                          >
+                            تلاش مجدد
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Microphase 095: Payments Domain Suite Part 2 (7 RPCs) */}
+                <div className="bg-dark-800/60 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                        <span>💳</span>
+                        <span>مدیریت پیشرفته پرداخت و ستاره‌ها (فاز ۲) - هدایا، آن‌رمپ و پاکسازی</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        متدهای MTProto لایه ۲۳۲ تلگرام: بررسی کد هدیه، پاکسازی کارت، اتصال ربات ارجاع، تبدیل و کرافت گیفت، جلسه آن‌رمپ رمزارز و کلکسیون گیفت
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                      Phase 095 / Layer 232
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* RPC 1: payments.checkGiftCode */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۱. استعلام و بررسی کد هدیه تلگرام (payments.checkGiftCode)</span>
+                        <span className="text-[10px] text-amber-400 font-mono">Gift Code Metadata</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m095CheckGiftSlug}
+                          onChange={(e) => setM095CheckGiftSlug(e.target.value)}
+                          placeholder="اسلاگ کد هدیه (Gift Slug e.g. tg-gift-abc123xyz)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM095CheckGiftCode}
+                          disabled={m095LoadingOp === 'checkGiftCode'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'checkGiftCode' ? 'در حال استعلام...' : 'استعلام کد هدیه'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 2: payments.clearSavedInfo */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۲. پاکسازی اطلاعات مالی و صورتحساب ذخیره شده (payments.clearSavedInfo)</span>
+                        <span className="text-[10px] text-red-400 font-mono">Financial Privacy</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 text-xs text-gray-300">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={m095ClearCredentials}
+                              onChange={(e) => setM095ClearCredentials(e.target.checked)}
+                              className="rounded bg-white/5 border-white/10 text-amber-500 focus:ring-0"
+                            />
+                            <span>پاکسازی اطلاعات کارت بانکی (Credentials)</span>
+                          </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={m095ClearInfo}
+                              onChange={(e) => setM095ClearInfo(e.target.checked)}
+                              className="rounded bg-white/5 border-white/10 text-amber-500 focus:ring-0"
+                            />
+                            <span>پاکسازی آدرس و اطلاعات صورتحساب (Info)</span>
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleM095ClearSavedInfo}
+                          disabled={m095LoadingOp === 'clearSavedInfo'}
+                          className="px-3 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/50 border border-red-500/40 text-red-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'clearSavedInfo' ? 'در حال پاکسازی...' : 'حذف اطلاعات مالی'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 3: payments.connectStarRefBot */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۳. اتصال ربات افیلیت ارجاع ستاره‌ها (payments.connectStarRefBot)</span>
+                        <span className="text-[10px] text-purple-400 font-mono">Star Referral Bot</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m095RefPeerId}
+                          onChange={(e) => setM095RefPeerId(e.target.value)}
+                          placeholder="شناسه کانال یا گروه مقصد (Peer ID)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-purple-500"
+                        />
+                        <input
+                          type="text"
+                          value={m095RefBotId}
+                          onChange={(e) => setM095RefBotId(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم ربات ارجاع (Bot ID)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM095ConnectStarRefBot}
+                          disabled={m095LoadingOp === 'connectStarRefBot'}
+                          className="px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'connectStarRefBot' ? 'در حال اتصال...' : 'اتصال ربات ستاره‌ها'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 4: payments.convertStarGift */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۴. تبدیل هدیه دریافتی به ستاره تلگرام (payments.convertStarGift)</span>
+                        <span className="text-[10px] text-yellow-400 font-mono">Convert Gift to Stars</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m095ConvertStarGiftInput}
+                          onChange={(e) => setM095ConvertStarGiftInput(e.target.value)}
+                          placeholder="شناسه پیام هدیه یا اسلاگ گیفت (Message ID / Slug)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-yellow-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM095ConvertStarGift}
+                          disabled={m095LoadingOp === 'convertStarGift'}
+                          className="px-3 py-1.5 rounded-lg bg-yellow-600/30 hover:bg-yellow-600/50 border border-yellow-500/40 text-yellow-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'convertStarGift' ? 'در حال تبدیل...' : 'تبدیل گیفت به Stars'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 5: payments.craftStarGift */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۵. ارتقا و ساخت هدیه ترکیبی / کرافتینگ (payments.craftStarGift)</span>
+                        <span className="text-[10px] text-pink-400 font-mono">Gift Crafting Engine</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m095CraftGiftsInput}
+                          onChange={(e) => setM095CraftGiftsInput(e.target.value)}
+                          placeholder="شناسه‌های گیفت‌های مبدأ با کاما (e.g. 1024, 1025)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-pink-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM095CraftStarGift}
+                          disabled={m095LoadingOp === 'craftStarGift'}
+                          className="px-3 py-1.5 rounded-lg bg-pink-600/30 hover:bg-pink-600/50 border border-pink-500/40 text-pink-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'craftStarGift' ? 'در حال ساخت...' : 'کرافت گیفت'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 6: payments.createOnrampSession */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۶. ایجاد نشست خرید رمزارز و واریز مستقیم (payments.createOnrampSession)</span>
+                        <span className="text-[10px] text-cyan-400 font-mono">Crypto Onramp Session</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={m095OnrampProvider}
+                          onChange={(e) => setM095OnrampProvider(e.target.value)}
+                          placeholder="ارائه‌دهنده (Provider e.g. fragment)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                        />
+                        <input
+                          type="text"
+                          value={m095OnrampCryptoCurrency}
+                          onChange={(e) => setM095OnrampCryptoCurrency(e.target.value)}
+                          placeholder="رمزارز (Crypto e.g. TON)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                        />
+                        <input
+                          type="text"
+                          value={m095OnrampAddress}
+                          onChange={(e) => setM095OnrampAddress(e.target.value)}
+                          placeholder="آدرس ولت دریافت (TON Address)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM095CreateOnrampSession}
+                          disabled={m095LoadingOp === 'createOnrampSession'}
+                          className="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'createOnrampSession' ? 'در حال ایجاد نشست...' : 'ایجاد نشست آن‌رمپ'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 7: payments.createStarGiftCollection */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۷. ساخت کلکسیون گیفت‌های ستاره‌ای (payments.createStarGiftCollection)</span>
+                        <span className="text-[10px] text-emerald-400 font-mono">Gift Collections</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m095CollecPeerId}
+                          onChange={(e) => setM095CollecPeerId(e.target.value)}
+                          placeholder="شناسه مقصد (Peer ID e.g. me or channel)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <input
+                          type="text"
+                          value={m095CollecTitle}
+                          onChange={(e) => setM095CollecTitle(e.target.value)}
+                          placeholder="عنوان کلکسیون (Collection Title)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m095CollecGifts}
+                          onChange={(e) => setM095CollecGifts(e.target.value)}
+                          placeholder="شناسه‌های گیفت با کاما (اختیاری)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM095CreateStarGiftCollection}
+                          disabled={m095LoadingOp === 'createStarGiftCollection'}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m095LoadingOp === 'createStarGiftCollection' ? 'در حال ساخت...' : 'ایجاد کلکسیون گیفت'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Honest Empty State */}
+                    {!m095OpResult && !m095Status && (
+                      <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl text-center text-xs text-gray-500">
+                        هیچ عملیاتی در ماژول پرداخت ۲ اجرا نشده است. برای استعلام یا تست یکی از متدهای بالا را اجرا کنید.
+                      </div>
+                    )}
+
+                    {/* Structured Operation Output Box */}
+                    {m095OpResult && (
+                      <div className="bg-black/30 p-2.5 rounded-lg border border-amber-500/20 text-[11px] font-mono text-amber-300 text-left overflow-x-auto max-h-36">
+                        <pre>{JSON.stringify(m095OpResult, null, 2)}</pre>
+                      </div>
+                    )}
+
+                    {/* Status Feedback / Error with Retry */}
+                    {m095Status && (
+                      <div
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                          m095Status.type === 'success'
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                            : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                        }`}
+                      >
+                        <span>{m095Status.message}</span>
+                        {m095Status.type === 'error' && (
+                          <button
+                            type="button"
+                            onClick={() => setM095Status(null)}
                             className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                           >
                             تلاش مجدد
