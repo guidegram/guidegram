@@ -25,6 +25,9 @@ import {
   Send,
   Layers,
   BookOpen,
+  Eye,
+  Users,
+  BarChart2,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
@@ -136,6 +139,20 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // Peer Max IDs sync (stories.getPeerMaxIDs)
   const [peerMaxId, setPeerMaxId] = useState<number | null>(null)
 
+  // --- Microphase 122: Stories Domain Suite Part 3 States ---
+  // Viewers & reactions sheet (stories.getStoryViewsList, stories.getStoryReactionsList, stories.getStoriesViews)
+  const [viewsModalOpen, setViewsModalOpen] = useState(false)
+  const [viewersList, setViewersList] = useState<any[]>([])
+  const [reactionsList, setReactionsList] = useState<any[]>([])
+  const [storiesViewsData, setStoriesViewsData] = useState<any>(null)
+  const [loadingViewsData, setLoadingViewsData] = useState(false)
+
+  // Lookup Story by ID (stories.getStoriesByID)
+  const [lookupStoryModalOpen, setLookupStoryModalOpen] = useState(false)
+  const [lookupStoryId, setLookupStoryId] = useState('')
+  const [lookupStoryLoading, setLookupStoryLoading] = useState(false)
+  const [lookupStoryResult, setLookupStoryResult] = useState<any>(null)
+
   useEffect(() => {
     if (initialTab) {
       setStoryTab(initialTab)
@@ -155,6 +172,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     if (!currentStoryId || localGhostMode || !accountId || !peerId) return
     if (window.guidegram?.readStories) {
       window.guidegram.readStories(accountId, peerId, currentStoryId).catch(() => {})
+    }
+    // stories.incrementStoryViews
+    if ((window as any).guidegram?.storiesIncrementStoryViewsRaw) {
+      (window as any).guidegram.storiesIncrementStoryViewsRaw(accountId, { peerId, id: currentStoryId }).catch(() => {})
     }
   }, [currentStoryId, localGhostMode, accountId, peerId])
 
@@ -195,9 +216,17 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
     let request: Promise<any> | undefined
     if (storyTab === 'pinned') {
-      request = window.guidegram?.getPinnedStories?.(accountId, peerId)
+      if ((window as any).guidegram?.storiesGetPinnedStoriesRaw) {
+        request = (window as any).guidegram.storiesGetPinnedStoriesRaw(accountId, { peerId })
+      } else {
+        request = window.guidegram?.getPinnedStories?.(accountId, peerId)
+      }
     } else if (storyTab === 'archive') {
-      request = window.guidegram?.getStoriesArchive?.(accountId, peerId)
+      if ((window as any).guidegram?.storiesGetStoriesArchiveRaw) {
+        request = (window as any).guidegram.storiesGetStoriesArchiveRaw(accountId, { peerId })
+      } else {
+        request = window.guidegram?.getStoriesArchive?.(accountId, peerId)
+      }
     } else {
       if ((window as any).guidegram?.storiesGetPeerStoriesRaw) {
         request = (window as any).guidegram.storiesGetPeerStoriesRaw(accountId, { peerId })
@@ -663,6 +692,68 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     } catch (_) {}
   }, [accountId])
 
+  // --- Microphase 122 Callbacks ---
+  // Fetch detailed story views, viewers and reactions (stories.getStoryViewsList, stories.getStoryReactionsList, stories.getStoriesViews)
+  const handleOpenViewsModal = useCallback(async () => {
+    if (!accountId || !peerId || !currentStoryId) return
+    setPaused(true)
+    setViewsModalOpen(true)
+    setLoadingViewsData(true)
+    try {
+      // 1. stories.getStoryViewsList
+      if ((window as any).guidegram?.storiesGetStoryViewsListRaw) {
+        const vRes = await (window as any).guidegram.storiesGetStoryViewsListRaw(accountId, {
+          peerId,
+          id: currentStoryId,
+          limit: 30,
+        })
+        setViewersList(vRes?.views || vRes?.users || (Array.isArray(vRes) ? vRes : []))
+      }
+
+      // 2. stories.getStoryReactionsList
+      if ((window as any).guidegram?.storiesGetStoryReactionsListRaw) {
+        const rRes = await (window as any).guidegram.storiesGetStoryReactionsListRaw(accountId, {
+          peerId,
+          id: currentStoryId,
+          limit: 30,
+        })
+        setReactionsList(rRes?.reactions || (Array.isArray(rRes) ? rRes : []))
+      }
+
+      // 3. stories.getStoriesViews
+      if ((window as any).guidegram?.storiesGetStoriesViewsRaw) {
+        const sRes = await (window as any).guidegram.storiesGetStoriesViewsRaw(accountId, {
+          peerId,
+          id: [currentStoryId],
+        })
+        setStoriesViewsData(sRes)
+      }
+    } catch (_) {
+    } finally {
+      setLoadingViewsData(false)
+    }
+  }, [accountId, peerId, currentStoryId])
+
+  // Lookup story by ID using stories.getStoriesByID
+  const handleLookupStoryById = useCallback(async () => {
+    if (!accountId || !peerId || !lookupStoryId.trim()) return
+    setLookupStoryLoading(true)
+    setLookupStoryResult(null)
+    try {
+      if ((window as any).guidegram?.storiesGetStoriesByIDRaw) {
+        const res = await (window as any).guidegram.storiesGetStoriesByIDRaw(accountId, {
+          peerId,
+          id: [parseInt(lookupStoryId.trim(), 10)],
+        })
+        setLookupStoryResult(res)
+      }
+    } catch (err: any) {
+      setLookupStoryResult({ error: err?.message || 'Story not found' })
+    } finally {
+      setLookupStoryLoading(false)
+    }
+  }, [accountId, peerId, lookupStoryId])
+
   useEffect(() => {
     if (!isOpen || !currentStoryId || !mediaUrl || mediaLoading || isVideo) return
     let frame = 0
@@ -820,7 +911,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <Calendar className="h-3 w-3" />
                 <span>{formatStoryTime(currentStory?.date)}</span>
                 {currentStory?.viewsCount !== undefined && (
-                  <span className="ml-1">· {currentStory.viewsCount.toLocaleString()} views</span>
+                  <button
+                    type="button"
+                    onClick={handleOpenViewsModal}
+                    className="ml-1 hover:underline hover:text-white cursor-pointer inline-flex items-center gap-1"
+                  >
+                    · {currentStory.viewsCount.toLocaleString()} views
+                  </button>
                 )}
               </div>
             </div>
@@ -879,6 +976,31 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               aria-label="All stories feed"
             >
               <Layers className="h-4 w-4" />
+            </button>
+
+            {/* Microphase 122: Story Views & Reactions */}
+            <button
+              type="button"
+              onClick={handleOpenViewsModal}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-cyan-600/70 hover:text-white"
+              title={isPersian ? 'آمار بازدید و واکنش‌ها (getStoryViewsList)' : 'Story Views & Reactions'}
+              aria-label="Story views"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+
+            {/* Microphase 122: Lookup Story by ID */}
+            <button
+              type="button"
+              onClick={() => {
+                setPaused(true)
+                setLookupStoryModalOpen(true)
+              }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-teal-600/70 hover:text-white"
+              title={isPersian ? 'شناسایی و بازیابی با شناسه (getStoriesByID)' : 'Lookup Story by ID'}
+              aria-label="Lookup story"
+            >
+              <BarChart2 className="h-4 w-4" />
             </button>
 
             {isOwnStory && currentStoryId && !loading && (
@@ -1701,6 +1823,198 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Microphase 122: Story Views & Reactions Sheet */}
+        <AnimatePresence>
+          {viewsModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 bottom-16 top-16 z-50 overflow-y-auto rounded-2xl bg-black/90 p-5 text-white backdrop-blur-xl border border-white/15"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-cyan-400" />
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      {isPersian ? 'بازدیدکنندگان و واکنش‌ها' : 'Story Viewers & Reactions'}
+                    </h3>
+                    <div className="text-[10px] text-cyan-300">
+                      stories.getStoryViewsList · stories.getStoryReactionsList
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewsModalOpen(false)
+                    setPaused(false)
+                  }}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {loadingViewsData && (
+                <div className="flex flex-col items-center justify-center p-8 text-xs text-gray-400">
+                  <Loader2 className="h-6 w-6 animate-spin mb-2 text-cyan-400" />
+                  <span>{isPersian ? 'در حال دریافت اطلاعات بازدید و واکنش‌ها...' : 'Loading view analytics...'}</span>
+                </div>
+              )}
+
+              {!loadingViewsData && (
+                <div className="space-y-4">
+                  {/* Summary / Stats banner */}
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                      <div className="text-lg font-bold text-cyan-400">
+                        {viewersList.length || currentStory?.viewsCount || 0}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        {isPersian ? 'کل بازدیدها' : 'Total Views'}
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                      <div className="text-lg font-bold text-amber-400">
+                        {reactionsList.length || 0}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        {isPersian ? 'واکنش‌ها' : 'Reactions'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reactions Section */}
+                  {reactionsList.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-300 mb-2 flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-amber-400" />
+                        <span>{isPersian ? 'لیست واکنش‌ها' : 'Reactions List'}</span>
+                      </h4>
+                      <div className="space-y-1.5">
+                        {reactionsList.map((react: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10"
+                          >
+                            <span className="text-xs text-white">
+                              {react.userId || react.peer_id || `User ${idx + 1}`}
+                            </span>
+                            <span className="text-base">
+                              {react.reaction?.emoticon || '❤️'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Viewers Section */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-300 mb-2 flex items-center gap-1.5">
+                      <Eye className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>{isPersian ? 'بینندگان اخیر' : 'Recent Viewers'}</span>
+                    </h4>
+                    {viewersList.length === 0 ? (
+                      <div className="text-center p-4 text-xs text-gray-400">
+                        {isPersian ? 'هیچ بازدیدی هنوز ثبت نشده است.' : 'No recent viewers found.'}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {viewersList.map((viewer: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">
+                                {idx + 1}
+                              </div>
+                              <span className="text-xs text-white">
+                                {viewer.userId || viewer.id || `User ${idx + 1}`}
+                              </span>
+                            </div>
+                            {viewer.date && (
+                              <span className="text-[10px] text-gray-400">
+                                {new Date(viewer.date * 1000).toLocaleTimeString()}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Microphase 122: Lookup Story by ID Modal */}
+        <AnimatePresence>
+          {lookupStoryModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 bottom-20 top-20 z-50 overflow-y-auto rounded-2xl bg-black/90 p-5 text-white backdrop-blur-xl border border-white/15"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <BarChart2 className="h-5 w-5 text-teal-400" />
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      {isPersian ? 'جستجوی استوری بر اساس شناسه' : 'Lookup Story by ID'}
+                    </h3>
+                    <div className="text-[10px] text-teal-300">stories.getStoriesByID</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLookupStoryModalOpen(false)
+                    setPaused(false)
+                  }}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="number"
+                  placeholder={isPersian ? 'شناسه استوری عددی (مثلا ۱۲۳)...' : 'Story ID (e.g. 123)...'}
+                  value={lookupStoryId}
+                  onChange={(e) => setLookupStoryId(e.target.value)}
+                  className="flex-1 rounded-xl bg-white/10 px-3 py-2 text-xs text-white placeholder-gray-400 border border-white/10 focus:outline-none focus:border-teal-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleLookupStoryById}
+                  disabled={lookupStoryLoading || !lookupStoryId.trim()}
+                  className="px-4 py-2 rounded-xl bg-teal-600 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {lookupStoryLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <span>{isPersian ? 'جستجو' : 'Lookup'}</span>
+                  )}
+                </button>
+              </div>
+
+              {lookupStoryResult && (
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono overflow-x-auto max-h-48 text-gray-200">
+                  <pre className="text-[11px] whitespace-pre-wrap">
+                    {JSON.stringify(lookupStoryResult, null, 2)}
+                  </pre>
                 </div>
               )}
             </motion.div>

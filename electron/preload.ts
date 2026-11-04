@@ -3329,6 +3329,22 @@ const guidegramAPI = {
   storiesGetPeerStoriesRaw: (accountId: string, params: { peerId?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:stories:get-peer-stories-raw', { accountId, ...params }),
 
+  // --- Microphase 122: Stories Domain Suite Part 3 ---
+  storiesGetPinnedStoriesRaw: (accountId: string, params: { peerId?: string; offsetId?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-pinned-stories-raw', { accountId, ...params }),
+  storiesGetStoriesArchiveRaw: (accountId: string, params: { peerId?: string; offsetId?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-stories-archive-raw', { accountId, ...params }),
+  storiesGetStoriesByIDRaw: (accountId: string, params: { peerId?: string; id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-stories-by-id-raw', { accountId, ...params }),
+  storiesGetStoriesViewsRaw: (accountId: string, params: { peerId?: string; id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-stories-views-raw', { accountId, ...params }),
+  storiesGetStoryReactionsListRaw: (accountId: string, params: { forwardsFirst?: boolean; peerId?: string; id?: number; reaction?: any; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-story-reactions-list-raw', { accountId, ...params }),
+  storiesGetStoryViewsListRaw: (accountId: string, params: { justContacts?: boolean; reactionsFirst?: boolean; forwardsFirst?: boolean; peerId?: string; q?: string; id?: number; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-story-views-list-raw', { accountId, ...params }),
+  storiesIncrementStoryViewsRaw: (accountId: string, params: { peerId?: string; id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:increment-story-views-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

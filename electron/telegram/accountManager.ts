@@ -23663,6 +23663,99 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.stories_getPeerStories(holder as any, accountId, params?.peerId)
   }
+
+  // --- Microphase 122: Stories Domain Suite Part 3 ---
+  public async storiesGetPinnedStoriesRaw(
+    accountId: string,
+    params: { peerId?: string; offsetId?: number; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getPinnedStories(holder as any, accountId, params?.peerId, params?.offsetId, params?.limit)
+  }
+
+  public async storiesGetStoriesArchiveRaw(
+    accountId: string,
+    params: { peerId?: string; offsetId?: number; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getStoriesArchive(holder as any, accountId, params?.peerId, params?.offsetId, params?.limit)
+  }
+
+  public async storiesGetStoriesByIDRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getStoriesByID(holder as any, accountId, params?.peerId, params?.id)
+  }
+
+  public async storiesGetStoriesViewsRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getStoriesViews(holder as any, accountId, params?.peerId, params?.id)
+  }
+
+  public async storiesGetStoryReactionsListRaw(
+    accountId: string,
+    params: { forwardsFirst?: boolean; peerId?: string; id?: number; reaction?: any; offset?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getStoryReactionsList(
+      holder as any,
+      accountId,
+      params?.forwardsFirst,
+      params?.peerId,
+      params?.id,
+      params?.reaction,
+      params?.offset,
+      params?.limit
+    )
+  }
+
+  public async storiesGetStoryViewsListRaw(
+    accountId: string,
+    params: {
+      justContacts?: boolean
+      reactionsFirst?: boolean
+      forwardsFirst?: boolean
+      peerId?: string
+      q?: string
+      id?: number
+      offset?: string
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getStoryViewsList(
+      holder as any,
+      accountId,
+      params?.justContacts,
+      params?.reactionsFirst,
+      params?.forwardsFirst,
+      params?.peerId,
+      params?.q,
+      params?.id,
+      params?.offset,
+      params?.limit
+    )
+  }
+
+  public async storiesIncrementStoryViewsRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_incrementStoryViews(holder as any, accountId, params?.peerId, params?.id)
+  }
 }
 
 

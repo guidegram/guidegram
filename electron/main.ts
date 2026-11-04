@@ -11168,6 +11168,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stories Domain Suite Part 3 IPC (Microphase 122)
+  ipcMain.handle('telegram:stories:get-pinned-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetPinnedStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetPinnedStoriesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-stories-archive-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetStoriesArchiveRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetStoriesArchiveRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-stories-by-id-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetStoriesByIDRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetStoriesByIDRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-stories-views-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetStoriesViewsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetStoriesViewsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-story-reactions-list-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetStoryReactionsListRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetStoryReactionsListRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-story-views-list-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetStoryViewsListRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetStoryViewsListRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:increment-story-views-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesIncrementStoryViewsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesIncrementStoryViewsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
