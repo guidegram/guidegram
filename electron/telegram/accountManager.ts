@@ -20877,6 +20877,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.channelsService.editTitle(holder as any, accountId, params.channelId, params.title)
   }
+
+  // Layer 232 Channels Domain Part 3 (Microphase 081)
+  public async channelsExportMessageLinkRaw(accountId: string, params: { channelId: string; messageId: number; grouped?: boolean; thread?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.exportMessageLink(holder as any, accountId, params.channelId, params.messageId, params.grouped, params.thread)
+  }
+
+  public async channelsGetAdminLogRaw(accountId: string, params: { channelId: string; options?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getAdminLog(holder as any, accountId, params.channelId, params.options)
+  }
+
+  public async channelsGetAdminedPublicChannelsRaw(accountId: string, options?: any): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getAdminedPublicChannels(holder as any, options)
+  }
+
+  public async channelsGetChannelRecommendationsRaw(accountId: string, params?: { channelId?: string }): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getChannelRecommendations(holder as any, accountId, params?.channelId)
+  }
+
+  public async channelsGetChannelsRaw(accountId: string, params: { channelIds: string[] }): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getChannels(holder as any, accountId, params.channelIds)
+  }
+
+  public async channelsGetFullChannelRaw(accountId: string, params: { channelId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.getFullChannel(holder as any, accountId, params.channelId)
+  }
+
+  public async channelsGetGroupsForDiscussionRaw(accountId: string): Promise<any[]> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.channelsService.getGroupsForDiscussion(holder as any)
+  }
 }
 
 

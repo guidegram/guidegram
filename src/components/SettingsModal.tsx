@@ -8497,6 +8497,155 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 081 State & Handlers (Channels Domain Part 3)
+  const [m081Status, setM081Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m081LoadingOp, setM081LoadingOp] = useState<string | null>(null)
+  const [m081ChannelId, setM081ChannelId] = useState('')
+  const [m081MsgId, setM081MsgId] = useState('')
+  const [m081ExportedLink, setM081ExportedLink] = useState<string | null>(null)
+  const [m081AdminLogResult, setM081AdminLogResult] = useState<any[] | null>(null)
+  const [m081PublicChannels, setM081PublicChannels] = useState<any[] | null>(null)
+  const [m081Recommendations, setM081Recommendations] = useState<any[] | null>(null)
+  const [m081FullChannel, setM081FullChannel] = useState<any | null>(null)
+  const [m081DiscussionGroups, setM081DiscussionGroups] = useState<any[] | null>(null)
+
+  const handleM081ExportMessageLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const msgIdNum = parseInt(m081MsgId.trim(), 10)
+    if (!targetId || !window.guidegram?.channelsExportMessageLinkRaw || !m081ChannelId.trim() || isNaN(msgIdNum)) return
+    setM081LoadingOp('exportMessageLink')
+    setM081Status(null)
+    setM081ExportedLink(null)
+    try {
+      const res = await window.guidegram.channelsExportMessageLinkRaw(targetId, {
+        channelId: m081ChannelId.trim(),
+        messageId: msgIdNum,
+      })
+      if (res?.link) {
+        setM081ExportedLink(res.link)
+        setM081Status({
+          type: 'success',
+          message: `لینک پیام استخراج شد: ${res.link}`,
+        })
+      } else {
+        setM081Status({ type: 'error', message: 'لینکی برای این پیام یافت نشد' })
+      }
+    } catch (err: any) {
+      setM081Status({ type: 'error', message: err?.message || 'خطا در channels.exportMessageLink' })
+    } finally {
+      setM081LoadingOp(null)
+    }
+  }
+
+  const handleM081GetAdminLog = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetAdminLogRaw || !m081ChannelId.trim()) return
+    setM081LoadingOp('getAdminLog')
+    setM081Status(null)
+    setM081AdminLogResult(null)
+    try {
+      const res = await window.guidegram.channelsGetAdminLogRaw(targetId, {
+        channelId: m081ChannelId.trim(),
+        options: { limit: 20 },
+      })
+      const events = Array.isArray(res?.events) ? res.events : []
+      setM081AdminLogResult(events)
+      setM081Status({
+        type: 'success',
+        message: `تعداد ${events.length} رخداد از گزارش لاگ ادمین دریافت گردید`,
+      })
+    } catch (err: any) {
+      setM081Status({ type: 'error', message: err?.message || 'خطا در channels.getAdminLog' })
+    } finally {
+      setM081LoadingOp(null)
+    }
+  }
+
+  const handleM081GetAdminedPublicChannels = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetAdminedPublicChannelsRaw) return
+    setM081LoadingOp('getAdminedPublicChannels')
+    setM081Status(null)
+    setM081PublicChannels(null)
+    try {
+      const chats = await window.guidegram.channelsGetAdminedPublicChannelsRaw(targetId, { checkLimit: true })
+      setM081PublicChannels(chats)
+      setM081Status({
+        type: 'success',
+        message: `تعداد ${chats.length} کانال عمومی تحت مدیریت شما دریافت شد`,
+      })
+    } catch (err: any) {
+      setM081Status({ type: 'error', message: err?.message || 'خطا در channels.getAdminedPublicChannels' })
+    } finally {
+      setM081LoadingOp(null)
+    }
+  }
+
+  const handleM081GetRecommendations = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetChannelRecommendationsRaw) return
+    setM081LoadingOp('getChannelRecommendations')
+    setM081Status(null)
+    setM081Recommendations(null)
+    try {
+      const chats = await window.guidegram.channelsGetChannelRecommendationsRaw(targetId, {
+        channelId: m081ChannelId.trim() || undefined,
+      })
+      setM081Recommendations(chats)
+      setM081Status({
+        type: 'success',
+        message: `تعداد ${chats.length} کانال پیشنهادی دریافت گردید`,
+      })
+    } catch (err: any) {
+      setM081Status({ type: 'error', message: err?.message || 'خطا در channels.getChannelRecommendations' })
+    } finally {
+      setM081LoadingOp(null)
+    }
+  }
+
+  const handleM081GetFullChannel = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetFullChannelRaw || !m081ChannelId.trim()) return
+    setM081LoadingOp('getFullChannel')
+    setM081Status(null)
+    setM081FullChannel(null)
+    try {
+      const res = await window.guidegram.channelsGetFullChannelRaw(targetId, {
+        channelId: m081ChannelId.trim(),
+      })
+      setM081FullChannel(res)
+      setM081Status({
+        type: 'success',
+        message: `اطلاعات کامل کانال با موفقیت واکشی شد`,
+      })
+    } catch (err: any) {
+      setM081Status({ type: 'error', message: err?.message || 'خطا در channels.getFullChannel' })
+    } finally {
+      setM081LoadingOp(null)
+    }
+  }
+
+  const handleM081GetGroupsForDiscussion = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsGetGroupsForDiscussionRaw) return
+    setM081LoadingOp('getGroupsForDiscussion')
+    setM081Status(null)
+    setM081DiscussionGroups(null)
+    try {
+      const chats = await window.guidegram.channelsGetGroupsForDiscussionRaw(targetId)
+      setM081DiscussionGroups(chats)
+      setM081Status({
+        type: 'success',
+        message: `تعداد ${chats.length} گروه مناسب جهت پیوند به بخش نظرات کانال دریافت شد`,
+      })
+    } catch (err: any) {
+      setM081Status({ type: 'error', message: err?.message || 'خطا در channels.getGroupsForDiscussion' })
+    } finally {
+      setM081LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -21854,6 +22003,193 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m080LoadingOp === 'editTitle' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تغییر عنوان کانال'}
                       </button>
                     </form>
+                  </div>
+                </div>
+
+                {/* Microphase 081: Channels Domain Suite Part 3 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۸۱: استخراج لینک، لاگ ادمین، کانال‌های عمومی و پیشنهادی (Channels Domain Part 3)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    استخراج لینک عمومی پیام، بازرسی لاگ فعالیت‌های ادمین، دریافت کانال‌های عمومی من، کانال‌های پیشنهادی و گروه‌های مباحثه:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m081Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m081Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m081Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m081Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM081Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال هدف:</span>
+                    <input
+                      type="text"
+                      value={m081ChannelId}
+                      onChange={(e) => setM081ChannelId(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال (مثلاً 123456789 یا @mychannel)..."
+                      className="w-full bg-transparent text-xs text-cyan-300 placeholder-gray-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.exportMessageLink */}
+                    <form
+                      onSubmit={handleM081ExportMessageLink}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. دریافت لینک عمومی پیام (exportMessageLink)</span>
+                      <input
+                        type="number"
+                        value={m081MsgId}
+                        onChange={(e) => setM081MsgId(e.target.value)}
+                        placeholder="شماره پیام (Message ID)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      {m081ExportedLink && (
+                        <div className="p-1.5 bg-cyan-950/40 border border-cyan-500/20 rounded-lg text-[10px] text-cyan-300 break-all select-all">
+                          {m081ExportedLink}
+                        </div>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={m081LoadingOp === 'exportMessageLink' || !m081ChannelId.trim() || !m081MsgId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m081LoadingOp === 'exportMessageLink' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استخراج لینک پیام'}
+                      </button>
+                    </form>
+
+                    {/* 2. channels.getAdminLog */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. گزارش فعالیت ادمین‌ها (getAdminLog)</span>
+                      <p className="text-[10px] text-gray-400">واکشی ۲۰ رخداد اخیر مدیریت (حذف، اخراج، ویرایش دسترسی و...)</p>
+                      {m081AdminLogResult && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          تعداد رخدادها: {m081AdminLogResult.length} مورد
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM081GetAdminLog}
+                        disabled={m081LoadingOp === 'getAdminLog' || !m081ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m081LoadingOp === 'getAdminLog' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت لاگ فعالیت‌ها'}
+                      </button>
+                    </div>
+
+                    {/* 3. channels.getAdminedPublicChannels */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۳. کانال‌های عمومی من (getAdminedPublicChannels)</span>
+                      <p className="text-[10px] text-gray-400">بررسی کانال‌های عمومی تحت مالکیت یا مدیریت کاربر جهت بررسی سقف مجاز</p>
+                      {m081PublicChannels && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          تعداد کانال‌ها: {m081PublicChannels.length} کانال
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM081GetAdminedPublicChannels}
+                        disabled={m081LoadingOp === 'getAdminedPublicChannels'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m081LoadingOp === 'getAdminedPublicChannels' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی کانال‌های عمومی من'}
+                      </button>
+                    </div>
+
+                    {/* 4. channels.getChannelRecommendations */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۴. کانال‌های پیشنهادی (getChannelRecommendations)</span>
+                      <p className="text-[10px] text-gray-400">کانال‌های مشابه بر اساس الگوریتم هوشمند تلگرام</p>
+                      {m081Recommendations && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          پیشنهادات: {m081Recommendations.length} کانال
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM081GetRecommendations}
+                        disabled={m081LoadingOp === 'getChannelRecommendations'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m081LoadingOp === 'getChannelRecommendations' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت پیشنهادات'}
+                      </button>
+                    </div>
+
+                    {/* 5. channels.getFullChannel */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. پروفایل کامل کانال (getFullChannel)</span>
+                      <p className="text-[10px] text-gray-400">واکشی تعداد اعضا، بیو، دسترسی‌ها و شناسه گروه مباحثه</p>
+                      {m081FullChannel && (
+                        <div className="text-[10px] text-cyan-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5 truncate">
+                          اعضا: {m081FullChannel.fullChat?.participantsCount ?? 'نامشخص'} | بیو: {m081FullChannel.fullChat?.about || 'ندارد'}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM081GetFullChannel}
+                        disabled={m081LoadingOp === 'getFullChannel' || !m081ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m081LoadingOp === 'getFullChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی مشخصات کامل'}
+                      </button>
+                    </div>
+
+                    {/* 6. channels.getGroupsForDiscussion */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶. گروه‌های مباحثه (getGroupsForDiscussion)</span>
+                      <p className="text-[10px] text-gray-400">سوپرگروه‌های مجاز جهت پیوند به عنوان بخش نظرات کانال</p>
+                      {m081DiscussionGroups && (
+                        <div className="text-[10px] text-gray-300 bg-dark-900/80 p-1.5 rounded-lg border border-white/5">
+                          گروه‌های در دسترس: {m081DiscussionGroups.length} گروه
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM081GetGroupsForDiscussion}
+                        disabled={m081LoadingOp === 'getGroupsForDiscussion'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m081LoadingOp === 'getGroupsForDiscussion' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی سوپرگروه‌های مباحثه'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

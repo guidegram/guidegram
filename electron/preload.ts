@@ -2793,6 +2793,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:edit-photo-raw', { accountId, ...params }),
   channelsEditTitleRaw: (accountId: string, params: { channelId: string; title: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:channels:edit-title-raw', { accountId, ...params }),
+  channelsExportMessageLinkRaw: (accountId: string, params: { channelId: string; messageId: number; grouped?: boolean; thread?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:export-message-link-raw', { accountId, ...params }),
+  channelsGetAdminLogRaw: (accountId: string, params: { channelId: string; options?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:get-admin-log-raw', { accountId, ...params }),
+  channelsGetAdminedPublicChannelsRaw: (accountId: string, options?: any): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-admined-public-channels-raw', { accountId, ...options }),
+  channelsGetChannelRecommendationsRaw: (accountId: string, params?: { channelId?: string }): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-channel-recommendations-raw', { accountId, ...params }),
+  channelsGetChannelsRaw: (accountId: string, params: { channelIds: string[] }): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-channels-raw', { accountId, ...params }),
+  channelsGetFullChannelRaw: (accountId: string, params: { channelId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:get-full-channel-raw', { accountId, ...params }),
+  channelsGetGroupsForDiscussionRaw: (accountId: string): Promise<any[]> =>
+    ipcRenderer.invoke('telegram:channels:get-groups-for-discussion-raw', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
