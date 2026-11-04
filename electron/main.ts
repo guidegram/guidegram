@@ -10071,6 +10071,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 101: Payments Domain Suite Part 8 IPC Handlers (Revenue, Status, Subscriptions, Topup Options & Transactions)
+  ipcMain.handle('telegram:payments:get-stars-revenue-ads-account-url-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsRevenueAdsAccountUrlRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsRevenueAdsAccountUrlRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-revenue-stats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsRevenueStatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsRevenueStatsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-revenue-withdrawal-url-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsRevenueWithdrawalUrlRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsRevenueWithdrawalUrlRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-status-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsStatusRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsStatusRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-subscriptions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsSubscriptionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsSubscriptionsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-topup-options-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.paymentsGetStarsTopupOptionsRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsTopupOptionsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-stars-transactions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetStarsTransactionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetStarsTransactionsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

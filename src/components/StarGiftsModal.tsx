@@ -25,6 +25,10 @@ import {
   Trophy,
   Zap,
   Wallet,
+  TrendingUp,
+  Receipt,
+  CreditCard,
+  BarChart3,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
@@ -54,7 +58,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
@@ -93,6 +97,166 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   const [giveawayOptionsData, setGiveawayOptionsData] = useState<any | null>(null)
   const [loadingOptions, setLoadingOptions] = useState<boolean>(false)
   const [optionsError, setOptionsError] = useState<string | null>(null)
+
+  // Microphase 101: Revenue, Status, Subscriptions, Topup Options & Transactions
+  const [m101PeerId, setM101PeerId] = useState<string>(peerId || '')
+  const [m101Dark, setM101Dark] = useState<boolean>(true)
+  const [m101WithdrawalStars, setM101WithdrawalStars] = useState<string>('')
+  const [m101Offset, setM101Offset] = useState<string>('')
+  const [m101Limit, setM101Limit] = useState<number>(20)
+  const [m101StatusData, setM101StatusData] = useState<any | null>(null)
+  const [m101RevenueStats, setM101RevenueStats] = useState<any | null>(null)
+  const [m101TopupOptions, setM101TopupOptions] = useState<any[] | null>(null)
+  const [m101Transactions, setM101Transactions] = useState<any | null>(null)
+  const [m101Subscriptions, setM101Subscriptions] = useState<any | null>(null)
+  const [m101AdsAccountUrl, setM101AdsAccountUrl] = useState<string | null>(null)
+  const [m101RevenueWithdrawalUrl, setM101RevenueWithdrawalUrl] = useState<string | null>(null)
+  const [m101LoadingOp, setM101LoadingOp] = useState<string | null>(null)
+  const [m101Error, setM101Error] = useState<string | null>(null)
+  const [m101SuccessMessage, setM101SuccessMessage] = useState<string | null>(null)
+
+  const loadM101StarsStatus = async () => {
+    if (!accountId) return
+    setM101LoadingOp('status')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsStatusRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+      })
+      setM101StatusData(res)
+      setM101SuccessMessage('موجودی و وضعیت ستاره با موفقیت دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101StarsStatus error:', err)
+      setM101Error(err?.message || 'خطا در دریافت وضعیت ستاره‌ها (payments.getStarsStatus)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
+
+  const loadM101RevenueStats = async () => {
+    if (!accountId) return
+    setM101LoadingOp('revenueStats')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsRevenueStatsRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+        dark: m101Dark,
+      })
+      setM101RevenueStats(res)
+      setM101SuccessMessage('آمار درآمد ستاره با موفقیت دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101RevenueStats error:', err)
+      setM101Error(err?.message || 'خطا در دریافت آمار درآمد ستاره (payments.getStarsRevenueStats)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
+
+  const loadM101TopupOptions = async () => {
+    if (!accountId) return
+    setM101LoadingOp('topup')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsTopupOptionsRaw?.(accountId)
+      const list = Array.isArray(res) ? res : res?.options || []
+      setM101TopupOptions(list)
+      setM101SuccessMessage('بسته‌های خرید ستاره دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101TopupOptions error:', err)
+      setM101Error(err?.message || 'خطا در دریافت بسته‌های خرید ستاره (payments.getStarsTopupOptions)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
+
+  const loadM101Transactions = async () => {
+    if (!accountId) return
+    setM101LoadingOp('transactions')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsTransactionsRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+        offset: m101Offset.trim() || undefined,
+        limit: m101Limit,
+      })
+      setM101Transactions(res)
+      setM101SuccessMessage('تاریخچه تراکنش‌های ستاره دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101Transactions error:', err)
+      setM101Error(err?.message || 'خطا در دریافت تراکنش‌های ستاره (payments.getStarsTransactions)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
+
+  const loadM101Subscriptions = async () => {
+    if (!accountId) return
+    setM101LoadingOp('subscriptions')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsSubscriptionsRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+        offset: m101Offset.trim() || undefined,
+      })
+      setM101Subscriptions(res)
+      setM101SuccessMessage('اشتراک‌های ستاره دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101Subscriptions error:', err)
+      setM101Error(err?.message || 'خطا در دریافت اشتراک‌های ستاره (payments.getStarsSubscriptions)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
+
+  const loadM101AdsAccountUrl = async () => {
+    if (!accountId || !m101PeerId.trim()) {
+      setM101Error('لطفاً شناسه کانال یا پیر را وارد کنید.')
+      return
+    }
+    setM101LoadingOp('adsUrl')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsRevenueAdsAccountUrlRaw?.(accountId, {
+        peerId: m101PeerId.trim(),
+      })
+      setM101AdsAccountUrl(res?.url || (typeof res === 'string' ? res : JSON.stringify(res)))
+      setM101SuccessMessage('لینک حساب تبلیغاتی ستاره دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101AdsAccountUrl error:', err)
+      setM101Error(err?.message || 'خطا در دریافت حساب تبلیغاتی (payments.getStarsRevenueAdsAccountUrl)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
+
+  const loadM101RevenueWithdrawalUrl = async () => {
+    if (!accountId || !m101PeerId.trim()) {
+      setM101Error('لطفاً شناسه کانال یا پیر را وارد کنید.')
+      return
+    }
+    setM101LoadingOp('withdrawalUrl')
+    setM101Error(null)
+    setM101SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsRevenueWithdrawalUrlRaw?.(accountId, {
+        peerId: m101PeerId.trim(),
+        stars: m101WithdrawalStars ? BigInt(m101WithdrawalStars) : undefined,
+      })
+      setM101RevenueWithdrawalUrl(res?.url || (typeof res === 'string' ? res : JSON.stringify(res)))
+      setM101SuccessMessage('لینک برداشت درآمد ستاره دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM101RevenueWithdrawalUrl error:', err)
+      setM101Error(err?.message || 'خطا در دریافت لینک برداشت ستاره (payments.getStarsRevenueWithdrawalUrl)')
+    } finally {
+      setM101LoadingOp(null)
+    }
+  }
 
   const loadCollections = async () => {
     if (!accountId) return
@@ -925,6 +1089,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Upgrades & Collections</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('revenue')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'revenue'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Coins className="w-3.5 h-3.5" />
+                <span>Revenue & Stars</span>
+              </button>
             </div>
 
             {/* Ultra-Refined Minimalist Sorting & Filter Bar (/minimalist-ui) */}
@@ -1372,7 +1548,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : activeTab === 'upgrades' ? (
                 /* Microphase 100: Upgrades, Collections, Withdrawals & Stars Options */
                 <div className="space-y-4">
                   {/* Collections Explorer Section */}
@@ -1695,6 +1871,358 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     )}
                   </div>
                 </div>
+              ) : (
+                /* Microphase 101: Revenue, Status, Subscriptions, Topup Options & Transactions */
+                <div className="space-y-4">
+                  {/* Status & Feedback Banners */}
+                  {m101Error && (
+                    <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 flex items-start justify-between gap-3 text-xs text-rose-200">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-semibold">خطا در پردازش عملیات ستاره‌ها</div>
+                          <div className="text-[10px] opacity-80 mt-0.5">{m101Error}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM101Error(null)}
+                        className="px-2 py-1 rounded-md bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] shrink-0 font-medium transition-colors cursor-pointer"
+                      >
+                        تلاش مجدد
+                      </button>
+                    </div>
+                  )}
+
+                  {m101SuccessMessage && (
+                    <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-200">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <span>{m101SuccessMessage}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM101SuccessMessage(null)}
+                        className="text-[10px] text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Header / Config Bar */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                          <Coins className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-100 flex items-center gap-1.5">
+                            <span>Stars Telemetry & Revenue Center</span>
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                              Microphase 101
+                            </span>
+                          </h4>
+                          <p className="text-[10px] text-neutral-400">
+                            استعلام موجودی واقعی، درآمد، بسته‌های شارژ و تراکنش‌های رسمی لایه ۲۳۲
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-neutral-400">
+                        Layer 232 RPCs
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 block mb-1">شناسه کانال یا پیر (اختیاری - خالی برای اکانت جاری):</label>
+                        <input
+                          type="text"
+                          value={m101PeerId}
+                          onChange={(e) => setM101PeerId(e.target.value)}
+                          placeholder="مثال: me یا -1001234567890"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-amber-400/50"
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={loadM101StarsStatus}
+                          disabled={m101LoadingOp === 'status'}
+                          className="flex-1 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${m101LoadingOp === 'status' ? 'animate-spin' : ''}`} />
+                          <span>استعلام موجودی ستاره</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={loadM101TopupOptions}
+                          disabled={m101LoadingOp === 'topup'}
+                          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-200 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+                          <span>بسته‌های شارژ</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Real Live Balance & Revenue Telemetry */}
+                  {m101StatusData && (
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-amber-400 fill-current" />
+                          <span className="text-xs font-bold text-neutral-200">وضعیت زنده موجودی ستاره (payments.getStarsStatus)</span>
+                        </div>
+                        <span className="text-xs font-bold text-amber-400 font-mono">
+                          {m101StatusData.balance?.toString?.() ?? m101StatusData.balance ?? '0'} Stars
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
+                          <div className="text-[10px] text-neutral-400">موجودی فعلی</div>
+                          <div className="font-mono font-bold text-neutral-200 mt-0.5">
+                            {m101StatusData.balance?.toString?.() ?? '0'} ⭐
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
+                          <div className="text-[10px] text-neutral-400">اشتراک‌های فعال</div>
+                          <div className="font-mono font-bold text-neutral-200 mt-0.5">
+                            {m101StatusData.subscriptionsCount ?? (m101StatusData.subscriptions ? 'دارد' : '۰')}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
+                          <div className="text-[10px] text-neutral-400">قابلیت برداشت</div>
+                          <div className="font-mono font-bold text-emerald-400 mt-0.5">
+                            {m101StatusData.canWithdraw ? 'مجاز' : 'غیرفعال'}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
+                          <div className="text-[10px] text-neutral-400">رمز عبور دو مرحله‌ای</div>
+                          <div className="font-mono font-bold text-neutral-200 mt-0.5">
+                            {m101StatusData.hasPassword ? 'تنظیم شده' : 'نیاز ندارد'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 2: Topup Options Grid */}
+                  {m101TopupOptions && m101TopupOptions.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-emerald-400" />
+                          <span className="text-xs font-bold text-neutral-200">بسته‌های رسمی شارژ و خرید ستاره (payments.getStarsTopupOptions)</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-neutral-400">{m101TopupOptions.length} بسته فعال</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {m101TopupOptions.map((opt: any, idx: number) => (
+                          <div key={idx} className="p-3 rounded-xl bg-black/30 border border-white/5 flex flex-col justify-between text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-amber-400 flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-current" />
+                                {opt.stars?.toString?.() ?? opt.stars ?? '۰'}
+                              </span>
+                              {opt.extended && (
+                                <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono">Special</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] font-mono text-neutral-300 mt-2">
+                              {opt.currency ? `${opt.currency} ${(opt.amount / 100).toFixed(2)}` : 'پیشنهاد مستقیم'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 3: Revenue Statistics & Operations */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-cyan-400" />
+                        <span className="text-xs font-bold text-neutral-200">آمار و مدیریت درآمد ستاره کانال/ربات</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={loadM101RevenueStats}
+                          disabled={m101LoadingOp === 'revenueStats'}
+                          className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <TrendingUp className="w-3 h-3" />
+                          <span>دریافت آمار درآمد</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={loadM101AdsAccountUrl}
+                          disabled={m101LoadingOp === 'adsUrl'}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>حساب تبلیغاتی</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {m101RevenueStats && (
+                      <div className="p-3 rounded-xl bg-black/30 border border-white/5 text-xs space-y-2">
+                        <div className="flex items-center justify-between text-neutral-300">
+                          <span>کل درآمد کسب شده:</span>
+                          <span className="font-mono font-bold text-cyan-400">
+                            {m101RevenueStats.revenue?.overall?.toString?.() ?? '۰'} Stars
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-neutral-300">
+                          <span>موجودی قابل برداشت:</span>
+                          <span className="font-mono font-bold text-emerald-400">
+                            {m101RevenueStats.revenue?.current?.toString?.() ?? '۰'} Stars
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {m101AdsAccountUrl && (
+                      <div className="p-3 rounded-xl bg-black/30 border border-cyan-500/30 flex items-center justify-between text-xs">
+                        <span className="text-neutral-300">لینک پنل تبلیغاتی:</span>
+                        <a
+                          href={m101AdsAccountUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-cyan-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                        >
+                          <span>باز کردن پنل تبلیغات</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Withdrawal Section */}
+                    <div className="pt-2 border-t border-white/5 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={m101WithdrawalStars}
+                          onChange={(e) => setM101WithdrawalStars(e.target.value)}
+                          placeholder="تعداد ستاره جهت برداشت..."
+                          className="w-44 bg-black/40 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-cyan-400/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={loadM101RevenueWithdrawalUrl}
+                          disabled={m101LoadingOp === 'withdrawalUrl'}
+                          className="px-3 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Wallet className="w-3.5 h-3.5" />
+                          <span>دریافت لینک برداشت (Withdrawal URL)</span>
+                        </button>
+                      </div>
+                      {m101RevenueWithdrawalUrl && (
+                        <a
+                          href={m101RevenueWithdrawalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-400 hover:underline text-[11px] font-mono flex items-center gap-1"
+                        >
+                          <span>تکمیل برداشت در Fragment</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section 4: Transactions & Subscriptions */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Receipt className="w-4 h-4 text-purple-400" />
+                        <span className="text-xs font-bold text-neutral-200">تراکنش‌ها و اشتراک‌های ستاره</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={loadM101Transactions}
+                          disabled={m101LoadingOp === 'transactions'}
+                          className="px-2.5 py-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Receipt className="w-3 h-3" />
+                          <span>تراکنش‌ها (getStarsTransactions)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={loadM101Subscriptions}
+                          disabled={m101LoadingOp === 'subscriptions'}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>اشتراک‌ها (getSubscriptions)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 4-State Transaction List View */}
+                    {m101LoadingOp === 'transactions' ? (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2 text-xs text-neutral-400">
+                        <div className="w-6 h-6 rounded-full border-2 border-purple-500/40 border-t-purple-400 animate-spin" />
+                        <span>در حال دریافت تاریخچه تراکنش‌های ستاره از تلگرام...</span>
+                      </div>
+                    ) : m101Transactions ? (
+                      <div className="space-y-2">
+                        {m101Transactions.history?.length > 0 ? (
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            {m101Transactions.history.map((tx: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between text-xs"
+                              >
+                                <div>
+                                  <div className="font-semibold text-neutral-200 flex items-center gap-1.5">
+                                    <span>{tx.title || `تراکنش #${tx.id || idx + 1}`}</span>
+                                    {tx.stars && (
+                                      <span className="text-[10px] text-amber-400 font-mono">
+                                        {tx.stars > 0 ? `+${tx.stars}` : tx.stars} ⭐
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-500 font-mono mt-0.5">
+                                    {tx.date ? new Date(tx.date * 1000).toLocaleDateString('fa-IR') : 'نامشخص'}
+                                  </div>
+                                </div>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                                  tx.refund ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                                }`}>
+                                  {tx.refund ? 'مرجوع شده' : 'موفق'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-6 px-4 rounded-xl bg-black/20 border border-dashed border-white/5 text-center text-xs text-neutral-400">
+                            هیچ تراکنش ستاره‌ای برای این شناسه ثبت نشده است (Zero Genesis State).
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Honest Empty State */
+                      <div className="py-4 px-3 rounded-xl bg-black/20 border border-dashed border-white/5 text-center text-xs text-neutral-500">
+                        برای مشاهده تاریخچه و اشتراک‌ها یکی از دکمه‌های بالا را فراخوانی کنید.
+                      </div>
+                    )}
+
+                    {m101Subscriptions && (
+                      <div className="p-3 rounded-xl bg-black/30 border border-white/5 text-xs space-y-1 mt-2">
+                        <div className="text-neutral-400 font-medium">وضعیت اشتراک‌های فعال:</div>
+                        <div className="text-[11px] font-mono text-purple-300">
+                          {m101Subscriptions.subscriptions?.length ?? 0} اشتراک فعال ثبت شده در این اکانت
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1709,7 +2237,9 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ? 'Telegram MTProto payments.getStarGifts'
                     : activeTab === 'auctions'
                     ? 'Telegram MTProto payments.getStarGiftActiveAuctions & Resale'
-                    : 'Telegram MTProto payments.getStarGiftCollections, Upgrades & Giveaways'}
+                    : activeTab === 'upgrades'
+                    ? 'Telegram MTProto payments.getStarGiftCollections, Upgrades & Giveaways'
+                    : 'Telegram MTProto payments.getStarsStatus, RevenueStats, TopupOptions & Transactions'}
                 </span>
               </div>
               <button

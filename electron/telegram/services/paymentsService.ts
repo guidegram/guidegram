@@ -264,33 +264,52 @@ export class PaymentsService {
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsTopupOptions error:', err)
-      return null
+      throw err
     }
   }
 
   public async getStarsStatus(holder: RpcClientHolder, accountId: string, peerId?: string, ton = false): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getStarsStatus',
-        peer, ton,
+        peer,
+        ton: ton ? true : undefined,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsStatus error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getStarsTransactions(holder: RpcClientHolder, accountId: string, peerId?: string, offset = '', limit = 50, inbound?: boolean, outbound?: boolean, ascending?: boolean, ton?: boolean, subscriptionId?: string): Promise<any> {
+  public async getStarsTransactions(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerId?: string,
+    offset = '',
+    limit = 50,
+    inbound?: boolean,
+    outbound?: boolean,
+    ascending?: boolean,
+    ton?: boolean,
+    subscriptionId?: string
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getStarsTransactions',
-        peer, offset, limit, inbound, outbound, ascending, ton, subscriptionId,
+        peer,
+        offset: String(offset || ''),
+        limit: Number(limit) || 50,
+        inbound: inbound ? true : undefined,
+        outbound: outbound ? true : undefined,
+        ascending: ascending ? true : undefined,
+        ton: ton ? true : undefined,
+        subscriptionId: subscriptionId ? String(subscriptionId) : undefined,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsTransactions error:', err)
-      return null
+      throw err
     }
   }
 
@@ -320,40 +339,58 @@ export class PaymentsService {
 
   public async getStarsRevenueStats(holder: RpcClientHolder, accountId: string, peerId: string, dark = false, ton = false): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getStarsRevenueStats',
-        peer, dark, ton,
+        peer,
+        dark: dark ? true : undefined,
+        ton: ton ? true : undefined,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsRevenueStats error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getStarsRevenueWithdrawalUrl(holder: RpcClientHolder, accountId: string, peerId: string, amount: bigint, password?: any, ton = false): Promise<any> {
+  public async getStarsRevenueWithdrawalUrl(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerId: string,
+    amount: bigint | number | string,
+    password?: any,
+    ton = false
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+      let amountBig: bigint = 0n
+      try {
+        amountBig = BigInt(amount || 0)
+      } catch {
+        amountBig = 0n
+      }
       return await holder.client.call({
         _: 'payments.getStarsRevenueWithdrawalUrl',
-        peer, amount, password, ton,
+        peer,
+        amount: amountBig,
+        password: password || { _: 'inputCheckPasswordEmpty' },
+        ton: ton ? true : undefined,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsRevenueWithdrawalUrl error:', err)
-      return null
+      throw err
     }
   }
 
   public async getStarsRevenueAdsAccountUrl(holder: RpcClientHolder, accountId: string, peerId: string): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getStarsRevenueAdsAccountUrl',
         peer,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsRevenueAdsAccountUrl error:', err)
-      return null
+      throw err
     }
   }
 
@@ -384,14 +421,16 @@ export class PaymentsService {
 
   public async getStarsSubscriptions(holder: RpcClientHolder, accountId: string, peerId?: string, offset = '', missingBalance?: boolean): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getStarsSubscriptions',
-        peer, offset, missingBalance,
+        peer,
+        offset: String(offset || ''),
+        missingBalance: missingBalance ? true : undefined,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsSubscriptions error:', err)
-      return null
+      throw err
     }
   }
 

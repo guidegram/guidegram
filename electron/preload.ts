@@ -3069,6 +3069,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:get-stars-gift-options-raw', { accountId, ...params }),
   paymentsGetStarsGiveawayOptionsRaw: (accountId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:get-stars-giveaway-options-raw', { accountId }),
+  // Microphase 101: Payments Domain Suite Part 8 (7 RPCs: Revenue, Status, Subscriptions, Topup Options & Transactions)
+  paymentsGetStarsRevenueAdsAccountUrlRaw: (accountId: string, params: { peerId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-revenue-ads-account-url-raw', { accountId, ...params }),
+  paymentsGetStarsRevenueStatsRaw: (accountId: string, params: { peerId: string; dark?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-revenue-stats-raw', { accountId, ...params }),
+  paymentsGetStarsRevenueWithdrawalUrlRaw: (accountId: string, params: { peerId: string; stars?: bigint | number | string; password?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-revenue-withdrawal-url-raw', { accountId, ...params }),
+  paymentsGetStarsStatusRaw: (accountId: string, params?: { peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-status-raw', { accountId, ...params }),
+  paymentsGetStarsSubscriptionsRaw: (accountId: string, params?: { peerId?: string; offset?: string; missingBalance?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-subscriptions-raw', { accountId, ...params }),
+  paymentsGetStarsTopupOptionsRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-topup-options-raw', { accountId }),
+  paymentsGetStarsTransactionsRaw: (accountId: string, params?: { peerId?: string; offset?: string; limit?: number; inbound?: boolean; outbound?: boolean; ascending?: boolean; subscriptionId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-transactions-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -22084,6 +22084,89 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.getStarsGiveawayOptions(holder as any)
   }
+
+  // --- Microphase 101: payments stars revenue, status, subscriptions, topup options & transactions ---
+  public async paymentsGetStarsRevenueAdsAccountUrlRaw(
+    accountId: string,
+    params: { peerId: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsRevenueAdsAccountUrl(holder as any, accountId, params?.peerId)
+  }
+
+  public async paymentsGetStarsRevenueStatsRaw(
+    accountId: string,
+    params: { peerId: string; dark?: boolean; ton?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsRevenueStats(holder as any, accountId, params?.peerId, params?.dark, params?.ton)
+  }
+
+  public async paymentsGetStarsRevenueWithdrawalUrlRaw(
+    accountId: string,
+    params: { peerId: string; amount: bigint | number | string; password?: any; ton?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsRevenueWithdrawalUrl(holder as any, accountId, params?.peerId, params?.amount, params?.password, params?.ton)
+  }
+
+  public async paymentsGetStarsStatusRaw(
+    accountId: string,
+    params?: { peerId?: string; ton?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsStatus(holder as any, accountId, params?.peerId, params?.ton)
+  }
+
+  public async paymentsGetStarsSubscriptionsRaw(
+    accountId: string,
+    params?: { peerId?: string; offset?: string; missingBalance?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsSubscriptions(holder as any, accountId, params?.peerId, params?.offset, params?.missingBalance)
+  }
+
+  public async paymentsGetStarsTopupOptionsRaw(
+    accountId: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsTopupOptions(holder as any)
+  }
+
+  public async paymentsGetStarsTransactionsRaw(
+    accountId: string,
+    params?: {
+      peerId?: string
+      offset?: string
+      limit?: number
+      inbound?: boolean
+      outbound?: boolean
+      ascending?: boolean
+      ton?: boolean
+      subscriptionId?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsTransactions(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.offset,
+      params?.limit,
+      params?.inbound,
+      params?.outbound,
+      params?.ascending,
+      params?.ton,
+      params?.subscriptionId
+    )
+  }
 }
 
 
