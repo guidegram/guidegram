@@ -9174,6 +9174,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 086 IPC Handlers (Channels Domain Part 8)
+  ipcMain.handle('telegram:channels:toggle-pre-history-hidden-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsTogglePreHistoryHiddenRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsTogglePreHistoryHiddenRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-signatures-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleSignaturesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleSignaturesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-slow-mode-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleSlowModeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleSlowModeRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleUsernameRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:toggle-view-forum-as-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsToggleViewForumAsMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsToggleViewForumAsMessagesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:update-color-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsUpdateColorRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsUpdateColorRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:update-emoji-status-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsUpdateEmojiStatusRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsUpdateEmojiStatusRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

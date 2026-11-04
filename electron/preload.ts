@@ -2863,6 +2863,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:toggle-join-to-send-raw', { accountId, ...params }),
   channelsToggleParticipantsHiddenRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:channels:toggle-participants-hidden-raw', { accountId, ...params }),
+  channelsTogglePreHistoryHiddenRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-pre-history-hidden-raw', { accountId, ...params }),
+  channelsToggleSignaturesRaw: (accountId: string, params: { channelId: string; signaturesEnabled?: boolean; profilesEnabled?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-signatures-raw', { accountId, ...params }),
+  channelsToggleSlowModeRaw: (accountId: string, params: { channelId: string; seconds: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-slow-mode-raw', { accountId, ...params }),
+  channelsToggleUsernameRaw: (accountId: string, params: { channelId: string; username: string; active: boolean }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:toggle-username-raw', { accountId, ...params }),
+  channelsToggleViewForumAsMessagesRaw: (accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:toggle-view-forum-as-messages-raw', { accountId, ...params }),
+  channelsUpdateColorRaw: (accountId: string, params: { channelId: string; color: number; forProfile?: boolean; backgroundEmojiId?: bigint }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:update-color-raw', { accountId, ...params }),
+  channelsUpdateEmojiStatusRaw: (accountId: string, params: { channelId: string; emojiStatus: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:update-emoji-status-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -9341,6 +9341,175 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 086 State & Handlers (Channels Domain Part 8)
+  const [m086Status, setM086Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m086LoadingOp, setM086LoadingOp] = useState<string | null>(null)
+  const [m086ChannelId, setM086ChannelId] = useState('')
+  const [m086SlowModeSeconds, setM086SlowModeSeconds] = useState(10)
+  const [m086Username, setM086Username] = useState('')
+  const [m086Color, setM086Color] = useState(1)
+  const [m086EmojiDocumentId, setM086EmojiDocumentId] = useState('')
+
+  const handleM086TogglePreHistoryHidden = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsTogglePreHistoryHiddenRaw || !m086ChannelId.trim()) return
+    setM086LoadingOp('togglePreHistoryHidden')
+    setM086Status(null)
+    try {
+      await window.guidegram.channelsTogglePreHistoryHiddenRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        enabled,
+      })
+      setM086Status({
+        type: 'success',
+        message: enabled ? 'تاریخچه پیام‌ها برای اعضای جدید پنهان شد' : 'تاریخچه پیام‌ها برای اعضای جدید قابل مشاهده شد',
+      })
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.togglePreHistoryHidden' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
+  const handleM086ToggleSignatures = async (signaturesEnabled: boolean, profilesEnabled = false) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleSignaturesRaw || !m086ChannelId.trim()) return
+    setM086LoadingOp('toggleSignatures')
+    setM086Status(null)
+    try {
+      await window.guidegram.channelsToggleSignaturesRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        signaturesEnabled,
+        profilesEnabled,
+      })
+      setM086Status({
+        type: 'success',
+        message: signaturesEnabled
+          ? (profilesEnabled ? 'امضای پیام‌ها همراه با لینک به پروفایل فعال شد' : 'امضای پیام‌ها فعال شد')
+          : 'امضای پیام‌ها غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.toggleSignatures' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
+  const handleM086ToggleSlowMode = async (seconds: number) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleSlowModeRaw || !m086ChannelId.trim()) return
+    setM086LoadingOp('toggleSlowMode')
+    setM086Status(null)
+    try {
+      await window.guidegram.channelsToggleSlowModeRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        seconds,
+      })
+      setM086SlowModeSeconds(seconds)
+      setM086Status({
+        type: 'success',
+        message: seconds > 0 ? `حالت آرام (Slow Mode) روی ${seconds} ثانیه تنظیم شد` : 'حالت آرام غیرفعال شد',
+      })
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.toggleSlowMode' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
+  const handleM086ToggleUsername = async (active: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleUsernameRaw || !m086ChannelId.trim() || !m086Username.trim()) return
+    setM086LoadingOp('toggleUsername')
+    setM086Status(null)
+    try {
+      const ok = await window.guidegram.channelsToggleUsernameRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        username: m086Username.trim(),
+        active,
+      })
+      if (ok) {
+        setM086Status({
+          type: 'success',
+          message: active ? `نام کاربری @${m086Username.trim()} فعال شد` : `نام کاربری @${m086Username.trim()} غیرفعال شد`,
+        })
+      } else {
+        setM086Status({ type: 'error', message: 'عملیات تغییر وضعیت نام کاربری با شکست مواجه شد' })
+      }
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.toggleUsername' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
+  const handleM086ToggleViewForumAsMessages = async (enabled: boolean) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsToggleViewForumAsMessagesRaw || !m086ChannelId.trim()) return
+    setM086LoadingOp('toggleViewForumAsMessages')
+    setM086Status(null)
+    try {
+      await window.guidegram.channelsToggleViewForumAsMessagesRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        enabled,
+      })
+      setM086Status({
+        type: 'success',
+        message: enabled ? 'نمایش فروم به صورت چت معمولی پیام‌ها فعال شد' : 'نمایش استاندارد تاپیک‌های فروم فعال شد',
+      })
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.toggleViewForumAsMessages' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
+  const handleM086UpdateColor = async (forProfile = false) => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsUpdateColorRaw || !m086ChannelId.trim()) return
+    setM086LoadingOp('updateColor')
+    setM086Status(null)
+    try {
+      await window.guidegram.channelsUpdateColorRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        color: m086Color,
+        forProfile,
+      })
+      setM086Status({
+        type: 'success',
+        message: forProfile ? `رنگ پس‌زمینه پروفایل کانال به کد ${m086Color} تغییر یافت` : `رنگ اصلی کانال به کد ${m086Color} تغییر یافت`,
+      })
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.updateColor' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
+  const handleM086UpdateEmojiStatus = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsUpdateEmojiStatusRaw || !m086ChannelId.trim()) return
+    setM086LoadingOp('updateEmojiStatus')
+    setM086Status(null)
+    try {
+      const emojiStatus = m086EmojiDocumentId.trim()
+        ? { _: 'emojiStatus', documentId: BigInt(m086EmojiDocumentId.trim()) }
+        : { _: 'emojiStatusEmpty' }
+      await window.guidegram.channelsUpdateEmojiStatusRaw(targetId, {
+        channelId: m086ChannelId.trim(),
+        emojiStatus,
+      })
+      setM086Status({
+        type: 'success',
+        message: m086EmojiDocumentId.trim() ? 'استاتوس ایموجی کانال تنظیم شد' : 'استاتوس ایموجی کانال پاک شد',
+      })
+    } catch (err: any) {
+      setM086Status({ type: 'error', message: err?.message || 'خطا در channels.updateEmojiStatus' })
+    } finally {
+      setM086LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -23753,6 +23922,254 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </button>
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Microphase 086: Channels Domain Suite Part 8 */}
+                <div className="p-4 rounded-2xl bg-dark-900/40 border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        تنظیمات پیشرفته کانال و سوپرگروه — بخش ۸ (Microphase 086)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400 font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+                      Layer 232 • 7 RPCs
+                    </span>
+                  </div>
+
+                  {/* Status Banner */}
+                  {m086Status && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs flex items-center justify-between ${
+                        m086Status.type === 'success'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      <span>{m086Status.message}</span>
+                      <button
+                        type="button"
+                        onClick={() => setM086Status(null)}
+                        className="text-[10px] opacity-75 hover:opacity-100 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Glass Loading Overlay */}
+                  {m086LoadingOp && (
+                    <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs flex items-center gap-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>در حال ارسال دستور MTProto ({m086LoadingOp})...</span>
+                    </div>
+                  )}
+
+                  {/* Target Channel ID input */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال/گروه:</span>
+                    <input
+                      type="text"
+                      value={m086ChannelId}
+                      onChange={(e) => setM086ChannelId(e.target.value)}
+                      placeholder="مثال: -1001234567890 یا username..."
+                      className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                    />
+                  </div>
+
+                  {/* Honest Empty State */}
+                  {!m086ChannelId.trim() && (
+                    <div className="p-3 rounded-xl bg-dark-900/40 border border-dashed border-white/10 text-center">
+                      <p className="text-[11px] text-gray-500">
+                        برای دسترسی به تنظیمات پنهان‌سازی تاریخچه، امضا، حالت آرام، رنگ و ایموجی، شناسه کانال را وارد کنید.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Operations Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.togglePreHistoryHidden */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. پنهان‌سازی تاریخچه پیام (togglePreHistoryHidden)</span>
+                      <p className="text-[10px] text-gray-500">پنهان کردن تاریخچه چت قبلی برای اعضای جدید وارد شده</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM086TogglePreHistoryHidden(true)}
+                          disabled={m086LoadingOp === 'togglePreHistoryHidden' || !m086ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          {m086LoadingOp === 'togglePreHistoryHidden' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'پنهان'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM086TogglePreHistoryHidden(false)}
+                          disabled={m086LoadingOp === 'togglePreHistoryHidden' || !m086ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 border border-gray-500/30 text-gray-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          نمایان
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. channels.toggleSignatures */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. امضای پیام‌های کانال (toggleSignatures)</span>
+                      <p className="text-[10px] text-gray-500">نمایش نام مدیر نویسنده با یا بدون لینک پروفایل</p>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleSignatures(true, true)}
+                          disabled={m086LoadingOp === 'toggleSignatures' || !m086ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-[11px] rounded-xl flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        >
+                          با پروفایل
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleSignatures(true, false)}
+                          disabled={m086LoadingOp === 'toggleSignatures' || !m086ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-[11px] rounded-xl flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        >
+                          فقط نام
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleSignatures(false, false)}
+                          disabled={m086LoadingOp === 'toggleSignatures' || !m086ChannelId.trim()}
+                          className="py-1.5 px-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-[11px] rounded-xl flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        >
+                          خاموش
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 3. channels.toggleSlowMode */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۳. حالت آرام سوپرگروه (toggleSlowMode)</span>
+                      <div className="flex items-center gap-1">
+                        {[0, 10, 30, 60, 300].map((sec) => (
+                          <button
+                            key={sec}
+                            type="button"
+                            onClick={() => handleM086ToggleSlowMode(sec)}
+                            disabled={m086LoadingOp === 'toggleSlowMode' || !m086ChannelId.trim()}
+                            className={`flex-1 py-1 text-[10px] rounded-lg border cursor-pointer transition-all disabled:opacity-40 ${
+                              m086SlowModeSeconds === sec
+                                ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-semibold'
+                                : 'bg-dark-900 border-white/5 text-gray-400 hover:text-gray-200'
+                            }`}
+                          >
+                            {sec === 0 ? 'خاموش' : `${sec}s`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 4. channels.toggleUsername */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۴. فعال/غیرفعال نام کاربری (toggleUsername)</span>
+                      <input
+                        type="text"
+                        value={m086Username}
+                        onChange={(e) => setM086Username(e.target.value)}
+                        placeholder="نام کاربری (بدون @)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleUsername(true)}
+                          disabled={m086LoadingOp === 'toggleUsername' || !m086ChannelId.trim() || !m086Username.trim()}
+                          className="flex-1 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          فعال
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleUsername(false)}
+                          disabled={m086LoadingOp === 'toggleUsername' || !m086ChannelId.trim() || !m086Username.trim()}
+                          className="flex-1 py-1 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          غیرفعال
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 5. channels.toggleViewForumAsMessages */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. نمایش فروم به صورت چت معمولی (toggleViewForumAsMessages)</span>
+                      <p className="text-[10px] text-gray-500">مشاهده تاپیک‌های انجمن در یک چت یکپارچه</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleViewForumAsMessages(true)}
+                          disabled={m086LoadingOp === 'toggleViewForumAsMessages' || !m086ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          چت یکپارچه
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM086ToggleViewForumAsMessages(false)}
+                          disabled={m086LoadingOp === 'toggleViewForumAsMessages' || !m086ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-gray-600/20 hover:bg-gray-600/30 border border-gray-500/30 text-gray-300 text-xs rounded-xl flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                        >
+                          تاپیک‌ها
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 6. channels.updateColor & 7. updateEmojiStatus */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶ و ۷. رنگ کانال و استاتوس ایموجی</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-400">کد رنگ (۱-۷):</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={7}
+                          value={m086Color}
+                          onChange={(e) => setM086Color(Number(e.target.value) || 1)}
+                          className="w-14 bg-dark-900 border border-white/5 rounded-lg px-2 py-0.5 text-xs text-gray-200 text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleM086UpdateColor(false)}
+                          disabled={m086LoadingOp === 'updateColor' || !m086ChannelId.trim()}
+                          className="flex-1 py-1 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-[11px] rounded-lg cursor-pointer disabled:opacity-40"
+                        >
+                          رنگ اصلی
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleM086UpdateColor(true)}
+                          disabled={m086LoadingOp === 'updateColor' || !m086ChannelId.trim()}
+                          className="flex-1 py-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-[11px] rounded-lg cursor-pointer disabled:opacity-40"
+                        >
+                          پروفایل
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
+                        <input
+                          type="text"
+                          value={m086EmojiDocumentId}
+                          onChange={(e) => setM086EmojiDocumentId(e.target.value)}
+                          placeholder="آیدی سند ایموجی (خالی = حذف)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2 py-0.5 text-xs text-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM086UpdateEmojiStatus}
+                          disabled={m086LoadingOp === 'updateEmojiStatus' || !m086ChannelId.trim()}
+                          className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-[11px] rounded-lg cursor-pointer disabled:opacity-40"
+                        >
+                          ثبت استاتوس
+                        </button>
                       </div>
                     </div>
                   </div>

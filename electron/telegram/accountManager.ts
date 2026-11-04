@@ -21094,6 +21094,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.channelsService.toggleParticipantsHidden(holder as any, accountId, params.channelId, params.enabled)
   }
+
+  // Layer 232 Channels Domain Part 8 (Microphase 086)
+  public async channelsTogglePreHistoryHiddenRaw(accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.togglePreHistoryHidden(holder as any, accountId, params.channelId, params.enabled)
+  }
+
+  public async channelsToggleSignaturesRaw(accountId: string, params: { channelId: string; signaturesEnabled?: boolean; profilesEnabled?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleSignatures(holder as any, accountId, params.channelId, params.signaturesEnabled ?? true, params.profilesEnabled ?? false)
+  }
+
+  public async channelsToggleSlowModeRaw(accountId: string, params: { channelId: string; seconds: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleSlowMode(holder as any, accountId, params.channelId, params.seconds)
+  }
+
+  public async channelsToggleUsernameRaw(accountId: string, params: { channelId: string; username: string; active: boolean }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.toggleUsername(holder as any, accountId, params.channelId, params.username, params.active)
+  }
+
+  public async channelsToggleViewForumAsMessagesRaw(accountId: string, params: { channelId: string; enabled: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.toggleViewForumAsMessages(holder as any, accountId, params.channelId, params.enabled)
+  }
+
+  public async channelsUpdateColorRaw(accountId: string, params: { channelId: string; color: number; forProfile?: boolean; backgroundEmojiId?: bigint }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.updateColor(holder as any, accountId, params.channelId, params.color, params.forProfile, params.backgroundEmojiId)
+  }
+
+  public async channelsUpdateEmojiStatusRaw(accountId: string, params: { channelId: string; emojiStatus: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.updateEmojiStatus(holder as any, accountId, params.channelId, params.emojiStatus)
+  }
 }
 
 
