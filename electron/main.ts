@@ -9577,6 +9577,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 093: Bots Domain Suite Part 6 (5 RPCs)
+  ipcMain.handle('telegram:bots:set-join-chat-results-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsSetJoinChatResultsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsSetJoinChatResultsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:toggle-user-emoji-status-permission-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsToggleUserEmojiStatusPermissionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsToggleUserEmojiStatusPermissionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:toggle-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsToggleUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsToggleUsernameRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:update-star-ref-program-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsUpdateStarRefProgramRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsUpdateStarRefProgramRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:update-user-emoji-status-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsUpdateUserEmojiStatusRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsUpdateUserEmojiStatusRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

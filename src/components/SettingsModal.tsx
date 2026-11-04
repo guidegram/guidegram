@@ -10396,6 +10396,190 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // --- Microphase 093 State: Bots Domain Suite Part 6 (5 RPCs) ---
+  const [m093Status, setM093Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m093LoadingOp, setM093LoadingOp] = useState<string | null>(null)
+  const [m093BotId, setM093BotId] = useState('')
+  // 1. setJoinChatResults
+  const [m093JoinQueryId, setM093JoinQueryId] = useState('')
+  const [m093JoinDecision, setM093JoinDecision] = useState<'approved' | 'declined' | 'queued' | 'webview'>('approved')
+  const [m093JoinWebviewUrl, setM093JoinWebviewUrl] = useState('')
+  // 2. toggleUserEmojiStatusPermission
+  const [m093EmojiPermissionEnabled, setM093EmojiPermissionEnabled] = useState(true)
+  // 3. toggleUsername
+  const [m093ToggleUsernameStr, setM093ToggleUsernameStr] = useState('')
+  const [m093ToggleUsernameActive, setM093ToggleUsernameActive] = useState(true)
+  // 4. updateStarRefProgram
+  const [m093StarRefCommission, setM093StarRefCommission] = useState('100')
+  const [m093StarRefDurationMonths, setM093StarRefDurationMonths] = useState('')
+  const [m093StarRefProgramResult, setM093StarRefProgramResult] = useState<any | null>(null)
+  // 5. updateUserEmojiStatus
+  const [m093TargetUserId, setM093TargetUserId] = useState('')
+  const [m093EmojiStatusDocId, setM093EmojiStatusDocId] = useState('')
+  const [m093EmojiStatusUntil, setM093EmojiStatusUntil] = useState('')
+
+  const handleM093SetJoinChatResults = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m093JoinQueryId.trim()) {
+      setM093Status({ type: 'error', message: 'شناسه درخواست پیوستن (Query ID) الزامی است.' })
+      return
+    }
+    setM093LoadingOp('setJoinChatResults')
+    setM093Status(null)
+    try {
+      let resultPayload: any = m093JoinDecision
+      if (m093JoinDecision === 'webview') {
+        resultPayload = { _: 'joinChatBotResultWebView', url: m093JoinWebviewUrl.trim() }
+      }
+      const res = await (window as any).guidegramAPI?.botsSetJoinChatResultsRaw(targetId, {
+        queryId: m093JoinQueryId.trim(),
+        result: resultPayload,
+      })
+      if (res) {
+        setM093Status({
+          type: 'success',
+          message: `نتیجه درخواست عضویت (${m093JoinDecision}) با موفقیت به تلگرام ارسال شد.`,
+        })
+      } else {
+        setM093Status({ type: 'error', message: 'پاسخ ناموفق در ثبت نتیجه عضویت ربات.' })
+      }
+    } catch (err: any) {
+      setM093Status({ type: 'error', message: err?.message || 'خطا در bots.setJoinChatResults' })
+    } finally {
+      setM093LoadingOp(null)
+    }
+  }
+
+  const handleM093ToggleEmojiPermission = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m093BotId.trim()) {
+      setM093Status({ type: 'error', message: 'شناسه ربات الزامی است.' })
+      return
+    }
+    setM093LoadingOp('toggleEmojiPermission')
+    setM093Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.botsToggleUserEmojiStatusPermissionRaw(targetId, {
+        botId: m093BotId.trim(),
+        enabled: m093EmojiPermissionEnabled,
+      })
+      if (res) {
+        setM093Status({
+          type: 'success',
+          message: `مجوز تنظیم ایموجی استاتوس توسط ربات ${m093EmojiPermissionEnabled ? 'فعال' : 'غیرفعال'} شد.`,
+        })
+      } else {
+        setM093Status({ type: 'error', message: 'پاسخ ناموفق در تغییر مجوز ایموجی استاتوس.' })
+      }
+    } catch (err: any) {
+      setM093Status({ type: 'error', message: err?.message || 'خطا در bots.toggleUserEmojiStatusPermission' })
+    } finally {
+      setM093LoadingOp(null)
+    }
+  }
+
+  const handleM093ToggleUsername = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m093BotId.trim() || !m093ToggleUsernameStr.trim()) {
+      setM093Status({ type: 'error', message: 'شناسه ربات و نام کاربری الزامی است.' })
+      return
+    }
+    setM093LoadingOp('toggleUsername')
+    setM093Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.botsToggleUsernameRaw(targetId, {
+        botId: m093BotId.trim(),
+        username: m093ToggleUsernameStr.trim(),
+        active: m093ToggleUsernameActive,
+      })
+      if (res) {
+        setM093Status({
+          type: 'success',
+          message: `نام کاربری @${m093ToggleUsernameStr.trim()} با موفقیت ${m093ToggleUsernameActive ? 'فعال' : 'غیرفعال'} شد.`,
+        })
+      } else {
+        setM093Status({ type: 'error', message: 'پاسخ ناموفق در تغییر وضعیت نام کاربری ربات.' })
+      }
+    } catch (err: any) {
+      setM093Status({ type: 'error', message: err?.message || 'خطا در bots.toggleUsername' })
+    } finally {
+      setM093LoadingOp(null)
+    }
+  }
+
+  const handleM093UpdateStarRefProgram = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m093BotId.trim()) {
+      setM093Status({ type: 'error', message: 'شناسه ربات الزامی است.' })
+      return
+    }
+    setM093LoadingOp('updateStarRefProgram')
+    setM093Status(null)
+    try {
+      const comm = parseInt(m093StarRefCommission, 10) || 0
+      const dur = m093StarRefDurationMonths.trim() ? parseInt(m093StarRefDurationMonths, 10) : undefined
+      const res = await (window as any).guidegramAPI?.botsUpdateStarRefProgramRaw(targetId, {
+        botId: m093BotId.trim(),
+        commissionPermille: comm,
+        durationMonths: dur,
+      })
+      if (res) {
+        setM093StarRefProgramResult(res)
+        setM093Status({
+          type: 'success',
+          message: `برنامه ریفرال استارز با کارمزد ${comm / 10}% با موفقیت به‌روزرسانی شد.`,
+        })
+      } else {
+        setM093Status({ type: 'error', message: 'پاسخ ناموفق در به‌روزرسانی برنامه ریفرال استارز ربات.' })
+      }
+    } catch (err: any) {
+      setM093Status({ type: 'error', message: err?.message || 'خطا در bots.updateStarRefProgram' })
+    } finally {
+      setM093LoadingOp(null)
+    }
+  }
+
+  const handleM093UpdateUserEmojiStatus = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m093TargetUserId.trim()) {
+      setM093Status({ type: 'error', message: 'شناسه کاربر هدف الزامی است.' })
+      return
+    }
+    setM093LoadingOp('updateUserEmojiStatus')
+    setM093Status(null)
+    try {
+      let emojiStatusObj: any = { _: 'emojiStatusEmpty' }
+      if (m093EmojiStatusDocId.trim()) {
+        emojiStatusObj = {
+          _: 'emojiStatus',
+          documentId: m093EmojiStatusDocId.trim(),
+          until: m093EmojiStatusUntil.trim() ? parseInt(m093EmojiStatusUntil, 10) : undefined,
+        }
+      }
+      const res = await (window as any).guidegramAPI?.botsUpdateUserEmojiStatusRaw(targetId, {
+        userId: m093TargetUserId.trim(),
+        emojiStatus: emojiStatusObj,
+      })
+      if (res) {
+        setM093Status({
+          type: 'success',
+          message: `ایموجی استاتوس کاربر ${m093TargetUserId.trim()} با موفقیت به‌روزرسانی شد.`,
+        })
+      } else {
+        setM093Status({ type: 'error', message: 'پاسخ ناموفق در ثبت ایموجی استاتوس کاربر.' })
+      }
+    } catch (err: any) {
+      setM093Status({ type: 'error', message: err?.message || 'خطا در bots.updateUserEmojiStatus' })
+    } finally {
+      setM093LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -26477,6 +26661,262 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       )}
                     </div>
                   )}
+
+                  {/* Microphase 093: Bots Domain Suite Part 6 (5 RPCs) */}
+                  <div className="pt-4 border-t border-white/10 space-y-4 text-right" dir="rtl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                        <span className="text-xs font-bold text-gray-200">
+                          میکروفاز 093: مدیریت نتایج عضویت، ایموجی استاتوس، نام‌های کاربری و ریفرال استارز (5 RPC)
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-cyan-400 font-mono bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40">
+                        Layer 232 Parity
+                      </span>
+                    </div>
+
+                    {/* Bot ID Global Input for Sub-operations */}
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5 space-y-2">
+                      <label className="text-[11px] text-gray-400 block font-medium">شناسه یا یوزرنیم ربات تحت مدیریت (Bot Identifier):</label>
+                      <input
+                        type="text"
+                        value={m093BotId}
+                        onChange={(e) => setM093BotId(e.target.value)}
+                        placeholder="e.g. 123456789 or @MyAwesomeBot"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500 font-mono text-left"
+                      />
+                    </div>
+
+                    {/* RPC 1: bots.setJoinChatResults */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-3">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۱. ثبت نتیجه درخواست عضویت چت (bots.setJoinChatResults)</span>
+                        <span className="text-[10px] text-gray-500 font-mono">JoinChatBotResult</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه درخواست پیوستن (Query ID):</label>
+                          <input
+                            type="text"
+                            value={m093JoinQueryId}
+                            onChange={(e) => setM093JoinQueryId(e.target.value)}
+                            placeholder="e.g. 9876543210123"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">تصمیم ربات (Decision / Result):</label>
+                          <select
+                            value={m093JoinDecision}
+                            onChange={(e) => setM093JoinDecision(e.target.value as any)}
+                            className="w-full bg-dark-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500"
+                          >
+                            <option value="approved">تأیید عضویت (Approved - joinChatBotResultOk)</option>
+                            <option value="declined">رد درخواست (Declined - joinChatBotResultDeclined)</option>
+                            <option value="queued">در صف انتظار (Queued - joinChatBotResultQueued)</option>
+                            <option value="webview">هدایت به وب‌اپلیکیشن (WebView Result)</option>
+                          </select>
+                        </div>
+                      </div>
+                      {m093JoinDecision === 'webview' && (
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">آدرس وب‌ویو اعتبارسنجی (WebView URL):</label>
+                          <input
+                            type="text"
+                            value={m093JoinWebviewUrl}
+                            onChange={(e) => setM093JoinWebviewUrl(e.target.value)}
+                            placeholder="https://t.me/bot?startapp=verify"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleM093SetJoinChatResults}
+                        disabled={m093LoadingOp === 'setJoinChatResults'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        {m093LoadingOp === 'setJoinChatResults' ? 'در حال ارسال پاسخ عضویت...' : 'ثبت نتیجه درخواست عضویت'}
+                      </button>
+                    </div>
+
+                    {/* RPC 2: bots.toggleUserEmojiStatusPermission */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۲. تغییر مجوز تنظیم ایموجی استاتوس توسط ربات (bots.toggleUserEmojiStatusPermission)</span>
+                        <span className="text-[10px] text-gray-500 font-mono">Layer 232 Toggle</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m093EmojiPermissionEnabled}
+                            onChange={(e) => setM093EmojiPermissionEnabled(e.target.checked)}
+                            className="rounded border-white/20 text-cyan-500 focus:ring-0 bg-white/5"
+                          />
+                          <span>مجوز به ربات برای تغییر ایموجی استاتوس کاربر داده شود</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleM093ToggleEmojiPermission}
+                          disabled={m093LoadingOp === 'toggleEmojiPermission'}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m093LoadingOp === 'toggleEmojiPermission' ? 'در حال اعمال...' : 'اعمال تغییر مجوز'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 3: bots.toggleUsername */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۳. فعال/غیرفعال‌سازی نام کاربری ربات (bots.toggleUsername)</span>
+                        <span className="text-[10px] text-gray-500 font-mono">Multi-Username</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m093ToggleUsernameStr}
+                          onChange={(e) => setM093ToggleUsernameStr(e.target.value)}
+                          placeholder="نام کاربری بدون @ (e.g. MyBotAlternative)"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                        />
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={m093ToggleUsernameActive}
+                              onChange={(e) => setM093ToggleUsernameActive(e.target.checked)}
+                              className="rounded border-white/20 text-cyan-500 focus:ring-0 bg-white/5"
+                            />
+                            <span>وضعیت فعال (Active)</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleM093ToggleUsername}
+                            disabled={m093LoadingOp === 'toggleUsername'}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                          >
+                            {m093LoadingOp === 'toggleUsername' ? 'در حال تغییر...' : 'ثبت وضعیت نام کاربری'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RPC 4: bots.updateStarRefProgram */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۴. مدیریت برنامه بازاریابی و ریفرال ستاره‌ها (bots.updateStarRefProgram)</span>
+                        <span className="text-[10px] text-amber-400 font-mono">Telegram Stars Affiliate</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">کارمزد به هزارم (Permille - 100 = 10%):</label>
+                          <input
+                            type="number"
+                            value={m093StarRefCommission}
+                            onChange={(e) => setM093StarRefCommission(e.target.value)}
+                            placeholder="100"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">مدت اعتبار به ماه (اختیاری):</label>
+                          <input
+                            type="number"
+                            value={m093StarRefDurationMonths}
+                            onChange={(e) => setM093StarRefDurationMonths(e.target.value)}
+                            placeholder="e.g. 12"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM093UpdateStarRefProgram}
+                        disabled={m093LoadingOp === 'updateStarRefProgram'}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        {m093LoadingOp === 'updateStarRefProgram' ? 'در حال به‌روزرسانی ریفرال...' : 'ثبت تنظیمات برنامه ریفرال'}
+                      </button>
+                      {m093StarRefProgramResult && (
+                        <div className="bg-black/30 p-2.5 rounded-lg border border-amber-500/20 text-[11px] font-mono text-amber-300 text-left overflow-x-auto max-h-32">
+                          <pre>{JSON.stringify(m093StarRefProgramResult, null, 2)}</pre>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RPC 5: bots.updateUserEmojiStatus */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۵. تنظیم مستقیم ایموجی استاتوس کاربر توسط ربات (bots.updateUserEmojiStatus)</span>
+                        <span className="text-[10px] text-gray-500 font-mono">Custom Emoji Status</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه کاربر هدف (Target User ID):</label>
+                          <input
+                            type="text"
+                            value={m093TargetUserId}
+                            onChange={(e) => setM093TargetUserId(e.target.value)}
+                            placeholder="e.g. 987654321"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه داکیومنت ایموجی (Document ID):</label>
+                          <input
+                            type="text"
+                            value={m093EmojiStatusDocId}
+                            onChange={(e) => setM093EmojiStatusDocId(e.target.value)}
+                            placeholder="خالی برای حذف / شناسه سفارشی"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">تا تاریخ یونیکس (Until Timestamp):</label>
+                          <input
+                            type="text"
+                            value={m093EmojiStatusUntil}
+                            onChange={(e) => setM093EmojiStatusUntil(e.target.value)}
+                            placeholder="اختیاری (e.g. 1798765432)"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM093UpdateUserEmojiStatus}
+                        disabled={m093LoadingOp === 'updateUserEmojiStatus'}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        {m093LoadingOp === 'updateUserEmojiStatus' ? 'در حال ثبت ایموجی استاتوس...' : 'تنظیم ایموجی استاتوس کاربر'}
+                      </button>
+                    </div>
+
+                    {/* Status Feedback / Error with Retry */}
+                    {m093Status && (
+                      <div
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                          m093Status.type === 'success'
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                            : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                        }`}
+                      >
+                        <span>{m093Status.message}</span>
+                        {m093Status.type === 'error' && (
+                          <button
+                            type="button"
+                            onClick={() => setM093Status(null)}
+                            className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                          >
+                            تلاش مجدد
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

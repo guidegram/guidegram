@@ -2953,6 +2953,17 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:bots:set-bot-menu-button-raw', { accountId, ...params }),
   botsSetCustomVerificationRaw: (accountId: string, params: { botId?: string | any; bot?: string | any; peerId: string; customDescription?: string; enabled?: boolean }): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bots:set-custom-verification-raw', { accountId, ...params }),
+  // Microphase 093: Bots Domain Suite Part 6 (5 RPCs)
+  botsSetJoinChatResultsRaw: (accountId: string, params: { queryId: bigint | number | string; result: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:set-join-chat-results-raw', { accountId, ...params }),
+  botsToggleUserEmojiStatusPermissionRaw: (accountId: string, params: { bot?: string | any; botId?: string | any; enabled: boolean }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:toggle-user-emoji-status-permission-raw', { accountId, ...params }),
+  botsToggleUsernameRaw: (accountId: string, params: { bot?: string | any; botId?: string | any; username: string; active: boolean }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:toggle-username-raw', { accountId, ...params }),
+  botsUpdateStarRefProgramRaw: (accountId: string, params: { bot?: string | any; botId?: string | any; commissionPermille: number; durationMonths?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:update-star-ref-program-raw', { accountId, ...params }),
+  botsUpdateUserEmojiStatusRaw: (accountId: string, params: { userId?: string | any; targetUserId?: string | any; emojiStatus: any }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:update-user-emoji-status-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

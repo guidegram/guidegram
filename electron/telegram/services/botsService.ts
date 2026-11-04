@@ -588,12 +588,24 @@ export class BotsService {
   public async updateStarRefProgram(
     holder: RpcClientHolder,
     accountId: string,
-    botId: string,
-    commissionPermille: number,
-    durationMonths?: number
+    paramsOrBotId: { bot?: string | any; botId?: string | any; commissionPermille: number; durationMonths?: number } | string,
+    commissionPermilleArg?: number,
+    durationMonthsArg?: number
   ): Promise<any> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let commissionPermille = 0
+      let durationMonths: number | undefined
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.bot || paramsOrBotId.botId
+        commissionPermille = paramsOrBotId.commissionPermille
+        durationMonths = paramsOrBotId.durationMonths
+      } else {
+        botId = paramsOrBotId
+        commissionPermille = commissionPermilleArg ?? 0
+        durationMonths = durationMonthsArg
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       return await holder.client.call({
         _: 'bots.updateStarRefProgram',
         bot,
@@ -602,13 +614,27 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] updateStarRefProgram error:', err)
-      return null
+      throw err
     }
   }
 
-  public async toggleUserEmojiStatusPermission(holder: RpcClientHolder, accountId: string, botId: string, enabled: boolean): Promise<boolean> {
+  public async toggleUserEmojiStatusPermission(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { bot?: string | any; botId?: string | any; enabled: boolean } | string,
+    enabledArg = true
+  ): Promise<boolean> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let enabled = true
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.bot || paramsOrBotId.botId
+        enabled = paramsOrBotId.enabled ?? true
+      } else {
+        botId = paramsOrBotId
+        enabled = enabledArg
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const res = await holder.client.call({
         _: 'bots.toggleUserEmojiStatusPermission',
         bot,
@@ -617,13 +643,60 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] toggleUserEmojiStatusPermission error:', err)
-      return false
+      throw err
     }
   }
 
-  public async updateUserEmojiStatus(holder: RpcClientHolder, accountId: string, targetUserId: string, emojiStatus: any): Promise<boolean> {
+  public async updateUserEmojiStatus(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrUserId: { userId?: string | any; targetUserId?: string | any; emojiStatus: any } | string,
+    emojiStatusArg?: any
+  ): Promise<boolean> {
     try {
-      const userId = await this.toInputUser(accountId, targetUserId)
+      let rawUserId: any
+      let rawEmojiStatus: any
+      if (typeof paramsOrUserId === 'object' && paramsOrUserId !== null) {
+        rawUserId = paramsOrUserId.userId || paramsOrUserId.targetUserId
+        rawEmojiStatus = paramsOrUserId.emojiStatus
+      } else {
+        rawUserId = paramsOrUserId
+        rawEmojiStatus = emojiStatusArg
+      }
+      const userId = typeof rawUserId === 'string' ? await this.toInputUser(accountId, rawUserId) : rawUserId
+
+      let emojiStatus: any = rawEmojiStatus
+      if (!rawEmojiStatus) {
+        emojiStatus = { _: 'emojiStatusEmpty' }
+      } else if (typeof rawEmojiStatus === 'string' || typeof rawEmojiStatus === 'number' || typeof rawEmojiStatus === 'bigint') {
+        const docId = typeof rawEmojiStatus === 'string'
+          ? Long.fromString(rawEmojiStatus)
+          : typeof rawEmojiStatus === 'bigint'
+          ? Long.fromString(rawEmojiStatus.toString())
+          : Long.fromNumber(rawEmojiStatus)
+        emojiStatus = {
+          _: 'emojiStatus',
+          documentId: docId,
+        }
+      } else if (typeof rawEmojiStatus === 'object' && !rawEmojiStatus._) {
+        if (rawEmojiStatus.documentId) {
+          const docId = typeof rawEmojiStatus.documentId === 'string'
+            ? Long.fromString(rawEmojiStatus.documentId)
+            : typeof rawEmojiStatus.documentId === 'bigint'
+            ? Long.fromString(rawEmojiStatus.documentId.toString())
+            : typeof rawEmojiStatus.documentId === 'number'
+            ? Long.fromNumber(rawEmojiStatus.documentId)
+            : rawEmojiStatus.documentId
+          emojiStatus = {
+            _: 'emojiStatus',
+            documentId: docId,
+            until: rawEmojiStatus.until,
+          }
+        } else {
+          emojiStatus = { _: 'emojiStatusEmpty' }
+        }
+      }
+
       const res = await holder.client.call({
         _: 'bots.updateUserEmojiStatus',
         userId,
@@ -632,7 +705,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] updateUserEmojiStatus error:', err)
-      return false
+      throw err
     }
   }
 
@@ -694,19 +767,38 @@ export class BotsService {
     }
   }
 
-  public async toggleUsername(holder: RpcClientHolder, accountId: string, botId: string, username: string, active: boolean): Promise<boolean> {
+  public async toggleUsername(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { bot?: string | any; botId?: string | any; username: string; active: boolean } | string,
+    usernameArg?: string,
+    activeArg = true
+  ): Promise<boolean> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let username = ''
+      let active = true
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.bot || paramsOrBotId.botId
+        username = paramsOrBotId.username
+        active = paramsOrBotId.active ?? true
+      } else {
+        botId = paramsOrBotId
+        username = usernameArg || ''
+        active = activeArg
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
+      const cleanUsername = String(username || '').replace(/^@/, '').trim()
       const res = await holder.client.call({
         _: 'bots.toggleUsername',
         bot,
-        username,
+        username: cleanUsername,
         active,
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] toggleUsername error:', err)
-      return false
+      throw err
     }
   }
 
@@ -837,8 +929,50 @@ export class BotsService {
     }
   }
 
-  public async setJoinChatResults(holder: RpcClientHolder, queryId: bigint, result: any): Promise<boolean> {
+  public async setJoinChatResults(
+    holder: RpcClientHolder,
+    paramsOrQueryId: { queryId: bigint | number | Long | string; result: any } | bigint | number | Long | string,
+    resultArg?: any
+  ): Promise<boolean> {
     try {
+      let rawQueryId: any
+      let rawResult: any
+      if (typeof paramsOrQueryId === 'object' && paramsOrQueryId !== null && 'queryId' in paramsOrQueryId) {
+        rawQueryId = paramsOrQueryId.queryId
+        rawResult = paramsOrQueryId.result
+      } else {
+        rawQueryId = paramsOrQueryId
+        rawResult = resultArg
+      }
+
+      const queryId = typeof rawQueryId === 'string'
+        ? Long.fromString(rawQueryId)
+        : typeof rawQueryId === 'bigint'
+        ? Long.fromString(rawQueryId.toString())
+        : typeof rawQueryId === 'number'
+        ? Long.fromNumber(rawQueryId)
+        : rawQueryId
+
+      let result: any = rawResult
+      if (typeof rawResult === 'string') {
+        if (rawResult === 'approved') result = { _: 'joinChatBotResultApproved' }
+        else if (rawResult === 'declined') result = { _: 'joinChatBotResultDeclined' }
+        else if (rawResult === 'queued') result = { _: 'joinChatBotResultQueued' }
+        else if (rawResult.startsWith('http://') || rawResult.startsWith('https://')) {
+          result = { _: 'joinChatBotResultWebView', url: rawResult }
+        } else {
+          result = { _: 'joinChatBotResultApproved' }
+        }
+      } else if (rawResult && typeof rawResult === 'object') {
+        if (!rawResult._) {
+          if (rawResult.approved) result = { _: 'joinChatBotResultApproved' }
+          else if (rawResult.declined) result = { _: 'joinChatBotResultDeclined' }
+          else if (rawResult.queued) result = { _: 'joinChatBotResultQueued' }
+          else if (rawResult.url) result = { _: 'joinChatBotResultWebView', url: rawResult.url }
+          else result = { _: 'joinChatBotResultApproved' }
+        }
+      }
+
       const res = await holder.client.call({
         _: 'bots.setJoinChatResults',
         queryId,
@@ -847,7 +981,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] setJoinChatResults error:', err)
-      return false
+      throw err
     }
   }
 

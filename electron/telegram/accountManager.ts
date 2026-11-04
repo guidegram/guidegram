@@ -21539,6 +21539,73 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.botsService.setCustomVerification(holder as any, accountId, params)
   }
+
+  // Microphase 093: Bots Domain Suite Part 6 (5 RPCs)
+  public async botsSetJoinChatResultsRaw(
+    accountId: string,
+    params: {
+      queryId: bigint | number | Long | string
+      result: any
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.setJoinChatResults(holder as any, params)
+  }
+
+  public async botsToggleUserEmojiStatusPermissionRaw(
+    accountId: string,
+    params: {
+      bot?: string | any
+      botId?: string | any
+      enabled: boolean
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.toggleUserEmojiStatusPermission(holder as any, accountId, params)
+  }
+
+  public async botsToggleUsernameRaw(
+    accountId: string,
+    params: {
+      bot?: string | any
+      botId?: string | any
+      username: string
+      active: boolean
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.toggleUsername(holder as any, accountId, params)
+  }
+
+  public async botsUpdateStarRefProgramRaw(
+    accountId: string,
+    params: {
+      bot?: string | any
+      botId?: string | any
+      commissionPermille: number
+      durationMonths?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.updateStarRefProgram(holder as any, accountId, params)
+  }
+
+  public async botsUpdateUserEmojiStatusRaw(
+    accountId: string,
+    params: {
+      userId?: string | any
+      targetUserId?: string | any
+      emojiStatus: any
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.updateUserEmojiStatus(holder as any, accountId, params)
+  }
 }
 
 
