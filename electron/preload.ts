@@ -3099,6 +3099,22 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:refund-stars-charge-raw', { accountId, ...params }),
   paymentsReorderStarGiftCollectionsRaw: (accountId: string, params: { peerId: string; order: number[] }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:reorder-star-gift-collections-raw', { accountId, ...params }),
+  // Layer 232 Payments Suite (Microphase 103)
+  paymentsResolveStarGiftOfferRaw: (accountId: string, params: { offerMsgId: number; decline?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:resolve-star-gift-offer-raw', { accountId, ...params }),
+  paymentsSaveStarGiftRaw: (accountId: string, params: { stargift: any; unsave?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:save-star-gift-raw', { accountId, ...params }),
+  paymentsSendPaymentFormRaw: (accountId: string, params: { formId: bigint | number | any; invoice: any; credentials: any; requestedInfoId?: string; shippingOptionId?: string; tipAmount?: bigint | number | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:send-payment-form-raw', { accountId, ...params }),
+  paymentsSendStarGiftOfferRaw: (accountId: string, params: { peerId: string; slug: string; price: any; duration?: number; randomId?: bigint | number | any; allowPaidStars?: bigint | number | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:send-star-gift-offer-raw', { accountId, ...params }),
+  paymentsSendStarsFormRaw: (accountId: string, params: { formId: bigint | number | any; invoice: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:send-stars-form-raw', { accountId, ...params }),
+  paymentsToggleChatStarGiftNotificationsRaw: (accountId: string, params: { peerId: string; enabled?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:toggle-chat-star-gift-notifications-raw', { accountId, ...params }),
+  paymentsToggleStarGiftsPinnedToTopRaw: (accountId: string, params: { peerId: string; stargift: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:toggle-star-gifts-pinned-to-top-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

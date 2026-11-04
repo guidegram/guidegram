@@ -10199,6 +10199,71 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Payments Suite (Microphase 103)
+  ipcMain.handle('telegram:payments:resolve-star-gift-offer-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsResolveStarGiftOfferRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsResolveStarGiftOfferRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:save-star-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsSaveStarGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsSaveStarGiftRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:send-payment-form-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsSendPaymentFormRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsSendPaymentFormRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:send-star-gift-offer-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsSendStarGiftOfferRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsSendStarGiftOfferRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:send-stars-form-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsSendStarsFormRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsSendStarsFormRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:toggle-chat-star-gift-notifications-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsToggleChatStarGiftNotificationsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsToggleChatStarGiftNotificationsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:toggle-star-gifts-pinned-to-top-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsToggleStarGiftsPinnedToTopRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsToggleStarGiftsPinnedToTopRaw error:', err)
+      throw err
+    }
+  })
+
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

@@ -22281,7 +22281,143 @@ export class AccountManager {
       params?.order || []
     )
   }
+
+  // =========================================================================
+  // Microphase 103: Payments Domain Suite Part 10 (Star Gift Offers & Forms)
+  // =========================================================================
+
+  public async paymentsSendPaymentFormRaw(
+    accountId: string,
+    params: {
+      formId: bigint | number | Long | string
+      invoice: any
+      credentials: any
+      requestedInfoId?: string
+      shippingOptionId?: string
+      tipAmount?: bigint | number | Long | string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.sendPaymentForm(
+      holder as any,
+      params?.formId,
+      params?.invoice,
+      params?.credentials,
+      params?.requestedInfoId,
+      params?.shippingOptionId,
+      params?.tipAmount
+    )
+  }
+
+  public async paymentsSendStarsFormRaw(
+    accountId: string,
+    params: {
+      formId: bigint | number | Long | string
+      invoice: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.sendStarsForm(
+      holder as any,
+      params?.formId,
+      params?.invoice
+    )
+  }
+
+  public async paymentsSaveStarGiftRaw(
+    accountId: string,
+    params: {
+      stargift: any
+      unsave?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.saveStarGift(
+      holder as any,
+      params?.stargift,
+      Boolean(params?.unsave)
+    )
+  }
+
+  public async paymentsToggleChatStarGiftNotificationsRaw(
+    accountId: string,
+    params: {
+      peerId: string
+      enabled?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.toggleChatStarGiftNotifications(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params?.enabled ?? true
+    )
+  }
+
+  public async paymentsToggleStarGiftsPinnedToTopRaw(
+    accountId: string,
+    params: {
+      peerId: string
+      stargift: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.toggleStarGiftsPinnedToTop(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params?.stargift
+    )
+  }
+
+  public async paymentsResolveStarGiftOfferRaw(
+    accountId: string,
+    params: {
+      offerMsgId: number
+      decline?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.resolveStarGiftOffer(
+      holder as any,
+      Number(params?.offerMsgId),
+      Boolean(params?.decline)
+    )
+  }
+
+  public async paymentsSendStarGiftOfferRaw(
+    accountId: string,
+    params: {
+      peerId: string
+      slug: string
+      price: any
+      duration?: number
+      randomId?: bigint | number | Long | string
+      allowPaidStars?: bigint | number | Long | string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.sendStarGiftOffer(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params?.slug || '',
+      params?.price,
+      params?.duration || 86400,
+      params?.randomId,
+      params?.allowPaidStars
+    )
+  }
 }
+
 
 
 

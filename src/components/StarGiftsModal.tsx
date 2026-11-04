@@ -29,6 +29,11 @@ import {
   Receipt,
   CreditCard,
   BarChart3,
+  CheckCircle2,
+  Bookmark,
+  Send,
+  Bell,
+  Pin,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
@@ -58,7 +63,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways' | 'checkout_offers'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
@@ -132,6 +137,42 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   const [m102LoadingOp, setM102LoadingOp] = useState<string | null>(null)
   const [m102Error, setM102Error] = useState<string | null>(null)
   const [m102SuccessMessage, setM102SuccessMessage] = useState<string | null>(null)
+
+  // Microphase 103: Payments Domain Suite Part 10 (Star Gift Offers, Forms & Chat Settings)
+  const [m103OfferMsgId, setM103OfferMsgId] = useState<string>('')
+  const [m103OfferDecline, setM103OfferDecline] = useState<boolean>(false)
+  const [m103ResolveOfferResult, setM103ResolveOfferResult] = useState<any | null>(null)
+
+  const [m103SaveGiftSlug, setM103SaveGiftSlug] = useState<string>('')
+  const [m103Unsave, setM103Unsave] = useState<boolean>(false)
+  const [m103SaveResult, setM103SaveResult] = useState<any | null>(null)
+
+  const [m103FormId, setM103FormId] = useState<string>('')
+  const [m103InvoiceJson, setM103InvoiceJson] = useState<string>('')
+  const [m103CredentialsJson, setM103CredentialsJson] = useState<string>('')
+  const [m103PaymentFormResult, setM103PaymentFormResult] = useState<any | null>(null)
+
+  const [m103OfferPeerId, setM103OfferPeerId] = useState<string>(peerId || '')
+  const [m103OfferSlug, setM103OfferSlug] = useState<string>('')
+  const [m103OfferPriceStars, setM103OfferPriceStars] = useState<string>('100')
+  const [m103OfferDuration, setM103OfferDuration] = useState<string>('86400')
+  const [m103SendOfferResult, setM103SendOfferResult] = useState<any | null>(null)
+
+  const [m103StarsFormId, setM103StarsFormId] = useState<string>('')
+  const [m103StarsInvoiceJson, setM103StarsInvoiceJson] = useState<string>('')
+  const [m103StarsFormResult, setM103StarsFormResult] = useState<any | null>(null)
+
+  const [m103NotifPeerId, setM103NotifPeerId] = useState<string>(peerId || '')
+  const [m103NotifEnabled, setM103NotifEnabled] = useState<boolean>(true)
+  const [m103NotifResult, setM103NotifResult] = useState<any | null>(null)
+
+  const [m103PinPeerId, setM103PinPeerId] = useState<string>(peerId || '')
+  const [m103PinGiftSlug, setM103PinGiftSlug] = useState<string>('')
+  const [m103PinResult, setM103PinResult] = useState<any | null>(null)
+
+  const [m103LoadingOp, setM103LoadingOp] = useState<string | null>(null)
+  const [m103Error, setM103Error] = useState<string | null>(null)
+  const [m103SuccessMessage, setM103SuccessMessage] = useState<string | null>(null)
 
   const loadM101StarsStatus = async () => {
     if (!accountId) return
@@ -432,6 +473,200 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
       setM102Error(err?.message || 'خطا در ذخیره ترتیب کالکشن‌های گیفت')
     } finally {
       setM102LoadingOp(null)
+    }
+  }
+
+  // Microphase 103 Handlers (Payments Domain Suite Part 10: Offers, Forms & Chat Settings)
+  const executeResolveStarGiftOffer = async () => {
+    if (!accountId || !m103OfferMsgId.trim()) {
+      setM103Error('شناسه پیام پیشنهاد گیفت (Offer Message ID) الزامی است')
+      return
+    }
+    setM103LoadingOp('resolve_offer')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsResolveStarGiftOfferRaw?.(accountId, {
+        offerMsgId: Number(m103OfferMsgId.trim()),
+        decline: m103OfferDecline,
+      })
+      setM103ResolveOfferResult(res)
+      setM103SuccessMessage(`پیشنهاد گیفت ستاره‌ای با موفقیت ${m103OfferDecline ? 'رد' : 'پذیرفته'} شد (payments.resolveStarGiftOffer)`)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeResolveStarGiftOffer error:', err)
+      setM103Error(err?.message || 'خطا در حل پیشنهاد گیفت ستاره‌ای')
+    } finally {
+      setM103LoadingOp(null)
+    }
+  }
+
+  const executeSaveStarGift = async () => {
+    if (!accountId || !m103SaveGiftSlug.trim()) {
+      setM103Error('اسلاگ یا مشخصه گیفت برای ذخیره/حذف الزامی است')
+      return
+    }
+    setM103LoadingOp('save_gift')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      const stargift = { _: 'inputSavedStarGiftUser', slug: m103SaveGiftSlug.trim() }
+      const res = await (window as any).guidegramAPI?.paymentsSaveStarGiftRaw?.(accountId, {
+        stargift,
+        unsave: m103Unsave,
+      })
+      setM103SaveResult(res)
+      setM103SuccessMessage(`وضعیت گیفت با موفقیت ${m103Unsave ? 'حذف از ذخیره‌ها' : 'ذخیره در پروفایل'} شد (payments.saveStarGift)`)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeSaveStarGift error:', err)
+      setM103Error(err?.message || 'خطا در ذخیره/حذف گیفت ستاره‌ای')
+    } finally {
+      setM103LoadingOp(null)
+    }
+  }
+
+  const executeSendPaymentForm = async () => {
+    if (!accountId || !m103FormId.trim()) {
+      setM103Error('شناسه فرم پرداخت (Form ID) الزامی است')
+      return
+    }
+    setM103LoadingOp('send_payment_form')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      let invoice: any = undefined
+      if (m103InvoiceJson.trim()) {
+        try {
+          invoice = JSON.parse(m103InvoiceJson.trim())
+        } catch {
+          invoice = { _: 'inputInvoiceSlug', slug: m103InvoiceJson.trim() }
+        }
+      }
+      let credentials: any = undefined
+      if (m103CredentialsJson.trim()) {
+        try {
+          credentials = JSON.parse(m103CredentialsJson.trim())
+        } catch {
+          credentials = { _: 'inputPaymentCredentials', data: { _: 'dataJSON', data: m103CredentialsJson.trim() } }
+        }
+      }
+      const res = await (window as any).guidegramAPI?.paymentsSendPaymentFormRaw?.(accountId, {
+        formId: m103FormId.trim(),
+        invoice,
+        credentials,
+      })
+      setM103PaymentFormResult(res)
+      setM103SuccessMessage('فرم پرداخت بانکی با موفقیت به درگاه ارسال شد (payments.sendPaymentForm)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeSendPaymentForm error:', err)
+      setM103Error(err?.message || 'خطا در ارسال فرم پرداخت بانکی')
+    } finally {
+      setM103LoadingOp(null)
+    }
+  }
+
+  const executeSendStarGiftOffer = async () => {
+    if (!accountId || !m103OfferPeerId.trim() || !m103OfferSlug.trim()) {
+      setM103Error('شناسه مخاطب و اسلاگ گیفت ستاره‌ای الزامی است')
+      return
+    }
+    setM103LoadingOp('send_gift_offer')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      const priceStars = Number(m103OfferPriceStars.trim()) || 100
+      const durationSec = Number(m103OfferDuration.trim()) || 86400
+      const price = { _: 'starsAmount', amount: BigInt(priceStars) }
+      const res = await (window as any).guidegramAPI?.paymentsSendStarGiftOfferRaw?.(accountId, {
+        peerId: m103OfferPeerId.trim(),
+        slug: m103OfferSlug.trim(),
+        price,
+        duration: durationSec,
+      })
+      setM103SendOfferResult(res)
+      setM103SuccessMessage('پیشنهاد خرید گیفت نایاب با موفقیت ارسال شد (payments.sendStarGiftOffer)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeSendStarGiftOffer error:', err)
+      setM103Error(err?.message || 'خطا در ارسال پیشنهاد گیفت ستاره‌ای')
+    } finally {
+      setM103LoadingOp(null)
+    }
+  }
+
+  const executeSendStarsForm = async () => {
+    if (!accountId || !m103StarsFormId.trim()) {
+      setM103Error('شناسه فرم ستاره‌ای (Form ID) الزامی است')
+      return
+    }
+    setM103LoadingOp('send_stars_form')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      let invoice: any = undefined
+      if (m103StarsInvoiceJson.trim()) {
+        try {
+          invoice = JSON.parse(m103StarsInvoiceJson.trim())
+        } catch {
+          invoice = { _: 'inputInvoiceStars', formId: BigInt(m103StarsFormId.trim()) }
+        }
+      }
+      const res = await (window as any).guidegramAPI?.paymentsSendStarsFormRaw?.(accountId, {
+        formId: m103StarsFormId.trim(),
+        invoice,
+      })
+      setM103StarsFormResult(res)
+      setM103SuccessMessage('فرم پرداخت ستاره‌ای با موفقیت به تلگرام ارسال شد (payments.sendStarsForm)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeSendStarsForm error:', err)
+      setM103Error(err?.message || 'خطا در ارسال فرم پرداخت ستاره‌ای')
+    } finally {
+      setM103LoadingOp(null)
+    }
+  }
+
+  const executeToggleChatStarGiftNotifications = async () => {
+    if (!accountId || !m103NotifPeerId.trim()) {
+      setM103Error('شناسه چت یا کانال برای تنظیم نوتیفیکیشن الزامی است')
+      return
+    }
+    setM103LoadingOp('toggle_notif')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsToggleChatStarGiftNotificationsRaw?.(accountId, {
+        peerId: m103NotifPeerId.trim(),
+        enabled: m103NotifEnabled,
+      })
+      setM103NotifResult(res)
+      setM103SuccessMessage(`نوتیفیکیشن گیفت‌های ستاره چت ${m103NotifEnabled ? 'فعال' : 'غیرفعال'} شد (payments.toggleChatStarGiftNotifications)`)
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeToggleChatStarGiftNotifications error:', err)
+      setM103Error(err?.message || 'خطا در تغییر نوتیفیکیشن‌های گیفت چت')
+    } finally {
+      setM103LoadingOp(null)
+    }
+  }
+
+  const executeToggleStarGiftsPinnedToTop = async () => {
+    if (!accountId || !m103PinPeerId.trim() || !m103PinGiftSlug.trim()) {
+      setM103Error('شناسه کاربر و اسلاگ گیفت ستاره‌ای برای پین/آن‌پین الزامی است')
+      return
+    }
+    setM103LoadingOp('toggle_pin')
+    setM103Error(null)
+    setM103SuccessMessage(null)
+    try {
+      const stargift = [{ _: 'inputSavedStarGiftUser', slug: m103PinGiftSlug.trim() }]
+      const res = await (window as any).guidegramAPI?.paymentsToggleStarGiftsPinnedToTopRaw?.(accountId, {
+        peerId: m103PinPeerId.trim(),
+        stargift,
+      })
+      setM103PinResult(res)
+      setM103SuccessMessage('وضعیت پین گیفت در بالای پروفایل کاربر بروزرسانی شد (payments.toggleStarGiftsPinnedToTop)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] executeToggleStarGiftsPinnedToTop error:', err)
+      setM103Error(err?.message || 'خطا در تغییر پین گیفت در بالای پروفایل')
+    } finally {
+      setM103LoadingOp(null)
     }
   }
 
@@ -1289,6 +1524,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
               >
                 <Trophy className="w-3.5 h-3.5" />
                 <span>Unique & Giveaways</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('checkout_offers')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'checkout_offers'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Offers & Forms (M103)</span>
               </button>
             </div>
 
@@ -2709,6 +2956,429 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                       >
                         <span>ذخیره چینش جدید</span>
                       </button>
+                    </div>
+                  </div>
+                </div>
+              ) : activeTab === 'checkout_offers' ? (
+                /* Microphase 103 Tab: Payments Domain Suite Part 10 (Offers, Forms & Chat Settings) */
+                <div className="p-6 space-y-6 text-right" dir="rtl">
+                  {/* Banner / Header */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-l from-amber-500/10 via-neutral-900/60 to-purple-500/10 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="space-y-1 text-right">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-amber-400" />
+                        <h3 className="text-base font-bold text-white">تسویه حساب، فرم‌های پرداخت و پیشنهادات گیفت (MTProto Layer 232)</h3>
+                      </div>
+                      <p className="text-xs text-neutral-400">
+                        مدیریت ۷ متد کلیدی پروتکل تلگرام شامل ارسال فرم‌های پرداخت ستاره‌ای، پیشنهادات خرید/فروش گیفت و اعلان‌های چت.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-400 font-mono text-[11px] border border-amber-400/20">
+                        Domain Suite Part 10 • 7 RPCs
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Operational Notifications / Alerts */}
+                  {m103Error && (
+                    <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center justify-between">
+                      <span>{m103Error}</span>
+                      <button
+                        type="button"
+                        onClick={() => setM103Error(null)}
+                        className="text-red-400 hover:text-red-200 text-xs underline cursor-pointer"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {m103SuccessMessage && (
+                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+                      <span>{m103SuccessMessage}</span>
+                      <button
+                        type="button"
+                        onClick={() => setM103SuccessMessage(null)}
+                        className="text-emerald-400 hover:text-emerald-200 text-xs underline cursor-pointer"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Grid of Operations */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* 1. payments.resolveStarGiftOffer */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>حل پیشنهاد گیفت</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          پذیرش یا رد رسمی پیشنهاد معامله گیفت ستاره‌ای تلگرام.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="number"
+                            value={m103OfferMsgId}
+                            onChange={(e) => setM103OfferMsgId(e.target.value)}
+                            placeholder="شناسه پیام پیشنهاد (Offer Msg ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <label className="flex items-center gap-2 text-[11px] text-neutral-300 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={m103OfferDecline}
+                              onChange={(e) => setM103OfferDecline(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-red-500 focus:ring-0"
+                            />
+                            <span>رد پیشنهاد (Decline Offer)</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeResolveStarGiftOffer}
+                          disabled={m103LoadingOp === 'resolve_offer'}
+                          className="w-full py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'resolve_offer' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>اجرای payments.resolveStarGiftOffer</span>
+                        </button>
+                        {m103ResolveOfferResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103ResolveOfferResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. payments.saveStarGift */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Bookmark className="w-4 h-4 text-blue-400" />
+                          <span>ذخیره/حذف گیفت در پروفایل</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          افزودن گیفت ستاره‌ای به بخش ذخیره‌شده‌های پروفایل یا حذف آن.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m103SaveGiftSlug}
+                            onChange={(e) => setM103SaveGiftSlug(e.target.value)}
+                            placeholder="شناسه یا اسلاگ گیفت (Slug)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <label className="flex items-center gap-2 text-[11px] text-neutral-300 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={m103Unsave}
+                              onChange={(e) => setM103Unsave(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-blue-500 focus:ring-0"
+                            />
+                            <span>حذف از ذخیره‌ها (Unsave)</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeSaveStarGift}
+                          disabled={m103LoadingOp === 'save_gift'}
+                          className="w-full py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'save_gift' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Bookmark className="w-3.5 h-3.5" />
+                          )}
+                          <span>اجرای payments.saveStarGift</span>
+                        </button>
+                        {m103SaveResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103SaveResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 3. payments.sendStarGiftOffer */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Gift className="w-4 h-4 text-amber-400" />
+                          <span>ارسال پیشنهاد گیفت نایاب</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          ارسال پیشنهاد خرید یا انتقال گیفت به یک کاربر مشخص.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m103OfferPeerId}
+                            onChange={(e) => setM103OfferPeerId(e.target.value)}
+                            placeholder="شناسه کاربر یا چت (Peer ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={m103OfferSlug}
+                            onChange={(e) => setM103OfferSlug(e.target.value)}
+                            placeholder="اسلاگ گیفت ستاره‌ای (Slug)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <input
+                              type="number"
+                              value={m103OfferPriceStars}
+                              onChange={(e) => setM103OfferPriceStars(e.target.value)}
+                              placeholder="تعداد ستاره"
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                            />
+                            <input
+                              type="number"
+                              value={m103OfferDuration}
+                              onChange={(e) => setM103OfferDuration(e.target.value)}
+                              placeholder="مدت زمان (ثانیه)"
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeSendStarGiftOffer}
+                          disabled={m103LoadingOp === 'send_gift_offer'}
+                          className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'send_gift_offer' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Send className="w-3.5 h-3.5" />
+                          )}
+                          <span>ارسال پیشنهاد رسمی گیفت</span>
+                        </button>
+                        {m103SendOfferResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103SendOfferResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 4. payments.sendPaymentForm */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <CreditCard className="w-4 h-4 text-purple-400" />
+                          <span>ارسال فرم پرداخت بانکی</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          تکمیل تسویه‌حساب بانکی یا اعتباری از طریق اندپوینت رسمی تلگرام.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m103FormId}
+                            onChange={(e) => setM103FormId(e.target.value)}
+                            placeholder="شناسه فرم پرداخت (Form ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={m103InvoiceJson}
+                            onChange={(e) => setM103InvoiceJson(e.target.value)}
+                            placeholder="اطلاعات فاکتور (Invoice JSON یا Slug)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono text-[11px]"
+                          />
+                          <input
+                            type="text"
+                            value={m103CredentialsJson}
+                            onChange={(e) => setM103CredentialsJson(e.target.value)}
+                            placeholder="اطلاعات احراز کارت (Credentials JSON)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono text-[11px]"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeSendPaymentForm}
+                          disabled={m103LoadingOp === 'send_payment_form'}
+                          className="w-full py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'send_payment_form' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CreditCard className="w-3.5 h-3.5" />
+                          )}
+                          <span>ارسال فرم پرداخت بانکی</span>
+                        </button>
+                        {m103PaymentFormResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103PaymentFormResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 5. payments.sendStarsForm */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Coins className="w-4 h-4 text-amber-400" />
+                          <span>ارسال فرم پرداخت ستاره‌ای</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          تایید تسویه تراکنش‌های خرید دیجیتال با ستاره‌های تلگرام.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m103StarsFormId}
+                            onChange={(e) => setM103StarsFormId(e.target.value)}
+                            placeholder="شناسه فرم ستاره‌ای (Stars Form ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={m103StarsInvoiceJson}
+                            onChange={(e) => setM103StarsInvoiceJson(e.target.value)}
+                            placeholder="فاکتور ستاره‌ای (اختیاری - Stars Invoice JSON)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono text-[11px]"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeSendStarsForm}
+                          disabled={m103LoadingOp === 'send_stars_form'}
+                          className="w-full py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'send_stars_form' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Coins className="w-3.5 h-3.5" />
+                          )}
+                          <span>ارسال فرم پرداخت ستاره‌ای</span>
+                        </button>
+                        {m103StarsFormResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103StarsFormResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 6. payments.toggleChatStarGiftNotifications */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Bell className="w-4 h-4 text-cyan-400" />
+                          <span>نوتیفیکیشن گیفت‌های چت</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          فعال یا بی‌صدا کردن اعلان ارسال گیفت ستاره‌ای در کانال یا گروه.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m103NotifPeerId}
+                            onChange={(e) => setM103NotifPeerId(e.target.value)}
+                            placeholder="شناسه چت یا کانال (Peer ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <label className="flex items-center gap-2 text-[11px] text-neutral-300 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={m103NotifEnabled}
+                              onChange={(e) => setM103NotifEnabled(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                            />
+                            <span>فعال‌سازی نوتیفیکیشن (Enabled)</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeToggleChatStarGiftNotifications}
+                          disabled={m103LoadingOp === 'toggle_notif'}
+                          className="w-full py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'toggle_notif' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Bell className="w-3.5 h-3.5" />
+                          )}
+                          <span>تغییر وضعیت اعلان‌ها</span>
+                        </button>
+                        {m103NotifResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103NotifResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 7. payments.toggleStarGiftsPinnedToTop */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                          <Pin className="w-4 h-4 text-pink-400" />
+                          <span>پین گیفت در بالای پروفایل</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400">
+                          سنجاق کردن گیفت‌های ستاره‌ای برتر در بالای بخش گیفت‌های پروفایل.
+                        </p>
+                        <div className="space-y-1.5 pt-1">
+                          <input
+                            type="text"
+                            value={m103PinPeerId}
+                            onChange={(e) => setM103PinPeerId(e.target.value)}
+                            placeholder="شناسه کاربر (Peer ID)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={m103PinGiftSlug}
+                            onChange={(e) => setM103PinGiftSlug(e.target.value)}
+                            placeholder="اسلاگ گیفت ستاره‌ای (Slug)"
+                            className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 pt-2">
+                        <button
+                          type="button"
+                          onClick={executeToggleStarGiftsPinnedToTop}
+                          disabled={m103LoadingOp === 'toggle_pin'}
+                          className="w-full py-2 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {m103LoadingOp === 'toggle_pin' ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Pin className="w-3.5 h-3.5" />
+                          )}
+                          <span>تغییر سنجاق گیفت در پروفایل</span>
+                        </button>
+                        {m103PinResult && (
+                          <div className="p-2 rounded-lg bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-24 overflow-y-auto">
+                            {JSON.stringify(m103PinResult, null, 2)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
