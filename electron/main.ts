@@ -11232,6 +11232,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stories Domain Suite Part 4 IPC (Microphase 123)
+  ipcMain.handle('telegram:stories:read-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesReadStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesReadStoriesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:reorder-albums-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesReorderAlbumsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesReorderAlbumsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:report-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesReportRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesReportRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:search-posts-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesSearchPostsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesSearchPostsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:send-reaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesSendReactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesSendReactionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:send-story-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesSendStoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesSendStoryRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:start-live-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesStartLiveRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesStartLiveRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

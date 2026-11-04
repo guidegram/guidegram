@@ -28,6 +28,10 @@ import {
   Eye,
   Users,
   BarChart2,
+  Flag,
+  Hash,
+  Radio,
+  ArrowUpDown,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
@@ -153,6 +157,26 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [lookupStoryLoading, setLookupStoryLoading] = useState(false)
   const [lookupStoryResult, setLookupStoryResult] = useState<any>(null)
 
+  // --- Microphase 123: Stories Domain Suite Part 4 States ---
+  // Report story (stories.report)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('inputReportReasonSpam')
+  const [reportMessage, setReportMessage] = useState('')
+  const [reportingStory, setReportingStory] = useState(false)
+  const [reportFeedback, setReportFeedback] = useState<string | null>(null)
+
+  // Search posts / stories (stories.searchPosts)
+  const [searchPostsModalOpen, setSearchPostsModalOpen] = useState(false)
+  const [searchHashtag, setSearchHashtag] = useState('')
+  const [searchPostsResults, setSearchPostsResults] = useState<any[]>([])
+  const [searchingPosts, setSearchingPosts] = useState(false)
+
+  // Live story stream (stories.startLive)
+  const [liveStreamModalOpen, setLiveStreamModalOpen] = useState(false)
+  const [liveCaption, setLiveCaption] = useState('')
+  const [startingLive, setStartingLive] = useState(false)
+  const [liveResult, setLiveResult] = useState<any>(null)
+
   useEffect(() => {
     if (initialTab) {
       setStoryTab(initialTab)
@@ -170,7 +194,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // MTProto stories.readStories sync (when not in Ghost / Stealth mode)
   useEffect(() => {
     if (!currentStoryId || localGhostMode || !accountId || !peerId) return
-    if (window.guidegram?.readStories) {
+    if ((window as any).guidegram?.storiesReadStoriesRaw) {
+      (window as any).guidegram.storiesReadStoriesRaw(accountId, { peerId, maxId: currentStoryId }).catch(() => {})
+    } else if (window.guidegram?.readStories) {
       window.guidegram.readStories(accountId, peerId, currentStoryId).catch(() => {})
     }
     // stories.incrementStoryViews
@@ -185,7 +211,14 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     setReactionFeedback(emoticon)
     setTimeout(() => setReactionFeedback(null), 1500)
     try {
-      if (window.guidegram?.sendStoryReaction) {
+      if ((window as any).guidegram?.storiesSendReactionRaw) {
+        await (window as any).guidegram.storiesSendReactionRaw(accountId, {
+          addToRecent: true,
+          peerId,
+          storyId: currentStoryId,
+          reaction: { _: 'reactionEmoji', emoticon },
+        })
+      } else if (window.guidegram?.sendStoryReaction) {
         await window.guidegram.sendStoryReaction(accountId, peerId, currentStoryId, emoticon)
       }
     } catch (err) {
@@ -754,6 +787,91 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
   }, [accountId, peerId, lookupStoryId])
 
+  // --- Microphase 123 Callbacks ---
+  // Report Story (stories.report)
+  const handleReportStory = useCallback(async () => {
+    if (!accountId || !peerId || !currentStoryId) return
+    setReportingStory(true)
+    setReportFeedback(null)
+    try {
+      if ((window as any).guidegram?.storiesReportRaw) {
+        await (window as any).guidegram.storiesReportRaw(accountId, {
+          peerId,
+          id: [currentStoryId],
+          option: { _: reportReason },
+          message: reportMessage.trim() || undefined,
+        })
+        setReportFeedback(isPersian ? 'گزارش تخلف با موفقیت به تلگرام ارسال شد.' : 'Story reported successfully.')
+        setTimeout(() => {
+          setReportModalOpen(false)
+          setReportFeedback(null)
+          setReportMessage('')
+        }, 1500)
+      }
+    } catch (err: any) {
+      setReportFeedback(err?.message || (isPersian ? 'خطا در ثبت گزارش' : 'Failed to report story'))
+    } finally {
+      setReportingStory(false)
+    }
+  }, [accountId, peerId, currentStoryId, reportReason, reportMessage, isPersian])
+
+  // Search Stories Posts (stories.searchPosts)
+  const handleSearchPosts = useCallback(async () => {
+    if (!accountId || !searchHashtag.trim()) return
+    setSearchingPosts(true)
+    setSearchPostsResults([])
+    try {
+      if ((window as any).guidegram?.storiesSearchPostsRaw) {
+        const res = await (window as any).guidegram.storiesSearchPostsRaw(accountId, {
+          hashtag: searchHashtag.replace(/^#/, '').trim(),
+          peerId: peerId || undefined,
+          limit: 20,
+        })
+        const posts = res?.stories || (Array.isArray(res) ? res : [])
+        setSearchPostsResults(posts)
+      }
+    } catch (_) {
+    } finally {
+      setSearchingPosts(false)
+    }
+  }, [accountId, peerId, searchHashtag])
+
+  // Reorder Albums (stories.reorderAlbums)
+  const handleReorderAlbums = useCallback(async () => {
+    if (!accountId || !peerId || albumsList.length <= 1) return
+    try {
+      const reversedIds = [...albumsList].reverse().map((a: any) => a.id || a.album_id || 0)
+      if ((window as any).guidegram?.storiesReorderAlbumsRaw) {
+        await (window as any).guidegram.storiesReorderAlbumsRaw(accountId, {
+          peerId,
+          order: reversedIds,
+        })
+        fetchAlbums()
+      }
+    } catch (_) {}
+  }, [accountId, peerId, albumsList, fetchAlbums])
+
+  // Start Live Story (stories.startLive)
+  const handleStartLiveStory = useCallback(async () => {
+    if (!accountId || !peerId) return
+    setStartingLive(true)
+    setLiveResult(null)
+    try {
+      if ((window as any).guidegram?.storiesStartLiveRaw) {
+        const res = await (window as any).guidegram.storiesStartLiveRaw(accountId, {
+          peerId,
+          caption: liveCaption.trim() || undefined,
+          rtmpStream: true,
+        })
+        setLiveResult(res)
+      }
+    } catch (err: any) {
+      setLiveResult({ error: err?.message || 'Failed to start live story' })
+    } finally {
+      setStartingLive(false)
+    }
+  }, [accountId, peerId, liveCaption])
+
   useEffect(() => {
     if (!isOpen || !currentStoryId || !mediaUrl || mediaLoading || isVideo) return
     let frame = 0
@@ -1002,6 +1120,52 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             >
               <BarChart2 className="h-4 w-4" />
             </button>
+
+            {/* Microphase 123: Search Posts / Hashtags */}
+            <button
+              type="button"
+              onClick={() => {
+                setPaused(true)
+                setSearchPostsModalOpen(true)
+              }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-pink-600/70 hover:text-white"
+              title={isPersian ? 'جستجوی هشتگ در استوری‌ها (searchPosts)' : 'Search story posts'}
+              aria-label="Search story posts"
+            >
+              <Hash className="h-4 w-4" />
+            </button>
+
+            {/* Microphase 123: Report Story */}
+            {!isOwnStory && currentStoryId && !loading && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPaused(true)
+                  setReportModalOpen(true)
+                }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-rose-600/70 hover:text-white"
+                title={isPersian ? 'گزارش تخلف استوری (report)' : 'Report story'}
+                aria-label="Report story"
+              >
+                <Flag className="h-4 w-4" />
+              </button>
+            )}
+
+            {/* Microphase 123: Start Live Story */}
+            {isOwnStory && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPaused(true)
+                  setLiveStreamModalOpen(true)
+                }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-red-600/70 hover:text-white"
+                title={isPersian ? 'آغاز پخش زنده استوری (startLive)' : 'Start live story'}
+                aria-label="Start live story"
+              >
+                <Radio className="h-4 w-4" />
+              </button>
+            )}
 
             {isOwnStory && currentStoryId && !loading && (
               <button
@@ -1615,13 +1779,24 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     <BookOpen className="h-4 w-4" />
                     <span>{isPersian ? 'آلبوم‌های موجود (stories.getAlbums)' : 'Existing Albums'}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={fetchAlbums}
-                    className="text-[10px] text-gray-400 hover:text-white"
-                  >
-                    {isPersian ? 'تازه‌سازی' : 'Refresh'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleReorderAlbums}
+                      className="flex items-center gap-1 text-[10px] text-amber-300 hover:text-white transition-colors"
+                      title={isPersian ? 'معکوس کردن ترتیب آلبوم‌ها (reorderAlbums)' : 'Reorder Albums'}
+                    >
+                      <ArrowUpDown className="h-3 w-3" />
+                      <span>{isPersian ? 'تغییر ترتیب' : 'Reorder'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fetchAlbums}
+                      className="text-[10px] text-gray-400 hover:text-white"
+                    >
+                      {isPersian ? 'تازه‌سازی' : 'Refresh'}
+                    </button>
+                  </div>
                 </div>
 
                 {loadingAlbums && (
@@ -2017,6 +2192,278 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   </pre>
                 </div>
               )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Microphase 123: Report Story Modal */}
+        <AnimatePresence>
+          {reportModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 bottom-20 top-20 z-50 overflow-y-auto rounded-2xl bg-black/95 p-5 text-white backdrop-blur-xl border border-rose-500/30"
+              dir={isPersian ? 'rtl' : 'ltr'}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Flag className="h-5 w-5 text-rose-400" />
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      {isPersian ? 'گزارش تخلف استوری' : 'Report Story'}
+                    </h3>
+                    <div className="text-[10px] text-rose-300">stories.report</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportModalOpen(false)
+                    setPaused(false)
+                  }}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {reportFeedback && (
+                <div className="p-3 mb-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-xs text-rose-200">
+                  {reportFeedback}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1.5 font-medium">
+                    {isPersian ? 'دلیل گزارش:' : 'Reason:'}
+                  </label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-400"
+                  >
+                    <option value="inputReportReasonSpam" className="bg-gray-900 text-white">
+                      {isPersian ? 'هرزنامه و اسپم (Spam)' : 'Spam'}
+                    </option>
+                    <option value="inputReportReasonViolence" className="bg-gray-900 text-white">
+                      {isPersian ? 'خشونت و محتوای خطرناک (Violence)' : 'Violence'}
+                    </option>
+                    <option value="inputReportReasonPornography" className="bg-gray-900 text-white">
+                      {isPersian ? 'محتوای غیراخلاقی (Pornography)' : 'Pornography'}
+                    </option>
+                    <option value="inputReportReasonChildAbuse" className="bg-gray-900 text-white">
+                      {isPersian ? 'سوءاستفاده از کودکان (Child Abuse)' : 'Child Abuse'}
+                    </option>
+                    <option value="inputReportReasonOther" className="bg-gray-900 text-white">
+                      {isPersian ? 'سایر موارد (Other)' : 'Other'}
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1.5 font-medium">
+                    {isPersian ? 'توضیحات تکمیلی (اختیاری):' : 'Additional details (optional):'}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reportMessage}
+                    onChange={(e) => setReportMessage(e.target.value)}
+                    placeholder={isPersian ? 'علت نامناسب بودن این استوری را بنویسید...' : 'Explain why this story is inappropriate...'}
+                    className="w-full rounded-xl bg-white/10 border border-white/10 p-2.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-rose-400 resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportModalOpen(false)
+                      setPaused(false)
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 text-xs text-gray-300 hover:bg-white/20"
+                  >
+                    {isPersian ? 'انصراف' : 'Cancel'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReportStory}
+                    disabled={reportingStory}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-rose-600 text-xs font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+                  >
+                    {reportingStory && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{isPersian ? 'ارسال گزارش' : 'Submit Report'}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Microphase 123: Search Posts / Hashtags Modal */}
+        <AnimatePresence>
+          {searchPostsModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 bottom-16 top-16 z-50 overflow-y-auto rounded-2xl bg-black/95 p-5 text-white backdrop-blur-xl border border-pink-500/30"
+              dir={isPersian ? 'rtl' : 'ltr'}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-5 w-5 text-pink-400" />
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      {isPersian ? 'جستجوی هشتگ استوری‌ها' : 'Search Story Posts'}
+                    </h3>
+                    <div className="text-[10px] text-pink-300">stories.searchPosts</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchPostsModalOpen(false)
+                    setPaused(false)
+                  }}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  placeholder={isPersian ? 'هشتگ بدون علامت # (مثلا tehran)...' : 'Hashtag (e.g. tehran)...'}
+                  value={searchHashtag}
+                  onChange={(e) => setSearchHashtag(e.target.value)}
+                  className="flex-1 rounded-xl bg-white/10 px-3 py-2 text-xs text-white placeholder-gray-400 border border-white/10 focus:outline-none focus:border-pink-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleSearchPosts}
+                  disabled={searchingPosts || !searchHashtag.trim()}
+                  className="px-4 py-2 rounded-xl bg-pink-600 text-xs font-semibold text-white hover:bg-pink-500 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {searchingPosts ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <span>{isPersian ? 'جستجو' : 'Search'}</span>
+                  )}
+                </button>
+              </div>
+
+              {searchingPosts && (
+                <div className="flex items-center justify-center p-6 text-xs text-gray-400">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2 text-pink-400" />
+                  <span>{isPersian ? 'در حال جستجوی پست‌ها...' : 'Searching posts...'}</span>
+                </div>
+              )}
+
+              {!searchingPosts && searchPostsResults.length === 0 && searchHashtag.trim() && (
+                <div className="text-center p-6 text-xs text-gray-400">
+                  {isPersian ? 'هیچ پستی با این هشتگ یافت نشد.' : 'No posts found with this hashtag.'}
+                </div>
+              )}
+
+              {!searchingPosts && searchPostsResults.length > 0 && (
+                <div className="space-y-2">
+                  {searchPostsResults.map((post: any, idx: number) => (
+                    <div
+                      key={post.id || idx}
+                      className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-white">
+                          Story #{post.id || idx + 1}
+                        </div>
+                        <div className="text-[11px] text-gray-300 truncate">
+                          {post.caption || (post.message || 'No caption')}
+                        </div>
+                      </div>
+                      {post.date && (
+                        <span className="text-[10px] text-gray-400">
+                          {new Date(post.date * 1000).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Microphase 123: Start Live Story Modal */}
+        <AnimatePresence>
+          {liveStreamModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 bottom-20 top-20 z-50 overflow-y-auto rounded-2xl bg-black/95 p-5 text-white backdrop-blur-xl border border-red-500/30"
+              dir={isPersian ? 'rtl' : 'ltr'}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Radio className="h-5 w-5 text-red-500 animate-pulse" />
+                  <div>
+                    <h3 className="text-sm font-bold">
+                      {isPersian ? 'پخش زنده استوری تلگرام' : 'Start Live Story Stream'}
+                    </h3>
+                    <div className="text-[10px] text-red-400">stories.startLive</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLiveStreamModalOpen(false)
+                    setPaused(false)
+                  }}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1.5 font-medium">
+                    {isPersian ? 'عنوان و موضوع لایو:' : 'Live broadcast title / topic:'}
+                  </label>
+                  <input
+                    type="text"
+                    value={liveCaption}
+                    onChange={(e) => setLiveCaption(e.target.value)}
+                    placeholder={isPersian ? 'موضوع پخش زنده استوری...' : 'Live stream topic...'}
+                    className="w-full rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-red-400"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleStartLiveStory}
+                  disabled={startingLive}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-xs font-bold text-white hover:from-red-500 hover:to-rose-500 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {startingLive ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Radio className="h-4 w-4" />
+                  )}
+                  <span>{isPersian ? 'شروع پخش زنده (RTMP Stream)' : 'Start Live Broadcast'}</span>
+                </button>
+
+                {liveResult && (
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono overflow-x-auto max-h-40 text-gray-200">
+                    <pre className="text-[10px] whitespace-pre-wrap">
+                      {JSON.stringify(liveResult, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

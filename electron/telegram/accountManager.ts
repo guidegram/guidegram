@@ -23756,6 +23756,128 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.stories_incrementStoryViews(holder as any, accountId, params?.peerId, params?.id)
   }
+
+  // --- Microphase 123: Stories Domain Suite Part 4 ---
+  public async storiesReadStoriesRaw(
+    accountId: string,
+    params: { peerId?: string; maxId?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_readStories(holder as any, accountId, params?.peerId, params?.maxId)
+  }
+
+  public async storiesReorderAlbumsRaw(
+    accountId: string,
+    params: { peerId?: string; order?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_reorderAlbums(holder as any, accountId, params?.peerId, params?.order)
+  }
+
+  public async storiesReportRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any; option?: any; message?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_report(holder as any, accountId, params?.peerId, params?.id, params?.option, params?.message)
+  }
+
+  public async storiesSearchPostsRaw(
+    accountId: string,
+    params: { hashtag?: string; area?: any; peerId?: string; offset?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_searchPosts(holder as any, accountId, params?.hashtag, params?.area, params?.peerId, params?.offset, params?.limit)
+  }
+
+  public async storiesSendReactionRaw(
+    accountId: string,
+    params: { addToRecent?: boolean; peerId?: string; storyId?: number; reaction?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_sendReaction(holder as any, accountId, params?.addToRecent, params?.peerId, params?.storyId, params?.reaction)
+  }
+
+  public async storiesSendStoryRaw(
+    accountId: string,
+    params: {
+      pinned?: boolean
+      noforwards?: boolean
+      fwdModified?: boolean
+      peerId?: string
+      media?: any
+      mediaAreas?: any
+      caption?: string
+      entities?: any
+      privacyRules?: any
+      randomId?: bigint | number
+      period?: number
+      fwdFromIdId?: string
+      fwdFromStory?: number
+      albums?: any
+      music?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_sendStory(
+      holder as any,
+      accountId,
+      params?.pinned,
+      params?.noforwards,
+      params?.fwdModified,
+      params?.peerId,
+      params?.media,
+      params?.mediaAreas,
+      params?.caption,
+      params?.entities,
+      params?.privacyRules,
+      params?.randomId,
+      params?.period,
+      params?.fwdFromIdId,
+      params?.fwdFromStory,
+      params?.albums,
+      params?.music
+    )
+  }
+
+  public async storiesStartLiveRaw(
+    accountId: string,
+    params: {
+      pinned?: boolean
+      noforwards?: boolean
+      rtmpStream?: boolean
+      peerId?: string
+      caption?: string
+      entities?: any
+      privacyRules?: any
+      randomId?: bigint | number
+      messagesEnabled?: boolean
+      sendPaidMessagesStars?: bigint | number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_startLive(
+      holder as any,
+      accountId,
+      params?.pinned,
+      params?.noforwards,
+      params?.rtmpStream,
+      params?.peerId,
+      params?.caption,
+      params?.entities,
+      params?.privacyRules,
+      params?.randomId,
+      params?.messagesEnabled,
+      params?.sendPaidMessagesStars
+    )
+  }
 }
 
 

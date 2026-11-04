@@ -3345,6 +3345,22 @@ const guidegramAPI = {
   storiesIncrementStoryViewsRaw: (accountId: string, params: { peerId?: string; id?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:stories:increment-story-views-raw', { accountId, ...params }),
 
+  // --- Microphase 123: Stories Domain Suite Part 4 ---
+  storiesReadStoriesRaw: (accountId: string, params: { peerId?: string; maxId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:read-stories-raw', { accountId, ...params }),
+  storiesReorderAlbumsRaw: (accountId: string, params: { peerId?: string; order?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:reorder-albums-raw', { accountId, ...params }),
+  storiesReportRaw: (accountId: string, params: { peerId?: string; id?: any; option?: any; message?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:report-raw', { accountId, ...params }),
+  storiesSearchPostsRaw: (accountId: string, params: { hashtag?: string; area?: any; peerId?: string; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:search-posts-raw', { accountId, ...params }),
+  storiesSendReactionRaw: (accountId: string, params: { addToRecent?: boolean; peerId?: string; storyId?: number; reaction?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:send-reaction-raw', { accountId, ...params }),
+  storiesSendStoryRaw: (accountId: string, params: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:send-story-raw', { accountId, ...params }),
+  storiesStartLiveRaw: (accountId: string, params: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:start-live-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
