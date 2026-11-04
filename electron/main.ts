@@ -10802,6 +10802,15 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:phone:toggle-group-call-start-subscription-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneToggleGroupCallStartSubscriptionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneToggleGroupCallStartSubscriptionRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

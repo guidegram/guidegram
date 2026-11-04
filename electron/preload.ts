@@ -3240,6 +3240,8 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:toggle-group-call-record-raw', { accountId, ...params }),
   phoneToggleGroupCallSettingsRaw: (accountId: string, params: { call: any; resetInviteHash?: boolean; joinMuted?: boolean; messagesEnabled?: boolean; sendPaidMessagesStars?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:toggle-group-call-settings-raw', { accountId, ...params }),
+  phoneToggleGroupCallStartSubscriptionRaw: (accountId: string, params: { call: any; subscribed: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:toggle-group-call-start-subscription-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

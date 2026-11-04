@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 82.19,
+  "overall_coverage_pct": 82.30,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -3438,8 +3438,8 @@
         "toggleGroupCallStartSubscription"
       ],
       "method_count": 1,
-      "ui_component": "src/components/StarGiftsModal.tsx",
-      "status": "PENDING",
+      "ui_component": "src/components/GroupCallModal.tsx",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,

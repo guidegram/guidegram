@@ -218,6 +218,10 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   // 7: phone.sendSignalingData
   const [signalingDataHex, setSignalingDataHex] = useState('')
 
+  // Microphase 113: Phone Domain Suite Part 7 State
+  // 1: phone.toggleGroupCallStartSubscription
+  const [startSubscribed, setStartSubscribed] = useState(true)
+
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -1690,6 +1694,32 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Microphase 113: 1. Toggle Group Call Start Subscription (phone.toggleGroupCallStartSubscription)
+  const handleToggleGroupCallStartSubscription = async () => {
+    const targetCallId = scheduledStartCallId.trim() || callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('شناسه تماس گروهی زمان‌بندی‌شده الزامی است')
+      return
+    }
+    setLoadingOp('toggle_start_subscription')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneToggleGroupCallStartSubscriptionRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        subscribed: startSubscribed,
+      })
+      setLastOpResult(res)
+      setSuccessMsg(startSubscribed ? 'یادآور شروع تماس فعال شد (phone.toggleGroupCallStartSubscription)' : 'یادآور تماس لغو شد')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] toggleGroupCallStartSubscription error:', err)
+      setErrorMsg(err?.message || 'خطا در ثبت یادآور تماس زمان‌بندی‌شده')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -2759,6 +2789,35 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                     >
                       {loadingOp === 'send_call_message' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <SendHorizontal className="w-3.5 h-3.5" />}
                       <span>ارسال پیام درون لایو/تماس</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 113: Toggle Group Call Start Subscription (phone.toggleGroupCallStartSubscription) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-pink-400" />
+                      <span>یادآور و اعلان شروع لایو استریم (phone.toggleGroupCallStartSubscription)</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-neutral-400">دریافت نوتیفیکیشن هنگام شروع لایو</span>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={startSubscribed}
+                          onChange={(e) => setStartSubscribed(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-pink-500 focus:ring-0"
+                        />
+                        <span>{startSubscribed ? 'عضویت فعال' : 'غیرفعال'}</span>
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleGroupCallStartSubscription}
+                      disabled={loadingOp === 'toggle_start_subscription'}
+                      className="w-full py-1.5 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'toggle_start_subscription' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                      <span>{startSubscribed ? 'ثبت یادآور شروع تماس' : 'لغو اشتراک یادآور'}</span>
                     </button>
                   </div>
                 </div>

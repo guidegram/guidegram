@@ -23184,6 +23184,18 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_toggleGroupCallSettings(holder as any, params)
   }
+
+  public async phoneToggleGroupCallStartSubscriptionRaw(
+    accountId: string,
+    params: {
+      call: any
+      subscribed: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_toggleGroupCallStartSubscription(holder as any, params)
+  }
 }
 
 

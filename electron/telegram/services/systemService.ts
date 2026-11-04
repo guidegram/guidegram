@@ -1981,16 +1981,26 @@ export class SystemService {
     }
   }
 
-  public async phone_toggleGroupCallStartSubscription(holder: RpcClientHolder, call?: any, subscribed?: boolean): Promise<any> {
+  public async phone_toggleGroupCallStartSubscription(
+    holder: RpcClientHolder,
+    callOrParams?: any,
+    subscribedParam?: boolean
+  ): Promise<any> {
     try {
+      let call = callOrParams
+      let subscribed = subscribedParam
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        subscribed = callOrParams.subscribed ?? subscribed
+      }
       return await holder.client.call({
         _: 'phone.toggleGroupCallStartSubscription',
-        'call': call,
-        'subscribed': subscribed,
+        call: this.toInputGroupCall(call),
+        subscribed: !!subscribed,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.toggleGroupCallStartSubscription error:', err)
-      return null
+      throw err
     }
   }
 
