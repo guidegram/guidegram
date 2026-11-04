@@ -9751,6 +9751,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 096: Payments Domain Suite Part 3 (7 RPCs)
+  ipcMain.handle('telegram:payments:delete-star-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsDeleteStarGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsDeleteStarGiftRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:delete-star-gift-collection-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsDeleteStarGiftCollectionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsDeleteStarGiftCollectionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:deposit-star-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsDepositStarGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsDepositStarGiftRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:display-star-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsDisplayStarGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsDisplayStarGiftRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:edit-connected-star-ref-bot-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsEditConnectedStarRefBotRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsEditConnectedStarRefBotRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:export-invoice-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsExportInvoiceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsExportInvoiceRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:fulfill-stars-subscription-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsFulfillStarsSubscriptionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsFulfillStarsSubscriptionRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

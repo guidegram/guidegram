@@ -2994,6 +2994,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:create-onramp-session-raw', { accountId, ...params }),
   paymentsCreateStarGiftCollectionRaw: (accountId: string, params: { peerId: string; title: string; stargift?: any[] }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:create-star-gift-collection-raw', { accountId, ...params }),
+  // Microphase 096: Payments Domain Suite Part 3 (7 RPCs)
+  paymentsDeleteStarGiftRaw: (accountId: string, params: { stargift: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:delete-star-gift-raw', { accountId, ...params }),
+  paymentsDeleteStarGiftCollectionRaw: (accountId: string, params: { peerId: string; collectionId: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:delete-star-gift-collection-raw', { accountId, ...params }),
+  paymentsDepositStarGiftRaw: (accountId: string, params: { peerId: string; slug: string; hideSender?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:deposit-star-gift-raw', { accountId, ...params }),
+  paymentsDisplayStarGiftRaw: (accountId: string, params: { slug: string; peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:display-star-gift-raw', { accountId, ...params }),
+  paymentsEditConnectedStarRefBotRaw: (accountId: string, params: { peerId: string; link: string; revoked?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:edit-connected-star-ref-bot-raw', { accountId, ...params }),
+  paymentsExportInvoiceRaw: (accountId: string, params: { invoiceMedia: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:export-invoice-raw', { accountId, ...params }),
+  paymentsFulfillStarsSubscriptionRaw: (accountId: string, params: { peerId: string; subscriptionId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:fulfill-stars-subscription-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -11033,6 +11033,242 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 096: Payments Domain Suite Part 3 (7 RPCs)
+  const [m096Status, setM096Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m096LoadingOp, setM096LoadingOp] = useState<string | null>(null)
+  const [m096DeleteGiftInput, setM096DeleteGiftInput] = useState('')
+  const [m096DeleteCollecPeerId, setM096DeleteCollecPeerId] = useState('')
+  const [m096DeleteCollecId, setM096DeleteCollecId] = useState('')
+  const [m096DepositPeerId, setM096DepositPeerId] = useState('')
+  const [m096DepositSlug, setM096DepositSlug] = useState('')
+  const [m096DepositHideSender, setM096DepositHideSender] = useState(false)
+  const [m096DisplaySlug, setM096DisplaySlug] = useState('')
+  const [m096DisplayPeerId, setM096DisplayPeerId] = useState('')
+  const [m096EditRefPeerId, setM096EditRefPeerId] = useState('')
+  const [m096EditRefLink, setM096EditRefLink] = useState('')
+  const [m096EditRefRevoked, setM096EditRefRevoked] = useState(false)
+  const [m096ExportInvoiceParam, setM096ExportInvoiceParam] = useState('')
+  const [m096FulfillPeerId, setM096FulfillPeerId] = useState('')
+  const [m096FulfillSubId, setM096FulfillSubId] = useState('')
+  const [m096OpResult, setM096OpResult] = useState<any | null>(null)
+
+  const handleM096DeleteStarGift = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096DeleteGiftInput.trim()) {
+      setM096Status({ type: 'error', message: 'لطفاً شناسه یا اسلاگ گیفت را وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('deleteStarGift')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsDeleteStarGiftRaw(targetId, {
+        stargift: m096DeleteGiftInput.trim(),
+      })
+      if (res !== undefined && res !== null) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'عملیات حذف گیفت ستاره‌ای با موفقیت انجام شد (payments.deleteStarGift).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ نامعتبر در حذف گیفت.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.deleteStarGift' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
+  const handleM096DeleteStarGiftCollection = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096DeleteCollecPeerId.trim() || !m096DeleteCollecId.trim()) {
+      setM096Status({ type: 'error', message: 'شناسه چت و شناسه کلکسیون را وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('deleteStarGiftCollection')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsDeleteStarGiftCollectionRaw(targetId, {
+        peerId: m096DeleteCollecPeerId.trim(),
+        collectionId: Number(m096DeleteCollecId),
+      })
+      if (res !== undefined && res !== null) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'کلکسیون گیفت مورد نظر با موفقیت حذف شد (payments.deleteStarGiftCollection).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ ناموفق در حذف کلکسیون گیفت.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.deleteStarGiftCollection' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
+  const handleM096DepositStarGift = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096DepositSlug.trim()) {
+      setM096Status({ type: 'error', message: 'لطفاً اسلاگ گیفت را برای واریز وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('depositStarGift')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsDepositStarGiftRaw(targetId, {
+        peerId: m096DepositPeerId.trim() || 'me',
+        slug: m096DepositSlug.trim(),
+        hideSender: m096DepositHideSender,
+      })
+      if (res) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'واریز گیفت ستاره‌ای با موفقیت پردازش شد (payments.depositStarGift).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ نامعتبر در واریز گیفت.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.depositStarGift' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
+  const handleM096DisplayStarGift = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096DisplaySlug.trim()) {
+      setM096Status({ type: 'error', message: 'لطفاً اسلاگ گیفت را برای نمایش در پروفایل وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('displayStarGift')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsDisplayStarGiftRaw(targetId, {
+        slug: m096DisplaySlug.trim(),
+        peerId: m096DisplayPeerId.trim() || undefined,
+      })
+      if (res !== undefined && res !== null) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'تنظیمات نمایش گیفت در پروفایل اعمال شد (payments.displayStarGift).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ ناموفق در تنظیم نمایش گیفت.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.displayStarGift' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
+  const handleM096EditConnectedStarRefBot = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096EditRefPeerId.trim() || !m096EditRefLink.trim()) {
+      setM096Status({ type: 'error', message: 'شناسه چت و لینک همکاری معرف را وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('editConnectedStarRefBot')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsEditConnectedStarRefBotRaw(targetId, {
+        peerId: m096EditRefPeerId.trim(),
+        link: m096EditRefLink.trim(),
+        revoked: m096EditRefRevoked,
+      })
+      if (res) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'ویرایش وضعیت ربات ارجاع ستاره با موفقیت ثبت شد (payments.editConnectedStarRefBot).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ ناموفق در ویرایش ربات همکار.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.editConnectedStarRefBot' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
+  const handleM096ExportInvoice = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096ExportInvoiceParam.trim()) {
+      setM096Status({ type: 'error', message: 'لطفاً پارامتر فاکتور یا شناسه فاکتور را وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('exportInvoice')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsExportInvoiceRaw(targetId, {
+        invoiceMedia: m096ExportInvoiceParam.trim(),
+      })
+      if (res) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'خروجی فاکتور ستاره‌ای با موفقیت صادر گردید (payments.exportInvoice).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ نامعتبر در صدور لینک فاکتور.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.exportInvoice' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
+  const handleM096FulfillStarsSubscription = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m096FulfillPeerId.trim() || !m096FulfillSubId.trim()) {
+      setM096Status({ type: 'error', message: 'شناسه چت و شناسه اشتراک را وارد کنید.' })
+      return
+    }
+    setM096LoadingOp('fulfillStarsSubscription')
+    setM096Status(null)
+    setM096OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsFulfillStarsSubscriptionRaw(targetId, {
+        peerId: m096FulfillPeerId.trim(),
+        subscriptionId: m096FulfillSubId.trim(),
+      })
+      if (res !== undefined && res !== null) {
+        setM096OpResult(res)
+        setM096Status({
+          type: 'success',
+          message: 'تکمیل و نهایی‌سازی اشتراک ستاره‌ای با موفقیت انجام شد (payments.fulfillStarsSubscription).',
+        })
+      } else {
+        setM096Status({ type: 'error', message: 'پاسخ ناموفق در تکمیل اشتراک ستاره.' })
+      }
+    } catch (err: any) {
+      setM096Status({ type: 'error', message: err?.message || 'خطا در payments.fulfillStarsSubscription' })
+    } finally {
+      setM096LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -27927,6 +28163,300 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setM095Status(null)}
+                            className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                          >
+                            تلاش مجدد
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Microphase 096: Payments Domain Suite Part 3 (7 RPCs) */}
+                <div className="bg-dark-800/60 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                        <span>🌟</span>
+                        <span>مدیریت پیشرفته پرداخت و ستاره‌ها (فاز ۳) - حذف، واریز، نمایش و اشتراک‌ها</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        متدهای MTProto لایه ۲۳۲ تلگرام: حذف گیفت ستاره، حذف کلکسیون، واریز گیفت، پین در پروفایل، ویرایش ربات ارجاع، صدور فاکتور و تکمیل اشتراک ستاره‌ها
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                      Phase 096 / Layer 232
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* RPC 1: payments.deleteStarGift */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۱. حذف و ابطال گیفت ستاره‌ای (payments.deleteStarGift)</span>
+                        <span className="text-[10px] text-rose-400 font-mono">Delete Star Gift</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m096DeleteGiftInput}
+                          onChange={(e) => setM096DeleteGiftInput(e.target.value)}
+                          placeholder="شناسه یا اسلاگ گیفت (e.g. gift_12345 or slug)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-rose-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM096DeleteStarGift}
+                          disabled={m096LoadingOp === 'deleteStarGift'}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'deleteStarGift' ? 'در حال حذف...' : 'حذف گیفت'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 2: payments.deleteStarGiftCollection */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۲. حذف کلکسیون گیفت‌های ستاره‌ای (payments.deleteStarGiftCollection)</span>
+                        <span className="text-[10px] text-red-400 font-mono">Delete Collection</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m096DeleteCollecPeerId}
+                          onChange={(e) => setM096DeleteCollecPeerId(e.target.value)}
+                          placeholder="شناسه چت یا کانال (Peer ID)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-red-500"
+                        />
+                        <input
+                          type="number"
+                          value={m096DeleteCollecId}
+                          onChange={(e) => setM096DeleteCollecId(e.target.value)}
+                          placeholder="شناسه عددی کلکسیون (Collection ID)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-red-500"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM096DeleteStarGiftCollection}
+                          disabled={m096LoadingOp === 'deleteStarGiftCollection'}
+                          className="px-3 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/50 border border-red-500/40 text-red-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'deleteStarGiftCollection' ? 'در حال حذف...' : 'حذف کلکسیون'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 3: payments.depositStarGift */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۳. واریز و ثبت گیفت در حساب مقصد (payments.depositStarGift)</span>
+                        <span className="text-[10px] text-emerald-400 font-mono">Deposit Star Gift</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m096DepositPeerId}
+                          onChange={(e) => setM096DepositPeerId(e.target.value)}
+                          placeholder="شناسه مقصد (Peer ID e.g. me)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <input
+                          type="text"
+                          value={m096DepositSlug}
+                          onChange={(e) => setM096DepositSlug(e.target.value)}
+                          placeholder="اسلاگ گیفت (Gift Slug)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m096DepositHideSender}
+                            onChange={(e) => setM096DepositHideSender(e.target.checked)}
+                            className="rounded bg-white/5 border-white/10 text-emerald-500 focus:ring-0"
+                          />
+                          <span>ارسال به صورت مخفیانه و ناشناس (Hide Sender)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleM096DepositStarGift}
+                          disabled={m096LoadingOp === 'depositStarGift'}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'depositStarGift' ? 'در حال واریز...' : 'واریز گیفت'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 4: payments.displayStarGift */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۴. تنظیم وضعیت نمایش گیفت در پروفایل (payments.displayStarGift)</span>
+                        <span className="text-[10px] text-cyan-400 font-mono">Display on Profile</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m096DisplaySlug}
+                          onChange={(e) => setM096DisplaySlug(e.target.value)}
+                          placeholder="اسلاگ گیفت برای نمایش (Gift Slug)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                        />
+                        <input
+                          type="text"
+                          value={m096DisplayPeerId}
+                          onChange={(e) => setM096DisplayPeerId(e.target.value)}
+                          placeholder="شناسه مقصد (اختیاری - پیش‌فرض پروفایل خود)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM096DisplayStarGift}
+                          disabled={m096LoadingOp === 'displayStarGift'}
+                          className="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'displayStarGift' ? 'در حال ذخیره...' : 'اعمال نمایش در پروفایل'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 5: payments.editConnectedStarRefBot */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۵. ویرایش وضعیت اتصال ربات ارجاع همکار (payments.editConnectedStarRefBot)</span>
+                        <span className="text-[10px] text-purple-400 font-mono">Edit Referral Bot</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m096EditRefPeerId}
+                          onChange={(e) => setM096EditRefPeerId(e.target.value)}
+                          placeholder="شناسه چت (Peer ID)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-purple-500"
+                        />
+                        <input
+                          type="text"
+                          value={m096EditRefLink}
+                          onChange={(e) => setM096EditRefLink(e.target.value)}
+                          placeholder="لینک همکاری (Referral Link)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m096EditRefRevoked}
+                            onChange={(e) => setM096EditRefRevoked(e.target.checked)}
+                            className="rounded bg-white/5 border-white/10 text-purple-500 focus:ring-0"
+                          />
+                          <span>لغو و ابطال پیوند ارجاع (Revoke Link)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleM096EditConnectedStarRefBot}
+                          disabled={m096LoadingOp === 'editConnectedStarRefBot'}
+                          className="px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'editConnectedStarRefBot' ? 'در حال ذخیره...' : 'ویرایش ربات ارجاع'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 6: payments.exportInvoice */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۶. صدور لینک و مدیا فاکتور ستاره‌ای (payments.exportInvoice)</span>
+                        <span className="text-[10px] text-amber-400 font-mono">Export Invoice URL</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m096ExportInvoiceParam}
+                          onChange={(e) => setM096ExportInvoiceParam(e.target.value)}
+                          placeholder="شناسه یا اطلاعات فاکتور (Invoice Media / Slug)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM096ExportInvoice}
+                          disabled={m096LoadingOp === 'exportInvoice'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'exportInvoice' ? 'در حال صدور...' : 'صدور فاکتور'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 7: payments.fulfillStarsSubscription */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۷. تکمیل و فعال‌سازی اشتراک ستاره‌ای (payments.fulfillStarsSubscription)</span>
+                        <span className="text-[10px] text-emerald-400 font-mono">Fulfill Subscription</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={m096FulfillPeerId}
+                          onChange={(e) => setM096FulfillPeerId(e.target.value)}
+                          placeholder="شناسه چت مقصد (Peer ID e.g. channel)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <input
+                          type="text"
+                          value={m096FulfillSubId}
+                          onChange={(e) => setM096FulfillSubId(e.target.value)}
+                          placeholder="شناسه اشتراک (Subscription ID e.g. sub_123)"
+                          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={handleM096FulfillStarsSubscription}
+                          disabled={m096LoadingOp === 'fulfillStarsSubscription'}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m096LoadingOp === 'fulfillStarsSubscription' ? 'در حال پردازش...' : 'تکمیل اشتراک ستاره'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Honest Empty State */}
+                    {!m096OpResult && !m096Status && (
+                      <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl text-center text-xs text-gray-500">
+                        هیچ عملیاتی در ماژول پرداخت ۳ اجرا نشده است. برای فراخوانی یا تست یکی از متدهای بالا را اجرا کنید.
+                      </div>
+                    )}
+
+                    {/* Structured Operation Output Box */}
+                    {m096OpResult && (
+                      <div className="bg-black/30 p-2.5 rounded-lg border border-amber-500/20 text-[11px] font-mono text-amber-300 text-left overflow-x-auto max-h-36">
+                        <pre>{JSON.stringify(m096OpResult, null, 2)}</pre>
+                      </div>
+                    )}
+
+                    {/* Status Feedback / Error with Retry */}
+                    {m096Status && (
+                      <div
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                          m096Status.type === 'success'
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                            : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                        }`}
+                      >
+                        <span>{m096Status.message}</span>
+                        {m096Status.type === 'error' && (
+                          <button
+                            type="button"
+                            onClick={() => setM096Status(null)}
                             className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                           >
                             تلاش مجدد

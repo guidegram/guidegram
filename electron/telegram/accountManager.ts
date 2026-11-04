@@ -21752,6 +21752,70 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.createStarGiftCollection(holder as any, accountId, params)
   }
+
+  // Microphase 096: Payments Domain Suite Part 3 (7 RPCs)
+  public async paymentsDeleteStarGiftRaw(
+    accountId: string,
+    params: { stargift: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.deleteStarGift(holder as any, params.stargift)
+  }
+
+  public async paymentsDeleteStarGiftCollectionRaw(
+    accountId: string,
+    params: { peerId: string; collectionId: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.deleteStarGiftCollection(holder as any, accountId, params.peerId, params.collectionId)
+  }
+
+  public async paymentsDepositStarGiftRaw(
+    accountId: string,
+    params: { peerId: string; slug: string; hideSender?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.depositStarGift(holder as any, accountId, params)
+  }
+
+  public async paymentsDisplayStarGiftRaw(
+    accountId: string,
+    params: { slug: string; peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.displayStarGift(holder as any, accountId, params)
+  }
+
+  public async paymentsEditConnectedStarRefBotRaw(
+    accountId: string,
+    params: { peerId: string; link: string; revoked?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.editConnectedStarRefBot(holder as any, accountId, params.peerId, params.link, params.revoked)
+  }
+
+  public async paymentsExportInvoiceRaw(
+    accountId: string,
+    params: { invoiceMedia: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.exportInvoice(holder as any, params.invoiceMedia)
+  }
+
+  public async paymentsFulfillStarsSubscriptionRaw(
+    accountId: string,
+    params: { peerId: string; subscriptionId: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.fulfillStarsSubscription(holder as any, accountId, params.peerId, params.subscriptionId)
+  }
 }
 
 
