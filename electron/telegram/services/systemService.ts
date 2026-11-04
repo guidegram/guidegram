@@ -2407,69 +2407,119 @@ export class SystemService {
     }
   }
 
-  public async langpack_getLangPack(holder: RpcClientHolder, langPack?: string, langCode?: string): Promise<any> {
+  public async langpack_getLangPack(holder: RpcClientHolder, langPackOrParams?: any, langCodeParam?: string): Promise<any> {
     try {
+      let langPack = 'tdesktop'
+      let langCode = 'fa'
+      if (typeof langPackOrParams === 'object' && langPackOrParams !== null && !langPackOrParams._) {
+        langPack = langPackOrParams.langPack ?? langPackOrParams.lang_pack ?? langPack
+        langCode = langPackOrParams.langCode ?? langPackOrParams.lang_code ?? langCode
+      } else {
+        if (langPackOrParams) langPack = String(langPackOrParams)
+        if (langCodeParam) langCode = String(langCodeParam)
+      }
       return await holder.client.call({
         _: 'langpack.getLangPack',
-        'lang_pack': langPack,
-        'lang_code': langCode,
+        lang_pack: langPack,
+        lang_code: langCode,
       })
     } catch (err) {
       Logger.warn('[SystemService] langpack.getLangPack error:', err)
-      return null
+      throw err
     }
   }
 
-  public async langpack_getStrings(holder: RpcClientHolder, langPack?: string, langCode?: string, keys?: string): Promise<any> {
+  public async langpack_getStrings(holder: RpcClientHolder, langPackOrParams?: any, langCodeParam?: string, keysParam?: string[] | string): Promise<any> {
     try {
+      let langPack = 'tdesktop'
+      let langCode = 'fa'
+      let keys: string[] = []
+      if (typeof langPackOrParams === 'object' && langPackOrParams !== null && !langPackOrParams._ && (langPackOrParams.keys !== undefined || langPackOrParams.langCode !== undefined || langPackOrParams.lang_code !== undefined)) {
+        langPack = langPackOrParams.langPack ?? langPackOrParams.lang_pack ?? langPack
+        langCode = langPackOrParams.langCode ?? langPackOrParams.lang_code ?? langCode
+        const rawKeys = langPackOrParams.keys
+        keys = Array.isArray(rawKeys) ? rawKeys.map(String) : (typeof rawKeys === 'string' ? [rawKeys] : [])
+      } else {
+        if (langPackOrParams) langPack = String(langPackOrParams)
+        if (langCodeParam) langCode = String(langCodeParam)
+        if (Array.isArray(keysParam)) keys = keysParam.map(String)
+        else if (typeof keysParam === 'string') keys = [keysParam]
+      }
       return await holder.client.call({
         _: 'langpack.getStrings',
-        'lang_pack': langPack,
-        'lang_code': langCode,
-        'keys': keys,
+        lang_pack: langPack,
+        lang_code: langCode,
+        keys: keys,
       })
     } catch (err) {
       Logger.warn('[SystemService] langpack.getStrings error:', err)
-      return null
+      throw err
     }
   }
 
-  public async langpack_getDifference(holder: RpcClientHolder, langPack?: string, langCode?: string, fromVersion?: number): Promise<any> {
+  public async langpack_getDifference(holder: RpcClientHolder, langPackOrParams?: any, langCodeParam?: string, fromVersionParam?: number): Promise<any> {
     try {
+      let langPack = 'tdesktop'
+      let langCode = 'fa'
+      let fromVersion = 0
+      if (typeof langPackOrParams === 'object' && langPackOrParams !== null && !langPackOrParams._) {
+        langPack = langPackOrParams.langPack ?? langPackOrParams.lang_pack ?? langPack
+        langCode = langPackOrParams.langCode ?? langPackOrParams.lang_code ?? langCode
+        fromVersion = Number(langPackOrParams.fromVersion ?? langPackOrParams.from_version ?? fromVersion)
+      } else {
+        if (langPackOrParams) langPack = String(langPackOrParams)
+        if (langCodeParam) langCode = String(langCodeParam)
+        if (fromVersionParam !== undefined) fromVersion = Number(fromVersionParam)
+      }
       return await holder.client.call({
         _: 'langpack.getDifference',
-        'lang_pack': langPack,
-        'lang_code': langCode,
-        'from_version': fromVersion,
+        lang_pack: langPack,
+        lang_code: langCode,
+        from_version: fromVersion,
       })
     } catch (err) {
       Logger.warn('[SystemService] langpack.getDifference error:', err)
-      return null
+      throw err
     }
   }
 
-  public async langpack_getLanguages(holder: RpcClientHolder, langPack?: string): Promise<any> {
+  public async langpack_getLanguages(holder: RpcClientHolder, langPackOrParams?: any): Promise<any> {
     try {
+      let langPack = 'tdesktop'
+      if (typeof langPackOrParams === 'object' && langPackOrParams !== null && !langPackOrParams._ && (langPackOrParams.langPack !== undefined || langPackOrParams.lang_pack !== undefined)) {
+        langPack = langPackOrParams.langPack ?? langPackOrParams.lang_pack ?? langPack
+      } else if (typeof langPackOrParams === 'string' && langPackOrParams.trim()) {
+        langPack = langPackOrParams.trim()
+      }
       return await holder.client.call({
         _: 'langpack.getLanguages',
-        'lang_pack': langPack,
+        lang_pack: langPack,
       })
     } catch (err) {
       Logger.warn('[SystemService] langpack.getLanguages error:', err)
-      return null
+      throw err
     }
   }
 
-  public async langpack_getLanguage(holder: RpcClientHolder, langPack?: string, langCode?: string): Promise<any> {
+  public async langpack_getLanguage(holder: RpcClientHolder, langPackOrParams?: any, langCodeParam?: string): Promise<any> {
     try {
+      let langPack = 'tdesktop'
+      let langCode = 'fa'
+      if (typeof langPackOrParams === 'object' && langPackOrParams !== null && !langPackOrParams._) {
+        langPack = langPackOrParams.langPack ?? langPackOrParams.lang_pack ?? langPack
+        langCode = langPackOrParams.langCode ?? langPackOrParams.lang_code ?? langCode
+      } else {
+        if (langPackOrParams) langPack = String(langPackOrParams)
+        if (langCodeParam) langCode = String(langCodeParam)
+      }
       return await holder.client.call({
         _: 'langpack.getLanguage',
-        'lang_pack': langPack,
-        'lang_code': langCode,
+        lang_pack: langPack,
+        lang_code: langCode,
       })
     } catch (err) {
       Logger.warn('[SystemService] langpack.getLanguage error:', err)
-      return null
+      throw err
     }
   }
 

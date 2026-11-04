@@ -259,6 +259,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [sensitiveContentEnabled, setSensitiveContentEnabled] = useState<boolean>(false)
   const [archiveAndMuteNonContacts, setArchiveAndMuteNonContacts] = useState<boolean>(false)
   const [isLoadingContentSettings, setIsLoadingContentSettings] = useState<boolean>(false)
+
+  // Microphase 114: Langpack Domain Suite States
+  const [langPackPlatform, setLangPackPlatform] = useState('tdesktop')
+  const [langPackCode, setLangPackCode] = useState('fa')
+  const [langPackFromVersion, setLangPackFromVersion] = useState(0)
+  const [langPackQueryKeys, setLangPackQueryKeys] = useState('lng_intro, lng_settings_general')
+  const [langPackLanguagesList, setLangPackLanguagesList] = useState<any[]>([])
+  const [langPackActiveLanguageInfo, setLangPackActiveLanguageInfo] = useState<any | null>(null)
+  const [langPackStringsResult, setLangPackStringsResult] = useState<any[]>([])
+  const [langPackDiffResult, setLangPackDiffResult] = useState<any | null>(null)
+  const [langPackLoadingOp, setLangPackLoadingOp] = useState<string | null>(null)
+  const [langPackStatus, setLangPackStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [passkeysList, setPasskeysList] = useState<any[]>([])
   const [isLoadingPasskeys, setIsLoadingPasskeys] = useState<boolean>(false)
   const [notifyExceptionsCount, setNotifyExceptionsCount] = useState<number | null>(null)
@@ -2022,6 +2034,116 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setUpdateCheckResult('Check failed. Make sure your connection or proxy is active.')
     } finally {
       setCheckingUpdate(false)
+    }
+  }
+
+  // Microphase 114: 1. Get Languages (langpack.getLanguages)
+  const handleLangpackGetLanguages = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setLangPackLoadingOp('getLanguages')
+    setLangPackStatus(null)
+    try {
+      const res = await window.guidegram?.langpackGetLanguagesRaw?.(targetId, {
+        langPack: langPackPlatform.trim() || 'tdesktop',
+      })
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.languages) ? res.languages : [])
+      setLangPackLanguagesList(list)
+      setLangPackStatus({ type: 'success', message: `تعداد ${list.length} زبان رسمی تلگرام دریافت شد (langpack.getLanguages)` })
+    } catch (err: any) {
+      setLangPackStatus({ type: 'error', message: err?.message || 'خطا در دریافت زبان‌ها' })
+    } finally {
+      setLangPackLoadingOp(null)
+    }
+  }
+
+  // Microphase 114: 2. Get Language (langpack.getLanguage)
+  const handleLangpackGetLanguage = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setLangPackLoadingOp('getLanguage')
+    setLangPackStatus(null)
+    try {
+      const res = await window.guidegram?.langpackGetLanguageRaw?.(targetId, {
+        langPack: langPackPlatform.trim() || 'tdesktop',
+        langCode: langPackCode.trim() || 'fa',
+      })
+      setLangPackActiveLanguageInfo(res)
+      setLangPackStatus({ type: 'success', message: `مشخصات زبان ${res?.name || langPackCode} دریافت شد (langpack.getLanguage)` })
+    } catch (err: any) {
+      setLangPackStatus({ type: 'error', message: err?.message || 'خطا در دریافت مشخصات زبان' })
+    } finally {
+      setLangPackLoadingOp(null)
+    }
+  }
+
+  // Microphase 114: 3. Get Strings (langpack.getStrings)
+  const handleLangpackGetStrings = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    const keys = langPackQueryKeys.split(/[,;\s]+/).map(k => k.trim()).filter(Boolean)
+    if (keys.length === 0) {
+      setLangPackStatus({ type: 'error', message: 'حداقل یک کلید ترجمه الزامی است' })
+      return
+    }
+    setLangPackLoadingOp('getStrings')
+    setLangPackStatus(null)
+    try {
+      const res = await window.guidegram?.langpackGetStringsRaw?.(targetId, {
+        langPack: langPackPlatform.trim() || 'tdesktop',
+        langCode: langPackCode.trim() || 'fa',
+        keys,
+      })
+      const strings = Array.isArray(res) ? res : []
+      setLangPackStringsResult(strings)
+      setLangPackStatus({ type: 'success', message: `تعداد ${strings.length} رشته ترجمه دریافت شد (langpack.getStrings)` })
+    } catch (err: any) {
+      setLangPackStatus({ type: 'error', message: err?.message || 'خطا در استعلام رشته‌های ترجمه' })
+    } finally {
+      setLangPackLoadingOp(null)
+    }
+  }
+
+  // Microphase 114: 4. Get Difference (langpack.getDifference)
+  const handleLangpackGetDifference = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setLangPackLoadingOp('getDifference')
+    setLangPackStatus(null)
+    try {
+      const res = await window.guidegram?.langpackGetDifferenceRaw?.(targetId, {
+        langPack: langPackPlatform.trim() || 'tdesktop',
+        langCode: langPackCode.trim() || 'fa',
+        fromVersion: Number(langPackFromVersion) || 0,
+      })
+      setLangPackDiffResult(res)
+      const count = Array.isArray(res?.strings) ? res.strings.length : 0
+      setLangPackStatus({ type: 'success', message: `تفاوت‌های نسخه با ${count} رشته جدید دریافت شد (langpack.getDifference)` })
+    } catch (err: any) {
+      setLangPackStatus({ type: 'error', message: err?.message || 'خطا در دریافت تفاوت‌های بسته زبان' })
+    } finally {
+      setLangPackLoadingOp(null)
+    }
+  }
+
+  // Microphase 114: 5. Get Lang Pack (langpack.getLangPack)
+  const handleLangpackGetLangPack = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setLangPackLoadingOp('getLangPack')
+    setLangPackStatus(null)
+    try {
+      const res = await window.guidegram?.langpackGetLangPackRaw?.(targetId, {
+        langPack: langPackPlatform.trim() || 'tdesktop',
+        langCode: langPackCode.trim() || 'fa',
+      })
+      setLangPackDiffResult(res)
+      const count = Array.isArray(res?.strings) ? res.strings.length : 0
+      setLangPackStatus({ type: 'success', message: `کل بسته زبان با ${count} رشته دانلود شد (langpack.getLangPack)` })
+    } catch (err: any) {
+      setLangPackStatus({ type: 'error', message: err?.message || 'خطا در دریافت کامل بسته زبان' })
+    } finally {
+      setLangPackLoadingOp(null)
     }
   }
 
@@ -12052,6 +12174,208 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span>🇮🇷 {t('settings.lang_fa')}</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Microphase 114: Native Telegram MTProto Langpack Domain Suite */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-gray-200 flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-sky-400" />
+                        <span>پروتکل رسمی بسته‌های زبان تلگرام (Langpack Domain Suite - Microphase 114)</span>
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        همگام‌سازی مستقیم بسته‌های محلی‌سازی، استعلام رشته‌های ترجمه و اطلاعات زبان‌ها با سرور MTProto تلگرام
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                      Layer 232 • 5 RPCs
+                    </span>
+                  </div>
+
+                  {/* Config Inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">شناسه پلتفرم (Platform Pack)</label>
+                      <input
+                        type="text"
+                        value={langPackPlatform}
+                        onChange={(e) => setLangPackPlatform(e.target.value)}
+                        placeholder="tdesktop / android / ios"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 font-mono focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">کد زبان (Language Code)</label>
+                      <input
+                        type="text"
+                        value={langPackCode}
+                        onChange={(e) => setLangPackCode(e.target.value)}
+                        placeholder="fa / en / ar"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 font-mono focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">نسخه پایه تفاوت (From Version)</label>
+                      <input
+                        type="number"
+                        value={langPackFromVersion}
+                        onChange={(e) => setLangPackFromVersion(Number(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 font-mono focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    {/* 1. langpack.getLanguages */}
+                    <button
+                      type="button"
+                      onClick={handleLangpackGetLanguages}
+                      disabled={langPackLoadingOp === 'getLanguages'}
+                      className="py-2 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-sky-300 text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="دریافت لیست تمام زبان‌های رسمی این پلتفرم"
+                    >
+                      {langPackLoadingOp === 'getLanguages' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+                      <span>زبان‌های رسمی</span>
+                    </button>
+
+                    {/* 2. langpack.getLanguage */}
+                    <button
+                      type="button"
+                      onClick={handleLangpackGetLanguage}
+                      disabled={langPackLoadingOp === 'getLanguage'}
+                      className="py-2 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="استعلام مشخصات و قوانین جمع زبان انتخابی"
+                    >
+                      {langPackLoadingOp === 'getLanguage' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                      <span>مشخصات زبان</span>
+                    </button>
+
+                    {/* 3. langpack.getDifference */}
+                    <button
+                      type="button"
+                      onClick={handleLangpackGetDifference}
+                      disabled={langPackLoadingOp === 'getDifference'}
+                      className="py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-300 text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="دریافت تغییرات و رشته‌های جدید نسبت به نسخه قبلی"
+                    >
+                      {langPackLoadingOp === 'getDifference' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      <span>تفاوت نسخه</span>
+                    </button>
+
+                    {/* 4. langpack.getLangPack */}
+                    <button
+                      type="button"
+                      onClick={handleLangpackGetLangPack}
+                      disabled={langPackLoadingOp === 'getLangPack'}
+                      className="py-2 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-300 text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="دانلود کامل تمام رشته‌های زبان از سرور تلگرام"
+                    >
+                      {langPackLoadingOp === 'getLangPack' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      <span>دانلود کل پَک</span>
+                    </button>
+                  </div>
+
+                  {/* 5. langpack.getStrings Query Bar */}
+                  <div className="p-3 rounded-xl bg-dark-900/60 border border-white/5 space-y-2">
+                    <div className="text-[11px] font-semibold text-gray-300 flex items-center gap-1.5">
+                      <Code className="w-3.5 h-3.5 text-amber-400" />
+                      <span>استعلام رشته‌های مشخص زبان (langpack.getStrings)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={langPackQueryKeys}
+                        onChange={(e) => setLangPackQueryKeys(e.target.value)}
+                        placeholder="کلیدهای رشته با کاما (مثلاً lng_intro, lng_settings_general)"
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-dark-850 border border-white/10 text-xs text-gray-200 font-mono focus:outline-none focus:border-amber-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleLangpackGetStrings}
+                        disabled={langPackLoadingOp === 'getStrings'}
+                        className="py-1.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {langPackLoadingOp === 'getStrings' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Code className="w-3.5 h-3.5" />}
+                        <span>استعلام رشته‌ها</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Status Banner */}
+                  {langPackStatus && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                        langPackStatus.type === 'success'
+                          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/10 border border-rose-500/20 text-rose-300'
+                      }`}
+                    >
+                      {langPackStatus.type === 'success' ? (
+                        <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                      )}
+                      <span>{langPackStatus.message}</span>
+                    </div>
+                  )}
+
+                  {/* Results: Languages List */}
+                  {langPackLanguagesList.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-semibold text-gray-400">زبان‌های دریافت شده ({langPackLanguagesList.length}):</div>
+                      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1.5 rounded-xl bg-dark-900 border border-white/5 scrollbar-thin">
+                        {langPackLanguagesList.map((l: any, i: number) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              setLangPackCode(l.lang_code || l.langCode || '')
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-dark-800 hover:bg-sky-500/20 hover:text-sky-300 border border-white/5 text-[10px] text-gray-300 font-mono transition-colors cursor-pointer"
+                          >
+                            {l.name || l.native_name || l.nativeName} ({l.lang_code || l.langCode})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Results: Active Language Info */}
+                  {langPackActiveLanguageInfo && (
+                    <div className="p-2.5 rounded-xl bg-dark-900 border border-white/5 font-mono text-[11px] text-gray-300 space-y-1">
+                      <div>نام زبان: <span className="text-sky-400 font-bold">{langPackActiveLanguageInfo.name}</span> ({langPackActiveLanguageInfo.native_name || langPackActiveLanguageInfo.nativeName})</div>
+                      <div>کد زبان: <span className="text-gray-200">{langPackActiveLanguageInfo.lang_code || langPackActiveLanguageInfo.langCode}</span> | راست‌چین (RTL): <span className={langPackActiveLanguageInfo.rtl ? 'text-emerald-400' : 'text-gray-400'}>{langPackActiveLanguageInfo.rtl ? 'بله' : 'خیر'}</span></div>
+                      {langPackActiveLanguageInfo.strings_count !== undefined && (
+                        <div>تعداد کل رشته‌ها: <span className="text-amber-400">{langPackActiveLanguageInfo.strings_count}</span></div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Results: Strings Display */}
+                  {langPackStringsResult.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-semibold text-gray-400">رشته‌های ترجمه ({langPackStringsResult.length}):</div>
+                      <div className="space-y-1 max-h-36 overflow-y-auto p-2 rounded-xl bg-dark-900 border border-white/5 scrollbar-thin text-xs font-mono">
+                        {langPackStringsResult.map((s: any, idx: number) => (
+                          <div key={idx} className="p-1.5 rounded-lg bg-dark-850 border border-white/5 flex flex-col gap-0.5">
+                            <span className="text-sky-400 font-semibold">{s.key}:</span>
+                            <span className="text-gray-200 font-sans text-[11px]">{s.value || s.zero_value || s.one_value || s.other_value || JSON.stringify(s)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Results: Pack / Difference Info */}
+                  {langPackDiffResult && (
+                    <div className="p-2.5 rounded-xl bg-dark-900 border border-white/5 font-mono text-[11px] text-gray-300 space-y-1">
+                      <div>نسخه بسته: <span className="text-emerald-400 font-bold">{langPackDiffResult.version}</span></div>
+                      <div>تعداد رشته‌ها: <span className="text-sky-400">{Array.isArray(langPackDiffResult.strings) ? langPackDiffResult.strings.length : 0}</span></div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Window Close Action (Desktop Only) */}

@@ -3242,6 +3242,16 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:toggle-group-call-settings-raw', { accountId, ...params }),
   phoneToggleGroupCallStartSubscriptionRaw: (accountId: string, params: { call: any; subscribed: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:toggle-group-call-start-subscription-raw', { accountId, ...params }),
+  langpackGetDifferenceRaw: (accountId: string, params: { langPack?: string; langCode?: string; fromVersion?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:langpack:get-difference-raw', { accountId, ...params }),
+  langpackGetLangPackRaw: (accountId: string, params: { langPack?: string; langCode?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:langpack:get-lang-pack-raw', { accountId, ...params }),
+  langpackGetLanguageRaw: (accountId: string, params: { langPack?: string; langCode?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:langpack:get-language-raw', { accountId, ...params }),
+  langpackGetLanguagesRaw: (accountId: string, params: { langPack?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:langpack:get-languages-raw', { accountId, ...params }),
+  langpackGetStringsRaw: (accountId: string, params: { langPack?: string; langCode?: string; keys: string[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:langpack:get-strings-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

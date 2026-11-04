@@ -23196,6 +23196,67 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_toggleGroupCallStartSubscription(holder as any, params)
   }
+
+  public async langpackGetDifferenceRaw(
+    accountId: string,
+    params: {
+      langPack?: string
+      langCode?: string
+      fromVersion?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.langpack_getDifference(holder as any, params)
+  }
+
+  public async langpackGetLangPackRaw(
+    accountId: string,
+    params: {
+      langPack?: string
+      langCode?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.langpack_getLangPack(holder as any, params)
+  }
+
+  public async langpackGetLanguageRaw(
+    accountId: string,
+    params: {
+      langPack?: string
+      langCode?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.langpack_getLanguage(holder as any, params)
+  }
+
+  public async langpackGetLanguagesRaw(
+    accountId: string,
+    params: {
+      langPack?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.langpack_getLanguages(holder as any, params)
+  }
+
+  public async langpackGetStringsRaw(
+    accountId: string,
+    params: {
+      langPack?: string
+      langCode?: string
+      keys: string[]
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.langpack_getStrings(holder as any, params)
+  }
 }
 
 

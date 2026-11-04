@@ -10811,6 +10811,51 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:langpack:get-difference-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.langpackGetDifferenceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] langpackGetDifferenceRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:langpack:get-lang-pack-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.langpackGetLangPackRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] langpackGetLangPackRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:langpack:get-language-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.langpackGetLanguageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] langpackGetLanguageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:langpack:get-languages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.langpackGetLanguagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] langpackGetLanguagesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:langpack:get-strings-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.langpackGetStringsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] langpackGetStringsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
