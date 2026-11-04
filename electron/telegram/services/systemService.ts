@@ -833,6 +833,46 @@ export class SystemService {
     return { _: 'inputDocumentEmpty' }
   }
 
+  private toInputGroupCall(call: any): any {
+    if (!call) return { _: 'inputGroupCall', id: 0n, access_hash: 0n }
+    if (typeof call === 'object' && call._) return call
+    if (typeof call === 'object' && call.id) {
+      return {
+        _: 'inputGroupCall',
+        id: BigInt(call.id),
+        access_hash: BigInt(call.accessHash || call.access_hash || 0),
+      }
+    }
+    if (typeof call === 'string' || typeof call === 'number' || typeof call === 'bigint') {
+      return {
+        _: 'inputGroupCall',
+        id: BigInt(call),
+        access_hash: 0n,
+      }
+    }
+    return { _: 'inputGroupCall', id: 0n, access_hash: 0n }
+  }
+
+  private toInputPhoneCall(call: any): any {
+    if (!call) return { _: 'inputPhoneCall', id: 0n, access_hash: 0n }
+    if (typeof call === 'object' && call._) return call
+    if (typeof call === 'object' && call.id) {
+      return {
+        _: 'inputPhoneCall',
+        id: BigInt(call.id),
+        access_hash: BigInt(call.accessHash || call.access_hash || 0),
+      }
+    }
+    if (typeof call === 'string' || typeof call === 'number' || typeof call === 'bigint') {
+      return {
+        _: 'inputPhoneCall',
+        id: BigInt(call),
+        access_hash: 0n,
+      }
+    }
+    return { _: 'inputPhoneCall', id: 0n, access_hash: 0n }
+  }
+
   public async stickers_createStickerSet(
     holder: RpcClientHolder,
     accountId: string,
@@ -1143,32 +1183,56 @@ export class SystemService {
     }
   }
 
-  public async phone_acceptCall(holder: RpcClientHolder, peer?: any, gB?: any, protocol?: any): Promise<any> {
+  public async phone_acceptCall(holder: RpcClientHolder, peerOrParams?: any, gB?: any, protocol?: any): Promise<any> {
     try {
+      let peer = peerOrParams
+      let b = gB
+      let prot = protocol
+      if (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && peerOrParams.peer !== undefined) {
+        peer = peerOrParams.peer
+        b = peerOrParams.gB ?? peerOrParams.g_b
+        prot = peerOrParams.protocol
+      }
       return await holder.client.call({
         _: 'phone.acceptCall',
-        'peer': peer,
-        'g_b': gB,
-        'protocol': protocol,
+        peer: this.toInputPhoneCall(peer),
+        g_b: typeof b === 'string' ? Buffer.from(b, 'hex') : (b || new Uint8Array(0)),
+        protocol: prot || { _: 'phoneCallProtocol', min_layer: 93, max_layer: 93, udp_p2p: true, udp_reflector: true, library_versions: ['1.0.0'] },
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.acceptCall error:', err)
-      return null
+      throw err
     }
   }
 
-  public async phone_confirmCall(holder: RpcClientHolder, peer?: any, gA?: any, keyFingerprint?: bigint | number, protocol?: any): Promise<any> {
+  public async phone_confirmCall(
+    holder: RpcClientHolder,
+    peerOrParams?: any,
+    gA?: any,
+    keyFingerprint?: bigint | number,
+    protocol?: any
+  ): Promise<any> {
     try {
+      let peer = peerOrParams
+      let a = gA
+      let fp = keyFingerprint
+      let prot = protocol
+      if (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && peerOrParams.peer !== undefined) {
+        peer = peerOrParams.peer
+        a = peerOrParams.gA ?? peerOrParams.g_a
+        fp = peerOrParams.keyFingerprint ?? peerOrParams.key_fingerprint
+        prot = peerOrParams.protocol
+      }
       return await holder.client.call({
         _: 'phone.confirmCall',
-        'peer': peer,
-        'g_a': gA,
-        'key_fingerprint': keyFingerprint,
-        'protocol': protocol,
+        peer: this.toInputPhoneCall(peer),
+        g_a: typeof a === 'string' ? Buffer.from(a, 'hex') : (a || new Uint8Array(0)),
+        key_fingerprint: fp !== undefined ? BigInt(fp) : 0n,
+        protocol: prot || { _: 'phoneCallProtocol', min_layer: 93, max_layer: 93, udp_p2p: true, udp_reflector: true, library_versions: ['1.0.0'] },
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.confirmCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1241,19 +1305,40 @@ export class SystemService {
     }
   }
 
-  public async phone_createGroupCall(holder: RpcClientHolder, accountId: string, rtmpStream?: boolean, peerId?: string, randomId?: number, title?: string, scheduleDate?: number): Promise<any> {
+  public async phone_createGroupCall(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrRtmp?: any,
+    peerId?: string,
+    randomId?: number,
+    title?: string,
+    scheduleDate?: number
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrRtmp === 'object' && paramsOrRtmp !== null && !paramsOrRtmp._) {
+        p = paramsOrRtmp
+      } else {
+        p = {
+          rtmpStream: paramsOrRtmp,
+          peerId,
+          randomId,
+          title,
+          scheduleDate,
+        }
+      }
+      const peer = p.peerId || p.peer_id || p.peer
       return await holder.client.call({
         _: 'phone.createGroupCall',
-        'rtmp_stream': rtmpStream,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'random_id': randomId,
-        'title': title,
-        'schedule_date': scheduleDate,
+        rtmp_stream: !!(p.rtmpStream ?? p.rtmp_stream),
+        peer: peer ? await this.resolveInputPeer(accountId, peer) : undefined,
+        random_id: p.randomId ?? p.random_id ?? Math.floor(Math.random() * 0x7fffffff),
+        title: p.title || '',
+        schedule_date: p.scheduleDate ?? p.schedule_date,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.createGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1359,16 +1444,28 @@ export class SystemService {
     }
   }
 
-  public async phone_checkGroupCall(holder: RpcClientHolder, call?: any, sources?: number): Promise<any> {
+  public async phone_checkGroupCall(holder: RpcClientHolder, callOrParams?: any, sources?: any): Promise<any> {
     try {
+      let call = callOrParams
+      let src = sources
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        src = callOrParams.sources
+      }
+      let resolvedSources: number[] = []
+      if (Array.isArray(src)) {
+        resolvedSources = src.map(Number)
+      } else if (typeof src === 'number') {
+        resolvedSources = [src]
+      }
       return await holder.client.call({
         _: 'phone.checkGroupCall',
-        'call': call,
-        'sources': sources,
+        call: this.toInputGroupCall(call),
+        sources: resolvedSources,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.checkGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1547,37 +1644,85 @@ export class SystemService {
     }
   }
 
-  public async phone_createConferenceCall(holder: RpcClientHolder, muted?: boolean, videoStopped?: boolean, join?: boolean, randomId?: number, publicKey?: any, block?: any, params?: any): Promise<any> {
+  public async phone_createConferenceCall(
+    holder: RpcClientHolder,
+    paramsOrMuted?: any,
+    videoStopped?: boolean,
+    join?: boolean,
+    randomId?: number,
+    publicKey?: any,
+    block?: any,
+    params?: any
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrMuted === 'object' && paramsOrMuted !== null && !paramsOrMuted._) {
+        p = paramsOrMuted
+      } else {
+        p = {
+          muted: paramsOrMuted,
+          videoStopped,
+          join,
+          randomId,
+          publicKey,
+          block,
+          params,
+        }
+      }
       return await holder.client.call({
         _: 'phone.createConferenceCall',
-        'muted': muted,
-        'video_stopped': videoStopped,
-        'join': join,
-        'random_id': randomId,
-        'public_key': publicKey,
-        'block': block,
-        'params': params,
+        muted: !!p.muted,
+        video_stopped: !!p.videoStopped || !!p.video_stopped,
+        join: !!p.join,
+        random_id: p.randomId ?? p.random_id ?? Math.floor(Math.random() * 0x7fffffff),
+        public_key: p.publicKey || p.public_key,
+        block: p.block,
+        params: p.params ? (typeof p.params === 'string' ? { _: 'dataJSON', data: p.params } : p.params) : undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.createConferenceCall error:', err)
-      return null
+      throw err
     }
   }
 
-  public async phone_deleteConferenceCallParticipants(holder: RpcClientHolder, onlyLeft?: boolean, kick?: boolean, call?: any, ids?: bigint | number, block?: any): Promise<any> {
+  public async phone_deleteConferenceCallParticipants(
+    holder: RpcClientHolder,
+    paramsOrOnlyLeft?: any,
+    kick?: boolean,
+    call?: any,
+    ids?: any,
+    block?: any
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrOnlyLeft === 'object' && paramsOrOnlyLeft !== null && !paramsOrOnlyLeft._) {
+        p = paramsOrOnlyLeft
+      } else {
+        p = {
+          onlyLeft: paramsOrOnlyLeft,
+          kick,
+          call,
+          ids,
+          block,
+        }
+      }
+      let resolvedIds: bigint[] = []
+      if (Array.isArray(p.ids)) {
+        resolvedIds = p.ids.map((id: any) => BigInt(id))
+      } else if (p.ids !== undefined) {
+        resolvedIds = [BigInt(p.ids)]
+      }
       return await holder.client.call({
         _: 'phone.deleteConferenceCallParticipants',
-        'only_left': onlyLeft,
-        'kick': kick,
-        'call': call,
-        'ids': ids,
-        'block': block,
+        only_left: !!(p.onlyLeft ?? p.only_left),
+        kick: !!p.kick,
+        call: this.toInputGroupCall(p.call),
+        ids: resolvedIds,
+        block: p.block,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.deleteConferenceCallParticipants error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1608,15 +1753,18 @@ export class SystemService {
     }
   }
 
-  public async phone_declineConferenceCallInvite(holder: RpcClientHolder, msgId?: number): Promise<any> {
+  public async phone_declineConferenceCallInvite(holder: RpcClientHolder, msgIdOrParams?: any): Promise<any> {
     try {
+      const msgId = (typeof msgIdOrParams === 'object' && msgIdOrParams !== null && msgIdOrParams.msgId !== undefined)
+        ? msgIdOrParams.msgId
+        : (typeof msgIdOrParams === 'object' && msgIdOrParams !== null && msgIdOrParams.msg_id !== undefined ? msgIdOrParams.msg_id : msgIdOrParams)
       return await holder.client.call({
         _: 'phone.declineConferenceCallInvite',
-        'msg_id': msgId,
+        msg_id: Number(msgId || 0),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.declineConferenceCallInvite error:', err)
-      return null
+      throw err
     }
   }
 

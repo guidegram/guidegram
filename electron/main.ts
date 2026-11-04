@@ -10419,6 +10419,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Phone Suite (Microphase 107)
+  ipcMain.handle('telegram:phone:accept-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneAcceptCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneAcceptCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:check-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneCheckGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneCheckGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:confirm-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneConfirmCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneConfirmCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:create-conference-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneCreateConferenceCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneCreateConferenceCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:create-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneCreateGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneCreateGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:decline-conference-call-invite-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneDeclineConferenceCallInviteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneDeclineConferenceCallInviteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:delete-conference-call-participants-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneDeleteConferenceCallParticipantsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneDeleteConferenceCallParticipantsRaw error:', err)
+      throw err
+    }
+  })
+
 
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {

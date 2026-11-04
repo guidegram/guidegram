@@ -22642,6 +22642,96 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.stickers_suggestShortName(holder as any, params?.title)
   }
+
+  // Layer 232 Phone Suite (Microphase 107)
+  public async phoneAcceptCallRaw(
+    accountId: string,
+    params: { peer: any; gB?: any; protocol?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_acceptCall(holder as any, params?.peer, params?.gB, params?.protocol)
+  }
+
+  public async phoneCheckGroupCallRaw(
+    accountId: string,
+    params: { call: any; sources: number[] }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_checkGroupCall(holder as any, params?.call, params?.sources)
+  }
+
+  public async phoneConfirmCallRaw(
+    accountId: string,
+    params: { peer: any; gA?: any; keyFingerprint?: bigint | number; protocol?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_confirmCall(
+      holder as any,
+      params?.peer,
+      params?.gA,
+      params?.keyFingerprint,
+      params?.protocol
+    )
+  }
+
+  public async phoneCreateConferenceCallRaw(
+    accountId: string,
+    params: {
+      muted?: boolean
+      videoStopped?: boolean
+      join?: boolean
+      randomId?: number
+      publicKey?: any
+      block?: any
+      params?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_createConferenceCall(holder as any, params)
+  }
+
+  public async phoneCreateGroupCallRaw(
+    accountId: string,
+    params: {
+      rtmpStream?: boolean
+      peerId?: string
+      randomId?: number
+      title?: string
+      scheduleDate?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_createGroupCall(holder as any, accountId, params)
+  }
+
+  public async phoneDeclineConferenceCallInviteRaw(
+    accountId: string,
+    params: { msgId: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_declineConferenceCallInvite(holder as any, params?.msgId)
+  }
+
+  public async phoneDeleteConferenceCallParticipantsRaw(
+    accountId: string,
+    params: {
+      onlyLeft?: boolean
+      kick?: boolean
+      call: any
+      ids: (bigint | number)[]
+      block?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_deleteConferenceCallParticipants(holder as any, params)
+  }
 }
 
 
