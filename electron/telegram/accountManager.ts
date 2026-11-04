@@ -23599,6 +23599,70 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.messagingService.stories_exportStoryLink(holder as any, accountId, params?.peerId, params?.id)
   }
+
+  // --- Microphase 121: Stories Domain Suite Part 2 ---
+  public async storiesGetAlbumStoriesRaw(
+    accountId: string,
+    params: { peerId?: string; albumId?: number; offset?: number; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getAlbumStories(holder as any, accountId, params?.peerId, params?.albumId, params?.offset, params?.limit)
+  }
+
+  public async storiesGetAlbumsRaw(
+    accountId: string,
+    params: { peerId?: string; hash?: bigint | number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getAlbums(holder as any, accountId, params?.peerId, params?.hash)
+  }
+
+  public async storiesGetAllReadPeerStoriesRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getAllReadPeerStories(holder as any, params)
+  }
+
+  public async storiesGetAllStoriesRaw(
+    accountId: string,
+    params: { next?: boolean; hidden?: boolean; state?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getAllStories(holder as any, params?.next, params?.hidden, params?.state)
+  }
+
+  public async storiesGetChatsToSendRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getChatsToSend(holder as any, params)
+  }
+
+  public async storiesGetPeerMaxIDsRaw(
+    accountId: string,
+    params: { idId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getPeerMaxIDs(holder as any, accountId, params?.idId)
+  }
+
+  public async storiesGetPeerStoriesRaw(
+    accountId: string,
+    params: { peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_getPeerStories(holder as any, accountId, params?.peerId)
+  }
 }
 
 

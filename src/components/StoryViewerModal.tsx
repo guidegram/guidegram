@@ -22,6 +22,9 @@ import {
   FolderPlus,
   FolderMinus,
   ShieldAlert,
+  Send,
+  Layers,
+  BookOpen,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
@@ -112,6 +115,27 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [albumLoading, setAlbumLoading] = useState(false)
   const [albumFeedback, setAlbumFeedback] = useState<string | null>(null)
 
+  // --- Microphase 121: Stories Domain Suite Part 2 States ---
+  // Albums list & stories (stories.getAlbums & stories.getAlbumStories)
+  const [albumsList, setAlbumsList] = useState<any[]>([])
+  const [loadingAlbums, setLoadingAlbums] = useState(false)
+  const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null)
+  const [selectedAlbumStories, setSelectedAlbumStories] = useState<any[] | null>(null)
+  const [loadingAlbumStories, setLoadingAlbumStories] = useState(false)
+
+  // Allowed chats to send stories (stories.getChatsToSend)
+  const [chatsToSendModalOpen, setChatsToSendModalOpen] = useState(false)
+  const [chatsToSendList, setChatsToSendList] = useState<any[]>([])
+  const [loadingChatsToSend, setLoadingChatsToSend] = useState(false)
+
+  // Global all stories feed (stories.getAllStories)
+  const [allStoriesFeedOpen, setAllStoriesFeedOpen] = useState(false)
+  const [allStoriesFeed, setAllStoriesFeed] = useState<any[]>([])
+  const [loadingAllStories, setLoadingAllStories] = useState(false)
+
+  // Peer Max IDs sync (stories.getPeerMaxIDs)
+  const [peerMaxId, setPeerMaxId] = useState<number | null>(null)
+
   useEffect(() => {
     if (initialTab) {
       setStoryTab(initialTab)
@@ -175,7 +199,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     } else if (storyTab === 'archive') {
       request = window.guidegram?.getStoriesArchive?.(accountId, peerId)
     } else {
-      request = window.guidegram?.getPeerStories?.(accountId, peerId)
+      if ((window as any).guidegram?.storiesGetPeerStoriesRaw) {
+        request = (window as any).guidegram.storiesGetPeerStoriesRaw(accountId, { peerId })
+      } else {
+        request = window.guidegram?.getPeerStories?.(accountId, peerId)
+      }
     }
 
     if (!request) {
@@ -532,6 +560,109 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
   }, [accountId, peerId, albumDeleteId, isPersian])
 
+  // --- Microphase 121 Callbacks ---
+  // Fetch albums using stories.getAlbums
+  const fetchAlbums = useCallback(async () => {
+    if (!accountId || !peerId) return
+    setLoadingAlbums(true)
+    try {
+      if ((window as any).guidegram?.storiesGetAlbumsRaw) {
+        const res = await (window as any).guidegram.storiesGetAlbumsRaw(accountId, { peerId })
+        const rawAlbums = res?.albums || (Array.isArray(res) ? res : [])
+        setAlbumsList(rawAlbums)
+      }
+    } catch (_) {
+      setAlbumsList([])
+    } finally {
+      setLoadingAlbums(false)
+    }
+  }, [accountId, peerId])
+
+  // Fetch stories of a specific album using stories.getAlbumStories
+  const handleLoadAlbumStories = useCallback(async (albumId: number) => {
+    if (!accountId || !peerId) return
+    setSelectedAlbumId(albumId)
+    setLoadingAlbumStories(true)
+    try {
+      if ((window as any).guidegram?.storiesGetAlbumStoriesRaw) {
+        const res = await (window as any).guidegram.storiesGetAlbumStoriesRaw(accountId, { peerId, albumId })
+        const stList = res?.stories || (Array.isArray(res) ? res : [])
+        setSelectedAlbumStories(stList)
+      }
+    } catch (_) {
+      setSelectedAlbumStories([])
+    } finally {
+      setLoadingAlbumStories(false)
+    }
+  }, [accountId, peerId])
+
+  // Fetch chats to send stories using stories.getChatsToSend
+  const handleOpenChatsToSend = useCallback(async () => {
+    setPaused(true)
+    setChatsToSendModalOpen(true)
+    if (!accountId) return
+    setLoadingChatsToSend(true)
+    try {
+      if ((window as any).guidegram?.storiesGetChatsToSendRaw) {
+        const res = await (window as any).guidegram.storiesGetChatsToSendRaw(accountId)
+        const chats = res?.chats || (Array.isArray(res) ? res : [])
+        setChatsToSendList(chats)
+      }
+    } catch (_) {
+      setChatsToSendList([])
+    } finally {
+      setLoadingChatsToSend(false)
+    }
+  }, [accountId])
+
+  // Sync peer max IDs using stories.getPeerMaxIDs
+  const syncPeerMaxIDs = useCallback(async () => {
+    if (!accountId || !peerId) return
+    try {
+      if ((window as any).guidegram?.storiesGetPeerMaxIDsRaw) {
+        const res = await (window as any).guidegram.storiesGetPeerMaxIDsRaw(accountId, { idId: peerId })
+        if (res?.max_id) {
+          setPeerMaxId(res.max_id)
+        }
+      }
+    } catch (_) {}
+  }, [accountId, peerId])
+
+  useEffect(() => {
+    if (isOpen) {
+      syncPeerMaxIDs()
+    }
+  }, [isOpen, syncPeerMaxIDs])
+
+  // Query global feed using stories.getAllStories
+  const handleOpenAllStoriesFeed = useCallback(async () => {
+    setPaused(true)
+    setAllStoriesFeedOpen(true)
+    if (!accountId) return
+    setLoadingAllStories(true)
+    try {
+      if ((window as any).guidegram?.storiesGetAllStoriesRaw) {
+        const res = await (window as any).guidegram.storiesGetAllStoriesRaw(accountId, {})
+        const list = res?.peer_stories || res?.stories || (Array.isArray(res) ? res : [])
+        setAllStoriesFeed(list)
+      }
+    } catch (_) {
+      setAllStoriesFeed([])
+    } finally {
+      setLoadingAllStories(false)
+    }
+  }, [accountId])
+
+  // Mark all read peer stories using stories.getAllReadPeerStories
+  const handleMarkAllRead = useCallback(async () => {
+    if (!accountId) return
+    try {
+      if ((window as any).guidegram?.storiesGetAllReadPeerStoriesRaw) {
+        await (window as any).guidegram.storiesGetAllReadPeerStoriesRaw(accountId)
+      }
+    } catch (_) {}
+  }, [accountId])
+
   useEffect(() => {
     if (!isOpen || !currentStoryId || !mediaUrl || mediaLoading || isVideo) return
     let frame = 0
@@ -718,14 +849,37 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 onClick={() => {
                   setPaused(true)
                   setAlbumModalOpen(true)
+                  fetchAlbums()
                 }}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-indigo-600/70 hover:text-white"
-                title={isPersian ? 'مدیریت آلبوم استوری‌ها' : 'Story Albums'}
+                title={isPersian ? 'مدیریت آلبوم استوری‌ها (getAlbums)' : 'Story Albums'}
                 aria-label="Story albums"
               >
                 <FolderPlus className="h-4 w-4" />
               </button>
             )}
+
+            {/* Microphase 121: Send Allowed Chats */}
+            <button
+              type="button"
+              onClick={handleOpenChatsToSend}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-emerald-600/70 hover:text-white"
+              title={isPersian ? 'چت‌های مجاز برای استوری (getChatsToSend)' : 'Chats to send stories'}
+              aria-label="Chats to send"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+
+            {/* Microphase 121: Global Stories Feed */}
+            <button
+              type="button"
+              onClick={handleOpenAllStoriesFeed}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-purple-600/70 hover:text-white"
+              title={isPersian ? 'فید عمومی همه استوری‌ها (getAllStories)' : 'All stories feed'}
+              aria-label="All stories feed"
+            >
+              <Layers className="h-4 w-4" />
+            </button>
 
             {isOwnStory && currentStoryId && !loading && (
               <button
@@ -1332,6 +1486,87 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 </div>
               </div>
 
+              {/* Existing Albums List (Microphase 121: stories.getAlbums & stories.getAlbumStories) */}
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-indigo-300 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen className="h-4 w-4" />
+                    <span>{isPersian ? 'آلبوم‌های موجود (stories.getAlbums)' : 'Existing Albums'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchAlbums}
+                    className="text-[10px] text-gray-400 hover:text-white"
+                  >
+                    {isPersian ? 'تازه‌سازی' : 'Refresh'}
+                  </button>
+                </div>
+
+                {loadingAlbums && (
+                  <div className="flex items-center justify-center p-3 text-xs text-gray-400">
+                    <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                    <span>{isPersian ? 'در حال بارگذاری آلبوم‌ها...' : 'Loading albums...'}</span>
+                  </div>
+                )}
+
+                {!loadingAlbums && albumsList.length === 0 && (
+                  <div className="text-center p-2.5 text-[11px] text-gray-400">
+                    {isPersian ? 'هیچ آلبومی یافت نشد.' : 'No albums found.'}
+                  </div>
+                )}
+
+                {!loadingAlbums && albumsList.length > 0 && (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {albumsList.map((alb) => (
+                      <div
+                        key={alb.id || alb.title}
+                        className="flex items-center justify-between p-2 rounded-lg bg-black/40 border border-white/5 hover:border-indigo-500/40 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-white truncate">{alb.title || `Album #${alb.id}`}</div>
+                          <div className="text-[10px] text-gray-400">ID: {alb.id} · {alb.stories_count || 0} stories</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleLoadAlbumStories(alb.id)}
+                          className="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40 text-[10px] font-medium transition-colors"
+                        >
+                          {isPersian ? 'مشاهده استوری‌ها' : 'View stories'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected Album Stories (stories.getAlbumStories) */}
+                {selectedAlbumStories !== null && (
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <div className="text-[11px] font-semibold text-gray-300 mb-1.5">
+                      {isPersian ? `استوری‌های آلبوم #${selectedAlbumId} (تعداد: ${selectedAlbumStories.length})` : `Stories in Album #${selectedAlbumId} (${selectedAlbumStories.length})`}
+                    </div>
+                    {loadingAlbumStories ? (
+                      <div className="flex items-center p-2 text-xs text-gray-400">
+                        <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                        <span>Loading...</span>
+                      </div>
+                    ) : selectedAlbumStories.length === 0 ? (
+                      <div className="text-[10px] text-gray-400">{isPersian ? 'استوری‌ای در این آلبوم نیست.' : 'No stories in this album.'}</div>
+                    ) : (
+                      <div className="flex gap-2 overflow-x-auto py-1">
+                        {selectedAlbumStories.map((st, idx) => (
+                          <div
+                            key={st.id || idx}
+                            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-black/50 border border-white/10 text-[10px] text-gray-300"
+                          >
+                            Story #{st.id}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {albumFeedback && (
                 <div
                   className={`text-[11px] p-2 rounded-lg mb-2 ${
@@ -1341,6 +1576,131 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   }`}
                 >
                   {albumFeedback}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chats To Send Stories Sheet (Microphase 121: stories.getChatsToSend) */}
+        <AnimatePresence>
+          {chatsToSendModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 top-16 z-50 rounded-2xl border border-white/15 bg-black/90 p-4 backdrop-blur-xl shadow-2xl text-white max-h-[80%] overflow-y-auto"
+              dir={isPersian ? 'rtl' : 'ltr'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Send className="h-5 w-5 text-emerald-400" />
+                  <span className="text-xs font-bold">
+                    {isPersian ? 'چت‌های مجاز برای ارسال استوری (getChatsToSend)' : 'Chats Permitted to Send Stories'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setChatsToSendModalOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {loadingChatsToSend && (
+                <div className="flex items-center justify-center p-6 text-xs text-gray-400">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <span>{isPersian ? 'در حال بررسی مقصدهای مجاز...' : 'Loading permitted chats...'}</span>
+                </div>
+              )}
+
+              {!loadingChatsToSend && chatsToSendList.length === 0 && (
+                <div className="text-center p-6 text-xs text-gray-400">
+                  {isPersian ? 'هیچ چت یا کانال مجاز دیگری برای ارسال استوری ثبت نشده است.' : 'No permitted chats found.'}
+                </div>
+              )}
+
+              {!loadingChatsToSend && chatsToSendList.length > 0 && (
+                <div className="space-y-2">
+                  {chatsToSendList.map((chat: any) => (
+                    <div
+                      key={chat.id || chat.title}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-white truncate">{chat.title || `Chat ${chat.id}`}</div>
+                        <div className="text-[10px] text-gray-400">ID: {chat.id}</div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {isPersian ? 'مجاز' : 'Allowed'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Global Stories Feed Sheet (Microphase 121: stories.getAllStories) */}
+        <AnimatePresence>
+          {allStoriesFeedOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 top-16 z-50 rounded-2xl border border-white/15 bg-black/90 p-4 backdrop-blur-xl shadow-2xl text-white max-h-[80%] overflow-y-auto"
+              dir={isPersian ? 'rtl' : 'ltr'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-purple-400" />
+                  <span className="text-xs font-bold">
+                    {isPersian ? 'فید همه استوری‌ها (getAllStories)' : 'All Stories Global Feed'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAllStoriesFeedOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {loadingAllStories && (
+                <div className="flex items-center justify-center p-6 text-xs text-gray-400">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <span>{isPersian ? 'در حال دریافت فید استوری‌ها...' : 'Loading feed...'}</span>
+                </div>
+              )}
+
+              {!loadingAllStories && allStoriesFeed.length === 0 && (
+                <div className="text-center p-6 text-xs text-gray-400">
+                  {isPersian ? 'هیچ استوری فعالی در فید عمومی وجود ندارد.' : 'No stories in feed.'}
+                </div>
+              )}
+
+              {!loadingAllStories && allStoriesFeed.length > 0 && (
+                <div className="space-y-2">
+                  {allStoriesFeed.map((item: any, i: number) => (
+                    <div
+                      key={item.id || i}
+                      className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-white">
+                          Peer: {item.peer?.user_id || item.peer?.channel_id || `User ${i + 1}`}
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          {item.stories?.length || 1} {isPersian ? 'استوری' : 'stories'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </motion.div>

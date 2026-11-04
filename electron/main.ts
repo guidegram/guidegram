@@ -11104,6 +11104,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stories Domain Suite Part 2 IPC (Microphase 121)
+  ipcMain.handle('telegram:stories:get-album-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetAlbumStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetAlbumStoriesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-albums-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetAlbumsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetAlbumsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-all-read-peer-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetAllReadPeerStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetAllReadPeerStoriesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-all-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetAllStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetAllStoriesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-chats-to-send-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetChatsToSendRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetChatsToSendRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-peer-max-ids-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetPeerMaxIDsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetPeerMaxIDsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:get-peer-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesGetPeerStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesGetPeerStoriesRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

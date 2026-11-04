@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 89.41,
+  "overall_coverage_pct": 90.22,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -3670,7 +3670,7 @@
       ],
       "method_count": 7,
       "ui_component": "src/components/StoryViewerModal.tsx",
-      "status": "PENDING",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,
@@ -4154,7 +4154,7 @@
       "dark_theme": true
     }
   ],
-  "total_implemented": 768,
+  "total_implemented": 775,
   "last_updated": "2026-11-04T14:48:00.000000Z",
-  "completed_microphases": 120
+  "completed_microphases": 121
 }

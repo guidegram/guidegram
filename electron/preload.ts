@@ -3313,6 +3313,22 @@ const guidegramAPI = {
   storiesExportStoryLinkRaw: (accountId: string, params: { peerId?: string; id?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:stories:export-story-link-raw', { accountId, ...params }),
 
+  // --- Microphase 121: Stories Domain Suite Part 2 ---
+  storiesGetAlbumStoriesRaw: (accountId: string, params: { peerId?: string; albumId?: number; offset?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-album-stories-raw', { accountId, ...params }),
+  storiesGetAlbumsRaw: (accountId: string, params: { peerId?: string; hash?: bigint | number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-albums-raw', { accountId, ...params }),
+  storiesGetAllReadPeerStoriesRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-all-read-peer-stories-raw', { accountId, ...params }),
+  storiesGetAllStoriesRaw: (accountId: string, params: { next?: boolean; hidden?: boolean; state?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-all-stories-raw', { accountId, ...params }),
+  storiesGetChatsToSendRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-chats-to-send-raw', { accountId, ...params }),
+  storiesGetPeerMaxIDsRaw: (accountId: string, params: { idId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-peer-max-ids-raw', { accountId, ...params }),
+  storiesGetPeerStoriesRaw: (accountId: string, params: { peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:get-peer-stories-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
