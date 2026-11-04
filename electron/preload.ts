@@ -3271,6 +3271,22 @@ const guidegramAPI = {
   statsLoadAsyncGraphRaw: (accountId: string, params: { token: string; x?: bigint | number | string }): Promise<any> =>
     ipcRenderer.invoke('telegram:stats:load-async-graph-raw', { accountId, ...params }),
 
+  // --- Microphase 118: Chatlists Domain Suite Part 1 ---
+  chatlistsCheckChatlistInviteRaw: (accountId: string, params: { slug: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:check-chatlist-invite-raw', { accountId, ...params }),
+  chatlistsDeleteExportedInviteRaw: (accountId: string, params: { chatlist: any; slug: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:delete-exported-invite-raw', { accountId, ...params }),
+  chatlistsEditExportedInviteRaw: (accountId: string, params: { chatlist: any; slug: string; title?: string; peers?: string[] | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:edit-exported-invite-raw', { accountId, ...params }),
+  chatlistsExportChatlistInviteRaw: (accountId: string, params: { chatlist: any; title: string; peers: string[] | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:export-chatlist-invite-raw', { accountId, ...params }),
+  chatlistsGetChatlistUpdatesRaw: (accountId: string, params: { chatlist: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:get-chatlist-updates-raw', { accountId, ...params }),
+  chatlistsGetExportedInvitesRaw: (accountId: string, params: { chatlist: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:get-exported-invites-raw', { accountId, ...params }),
+  chatlistsGetLeaveChatlistSuggestionsRaw: (accountId: string, params: { chatlist: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:get-leave-chatlist-suggestions-raw', { accountId, ...params }),
+
 
   setEmojiStatus: (
     accountId: string,

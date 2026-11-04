@@ -2707,144 +2707,283 @@ export class SystemService {
     }
   }
 
-  public async chatlists_exportChatlistInvite(holder: RpcClientHolder, accountId: string, chatlist?: any, title?: string, peersId?: string): Promise<any> {
+  // --- Microphase 118: Chatlists Domain Suite Part 1 Helpers & RPCs ---
+  private toInputChatlist(chatlist: any): any {
+    if (typeof chatlist === 'number') {
+      return { _: 'inputChatlistDialogFilter', filterId: chatlist }
+    }
+    if (chatlist && typeof chatlist === 'object') {
+      if (chatlist._ === 'inputChatlistDialogFilter') return chatlist
+      if (typeof chatlist.filterId === 'number') return { _: 'inputChatlistDialogFilter', filterId: chatlist.filterId }
+      if (typeof chatlist.id === 'number') return { _: 'inputChatlistDialogFilter', filterId: chatlist.id }
+    }
+    const num = Number(chatlist)
+    return { _: 'inputChatlistDialogFilter', filterId: Number.isFinite(num) ? num : 0 }
+  }
+
+  private async resolvePeersList(accountId: string, peers: any): Promise<any[]> {
+    const result: any[] = []
+    const rawList: any[] = Array.isArray(peers)
+      ? peers
+      : typeof peers === 'string'
+      ? peers.split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+
+    for (const item of rawList) {
+      if (!item) continue
+      if (typeof item === 'object' && item._) {
+        result.push(item)
+        continue
+      }
+      try {
+        const resolved = await this.resolveInputPeer(accountId, String(item))
+        if (resolved) result.push(resolved)
+      } catch (e) {
+        Logger.warn(`[SystemService] resolvePeersList skipped peer ${String(item)}:`, e)
+      }
+    }
+    return result
+  }
+
+  public async chatlists_exportChatlistInvite(
+    holder: RpcClientHolder,
+    accountId: string,
+    chatlistOrParams: any,
+    titleArg?: string,
+    peersArg?: any
+  ): Promise<any> {
+    const isObj = chatlistOrParams && typeof chatlistOrParams === 'object' && !chatlistOrParams._ && 'title' in chatlistOrParams
+    const chatlist = this.toInputChatlist(isObj ? chatlistOrParams.chatlist : chatlistOrParams)
+    const title = (isObj ? chatlistOrParams.title : titleArg) || ''
+    const peersRaw = isObj ? chatlistOrParams.peers : peersArg
+    const peers = await this.resolvePeersList(accountId, peersRaw)
+
     try {
       return await holder.client.call({
         _: 'chatlists.exportChatlistInvite',
-        'chatlist': chatlist,
-        'title': title,
-        'peers': peersId ? await this.resolveInputPeer(accountId, peersId) : undefined,
+        chatlist,
+        title,
+        peers,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.exportChatlistInvite error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_deleteExportedInvite(holder: RpcClientHolder, chatlist?: any, slug?: string): Promise<any> {
+  public async chatlists_deleteExportedInvite(
+    holder: RpcClientHolder,
+    chatlistOrParams: any,
+    slugArg?: string
+  ): Promise<any> {
+    const isObj = chatlistOrParams && typeof chatlistOrParams === 'object' && !chatlistOrParams._ && 'slug' in chatlistOrParams
+    const chatlist = this.toInputChatlist(isObj ? chatlistOrParams.chatlist : chatlistOrParams)
+    const rawSlug = (isObj ? chatlistOrParams.slug : slugArg) || ''
+    const slug = rawSlug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+
     try {
       return await holder.client.call({
         _: 'chatlists.deleteExportedInvite',
-        'chatlist': chatlist,
-        'slug': slug,
+        chatlist,
+        slug,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.deleteExportedInvite error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_editExportedInvite(holder: RpcClientHolder, accountId: string, chatlist?: any, slug?: string, title?: string, peersId?: string): Promise<any> {
+  public async chatlists_editExportedInvite(
+    holder: RpcClientHolder,
+    accountId: string,
+    chatlistOrParams: any,
+    slugArg?: string,
+    titleArg?: string,
+    peersArg?: any
+  ): Promise<any> {
+    const isObj = chatlistOrParams && typeof chatlistOrParams === 'object' && !chatlistOrParams._ && 'slug' in chatlistOrParams
+    const chatlist = this.toInputChatlist(isObj ? chatlistOrParams.chatlist : chatlistOrParams)
+    const rawSlug = (isObj ? chatlistOrParams.slug : slugArg) || ''
+    const slug = rawSlug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+    const title = isObj ? chatlistOrParams.title : titleArg
+    const peersRaw = isObj ? chatlistOrParams.peers : peersArg
+    const peers = peersRaw ? await this.resolvePeersList(accountId, peersRaw) : undefined
+
     try {
       return await holder.client.call({
         _: 'chatlists.editExportedInvite',
-        'chatlist': chatlist,
-        'slug': slug,
-        'title': title,
-        'peers': peersId ? await this.resolveInputPeer(accountId, peersId) : undefined,
+        chatlist,
+        slug,
+        title,
+        peers,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.editExportedInvite error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_getExportedInvites(holder: RpcClientHolder, chatlist?: any): Promise<any> {
+  public async chatlists_getExportedInvites(
+    holder: RpcClientHolder,
+    chatlistOrParams: any
+  ): Promise<any> {
+    const chatlist = this.toInputChatlist(
+      chatlistOrParams?.chatlist !== undefined ? chatlistOrParams.chatlist : chatlistOrParams
+    )
+
     try {
       return await holder.client.call({
         _: 'chatlists.getExportedInvites',
-        'chatlist': chatlist,
+        chatlist,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.getExportedInvites error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_checkChatlistInvite(holder: RpcClientHolder, slug?: string): Promise<any> {
+  public async chatlists_checkChatlistInvite(
+    holder: RpcClientHolder,
+    slugOrParams: any
+  ): Promise<any> {
+    const rawSlug = typeof slugOrParams === 'string' ? slugOrParams : slugOrParams?.slug || ''
+    const slug = rawSlug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+
     try {
       return await holder.client.call({
         _: 'chatlists.checkChatlistInvite',
-        'slug': slug,
+        slug,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.checkChatlistInvite error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_joinChatlistInvite(holder: RpcClientHolder, accountId: string, slug?: string, peersId?: string): Promise<any> {
+  public async chatlists_joinChatlistInvite(
+    holder: RpcClientHolder,
+    accountId: string,
+    slugOrParams: any,
+    peersArg?: any
+  ): Promise<any> {
+    const isObj = slugOrParams && typeof slugOrParams === 'object' && 'slug' in slugOrParams
+    const rawSlug = (isObj ? slugOrParams.slug : slugOrParams) || ''
+    const slug = rawSlug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+    const peersRaw = isObj ? slugOrParams.peers : peersArg
+    const peers = await this.resolvePeersList(accountId, peersRaw)
+
     try {
       return await holder.client.call({
         _: 'chatlists.joinChatlistInvite',
-        'slug': slug,
-        'peers': peersId ? await this.resolveInputPeer(accountId, peersId) : undefined,
+        slug,
+        peers,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.joinChatlistInvite error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_getChatlistUpdates(holder: RpcClientHolder, chatlist?: any): Promise<any> {
+  public async chatlists_getChatlistUpdates(
+    holder: RpcClientHolder,
+    chatlistOrParams: any
+  ): Promise<any> {
+    const chatlist = this.toInputChatlist(
+      chatlistOrParams?.chatlist !== undefined ? chatlistOrParams.chatlist : chatlistOrParams
+    )
+
     try {
       return await holder.client.call({
         _: 'chatlists.getChatlistUpdates',
-        'chatlist': chatlist,
+        chatlist,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.getChatlistUpdates error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_joinChatlistUpdates(holder: RpcClientHolder, accountId: string, chatlist?: any, peersId?: string): Promise<any> {
+  public async chatlists_joinChatlistUpdates(
+    holder: RpcClientHolder,
+    accountId: string,
+    chatlistOrParams: any,
+    peersArg?: any
+  ): Promise<any> {
+    const isObj = chatlistOrParams && typeof chatlistOrParams === 'object' && !chatlistOrParams._ && 'chatlist' in chatlistOrParams
+    const chatlist = this.toInputChatlist(isObj ? chatlistOrParams.chatlist : chatlistOrParams)
+    const peersRaw = isObj ? chatlistOrParams.peers : peersArg
+    const peers = await this.resolvePeersList(accountId, peersRaw)
+
     try {
       return await holder.client.call({
         _: 'chatlists.joinChatlistUpdates',
-        'chatlist': chatlist,
-        'peers': peersId ? await this.resolveInputPeer(accountId, peersId) : undefined,
+        chatlist,
+        peers,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.joinChatlistUpdates error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_hideChatlistUpdates(holder: RpcClientHolder, chatlist?: any): Promise<any> {
+  public async chatlists_hideChatlistUpdates(
+    holder: RpcClientHolder,
+    chatlistOrParams: any
+  ): Promise<any> {
+    const chatlist = this.toInputChatlist(
+      chatlistOrParams?.chatlist !== undefined ? chatlistOrParams.chatlist : chatlistOrParams
+    )
+
     try {
       return await holder.client.call({
         _: 'chatlists.hideChatlistUpdates',
-        'chatlist': chatlist,
+        chatlist,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.hideChatlistUpdates error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_getLeaveChatlistSuggestions(holder: RpcClientHolder, chatlist?: any): Promise<any> {
+  public async chatlists_getLeaveChatlistSuggestions(
+    holder: RpcClientHolder,
+    chatlistOrParams: any
+  ): Promise<any> {
+    const chatlist = this.toInputChatlist(
+      chatlistOrParams?.chatlist !== undefined ? chatlistOrParams.chatlist : chatlistOrParams
+    )
+
     try {
       return await holder.client.call({
         _: 'chatlists.getLeaveChatlistSuggestions',
-        'chatlist': chatlist,
+        chatlist,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.getLeaveChatlistSuggestions error:', err)
-      return null
+      throw err
     }
   }
 
-  public async chatlists_leaveChatlist(holder: RpcClientHolder, accountId: string, chatlist?: any, peersId?: string): Promise<any> {
+  public async chatlists_leaveChatlist(
+    holder: RpcClientHolder,
+    accountId: string,
+    chatlistOrParams: any,
+    peersArg?: any
+  ): Promise<any> {
+    const isObj = chatlistOrParams && typeof chatlistOrParams === 'object' && !chatlistOrParams._ && 'chatlist' in chatlistOrParams
+    const chatlist = this.toInputChatlist(isObj ? chatlistOrParams.chatlist : chatlistOrParams)
+    const peersRaw = isObj ? chatlistOrParams.peers : peersArg
+    const peers = await this.resolvePeersList(accountId, peersRaw)
+
     try {
       return await holder.client.call({
         _: 'chatlists.leaveChatlist',
-        'chatlist': chatlist,
-        'peers': peersId ? await this.resolveInputPeer(accountId, peersId) : undefined,
+        chatlist,
+        peers,
       })
     } catch (err) {
       Logger.warn('[SystemService] chatlists.leaveChatlist error:', err)
-      return null
+      throw err
     }
   }
 

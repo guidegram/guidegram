@@ -23414,6 +23414,70 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.stats_loadAsyncGraph(holder as any, params)
   }
+
+  // --- Microphase 118: Chatlists Domain Suite Part 1 ---
+  public async chatlistsCheckChatlistInviteRaw(
+    accountId: string,
+    params: { slug: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_checkChatlistInvite(holder as any, params)
+  }
+
+  public async chatlistsDeleteExportedInviteRaw(
+    accountId: string,
+    params: { chatlist: any; slug: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_deleteExportedInvite(holder as any, params)
+  }
+
+  public async chatlistsEditExportedInviteRaw(
+    accountId: string,
+    params: { chatlist: any; slug: string; title?: string; peers?: string[] | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_editExportedInvite(holder as any, accountId, params)
+  }
+
+  public async chatlistsExportChatlistInviteRaw(
+    accountId: string,
+    params: { chatlist: any; title: string; peers: string[] | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_exportChatlistInvite(holder as any, accountId, params)
+  }
+
+  public async chatlistsGetChatlistUpdatesRaw(
+    accountId: string,
+    params: { chatlist: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_getChatlistUpdates(holder as any, params)
+  }
+
+  public async chatlistsGetExportedInvitesRaw(
+    accountId: string,
+    params: { chatlist: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_getExportedInvites(holder as any, params)
+  }
+
+  public async chatlistsGetLeaveChatlistSuggestionsRaw(
+    accountId: string,
+    params: { chatlist: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_getLeaveChatlistSuggestions(holder as any, params)
+  }
 }
 
 

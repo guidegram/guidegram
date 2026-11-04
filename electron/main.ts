@@ -10939,6 +10939,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Chatlists Domain Suite Part 1 IPC (Microphase 118)
+  ipcMain.handle('telegram:chatlists:check-chatlist-invite-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsCheckChatlistInviteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsCheckChatlistInviteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:delete-exported-invite-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsDeleteExportedInviteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsDeleteExportedInviteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:edit-exported-invite-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsEditExportedInviteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsEditExportedInviteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:export-chatlist-invite-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsExportChatlistInviteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsExportChatlistInviteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:get-chatlist-updates-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsGetChatlistUpdatesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsGetChatlistUpdatesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:get-exported-invites-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsGetExportedInvitesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsGetExportedInvitesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:get-leave-chatlist-suggestions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsGetLeaveChatlistSuggestionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsGetLeaveChatlistSuggestionsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

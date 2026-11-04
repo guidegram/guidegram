@@ -8,11 +8,17 @@ import {
   Clock,
   Copy,
   Edit3,
+  ExternalLink,
+  FolderPlus,
+  Layers,
   Link2,
   Loader2,
   Plus,
   RefreshCw,
+  Search,
+  Share2,
   ShieldQuestion,
+  Sparkles,
   Trash2,
   Users,
   X,
@@ -32,7 +38,7 @@ export interface ChatInviteLinksModalProps {
   onInviteLinkChange?: (link: string | null) => void
 }
 
-type Tab = 'active' | 'revoked' | 'maintenance'
+type Tab = 'active' | 'revoked' | 'chatlists' | 'maintenance'
 type ConfirmState = { type: 'revoke' | 'delete'; link: ChatInviteLink } | null
 
 const stripIpcPrefix = (value: string): string =>
@@ -200,6 +206,39 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
   const [isLoadingDh, setIsLoadingDh] = useState(false)
   const [dhFeedback, setDhFeedback] = useState<string | null>(null)
 
+  // Microphase 118: Chatlists Domain Suite Part 1
+  const [clFolderId, setClFolderId] = useState('1')
+  const [clCheckSlug, setClCheckSlug] = useState('')
+  const [clCheckResult, setClCheckResult] = useState<any | null>(null)
+  const [isCheckingInvite, setIsCheckingInvite] = useState(false)
+  const [checkInviteFeedback, setCheckInviteFeedback] = useState<string | null>(null)
+
+  const [clExportTitle, setClExportTitle] = useState('')
+  const [clExportPeers, setClExportPeers] = useState('')
+  const [isExportingChatlist, setIsExportingChatlist] = useState(false)
+  const [exportChatlistFeedback, setExportChatlistFeedback] = useState<string | null>(null)
+  const [lastExportedInvite, setLastExportedInvite] = useState<any | null>(null)
+
+  const [clExportedInvites, setClExportedInvites] = useState<any[]>([])
+  const [isLoadingExportedInvites, setIsLoadingExportedInvites] = useState(false)
+  const [exportedInvitesFeedback, setExportedInvitesFeedback] = useState<string | null>(null)
+
+  const [clEditSlug, setClEditSlug] = useState('')
+  const [clEditTitle, setClEditTitle] = useState('')
+  const [isEditingExported, setIsEditingExported] = useState(false)
+  const [editExportedFeedback, setEditExportedFeedback] = useState<string | null>(null)
+
+  const [isDeletingSlug, setIsDeletingSlug] = useState<string | null>(null)
+  const [deleteExportedFeedback, setDeleteExportedFeedback] = useState<string | null>(null)
+
+  const [clUpdates, setClUpdates] = useState<any | null>(null)
+  const [isLoadingUpdates, setIsLoadingUpdates] = useState(false)
+  const [updatesFeedback, setUpdatesFeedback] = useState<string | null>(null)
+
+  const [clLeaveSuggestions, setClLeaveSuggestions] = useState<any | null>(null)
+  const [isLoadingLeaveSuggestions, setIsLoadingLeaveSuggestions] = useState(false)
+  const [leaveSuggestionsFeedback, setLeaveSuggestionsFeedback] = useState<string | null>(null)
+
   const formatDate = (unixSeconds?: number): string => {
     if (!unixSeconds) return t('invite_links.never')
     try {
@@ -214,7 +253,7 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
 
   const fetchLinks = useCallback(
     async (which: Tab) => {
-      if (which === 'maintenance') return
+      if (which === 'maintenance' || which === 'chatlists') return
       setLoading(true)
       setLoadError(null)
       try {
@@ -766,6 +805,151 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
     }
   }
 
+  // --- Microphase 118: Chatlists Domain Suite Part 1 Handlers ---
+  const handleCheckChatlistInvite = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!window.guidegram?.chatlistsCheckChatlistInviteRaw || !clCheckSlug.trim()) return
+    setIsCheckingInvite(true)
+    setCheckInviteFeedback(null)
+    setClCheckResult(null)
+    try {
+      const cleanSlug = clCheckSlug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+      const res = await window.guidegram.chatlistsCheckChatlistInviteRaw(accountId, { slug: cleanSlug })
+      setClCheckResult(res)
+      const title = res?.title || res?.chatlist?.title || 'پوشه اشتراکی'
+      const count = Array.isArray(res?.peers) ? res.peers.length : Array.isArray(res?.chats) ? res.chats.length : 0
+      setCheckInviteFeedback(`لینک معتبر است: «${title}» با ${count} گفتگو.`)
+    } catch (err: any) {
+      setCheckInviteFeedback(err?.message || 'خطا در اعتبارسنجی لینک چت‌لیست.')
+    } finally {
+      setIsCheckingInvite(false)
+    }
+  }
+
+  const handleExportChatlistInvite = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!window.guidegram?.chatlistsExportChatlistInviteRaw) return
+    setIsExportingChatlist(true)
+    setExportChatlistFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      const peersList = clExportPeers.trim()
+        ? clExportPeers.split(',').map((s) => s.trim()).filter(Boolean)
+        : [chatId]
+      const res = await window.guidegram.chatlistsExportChatlistInviteRaw(accountId, {
+        chatlist: folderIdNum,
+        title: clExportTitle.trim() || `Shared Folder ${folderIdNum}`,
+        peers: peersList,
+      })
+      setLastExportedInvite(res)
+      const link = res?.url || (res?.slug ? `https://t.me/addlist/${res.slug}` : 'صادر شد')
+      setExportChatlistFeedback(`لینک اشتراک پوشه با موفقیت ایجاد شد: ${link}`)
+      void handleGetExportedInvites()
+    } catch (err: any) {
+      setExportChatlistFeedback(err?.message || 'خطا در صدور لینک اشتراک پوشه.')
+    } finally {
+      setIsExportingChatlist(false)
+    }
+  }
+
+  const handleGetExportedInvites = async () => {
+    if (!window.guidegram?.chatlistsGetExportedInvitesRaw) return
+    setIsLoadingExportedInvites(true)
+    setExportedInvitesFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      const res = await window.guidegram.chatlistsGetExportedInvitesRaw(accountId, {
+        chatlist: folderIdNum,
+      })
+      const invites = Array.isArray(res?.invites) ? res.invites : Array.isArray(res) ? res : []
+      setClExportedInvites(invites)
+      setExportedInvitesFeedback(`تعداد ${invites.length} لینک صادر شده برای پوشه ${folderIdNum} دریافت شد.`)
+    } catch (err: any) {
+      setExportedInvitesFeedback(err?.message || 'خطا در دریافت لینک‌های صادر شده.')
+    } finally {
+      setIsLoadingExportedInvites(false)
+    }
+  }
+
+  const handleEditExportedInvite = async (slug: string, newTitle: string) => {
+    if (!window.guidegram?.chatlistsEditExportedInviteRaw || !slug) return
+    setIsEditingExported(true)
+    setEditExportedFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      await window.guidegram.chatlistsEditExportedInviteRaw(accountId, {
+        chatlist: folderIdNum,
+        slug,
+        title: newTitle.trim(),
+      })
+      setEditExportedFeedback(`عنوان لینک به «${newTitle.trim()}» به‌روزرسانی شد.`)
+      setClEditSlug('')
+      setClEditTitle('')
+      void handleGetExportedInvites()
+    } catch (err: any) {
+      setEditExportedFeedback(err?.message || 'خطا در ویرایش عنوان لینک پوشه.')
+    } finally {
+      setIsEditingExported(false)
+    }
+  }
+
+  const handleDeleteExportedInvite = async (slug: string) => {
+    if (!window.guidegram?.chatlistsDeleteExportedInviteRaw || !slug) return
+    setIsDeletingSlug(slug)
+    setDeleteExportedFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      await window.guidegram.chatlistsDeleteExportedInviteRaw(accountId, {
+        chatlist: folderIdNum,
+        slug,
+      })
+      setDeleteExportedFeedback(`لینک اشتراک ${slug} حذف شد.`)
+      setClExportedInvites((prev) => prev.filter((inv) => (inv.slug || inv.url) !== slug))
+    } catch (err: any) {
+      setDeleteExportedFeedback(err?.message || 'خطا در حذف لینک پوشه.')
+    } finally {
+      setIsDeletingSlug(null)
+    }
+  }
+
+  const handleGetChatlistUpdates = async () => {
+    if (!window.guidegram?.chatlistsGetChatlistUpdatesRaw) return
+    setIsLoadingUpdates(true)
+    setUpdatesFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      const res = await window.guidegram.chatlistsGetChatlistUpdatesRaw(accountId, {
+        chatlist: folderIdNum,
+      })
+      setClUpdates(res)
+      const missing = Array.isArray(res?.missing_peers) ? res.missing_peers.length : 0
+      setUpdatesFeedback(missing > 0 ? `تعداد ${missing} گفتگوی جدید به این پوشه اضافه شده است.` : 'هیچ گفتگوی جدیدی برای همگام‌سازی وجود ندارد.')
+    } catch (err: any) {
+      setUpdatesFeedback(err?.message || 'خطا در استعلام آپدیت‌های چت‌لیست.')
+    } finally {
+      setIsLoadingUpdates(false)
+    }
+  }
+
+  const handleGetLeaveChatlistSuggestions = async () => {
+    if (!window.guidegram?.chatlistsGetLeaveChatlistSuggestionsRaw) return
+    setIsLoadingLeaveSuggestions(true)
+    setLeaveSuggestionsFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      const res = await window.guidegram.chatlistsGetLeaveChatlistSuggestionsRaw(accountId, {
+        chatlist: folderIdNum,
+      })
+      setClLeaveSuggestions(res)
+      const count = Array.isArray(res?.peers) ? res.peers.length : Array.isArray(res) ? res.length : 0
+      setLeaveSuggestionsFeedback(`تعداد ${count} گفتگو برای ترک هنگام خروج از این پوشه پیشنهاد شد.`)
+    } catch (err: any) {
+      setLeaveSuggestionsFeedback(err?.message || 'خطا در دریافت پیشنهادهای ترک چت‌لیست.')
+    } finally {
+      setIsLoadingLeaveSuggestions(false)
+    }
+  }
+
   if (!isOpen) return null
 
   const canRequireApproval = Boolean(details?.username)
@@ -1149,6 +1333,18 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                 }`}
               >
                 Maintenance & Purge
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab('chatlists')}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  tab === 'chatlists'
+                    ? 'bg-cyan-500/20 text-cyan-200'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+                <span>پوشه‌های اشتراکی (Chatlists)</span>
               </button>
             </div>
             <button
@@ -1699,6 +1895,273 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                     </button>
                     {dhFeedback && <div className="text-[10px] text-gray-400">{dhFeedback}</div>}
                   </div>
+                </div>
+              </div>
+            </div>
+          ) : tab === 'chatlists' ? (
+            <div className="space-y-4">
+              {/* Folder Selector Header */}
+              <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-400">
+                    <FolderPlus className="w-4 h-4 text-cyan-400" />
+                    <span>مدیریت پوشه‌های اشتراکی (Chatlists & Share Folders)</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    MTProto Layer 232
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  ایجاد، بررسی و مدیریت لینک‌های دعوت به پوشه‌های اشتراکی تلگرام (Shareable Chat Folders).
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-1">
+                    <label className="text-[11px] font-medium text-gray-300 shrink-0">شناسه پوشه (Folder ID):</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={clFolderId}
+                      onChange={(e) => setClFolderId(e.target.value)}
+                      placeholder="Folder ID (مثلاً 1)"
+                      className="w-24 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetExportedInvites}
+                    disabled={isLoadingExportedInvites}
+                    className="px-3.5 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isLoadingExportedInvites ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    <span>استعلام لینک‌های صادر شده</span>
+                  </button>
+                </div>
+                {exportedInvitesFeedback && (
+                  <div className="text-[11px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-3 py-1.5">
+                    {exportedInvitesFeedback}
+                  </div>
+                )}
+              </div>
+
+              {/* 1. checkChatlistInvite */}
+              <form onSubmit={handleCheckChatlistInvite} className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-200 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-accent-cyan" />
+                    ۱. اعتبارسنجی لینک چت‌لیست (checkChatlistInvite)
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-mono">chatlists.checkChatlistInvite</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={clCheckSlug}
+                    onChange={(e) => setClCheckSlug(e.target.value)}
+                    placeholder="https://t.me/addlist/... یا شناسه slug"
+                    className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isCheckingInvite || !clCheckSlug.trim()}
+                    className="px-3.5 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isCheckingInvite ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                    <span>بررسی لینک</span>
+                  </button>
+                </div>
+                {checkInviteFeedback && (
+                  <div className="text-[11px] text-gray-300 bg-dark-900 border border-white/5 rounded-xl p-2.5 space-y-1">
+                    <div className="text-accent-cyan font-medium">{checkInviteFeedback}</div>
+                    {clCheckResult && (
+                      <div className="text-[10px] font-mono text-gray-400 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                        {JSON.stringify(clCheckResult, null, 2)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </form>
+
+              {/* 2. exportChatlistInvite */}
+              <form onSubmit={handleExportChatlistInvite} className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-200 flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-accent-emerald" />
+                    ۲. صدور لینک اشتراک پوشه (exportChatlistInvite)
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-mono">chatlists.exportChatlistInvite</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={clExportTitle}
+                    onChange={(e) => setClExportTitle(e.target.value)}
+                    placeholder="عنوان لینک دعوت (مثلاً: چت‌های برتر)"
+                    className="bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+                  />
+                  <input
+                    type="text"
+                    value={clExportPeers}
+                    onChange={(e) => setClExportPeers(e.target.value)}
+                    placeholder="شناسه چت‌ها با کاما (خالی = چت فعلی)"
+                    className="bg-dark-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isExportingChatlist}
+                  className="w-full py-2 rounded-xl bg-accent-emerald/20 hover:bg-accent-emerald/30 border border-accent-emerald/30 text-accent-emerald text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  {isExportingChatlist ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>ایجاد و صدور لینک جدید</span>
+                </button>
+                {exportChatlistFeedback && (
+                  <div className="text-[11px] text-accent-emerald bg-accent-emerald/10 border border-accent-emerald/20 rounded-xl p-2.5 flex items-center justify-between">
+                    <span className="truncate">{exportChatlistFeedback}</span>
+                    {lastExportedInvite?.url && (
+                      <button
+                        type="button"
+                        onClick={() => copyTextToClipboard(lastExportedInvite.url)}
+                        className="p-1 hover:text-white"
+                        title="کپی لینک"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </form>
+
+              {/* 3. getExportedInvites list & edit & delete */}
+              <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-200 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-amber-400" />
+                    ۳. لینک‌های صادر شده و مدیریت (editExportedInvite & deleteExportedInvite)
+                  </span>
+                  <span className="text-[9px] text-gray-500 font-mono">chatlists.getExportedInvites</span>
+                </div>
+                {clExportedInvites.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-dark-900/60 border border-white/5 text-center text-xs text-gray-500">
+                    لینکی صادر نشده یا هنوز استعلام نگرفته‌اید. برای مشاهده دکمه «استعلام لینک‌های صادر شده» را بزنید.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {clExportedInvites.map((inv: any, idx: number) => {
+                      const slug = inv.slug || inv.url?.replace(/^https?:\/\/t\.me\/addlist\//, '') || String(idx)
+                      const url = inv.url || `https://t.me/addlist/${slug}`
+                      const invTitle = inv.title || `لینک ${idx + 1}`
+                      const isEditing = clEditSlug === slug
+                      return (
+                        <div key={slug} className="p-3 bg-dark-900 rounded-xl border border-white/5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-xs font-semibold text-white truncate">{invTitle}</span>
+                              <span className="text-[10px] text-accent-cyan font-mono truncate">{url}</span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => copyTextToClipboard(url)}
+                                className="p-1.5 hover:text-white text-gray-400 rounded-lg cursor-pointer"
+                                title="کپی"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setClEditSlug(isEditing ? '' : slug)
+                                  setClEditTitle(invTitle)
+                                }}
+                                className="p-1.5 hover:text-amber-300 text-gray-400 rounded-lg cursor-pointer"
+                                title="ویرایش عنوان"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isDeletingSlug === slug}
+                                onClick={() => handleDeleteExportedInvite(slug)}
+                                className="p-1.5 hover:text-rose-400 text-gray-400 rounded-lg cursor-pointer disabled:opacity-40"
+                                title="حذف لینک"
+                              >
+                                {isDeletingSlug === slug ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          {isEditing && (
+                            <div className="flex gap-2 pt-1 border-t border-white/5">
+                              <input
+                                type="text"
+                                value={clEditTitle}
+                                onChange={(e) => setClEditTitle(e.target.value)}
+                                placeholder="عنوان جدید"
+                                className="flex-1 bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white"
+                              />
+                              <button
+                                type="button"
+                                disabled={isEditingExported || !clEditTitle.trim()}
+                                onClick={() => handleEditExportedInvite(slug, clEditTitle)}
+                                className="px-3 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-semibold cursor-pointer"
+                              >
+                                {isEditingExported ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {editExportedFeedback && <div className="text-[10px] text-amber-300">{editExportedFeedback}</div>}
+                {deleteExportedFeedback && <div className="text-[10px] text-rose-300">{deleteExportedFeedback}</div>}
+              </div>
+
+              {/* 4. getChatlistUpdates & getLeaveChatlistSuggestions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-cyan-400" />
+                      ۴. آپدیت‌های پوشه
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">getChatlistUpdates</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetChatlistUpdates}
+                    disabled={isLoadingUpdates}
+                    className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isLoadingUpdates ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    <span>بررسی تغییرات چت‌ها</span>
+                  </button>
+                  {updatesFeedback && <div className="text-[10px] text-cyan-300 bg-cyan-500/10 rounded-lg p-2">{updatesFeedback}</div>}
+                </div>
+
+                <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                      <ExternalLink className="w-4 h-4 text-rose-400" />
+                      ۵. پیشنهادهای ترک پوشه
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">getLeaveChatlistSuggestions</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGetLeaveChatlistSuggestions}
+                    disabled={isLoadingLeaveSuggestions}
+                    className="w-full py-1.5 rounded-xl bg-dark-900 hover:bg-white/5 border border-white/5 text-gray-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isLoadingLeaveSuggestions ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                    <span>استعلام چت‌های حذفی</span>
+                  </button>
+                  {leaveSuggestionsFeedback && <div className="text-[10px] text-rose-300 bg-rose-500/10 rounded-lg p-2">{leaveSuggestionsFeedback}</div>}
                 </div>
               </div>
             </div>
