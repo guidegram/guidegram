@@ -22520,6 +22520,86 @@ export class AccountManager {
       params?.save
     )
   }
+
+  // Layer 232 Stickers Suite (Microphase 105)
+  public async stickersAddStickerToSetRaw(
+    accountId: string,
+    params: { stickerset: any; sticker: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_addStickerToSet(holder as any, params?.stickerset, params?.sticker)
+  }
+
+  public async stickersChangeStickerRaw(
+    accountId: string,
+    params: { sticker: any; emoji?: string; maskCoords?: any; keywords?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_changeSticker(
+      holder as any,
+      params?.sticker,
+      params?.emoji,
+      params?.maskCoords,
+      params?.keywords
+    )
+  }
+
+  public async stickersChangeStickerPositionRaw(
+    accountId: string,
+    params: { sticker: any; position: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_changeStickerPosition(holder as any, params?.sticker, params?.position)
+  }
+
+  public async stickersCheckShortNameRaw(
+    accountId: string,
+    params: { shortName: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_checkShortName(holder as any, params?.shortName)
+  }
+
+  public async stickersCreateStickerSetRaw(
+    accountId: string,
+    params: {
+      masks?: boolean
+      emojis?: boolean
+      textColor?: boolean
+      userId?: string
+      title: string
+      shortName: string
+      thumb?: any
+      stickers: any[]
+      software?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_createStickerSet(holder as any, accountId, params)
+  }
+
+  public async stickersDeleteStickerSetRaw(
+    accountId: string,
+    params: { stickerset: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_deleteStickerSet(holder as any, params?.stickerset)
+  }
+
+  public async stickersRemoveStickerFromSetRaw(
+    accountId: string,
+    params: { sticker: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stickers_removeStickerFromSet(holder as any, params?.sticker)
+  }
 }
 
 

@@ -10318,6 +10318,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Layer 232 Stickers Suite (Microphase 105)
+  ipcMain.handle('telegram:stickers:add-sticker-to-set-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersAddStickerToSetRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersAddStickerToSetRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:change-sticker-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersChangeStickerRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersChangeStickerRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:change-sticker-position-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersChangeStickerPositionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersChangeStickerPositionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:check-short-name-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersCheckShortNameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersCheckShortNameRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:create-sticker-set-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersCreateStickerSetRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersCreateStickerSetRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:delete-sticker-set-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersDeleteStickerSetRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersDeleteStickerSetRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stickers:remove-sticker-from-set-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.stickersRemoveStickerFromSetRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] stickersRemoveStickerFromSetRaw error:', err)
+      throw err
+    }
+  })
+
 
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {

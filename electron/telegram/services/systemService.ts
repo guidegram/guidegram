@@ -792,61 +792,173 @@ export class SystemService {
     }
   }
 
-  public async stickers_createStickerSet(holder: RpcClientHolder, accountId: string, masks?: boolean, emojis?: boolean, textColor?: boolean, userIdId?: string, title?: string, shortName?: string, thumb?: any, stickers?: any, software?: string): Promise<any> {
+  private toInputStickerSet(stickerset: any): any {
+    if (!stickerset) return { _: 'inputStickerSetEmpty' }
+    if (typeof stickerset === 'object' && stickerset._) return stickerset
+    if (typeof stickerset === 'string') {
+      return { _: 'inputStickerSetShortName', shortName: stickerset }
+    }
+    if (typeof stickerset === 'object') {
+      if (stickerset.shortName) {
+        return { _: 'inputStickerSetShortName', shortName: stickerset.shortName }
+      }
+      if (stickerset.id) {
+        return {
+          _: 'inputStickerSetID',
+          id: BigInt(stickerset.id),
+          accessHash: BigInt(stickerset.accessHash || 0),
+        }
+      }
+    }
+    return { _: 'inputStickerSetEmpty' }
+  }
+
+  private toInputDocument(doc: any): any {
+    if (!doc) return { _: 'inputDocumentEmpty' }
+    if (typeof doc === 'object' && doc._) return doc
+    if (typeof doc === 'object' && doc.id) {
+      let fileRef: any = doc.fileReference
+      if (typeof fileRef === 'string') {
+        fileRef = Buffer.from(fileRef, 'hex')
+      } else if (!fileRef) {
+        fileRef = new Uint8Array(0)
+      }
+      return {
+        _: 'inputDocument',
+        id: BigInt(doc.id),
+        accessHash: BigInt(doc.accessHash || 0),
+        fileReference: fileRef,
+      }
+    }
+    return { _: 'inputDocumentEmpty' }
+  }
+
+  public async stickers_createStickerSet(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrMasks?: any,
+    emojis?: boolean,
+    textColor?: boolean,
+    userId?: string,
+    title?: string,
+    shortName?: string,
+    thumb?: any,
+    stickers?: any,
+    software?: string
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrMasks === 'object' && paramsOrMasks !== null && !paramsOrMasks._) {
+        p = paramsOrMasks
+      } else {
+        p = {
+          masks: paramsOrMasks,
+          emojis,
+          textColor,
+          userId,
+          title,
+          shortName,
+          thumb,
+          stickers,
+          software,
+        }
+      }
+
+      const inputUser = p.userId ? await this.toInputUser(accountId, p.userId) : { _: 'inputUserSelf' }
+      let resolvedStickers: any[] = []
+      if (Array.isArray(p.stickers)) {
+        resolvedStickers = p.stickers.map((s: any) => {
+          if (s && s._ === 'inputStickerSetItem') return s
+          return {
+            _: 'inputStickerSetItem',
+            document: this.toInputDocument(s.document || s),
+            emoji: s.emoji || s.emoticon || '⭐',
+            maskCoords: s.maskCoords,
+            keywords: s.keywords,
+          }
+        })
+      }
+
       return await holder.client.call({
         _: 'stickers.createStickerSet',
-        'masks': masks,
-        'emojis': emojis,
-        'text_color': textColor,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'title': title,
-        'short_name': shortName,
-        'thumb': thumb,
-        'stickers': stickers,
-        'software': software,
+        masks: !!p.masks,
+        emojis: !!p.emojis,
+        textColor: !!p.textColor,
+        userId: inputUser,
+        title: p.title || 'Untitled Stickers',
+        shortName: p.shortName,
+        thumb: p.thumb ? this.toInputDocument(p.thumb) : undefined,
+        stickers: resolvedStickers,
+        software: p.software || 'Guidegram',
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.createStickerSet error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stickers_removeStickerFromSet(holder: RpcClientHolder, sticker?: any): Promise<any> {
+  public async stickers_removeStickerFromSet(holder: RpcClientHolder, stickerOrParams?: any): Promise<any> {
     try {
+      const sticker = (typeof stickerOrParams === 'object' && stickerOrParams !== null && stickerOrParams.sticker !== undefined)
+        ? stickerOrParams.sticker
+        : stickerOrParams
       return await holder.client.call({
         _: 'stickers.removeStickerFromSet',
-        'sticker': sticker,
+        sticker: this.toInputDocument(sticker),
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.removeStickerFromSet error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stickers_changeStickerPosition(holder: RpcClientHolder, sticker?: any, position?: number): Promise<any> {
+  public async stickers_changeStickerPosition(holder: RpcClientHolder, stickerOrParams?: any, position?: number): Promise<any> {
     try {
+      let stk: any = stickerOrParams
+      let pos: number = position ?? 0
+      if (typeof stickerOrParams === 'object' && stickerOrParams !== null && !stickerOrParams._ && stickerOrParams.sticker !== undefined) {
+        stk = stickerOrParams.sticker
+        pos = Number(stickerOrParams.position ?? 0)
+      }
       return await holder.client.call({
         _: 'stickers.changeStickerPosition',
-        'sticker': sticker,
-        'position': position,
+        sticker: this.toInputDocument(stk),
+        position: pos,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.changeStickerPosition error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stickers_addStickerToSet(holder: RpcClientHolder, stickerset?: any, sticker?: any): Promise<any> {
+  public async stickers_addStickerToSet(holder: RpcClientHolder, stickersetOrParams?: any, sticker?: any): Promise<any> {
     try {
+      let set: any = stickersetOrParams
+      let item: any = sticker
+      if (typeof stickersetOrParams === 'object' && stickersetOrParams !== null && !stickersetOrParams._ && stickersetOrParams.stickerset !== undefined) {
+        set = stickersetOrParams.stickerset
+        item = stickersetOrParams.sticker
+      }
+
+      let resolvedItem: any = item
+      if (item && item._ !== 'inputStickerSetItem') {
+        resolvedItem = {
+          _: 'inputStickerSetItem',
+          document: this.toInputDocument(item.document || item),
+          emoji: item.emoji || item.emoticon || '⭐',
+          maskCoords: item.maskCoords,
+          keywords: item.keywords,
+        }
+      }
+
       return await holder.client.call({
         _: 'stickers.addStickerToSet',
-        'stickerset': stickerset,
-        'sticker': sticker,
+        stickerset: this.toInputStickerSet(set),
+        sticker: resolvedItem,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.addStickerToSet error:', err)
-      return null
+      throw err
     }
   }
 
@@ -854,25 +966,28 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'stickers.setStickerSetThumb',
-        'stickerset': stickerset,
-        'thumb': thumb,
-        'thumb_document_id': thumbDocumentId,
+        stickerset: this.toInputStickerSet(stickerset),
+        thumb: thumb ? this.toInputDocument(thumb) : undefined,
+        thumb_document_id: thumbDocumentId ? BigInt(thumbDocumentId) : undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.setStickerSetThumb error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stickers_checkShortName(holder: RpcClientHolder, shortName?: string): Promise<any> {
+  public async stickers_checkShortName(holder: RpcClientHolder, shortNameOrParams?: any): Promise<any> {
     try {
+      const name = (typeof shortNameOrParams === 'object' && shortNameOrParams !== null && shortNameOrParams.shortName !== undefined)
+        ? shortNameOrParams.shortName
+        : shortNameOrParams
       return await holder.client.call({
         _: 'stickers.checkShortName',
-        'short_name': shortName,
+        shortName: String(name || '').trim(),
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.checkShortName error:', err)
-      return null
+      throw err
     }
   }
 
@@ -880,26 +995,42 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'stickers.suggestShortName',
-        'title': title,
+        title: title || '',
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.suggestShortName error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stickers_changeSticker(holder: RpcClientHolder, sticker?: any, emoji?: string, maskCoords?: any, keywords?: string): Promise<any> {
+  public async stickers_changeSticker(
+    holder: RpcClientHolder,
+    stickerOrParams?: any,
+    emoji?: string,
+    maskCoords?: any,
+    keywords?: string
+  ): Promise<any> {
     try {
+      let stk: any = stickerOrParams
+      let em: string = emoji || ''
+      let mc: any = maskCoords
+      let kw: string = keywords || ''
+      if (typeof stickerOrParams === 'object' && stickerOrParams !== null && !stickerOrParams._ && stickerOrParams.sticker !== undefined) {
+        stk = stickerOrParams.sticker
+        em = stickerOrParams.emoji || ''
+        mc = stickerOrParams.maskCoords
+        kw = stickerOrParams.keywords || ''
+      }
       return await holder.client.call({
         _: 'stickers.changeSticker',
-        'sticker': sticker,
-        'emoji': emoji,
-        'mask_coords': maskCoords,
-        'keywords': keywords,
+        sticker: this.toInputDocument(stk),
+        emoji: em || undefined,
+        maskCoords: mc || undefined,
+        keywords: kw || undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.changeSticker error:', err)
-      return null
+      throw err
     }
   }
 
@@ -907,24 +1038,27 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'stickers.renameStickerSet',
-        'stickerset': stickerset,
-        'title': title,
+        stickerset: this.toInputStickerSet(stickerset),
+        title: title || '',
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.renameStickerSet error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stickers_deleteStickerSet(holder: RpcClientHolder, stickerset?: any): Promise<any> {
+  public async stickers_deleteStickerSet(holder: RpcClientHolder, stickersetOrParams?: any): Promise<any> {
     try {
+      const set = (typeof stickersetOrParams === 'object' && stickersetOrParams !== null && stickersetOrParams.stickerset !== undefined)
+        ? stickersetOrParams.stickerset
+        : stickersetOrParams
       return await holder.client.call({
         _: 'stickers.deleteStickerSet',
-        'stickerset': stickerset,
+        stickerset: this.toInputStickerSet(set),
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.deleteStickerSet error:', err)
-      return null
+      throw err
     }
   }
 
@@ -932,12 +1066,12 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'stickers.replaceSticker',
-        'sticker': sticker,
-        'new_sticker': newSticker,
+        sticker: this.toInputDocument(sticker),
+        new_sticker: this.toInputDocument(newSticker),
       })
     } catch (err) {
       Logger.warn('[SystemService] stickers.replaceSticker error:', err)
-      return null
+      throw err
     }
   }
 

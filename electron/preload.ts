@@ -3127,6 +3127,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:validate-requested-info-raw', { accountId, ...params }),
   paymentsWithdrawStarGiftRaw: (accountId: string, params: { stargift: any; keepOnProfile?: boolean; tmpPassword?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:withdraw-star-gift-raw', { accountId, ...params }),
+  // Layer 232 Stickers Suite (Microphase 105)
+  stickersAddStickerToSetRaw: (accountId: string, params: { stickerset: any; sticker: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:add-sticker-to-set-raw', { accountId, ...params }),
+  stickersChangeStickerRaw: (accountId: string, params: { sticker: any; emoji?: string; maskCoords?: any; keywords?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:change-sticker-raw', { accountId, ...params }),
+  stickersChangeStickerPositionRaw: (accountId: string, params: { sticker: any; position: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:change-sticker-position-raw', { accountId, ...params }),
+  stickersCheckShortNameRaw: (accountId: string, params: { shortName: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:check-short-name-raw', { accountId, ...params }),
+  stickersCreateStickerSetRaw: (accountId: string, params: { masks?: boolean; emojis?: boolean; textColor?: boolean; userId?: string; title: string; shortName: string; thumb?: any; stickers: any[]; software?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:create-sticker-set-raw', { accountId, ...params }),
+  stickersDeleteStickerSetRaw: (accountId: string, params: { stickerset: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:delete-sticker-set-raw', { accountId, ...params }),
+  stickersRemoveStickerFromSetRaw: (accountId: string, params: { sticker: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stickers:remove-sticker-from-set-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (
