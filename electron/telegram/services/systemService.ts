@@ -518,11 +518,10 @@ export class SystemService {
     }
   }
 
-  public async help_getSupport(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getSupport(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getSupport',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getSupport error:', err)
@@ -558,7 +557,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getRecentMeUrls',
-        'referer': referer,
+        referer: referer || '',
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getRecentMeUrls error:', err)
@@ -566,11 +565,10 @@ export class SystemService {
     }
   }
 
-  public async help_getTermsOfServiceUpdate(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getTermsOfServiceUpdate(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getTermsOfServiceUpdate',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getTermsOfServiceUpdate error:', err)
@@ -639,11 +637,10 @@ export class SystemService {
     }
   }
 
-  public async help_getSupportName(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getSupportName(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getSupportName',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getSupportName error:', err)
@@ -678,11 +675,10 @@ export class SystemService {
     }
   }
 
-  public async help_getPromoData(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getPromoData(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getPromoData',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getPromoData error:', err)
@@ -729,11 +725,10 @@ export class SystemService {
     }
   }
 
-  public async help_getPremiumPromo(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getPremiumPromo(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getPremiumPromo',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getPremiumPromo error:', err)
@@ -769,7 +764,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getTimezonesList',
-        'hash': hash,
+        hash: hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getTimezonesList error:', err)

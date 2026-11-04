@@ -20705,6 +20705,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.help_getPeerProfileColors(holder as any, params?.hash)
   }
+
+  // Layer 232 Help Suite Part 3 (Microphase 077)
+  public async helpGetPremiumPromoRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getPremiumPromo(holder as any)
+  }
+
+  public async helpGetPromoDataRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getPromoData(holder as any)
+  }
+
+  public async helpGetRecentMeUrlsRaw(accountId: string, params: { referer?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getRecentMeUrls(holder as any, params?.referer)
+  }
+
+  public async helpGetSupportRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getSupport(holder as any)
+  }
+
+  public async helpGetSupportNameRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getSupportName(holder as any)
+  }
+
+  public async helpGetTermsOfServiceUpdateRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getTermsOfServiceUpdate(holder as any)
+  }
+
+  public async helpGetTimezonesListRaw(accountId: string, params: { hash?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getTimezonesList(holder as any, params?.hash)
+  }
 }
 
 

@@ -7895,6 +7895,143 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 077 State & Handlers (Help Domain Part 3)
+  const [m077Status, setM077Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m077LoadingOp, setM077LoadingOp] = useState<string | null>(null)
+  const [m077Referer, setM077Referer] = useState('')
+
+  const handleM077GetPremiumPromo = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetPremiumPromoRaw) return
+    setM077LoadingOp('getPremiumPromo')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetPremiumPromoRaw(targetId)
+      const optionsCount = Array.isArray(res?.periodOptions) ? res.periodOptions.length : 0
+      setM077Status({
+        type: 'success',
+        message: `طرح‌های پریمیوم دریافت گردید (${optionsCount} گزینه اشتراک پریمیوم)`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در استعلام help.getPremiumPromo' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
+  const handleM077GetPromoData = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetPromoDataRaw) return
+    setM077LoadingOp('getPromoData')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetPromoDataRaw(targetId)
+      setM077Status({
+        type: 'success',
+        message: `داده‌های پروموشن تلگرام: ${res?._ || 'پاسخ معتبر دریافت شد'}`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getPromoData' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
+  const handleM077GetRecentMeUrls = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetRecentMeUrlsRaw) return
+    setM077LoadingOp('getRecentMeUrls')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetRecentMeUrlsRaw(targetId, {
+        referer: m077Referer.trim(),
+      })
+      const count = Array.isArray(res?.urls) ? res.urls.length : 0
+      setM077Status({
+        type: 'success',
+        message: `تعداد ${count} لینک اخیر t.me دریافت گردید`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getRecentMeUrls' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
+  const handleM077GetSupport = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetSupportRaw) return
+    setM077LoadingOp('getSupport')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetSupportRaw(targetId)
+      setM077Status({
+        type: 'success',
+        message: `کاربر پشتیبانی رسمی: ${res?.user?.firstName || res?.user?.id || 'پشتیبانی تلگرام'}`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getSupport' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
+  const handleM077GetSupportName = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetSupportNameRaw) return
+    setM077LoadingOp('getSupportName')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetSupportNameRaw(targetId)
+      setM077Status({
+        type: 'success',
+        message: `نام پشتیبانی منطقه: ${res?.name || 'Telegram Support'}`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getSupportName' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
+  const handleM077GetTermsOfServiceUpdate = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetTermsOfServiceUpdateRaw) return
+    setM077LoadingOp('getTermsOfServiceUpdate')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetTermsOfServiceUpdateRaw(targetId)
+      setM077Status({
+        type: 'success',
+        message: `وضعیت شرایط استفاده (TOS): ${res?._ === 'help.termsOfServiceUpdateEmpty' ? 'به‌روزرسانی جدیدی نیست' : 'شرایط جدید نیازمند تایید است'}`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در بررسی help.getTermsOfServiceUpdate' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
+  const handleM077GetTimezonesList = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetTimezonesListRaw) return
+    setM077LoadingOp('getTimezonesList')
+    setM077Status(null)
+    try {
+      const res = await window.guidegram.helpGetTimezonesListRaw(targetId, { hash: 0 })
+      const count = Array.isArray(res?.timezones) ? res.timezones.length : 0
+      setM077Status({
+        type: 'success',
+        message: `فهرست مناطق زمانی تلگرام: ${count} منطقه زمانی معتبر دریافت شد`,
+      })
+    } catch (err: any) {
+      setM077Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getTimezonesList' })
+    } finally {
+      setM077LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -20512,6 +20649,159 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m076LoadingOp === 'getDeepLinkInfo' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام دیپ‌لینک'}
                       </button>
                     </form>
+                  </div>
+                </div>
+
+                {/* Microphase 077: Help Domain Suite Part 3 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۷: پروموشن، پشتیبانی رسمی و مناطق زمانی (Help Domain Part 3)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Help
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    طرح‌های پریمیوم، داده‌های اسپانسرینگ، لینک‌های کوتاه، پشتیبانی رسمی تلگرام و مناطق زمانی:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m077Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m077Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m077Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m077Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM077Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. help.getPremiumPromo */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. طرح‌های پریمیوم (getPremiumPromo)</span>
+                      <button
+                        type="button"
+                        onClick={handleM077GetPremiumPromo}
+                        disabled={m077LoadingOp === 'getPremiumPromo'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getPremiumPromo' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام پروموشن پریمیوم'}
+                      </button>
+                    </div>
+
+                    {/* 2. help.getPromoData */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. دیتای پروموشن (getPromoData)</span>
+                      <button
+                        type="button"
+                        onClick={handleM077GetPromoData}
+                        disabled={m077LoadingOp === 'getPromoData'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getPromoData' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام پروموشن عمومی'}
+                      </button>
+                    </div>
+
+                    {/* 3. help.getRecentMeUrls */}
+                    <form
+                      onSubmit={handleM077GetRecentMeUrls}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. لینک‌های اخیر (getRecentMeUrls)</span>
+                      <input
+                        type="text"
+                        value={m077Referer}
+                        onChange={(e) => setM077Referer(e.target.value)}
+                        placeholder="ارجاع‌دهنده (Referer)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m077LoadingOp === 'getRecentMeUrls'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getRecentMeUrls' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت لینک‌های t.me'}
+                      </button>
+                    </form>
+
+                    {/* 4. help.getSupport */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۴. اکانت پشتیبانی (getSupport)</span>
+                      <button
+                        type="button"
+                        onClick={handleM077GetSupport}
+                        disabled={m077LoadingOp === 'getSupport'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getSupport' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام ساپورت تلگرام'}
+                      </button>
+                    </div>
+
+                    {/* 5. help.getSupportName */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. نام پشتیبانی (getSupportName)</span>
+                      <button
+                        type="button"
+                        onClick={handleM077GetSupportName}
+                        disabled={m077LoadingOp === 'getSupportName'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getSupportName' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'نام بخش پشتیبانی'}
+                      </button>
+                    </div>
+
+                    {/* 6. help.getTermsOfServiceUpdate */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶. وضعیت قوانین (getTermsOfServiceUpdate)</span>
+                      <button
+                        type="button"
+                        onClick={handleM077GetTermsOfServiceUpdate}
+                        disabled={m077LoadingOp === 'getTermsOfServiceUpdate'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getTermsOfServiceUpdate' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'بررسی شرایط جدید'}
+                      </button>
+                    </div>
+
+                    {/* 7. help.getTimezonesList */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۷. فهرست تایم‌زون‌ها (getTimezonesList)</span>
+                      <button
+                        type="button"
+                        onClick={handleM077GetTimezonesList}
+                        disabled={m077LoadingOp === 'getTimezonesList'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m077LoadingOp === 'getTimezonesList' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت مناطق زمانی'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

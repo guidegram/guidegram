@@ -2733,6 +2733,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:help:get-peer-colors-raw', { accountId, ...params }),
   helpGetPeerProfileColorsRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:help:get-peer-profile-colors-raw', { accountId, ...params }),
+  helpGetPremiumPromoRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-premium-promo-raw', { accountId }),
+  helpGetPromoDataRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-promo-data-raw', { accountId }),
+  helpGetRecentMeUrlsRaw: (accountId: string, params: { referer?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-recent-me-urls-raw', { accountId, ...params }),
+  helpGetSupportRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-support-raw', { accountId }),
+  helpGetSupportNameRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-support-name-raw', { accountId }),
+  helpGetTermsOfServiceUpdateRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-terms-of-service-update-raw', { accountId }),
+  helpGetTimezonesListRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-timezones-list-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

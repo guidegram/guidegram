@@ -8625,6 +8625,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 077 IPC Handlers (Help Domain Part 3)
+  ipcMain.handle('telegram:help:get-premium-promo-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetPremiumPromoRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetPremiumPromoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-promo-data-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetPromoDataRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetPromoDataRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-recent-me-urls-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetRecentMeUrlsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetRecentMeUrlsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-support-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetSupportRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetSupportRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-support-name-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetSupportNameRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetSupportNameRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-terms-of-service-update-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetTermsOfServiceUpdateRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetTermsOfServiceUpdateRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-timezones-list-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetTimezonesListRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetTimezonesListRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
