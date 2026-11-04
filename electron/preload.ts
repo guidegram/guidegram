@@ -3361,6 +3361,18 @@ const guidegramAPI = {
   storiesStartLiveRaw: (accountId: string, params: any): Promise<any> =>
     ipcRenderer.invoke('telegram:stories:start-live-raw', { accountId, ...params }),
 
+  // --- Microphase 124: Stories Domain Suite Part 5 ---
+  storiesToggleAllStoriesHiddenRaw: (accountId: string, params: { hidden?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:toggle-all-stories-hidden-raw', { accountId, ...params }),
+  storiesTogglePeerStoriesHiddenRaw: (accountId: string, params: { peerId?: string; hidden?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:toggle-peer-stories-hidden-raw', { accountId, ...params }),
+  storiesTogglePinnedRaw: (accountId: string, params: { peerId?: string; id?: any; pinned?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:toggle-pinned-raw', { accountId, ...params }),
+  storiesTogglePinnedToTopRaw: (accountId: string, params: { peerId?: string; id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:toggle-pinned-to-top-raw', { accountId, ...params }),
+  storiesUpdateAlbumRaw: (accountId: string, params: any): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:update-album-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

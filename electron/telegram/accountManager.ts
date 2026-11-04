@@ -23878,6 +23878,68 @@ export class AccountManager {
       params?.sendPaidMessagesStars
     )
   }
+
+  // --- Microphase 124: Stories Domain Suite Part 5 ---
+  public async storiesToggleAllStoriesHiddenRaw(
+    accountId: string,
+    params: { hidden?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_toggleAllStoriesHidden(holder as any, params?.hidden)
+  }
+
+  public async storiesTogglePeerStoriesHiddenRaw(
+    accountId: string,
+    params: { peerId?: string; hidden?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_togglePeerStoriesHidden(holder as any, accountId, params?.peerId, params?.hidden)
+  }
+
+  public async storiesTogglePinnedRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any; pinned?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_togglePinned(holder as any, accountId, params?.peerId, params?.id, params?.pinned)
+  }
+
+  public async storiesTogglePinnedToTopRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_togglePinnedToTop(holder as any, accountId, params?.peerId, params?.id)
+  }
+
+  public async storiesUpdateAlbumRaw(
+    accountId: string,
+    params: {
+      peerId?: string
+      albumId?: number
+      title?: string
+      deleteStories?: any
+      addStories?: any
+      order?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_updateAlbum(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.albumId,
+      params?.title,
+      params?.deleteStories,
+      params?.addStories,
+      params?.order
+    )
+  }
 }
 
 

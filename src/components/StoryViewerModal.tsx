@@ -32,6 +32,7 @@ import {
   Hash,
   Radio,
   ArrowUpDown,
+  ChevronUp,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
@@ -468,13 +469,69 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     setPinning(true)
     try {
       const nextPinned = pinnedState !== undefined ? !pinnedState : !currentStory?.isPinned
-      await window.guidegram.toggleStoryPinned(accountId, [currentStoryId], nextPinned, peerId)
+      if ((window as any).guidegram?.storiesTogglePinnedRaw) {
+        await (window as any).guidegram.storiesTogglePinnedRaw(accountId, {
+          peerId,
+          id: [currentStoryId],
+          pinned: nextPinned,
+        })
+      } else {
+        await window.guidegram.toggleStoryPinned(accountId, [currentStoryId], nextPinned, peerId)
+      }
       setPinnedState(nextPinned)
     } catch (_) {
     } finally {
       setPinning(false)
     }
   }, [accountId, peerId, currentStoryId, pinning, pinnedState, currentStory])
+
+  // Microphase 124: Toggle Pinned to Top (stories.togglePinnedToTop)
+  const handleTogglePinnedToTop = useCallback(async () => {
+    if (!currentStoryId || pinning) return
+    setPinning(true)
+    try {
+      if ((window as any).guidegram?.storiesTogglePinnedToTopRaw) {
+        await (window as any).guidegram.storiesTogglePinnedToTopRaw(accountId, {
+          peerId,
+          id: [currentStoryId],
+        })
+      }
+    } catch (_) {
+    } finally {
+      setPinning(false)
+    }
+  }, [accountId, peerId, currentStoryId, pinning])
+
+  // Microphase 124: Toggle Peer Stories Hidden (stories.togglePeerStoriesHidden)
+  const [peerStoriesHidden, setPeerStoriesHidden] = useState(false)
+  const handleTogglePeerStoriesHidden = useCallback(async () => {
+    if (!accountId || !peerId) return
+    const nextHidden = !peerStoriesHidden
+    try {
+      if ((window as any).guidegram?.storiesTogglePeerStoriesHiddenRaw) {
+        await (window as any).guidegram.storiesTogglePeerStoriesHiddenRaw(accountId, {
+          peerId,
+          hidden: nextHidden,
+        })
+        setPeerStoriesHidden(nextHidden)
+      }
+    } catch (_) {}
+  }, [accountId, peerId, peerStoriesHidden])
+
+  // Microphase 124: Toggle All Stories Hidden (stories.toggleAllStoriesHidden)
+  const [allStoriesHidden, setAllStoriesHidden] = useState(false)
+  const handleToggleAllStoriesHidden = useCallback(async () => {
+    if (!accountId) return
+    const nextHidden = !allStoriesHidden
+    try {
+      if ((window as any).guidegram?.storiesToggleAllStoriesHiddenRaw) {
+        await (window as any).guidegram.storiesToggleAllStoriesHiddenRaw(accountId, { hidden: nextHidden })
+        setAllStoriesHidden(nextHidden)
+      }
+    } catch (_) {}
+  }, [accountId, allStoriesHidden])
+
+
 
   // Check canSendStory (stories.canSendStory)
   const checkCanSendStory = useCallback(async () => {
@@ -639,6 +696,21 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       setLoadingAlbums(false)
     }
   }, [accountId, peerId])
+
+  // Microphase 124: Update Album (stories.updateAlbum)
+  const handleUpdateAlbum = useCallback(async (albumId: number, newTitle: string) => {
+    if (!accountId || !peerId || !newTitle.trim()) return
+    try {
+      if ((window as any).guidegram?.storiesUpdateAlbumRaw) {
+        await (window as any).guidegram.storiesUpdateAlbumRaw(accountId, {
+          peerId,
+          albumId,
+          title: newTitle.trim(),
+        })
+        fetchAlbums()
+      }
+    } catch (_) {}
+  }, [accountId, peerId, fetchAlbums])
 
   // Fetch stories of a specific album using stories.getAlbumStories
   const handleLoadAlbumStories = useCallback(async (albumId: number) => {
@@ -1204,6 +1276,37 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 aria-label="Pin story"
               >
                 {pinning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className="h-4 w-4" />}
+              </button>
+            )}
+            {isOwnStory && currentStoryId && !loading && (
+              <button
+                type="button"
+                onClick={handleTogglePinnedToTop}
+                disabled={pinning}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-amber-500/70 hover:text-white disabled:opacity-60"
+                title={isPersian ? 'پین کردن به بالاترین جایگاه (togglePinnedToTop)' : 'Pin to top of profile'}
+                aria-label="Pin to top"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+            )}
+            {!isOwnStory && (
+              <button
+                type="button"
+                onClick={handleTogglePeerStoriesHidden}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  peerStoriesHidden
+                    ? 'bg-amber-500 text-black font-bold'
+                    : 'bg-black/35 text-white/90 hover:bg-black/60 hover:text-white'
+                }`}
+                title={
+                  peerStoriesHidden
+                    ? (isPersian ? 'نمایش مجدد استوری‌های این مخاطب' : 'Unhide stories from peer')
+                    : (isPersian ? 'مخفی‌سازی استوری‌های این مخاطب (togglePeerStoriesHidden)' : 'Hide stories from peer')
+                }
+                aria-label="Toggle peer stories hidden"
+              >
+                <EyeOff className="h-4 w-4" />
               </button>
             )}
             {isOwnStory && currentStoryId && !loading && (
@@ -1823,13 +1926,26 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                           <div className="text-xs font-medium text-white truncate">{alb.title || `Album #${alb.id}`}</div>
                           <div className="text-[10px] text-gray-400">ID: {alb.id} · {alb.stories_count || 0} stories</div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleLoadAlbumStories(alb.id)}
-                          className="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40 text-[10px] font-medium transition-colors"
-                        >
-                          {isPersian ? 'مشاهده استوری‌ها' : 'View stories'}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newT = window.prompt(isPersian ? 'عنوان جدید آلبوم:' : 'New album title:', alb.title || '')
+                              if (newT) handleUpdateAlbum(alb.id, newT)
+                            }}
+                            className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 text-[10px] font-medium transition-colors"
+                            title={isPersian ? 'ویرایش عنوان آلبوم (updateAlbum)' : 'Update Album'}
+                          >
+                            {isPersian ? 'ویرایش' : 'Edit'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleLoadAlbumStories(alb.id)}
+                            className="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/40 text-[10px] font-medium transition-colors"
+                          >
+                            {isPersian ? 'مشاهده استوری‌ها' : 'View stories'}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

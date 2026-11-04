@@ -11296,6 +11296,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stories Domain Suite Part 5 IPC (Microphase 124)
+  ipcMain.handle('telegram:stories:toggle-all-stories-hidden-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesToggleAllStoriesHiddenRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesToggleAllStoriesHiddenRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:toggle-peer-stories-hidden-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesTogglePeerStoriesHiddenRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesTogglePeerStoriesHiddenRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:toggle-pinned-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesTogglePinnedRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesTogglePinnedRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:toggle-pinned-to-top-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesTogglePinnedToTopRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesTogglePinnedToTopRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:update-album-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesUpdateAlbumRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesUpdateAlbumRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
