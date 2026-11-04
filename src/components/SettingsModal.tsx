@@ -7771,6 +7771,130 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 076 State & Handlers (Help Domain Part 2)
+  const [m076Status, setM076Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m076LoadingOp, setM076LoadingOp] = useState<string | null>(null)
+  const [m076LangCode, setM076LangCode] = useState('en')
+  const [m076DeepLinkPath, setM076DeepLinkPath] = useState('socks')
+
+  const handleM076GetNearestDc = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetNearestDcRaw) return
+    setM076LoadingOp('getNearestDc')
+    setM076Status(null)
+    try {
+      const res = await window.guidegram.helpGetNearestDcRaw(targetId)
+      setM076Status({
+        type: 'success',
+        message: `نزدیک‌ترین مرکز داده تلگرام: DC ${res?.nearestDc || '?'} (کشور: ${res?.country || 'نامشخص'})`,
+      })
+    } catch (err: any) {
+      setM076Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getNearestDc' })
+    } finally {
+      setM076LoadingOp(null)
+    }
+  }
+
+  const handleM076GetInviteText = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetInviteTextRaw) return
+    setM076LoadingOp('getInviteText')
+    setM076Status(null)
+    try {
+      const res = await window.guidegram.helpGetInviteTextRaw(targetId)
+      setM076Status({
+        type: 'success',
+        message: `متن دعوتنامه رسمی تلگرام: "${(res?.message || '').slice(0, 50)}..."`,
+      })
+    } catch (err: any) {
+      setM076Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getInviteText' })
+    } finally {
+      setM076LoadingOp(null)
+    }
+  }
+
+  const handleM076GetCountriesList = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetCountriesListRaw) return
+    setM076LoadingOp('getCountriesList')
+    setM076Status(null)
+    try {
+      const res = await window.guidegram.helpGetCountriesListRaw(targetId, {
+        langCode: m076LangCode || 'en',
+        hash: 0,
+      })
+      const count = Array.isArray(res?.countries) ? res.countries.length : 0
+      setM076Status({
+        type: 'success',
+        message: `فهرست ${count} کشور با کد پیش‌شماره دریافت گردید (زبان: ${m076LangCode || 'en'})`,
+      })
+    } catch (err: any) {
+      setM076Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getCountriesList' })
+    } finally {
+      setM076LoadingOp(null)
+    }
+  }
+
+  const handleM076GetPeerColors = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetPeerColorsRaw) return
+    setM076LoadingOp('getPeerColors')
+    setM076Status(null)
+    try {
+      const res = await window.guidegram.helpGetPeerColorsRaw(targetId, { hash: 0 })
+      const count = Array.isArray(res?.colors) ? res.colors.length : 0
+      setM076Status({
+        type: 'success',
+        message: `پالت رنگ‌های نام کاربری و کانال (${count} پالت رنگی دریافت شد)`,
+      })
+    } catch (err: any) {
+      setM076Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getPeerColors' })
+    } finally {
+      setM076LoadingOp(null)
+    }
+  }
+
+  const handleM076GetPeerProfileColors = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetPeerProfileColorsRaw) return
+    setM076LoadingOp('getPeerProfileColors')
+    setM076Status(null)
+    try {
+      const res = await window.guidegram.helpGetPeerProfileColorsRaw(targetId, { hash: 0 })
+      const count = Array.isArray(res?.colors) ? res.colors.length : 0
+      setM076Status({
+        type: 'success',
+        message: `پالت رنگ‌های کاور پروفایل (${count} پالت رنگی دریافت شد)`,
+      })
+    } catch (err: any) {
+      setM076Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getPeerProfileColors' })
+    } finally {
+      setM076LoadingOp(null)
+    }
+  }
+
+  const handleM076GetDeepLinkInfo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetDeepLinkInfoRaw) return
+    setM076LoadingOp('getDeepLinkInfo')
+    setM076Status(null)
+    try {
+      const res = await window.guidegram.helpGetDeepLinkInfoRaw(targetId, {
+        path: m076DeepLinkPath.trim() || 'socks',
+      })
+      setM076Status({
+        type: 'success',
+        message: `اطلاعات دیپ‌لینک دریافت گردید: ${res?._ || 'پاسخ معتبر'}`,
+      })
+    } catch (err: any) {
+      setM076Status({ type: 'error', message: err?.message || 'خطا در استعلام help.getDeepLinkInfo' })
+    } finally {
+      setM076LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -20237,6 +20361,155 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                       >
                         {m075LoadingOp === 'dismissSuggestion' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'رد پیشنهاد'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 076: Help Domain Suite Part 2 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۶: مراکز داده، پالت‌های رنگی و پیش‌شماره‌ها (Help Domain Part 2)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Help
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    استعلام نزدیک‌ترین DC، متن دعوتنامه رسمی، پیش‌شماره کشورها، رنگ‌های نام کاربری و دیپ‌لینک:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m076Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m076Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m076Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m076Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM076Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. help.getNearestDc */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. نزدیک‌ترین DC (getNearestDc)</span>
+                      <button
+                        type="button"
+                        onClick={handleM076GetNearestDc}
+                        disabled={m076LoadingOp === 'getNearestDc'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m076LoadingOp === 'getNearestDc' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام نزدیک‌ترین دیتاسنتر'}
+                      </button>
+                    </div>
+
+                    {/* 2. help.getInviteText */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. متن دعوتنامه (getInviteText)</span>
+                      <button
+                        type="button"
+                        onClick={handleM076GetInviteText}
+                        disabled={m076LoadingOp === 'getInviteText'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m076LoadingOp === 'getInviteText' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'متن رسمی دعوتنامه'}
+                      </button>
+                    </div>
+
+                    {/* 3. help.getCountriesList */}
+                    <form
+                      onSubmit={handleM076GetCountriesList}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. فهرست کشورها (getCountriesList)</span>
+                      <input
+                        type="text"
+                        value={m076LangCode}
+                        onChange={(e) => setM076LangCode(e.target.value)}
+                        placeholder="کد زبان (en, fa)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m076LoadingOp === 'getCountriesList'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m076LoadingOp === 'getCountriesList' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت فهرست کشورها'}
+                      </button>
+                    </form>
+
+                    {/* 4. help.getPeerColors */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۴. رنگ‌های نام کاربری (getPeerColors)</span>
+                      <button
+                        type="button"
+                        onClick={handleM076GetPeerColors}
+                        disabled={m076LoadingOp === 'getPeerColors'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m076LoadingOp === 'getPeerColors' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'پالت رنگ نام کاربری'}
+                      </button>
+                    </div>
+
+                    {/* 5. help.getPeerProfileColors */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. رنگ‌های پروفایل (getPeerProfileColors)</span>
+                      <button
+                        type="button"
+                        onClick={handleM076GetPeerProfileColors}
+                        disabled={m076LoadingOp === 'getPeerProfileColors'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m076LoadingOp === 'getPeerProfileColors' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'پالت رنگ پروفایل'}
+                      </button>
+                    </div>
+
+                    {/* 6. help.getDeepLinkInfo */}
+                    <form
+                      onSubmit={handleM076GetDeepLinkInfo}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۶. اطلاعات دیپ‌لینک (getDeepLinkInfo)</span>
+                      <input
+                        type="text"
+                        value={m076DeepLinkPath}
+                        onChange={(e) => setM076DeepLinkPath(e.target.value)}
+                        placeholder="مسیر دیپ‌لینک (مانند socks)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m076LoadingOp === 'getDeepLinkInfo'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m076LoadingOp === 'getDeepLinkInfo' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام دیپ‌لینک'}
                       </button>
                     </form>
                   </div>

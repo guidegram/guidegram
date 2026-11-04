@@ -2719,6 +2719,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:help:get-cdn-config-raw', { accountId }),
   helpGetConfigRaw: (accountId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:help:get-config-raw', { accountId }),
+  helpGetCountriesListRaw: (accountId: string, params: { langCode?: string; hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-countries-list-raw', { accountId, ...params }),
+  helpGetDeepLinkInfoRaw: (accountId: string, params: { path?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-deep-link-info-raw', { accountId, ...params }),
+  helpGetInviteTextRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-invite-text-raw', { accountId }),
+  helpGetNearestDcRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-nearest-dc-raw', { accountId }),
+  helpGetPassportConfigRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-passport-config-raw', { accountId, ...params }),
+  helpGetPeerColorsRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-peer-colors-raw', { accountId, ...params }),
+  helpGetPeerProfileColorsRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-peer-profile-colors-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

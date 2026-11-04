@@ -20662,6 +20662,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.help_getConfig(holder as any)
   }
+
+  // Layer 232 Help Suite Part 2 (Microphase 076)
+  public async helpGetCountriesListRaw(accountId: string, params: { langCode?: string; hash?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getCountriesList(holder as any, params?.langCode, params?.hash)
+  }
+
+  public async helpGetDeepLinkInfoRaw(accountId: string, params: { path?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getDeepLinkInfo(holder as any, params?.path)
+  }
+
+  public async helpGetInviteTextRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getInviteText(holder as any)
+  }
+
+  public async helpGetNearestDcRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getNearestDc(holder as any)
+  }
+
+  public async helpGetPassportConfigRaw(accountId: string, params: { hash?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getPassportConfig(holder as any, params?.hash)
+  }
+
+  public async helpGetPeerColorsRaw(accountId: string, params: { hash?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getPeerColors(holder as any, params?.hash)
+  }
+
+  public async helpGetPeerProfileColorsRaw(accountId: string, params: { hash?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getPeerProfileColors(holder as any, params?.hash)
+  }
 }
 
 

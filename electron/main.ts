@@ -8561,6 +8561,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 076 IPC Handlers (Help Domain Part 2)
+  ipcMain.handle('telegram:help:get-countries-list-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetCountriesListRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetCountriesListRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-deep-link-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetDeepLinkInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetDeepLinkInfoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-invite-text-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetInviteTextRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetInviteTextRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-nearest-dc-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetNearestDcRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetNearestDcRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-passport-config-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetPassportConfigRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetPassportConfigRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-peer-colors-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetPeerColorsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetPeerColorsRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-peer-profile-colors-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetPeerProfileColorsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetPeerProfileColorsRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

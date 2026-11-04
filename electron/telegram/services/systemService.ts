@@ -484,11 +484,10 @@ export class SystemService {
     }
   }
 
-  public async help_getNearestDc(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getNearestDc(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getNearestDc',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getNearestDc error:', err)
@@ -508,11 +507,10 @@ export class SystemService {
     }
   }
 
-  public async help_getInviteText(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getInviteText(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getInviteText',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getInviteText error:', err)
@@ -597,7 +595,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getDeepLinkInfo',
-        'path': path,
+        path: path || '',
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getDeepLinkInfo error:', err)
@@ -633,7 +631,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getPassportConfig',
-        'hash': hash,
+        hash: hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getPassportConfig error:', err)
@@ -722,8 +720,8 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getCountriesList',
-        'lang_code': langCode,
-        'hash': hash,
+        langCode: langCode || 'en',
+        hash: hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getCountriesList error:', err)
@@ -747,7 +745,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getPeerColors',
-        'hash': hash,
+        hash: hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getPeerColors error:', err)
@@ -759,7 +757,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getPeerProfileColors',
-        'hash': hash,
+        hash: hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getPeerProfileColors error:', err)
