@@ -473,11 +473,10 @@ export class SystemService {
     }
   }
 
-  public async help_getConfig(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getConfig(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getConfig',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getConfig error:', err)
@@ -501,7 +500,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getAppUpdate',
-        'source': source,
+        source: source || 'android',
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getAppUpdate error:', err)
@@ -546,11 +545,10 @@ export class SystemService {
     }
   }
 
-  public async help_getCdnConfig(holder: RpcClientHolder, params: any = {}): Promise<any> {
+  public async help_getCdnConfig(holder: RpcClientHolder): Promise<any> {
     try {
       return await holder.client.call({
         _: 'help.getCdnConfig',
-        ...params,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getCdnConfig error:', err)
@@ -584,9 +582,10 @@ export class SystemService {
 
   public async help_acceptTermsOfService(holder: RpcClientHolder, id?: any): Promise<any> {
     try {
+      const dataJson = typeof id === 'string' ? { _: 'dataJSON', data: id } : (id || { _: 'dataJSON', data: '{}' })
       return await holder.client.call({
         _: 'help.acceptTermsOfService',
-        'id': id,
+        id: dataJson,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.acceptTermsOfService error:', err)
@@ -610,7 +609,7 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'help.getAppConfig',
-        'hash': hash,
+        hash: hash ?? 0,
       })
     } catch (err) {
       Logger.warn('[SystemService] help.getAppConfig error:', err)
@@ -666,13 +665,14 @@ export class SystemService {
     }
   }
 
-  public async help_editUserInfo(holder: RpcClientHolder, accountId: string, userIdId?: string, message?: string, entities?: any): Promise<any> {
+  public async help_editUserInfo(holder: RpcClientHolder, accountId: string, userId?: string, message?: string, entities?: any[]): Promise<any> {
     try {
+      const inputUser = userId ? await this.toInputUser(accountId, userId) : { _: 'inputUserSelf' }
       return await holder.client.call({
         _: 'help.editUserInfo',
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'message': message,
-        'entities': entities,
+        userId: inputUser,
+        message: message || '',
+        entities: Array.isArray(entities) ? entities : [],
       })
     } catch (err) {
       Logger.warn('[SystemService] help.editUserInfo error:', err)
@@ -706,10 +706,11 @@ export class SystemService {
 
   public async help_dismissSuggestion(holder: RpcClientHolder, accountId: string, peerId?: string, suggestion?: string): Promise<any> {
     try {
+      const inputPeer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'help.dismissSuggestion',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'suggestion': suggestion,
+        peer: inputPeer,
+        suggestion: suggestion || '',
       })
     } catch (err) {
       Logger.warn('[SystemService] help.dismissSuggestion error:', err)

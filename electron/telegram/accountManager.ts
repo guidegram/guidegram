@@ -20619,6 +20619,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.upload_saveFilePart(holder as any, params?.fileId, params?.filePart, params?.bytes)
   }
+
+  // Layer 232 Help Suite Part 1 (Microphase 075)
+  public async helpAcceptTermsOfServiceRaw(accountId: string, params: { id?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_acceptTermsOfService(holder as any, params?.id)
+  }
+
+  public async helpDismissSuggestionRaw(accountId: string, params: { peerId?: string; suggestion?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_dismissSuggestion(holder as any, accountId, params?.peerId, params?.suggestion)
+  }
+
+  public async helpEditUserInfoRaw(accountId: string, params: { userId?: string; message?: string; entities?: any[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_editUserInfo(holder as any, accountId, params?.userId, params?.message, params?.entities)
+  }
+
+  public async helpGetAppConfigRaw(accountId: string, params: { hash?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getAppConfig(holder as any, params?.hash)
+  }
+
+  public async helpGetAppUpdateRaw(accountId: string, params: { source?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getAppUpdate(holder as any, params?.source)
+  }
+
+  public async helpGetCdnConfigRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getCdnConfig(holder as any)
+  }
+
+  public async helpGetConfigRaw(accountId: string): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.help_getConfig(holder as any)
+  }
 }
 
 

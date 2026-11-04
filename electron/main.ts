@@ -8497,6 +8497,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 075 IPC Handlers (Help Domain Part 1)
+  ipcMain.handle('telegram:help:accept-terms-of-service-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpAcceptTermsOfServiceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpAcceptTermsOfServiceRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:dismiss-suggestion-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpDismissSuggestionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpDismissSuggestionRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:edit-user-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpEditUserInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpEditUserInfoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-app-config-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetAppConfigRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetAppConfigRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-app-update-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.helpGetAppUpdateRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetAppUpdateRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-cdn-config-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetCdnConfigRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetCdnConfigRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:help:get-config-raw', async (_event, { accountId }) => {
+    try {
+      return await accountManager.helpGetConfigRaw(accountId)
+    } catch (err: any) {
+      Logger.warn('[IPC] helpGetConfigRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

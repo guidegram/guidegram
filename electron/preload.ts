@@ -2705,6 +2705,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:upload:get-file-hashes-raw', { accountId, ...params }),
   uploadSaveFilePartRaw: (accountId: string, params: { fileId?: bigint | number | string; filePart?: number; bytes?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:upload:save-file-part-raw', { accountId, ...params }),
+  helpAcceptTermsOfServiceRaw: (accountId: string, params: { id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:accept-terms-of-service-raw', { accountId, ...params }),
+  helpDismissSuggestionRaw: (accountId: string, params: { peerId?: string; suggestion?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:dismiss-suggestion-raw', { accountId, ...params }),
+  helpEditUserInfoRaw: (accountId: string, params: { userId?: string; message?: string; entities?: any[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:edit-user-info-raw', { accountId, ...params }),
+  helpGetAppConfigRaw: (accountId: string, params: { hash?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-app-config-raw', { accountId, ...params }),
+  helpGetAppUpdateRaw: (accountId: string, params: { source?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-app-update-raw', { accountId, ...params }),
+  helpGetCdnConfigRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-cdn-config-raw', { accountId }),
+  helpGetConfigRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:help:get-config-raw', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

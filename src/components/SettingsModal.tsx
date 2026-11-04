@@ -7683,6 +7683,94 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 075 State & Handlers (Help Domain Part 1)
+  const [m075Status, setM075Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m075LoadingOp, setM075LoadingOp] = useState<string | null>(null)
+  const [m075AppUpdateSource, setM075AppUpdateSource] = useState('android')
+  const [m075SuggestionPeer, setM075SuggestionPeer] = useState('')
+  const [m075SuggestionText, setM075SuggestionText] = useState('')
+
+  const handleM075GetConfig = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetConfigRaw) return
+    setM075LoadingOp('getConfig')
+    setM075Status(null)
+    try {
+      const res = await window.guidegram.helpGetConfigRaw(targetId)
+      setM075Status({ type: 'success', message: `پیکربندی تلگرام دریافت گردید (DC پیش‌فرض: ${res?.thisDc || '۱'})` })
+    } catch (err: any) {
+      setM075Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getConfig' })
+    } finally {
+      setM075LoadingOp(null)
+    }
+  }
+
+  const handleM075GetAppUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetAppUpdateRaw) return
+    setM075LoadingOp('getAppUpdate')
+    setM075Status(null)
+    try {
+      const res = await window.guidegram.helpGetAppUpdateRaw(targetId, { source: m075AppUpdateSource || 'android' })
+      setM075Status({ type: 'success', message: `بررسی آپدیت با موفقیت انجام شد: ${res?._ || 'پاسخ دریافت شد'}` })
+    } catch (err: any) {
+      setM075Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getAppUpdate' })
+    } finally {
+      setM075LoadingOp(null)
+    }
+  }
+
+  const handleM075GetCdnConfig = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetCdnConfigRaw) return
+    setM075LoadingOp('getCdnConfig')
+    setM075Status(null)
+    try {
+      const res = await window.guidegram.helpGetCdnConfigRaw(targetId)
+      const count = Array.isArray(res?.dcOptions) ? res.dcOptions.length : 0
+      setM075Status({ type: 'success', message: `پیکربندی CDN تلگرام دریافت گردید (${count} سرور CDN)` })
+    } catch (err: any) {
+      setM075Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getCdnConfig' })
+    } finally {
+      setM075LoadingOp(null)
+    }
+  }
+
+  const handleM075GetAppConfig = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpGetAppConfigRaw) return
+    setM075LoadingOp('getAppConfig')
+    setM075Status(null)
+    try {
+      const res = await window.guidegram.helpGetAppConfigRaw(targetId, { hash: 0 })
+      setM075Status({ type: 'success', message: `تنظیمات اپلیکیشن تلگرام (AppConfig) دریافت گردید` })
+    } catch (err: any) {
+      setM075Status({ type: 'error', message: err?.message || 'خطا در دریافت help.getAppConfig' })
+    } finally {
+      setM075LoadingOp(null)
+    }
+  }
+
+  const handleM075DismissSuggestion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.helpDismissSuggestionRaw) return
+    setM075LoadingOp('dismissSuggestion')
+    setM075Status(null)
+    try {
+      await window.guidegram.helpDismissSuggestionRaw(targetId, {
+        peerId: m075SuggestionPeer.trim() || undefined,
+        suggestion: m075SuggestionText.trim() || 'NEW_FEATURE',
+      })
+      setM075Status({ type: 'success', message: `پیشنهاد تلگرام با موفقیت رد شد (dismissSuggestion)` })
+    } catch (err: any) {
+      setM075Status({ type: 'error', message: err?.message || 'خطا در رد پیشنهاد help.dismissSuggestion' })
+    } finally {
+      setM075LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -20007,6 +20095,151 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       {m074Loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال قطعه'}
                     </button>
                   </form>
+                </div>
+
+                {/* Microphase 075: Help Domain Suite Part 1 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۵: اطلاعات و پیکربندی سیستمی (Help Domain Part 1)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Help
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    استعلام پیکربندی عمومی تلگرام، وضعیت CDN، کانفیگ برنامه، بررسی آپدیت و رد پیشنهادات:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m075Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m075Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m075Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m075Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM075Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. help.getConfig */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. پیکربندی اصلی (getConfig)</span>
+                      <button
+                        type="button"
+                        onClick={handleM075GetConfig}
+                        disabled={m075LoadingOp === 'getConfig'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m075LoadingOp === 'getConfig' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام پیکربندی تلگرام'}
+                      </button>
+                    </div>
+
+                    {/* 2. help.getCdnConfig */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۲. پیکربندی CDN (getCdnConfig)</span>
+                      <button
+                        type="button"
+                        onClick={handleM075GetCdnConfig}
+                        disabled={m075LoadingOp === 'getCdnConfig'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m075LoadingOp === 'getCdnConfig' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام سرورهای CDN'}
+                      </button>
+                    </div>
+
+                    {/* 3. help.getAppConfig */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۳. تنظیمات اپلیکیشن (getAppConfig)</span>
+                      <button
+                        type="button"
+                        onClick={handleM075GetAppConfig}
+                        disabled={m075LoadingOp === 'getAppConfig'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m075LoadingOp === 'getAppConfig' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام کانفیگ اپ'}
+                      </button>
+                    </div>
+
+                    {/* 4. help.getAppUpdate */}
+                    <form
+                      onSubmit={handleM075GetAppUpdate}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۴. بررسی آپدیت (getAppUpdate)</span>
+                      <input
+                        type="text"
+                        value={m075AppUpdateSource}
+                        onChange={(e) => setM075AppUpdateSource(e.target.value)}
+                        placeholder="منبع آپدیت (مانند android)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m075LoadingOp === 'getAppUpdate'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m075LoadingOp === 'getAppUpdate' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'بررسی نسخه جدید'}
+                      </button>
+                    </form>
+
+                    {/* 5. help.dismissSuggestion */}
+                    <form
+                      onSubmit={handleM075DismissSuggestion}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2 md:col-span-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۵. رد پیشنهاد تلگرام (dismissSuggestion)</span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m075SuggestionPeer}
+                          onChange={(e) => setM075SuggestionPeer(e.target.value)}
+                          placeholder="شناسه طرف گفتگو (اختیاری)..."
+                          className="w-1/2 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m075SuggestionText}
+                          onChange={(e) => setM075SuggestionText(e.target.value)}
+                          placeholder="کلید پیشنهاد (Suggestion)..."
+                          className="w-1/2 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m075LoadingOp === 'dismissSuggestion'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m075LoadingOp === 'dismissSuggestion' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'رد پیشنهاد'}
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
             )}
