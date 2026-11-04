@@ -74,8 +74,17 @@ export class BotsService {
     }
   }
 
-  public async resetBotCommands(holder: RpcClientHolder, scope: any = { _: 'botCommandScopeDefault' }, langCode = ''): Promise<boolean> {
+  public async resetBotCommands(holder: RpcClientHolder, scopeOrParams?: any, langCodeParam = ''): Promise<boolean> {
     try {
+      let scope: any = { _: 'botCommandScopeDefault' }
+      let langCode = ''
+      if (scopeOrParams && typeof scopeOrParams === 'object' && ('scope' in scopeOrParams || 'langCode' in scopeOrParams)) {
+        scope = scopeOrParams.scope || scope
+        langCode = scopeOrParams.langCode || ''
+      } else if (scopeOrParams) {
+        scope = scopeOrParams
+        langCode = langCodeParam || ''
+      }
       const res = await holder.client.call({
         _: 'bots.resetBotCommands',
         scope,
@@ -226,13 +235,27 @@ export class BotsService {
   public async invokeWebViewCustomMethod(
     holder: RpcClientHolder,
     accountId: string,
-    botId: string,
-    customMethod: string,
-    params: any
+    paramsOrBotId: { botId: string | any; customMethod: string; params: any } | string,
+    customMethodParam?: string,
+    paramsParam?: any
   ): Promise<any> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
-      const dataJson = typeof params === 'string' ? { _: 'dataJSON', data: params } : { _: 'dataJSON', data: JSON.stringify(params) }
+      let botId: any
+      let customMethod = ''
+      let methodParams: any
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        customMethod = paramsOrBotId.customMethod
+        methodParams = paramsOrBotId.params
+      } else {
+        botId = paramsOrBotId
+        customMethod = customMethodParam || ''
+        methodParams = paramsParam
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
+      const dataJson = typeof methodParams === 'string'
+        ? { _: 'dataJSON', data: methodParams }
+        : { _: 'dataJSON', data: JSON.stringify(methodParams || {}) }
       return await holder.client.call({
         _: 'bots.invokeWebViewCustomMethod',
         bot,
@@ -241,7 +264,7 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] invokeWebViewCustomMethod error:', err)
-      return null
+      throw err
     }
   }
 
@@ -353,9 +376,27 @@ export class BotsService {
     }
   }
 
-  public async reorderPreviewMedias(holder: RpcClientHolder, accountId: string, botId: string, order: any[], langCode = ''): Promise<boolean> {
+  public async reorderPreviewMedias(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any; order: any[]; langCode?: string } | string,
+    orderParam?: any[],
+    langCodeParam = ''
+  ): Promise<boolean> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let order: any[] = []
+      let langCode = ''
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        order = Array.isArray(paramsOrBotId.order) ? paramsOrBotId.order : []
+        langCode = paramsOrBotId.langCode || ''
+      } else {
+        botId = paramsOrBotId
+        order = Array.isArray(orderParam) ? orderParam : []
+        langCode = langCodeParam || ''
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const res = await holder.client.call({
         _: 'bots.reorderPreviewMedias',
         bot,
@@ -365,7 +406,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] reorderPreviewMedias error:', err)
-      return false
+      throw err
     }
   }
 
@@ -495,9 +536,23 @@ export class BotsService {
     }
   }
 
-  public async removeUsername(holder: RpcClientHolder, accountId: string, botId: string, username: string): Promise<boolean> {
+  public async removeUsername(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any; username: string } | string,
+    usernameParam?: string
+  ): Promise<boolean> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let username = ''
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        username = paramsOrBotId.username
+      } else {
+        botId = paramsOrBotId
+        username = usernameParam || ''
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const res = await holder.client.call({
         _: 'bots.removeUsername',
         bot,
@@ -506,7 +561,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] removeUsername error:', err)
-      return false
+      throw err
     }
   }
 
@@ -526,9 +581,23 @@ export class BotsService {
     }
   }
 
-  public async reorderUsernames(holder: RpcClientHolder, accountId: string, botId: string, order: string[]): Promise<boolean> {
+  public async reorderUsernames(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any; order: string[] } | string,
+    orderParam?: string[]
+  ): Promise<boolean> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let order: string[] = []
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        order = Array.isArray(paramsOrBotId.order) ? paramsOrBotId.order : []
+      } else {
+        botId = paramsOrBotId
+        order = Array.isArray(orderParam) ? orderParam : []
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const res = await holder.client.call({
         _: 'bots.reorderUsernames',
         bot,
@@ -537,7 +606,7 @@ export class BotsService {
       return Boolean(res)
     } catch (err) {
       Logger.warn('[BotsService] reorderUsernames error:', err)
-      return false
+      throw err
     }
   }
 
@@ -566,9 +635,23 @@ export class BotsService {
     }
   }
 
-  public async getRequestedWebViewButton(holder: RpcClientHolder, accountId: string, botId: string, webappReqId: string): Promise<any> {
+  public async getRequestedWebViewButton(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any; webappReqId: string } | string,
+    webappReqIdParam?: string
+  ): Promise<any> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let webappReqId = ''
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        webappReqId = paramsOrBotId.webappReqId
+      } else {
+        botId = paramsOrBotId
+        webappReqId = webappReqIdParam || ''
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       return await holder.client.call({
         _: 'bots.getRequestedWebViewButton',
         bot,
@@ -576,13 +659,27 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] getRequestedWebViewButton error:', err)
-      return null
+      throw err
     }
   }
 
-  public async requestWebViewButton(holder: RpcClientHolder, accountId: string, botId: string, button: any): Promise<any> {
+  public async requestWebViewButton(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any; button: any } | string,
+    buttonParam?: any
+  ): Promise<any> {
     try {
-      const userId = await this.toInputUser(accountId, botId)
+      let botId: any
+      let button: any
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        button = paramsOrBotId.button
+      } else {
+        botId = paramsOrBotId
+        button = buttonParam
+      }
+      const userId = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       return await holder.client.call({
         _: 'bots.requestWebViewButton',
         userId,
@@ -590,7 +687,7 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] requestWebViewButton error:', err)
-      return null
+      throw err
     }
   }
 

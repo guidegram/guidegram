@@ -2923,6 +2923,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:bots:get-preview-info-raw', { accountId, ...params }),
   botsGetPreviewMediasRaw: (accountId: string, params: { botId: string | any }): Promise<any> =>
     ipcRenderer.invoke('telegram:bots:get-preview-medias-raw', { accountId, ...params }),
+  // Microphase 091 APIs: Bots Domain Suite Part 4 (7 RPCs)
+  botsGetRequestedWebViewButtonRaw: (accountId: string, params: { botId: string | any; webappReqId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-requested-web-view-button-raw', { accountId, ...params }),
+  botsInvokeWebViewCustomMethodRaw: (accountId: string, params: { botId: string | any; customMethod: string; params: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:invoke-web-view-custom-method-raw', { accountId, ...params }),
+  botsRemoveUsernameRaw: (accountId: string, params: { botId: string | any; username: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:remove-username-raw', { accountId, ...params }),
+  botsReorderPreviewMediasRaw: (accountId: string, params: { botId: string | any; order: any[]; langCode?: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:reorder-preview-medias-raw', { accountId, ...params }),
+  botsReorderUsernamesRaw: (accountId: string, params: { botId: string | any; order: string[] }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:reorder-usernames-raw', { accountId, ...params }),
+  botsRequestWebViewButtonRaw: (accountId: string, params: { botId: string | any; button: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:request-web-view-button-raw', { accountId, ...params }),
+  botsResetBotCommandsRaw: (accountId: string, params?: { scope?: any; langCode?: string }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:reset-bot-commands-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -9449,6 +9449,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 091 IPC Handlers: Bots Domain Suite Part 4 (7 RPCs)
+  ipcMain.handle('telegram:bots:get-requested-web-view-button-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetRequestedWebViewButtonRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetRequestedWebViewButtonRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:invoke-web-view-custom-method-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsInvokeWebViewCustomMethodRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsInvokeWebViewCustomMethodRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:remove-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsRemoveUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsRemoveUsernameRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:reorder-preview-medias-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsReorderPreviewMediasRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsReorderPreviewMediasRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:reorder-usernames-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsReorderUsernamesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsReorderUsernamesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:request-web-view-button-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsRequestWebViewButtonRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsRequestWebViewButtonRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:reset-bot-commands-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsResetBotCommandsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsResetBotCommandsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

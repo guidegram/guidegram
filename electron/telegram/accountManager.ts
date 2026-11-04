@@ -21360,6 +21360,93 @@ export class AccountManager {
     if (!holder?.client) return []
     return this.botsService.getPreviewMedias(holder as any, accountId, params)
   }
+
+  // --- Microphase 091: Bots Domain Suite Part 4 (7 RPCs) ---
+  public async botsGetRequestedWebViewButtonRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      webappReqId: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getRequestedWebViewButton(holder as any, accountId, params)
+  }
+
+  public async botsInvokeWebViewCustomMethodRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      customMethod: string
+      params: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.invokeWebViewCustomMethod(holder as any, accountId, params)
+  }
+
+  public async botsRemoveUsernameRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      username: string
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.removeUsername(holder as any, accountId, params)
+  }
+
+  public async botsReorderPreviewMediasRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      order: any[]
+      langCode?: string
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.reorderPreviewMedias(holder as any, accountId, params)
+  }
+
+  public async botsReorderUsernamesRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      order: string[]
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.reorderUsernames(holder as any, accountId, params)
+  }
+
+  public async botsRequestWebViewButtonRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      button: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.requestWebViewButton(holder as any, accountId, params)
+  }
+
+  public async botsResetBotCommandsRaw(
+    accountId: string,
+    params?: {
+      scope?: any
+      langCode?: string
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.resetBotCommands(holder as any, params)
+  }
 }
 
 

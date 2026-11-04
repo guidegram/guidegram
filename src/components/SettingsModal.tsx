@@ -9972,6 +9972,186 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // --- Microphase 091 State: Bots Domain Suite Part 4 (7 RPCs) ---
+  const [m091Status, setM091Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m091LoadingOp, setM091LoadingOp] = useState<string | null>(null)
+  const [m091BotId, setM091BotId] = useState('')
+  const [m091CustomMethod, setM091CustomMethod] = useState('')
+  const [m091CustomParams, setM091CustomParams] = useState('{}')
+  const [m091CustomResult, setM091CustomResult] = useState<any | null>(null)
+  const [m091UsernameToRemove, setM091UsernameToRemove] = useState('')
+  const [m091UsernamesOrder, setM091UsernamesOrder] = useState('')
+  const [m091WebappReqId, setM091WebappReqId] = useState('')
+  const [m091ButtonResult, setM091ButtonResult] = useState<any | null>(null)
+  const [m091ButtonText, setM091ButtonText] = useState('شروع برنامه')
+  const [m091ButtonUrl, setM091ButtonUrl] = useState('')
+  const [m091ResetLangCode, setM091ResetLangCode] = useState('')
+
+  const handleM091InvokeWebViewCustomMethod = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsInvokeWebViewCustomMethodRaw || !m091BotId.trim() || !m091CustomMethod.trim()) return
+    setM091LoadingOp('invokeCustom')
+    setM091Status(null)
+    setM091CustomResult(null)
+    try {
+      let parsedParams = {}
+      try {
+        parsedParams = JSON.parse(m091CustomParams || '{}')
+      } catch {
+        parsedParams = m091CustomParams
+      }
+      const res = await window.guidegram.botsInvokeWebViewCustomMethodRaw(targetId, {
+        botId: m091BotId.trim(),
+        customMethod: m091CustomMethod.trim(),
+        params: parsedParams,
+      })
+      setM091CustomResult(res)
+      setM091Status({
+        type: 'success',
+        message: `متد وب‌ویو سفارشی (${m091CustomMethod.trim()}) با موفقیت اجرا شد.`,
+      })
+    } catch (err: any) {
+      setM091Status({ type: 'error', message: err?.message || 'خطا در اجرای متد سفارشی وب‌ویو (bots.invokeWebViewCustomMethod)' })
+    } finally {
+      setM091LoadingOp(null)
+    }
+  }
+
+  const handleM091RemoveUsername = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsRemoveUsernameRaw || !m091BotId.trim() || !m091UsernameToRemove.trim()) return
+    setM091LoadingOp('removeUsername')
+    setM091Status(null)
+    try {
+      const cleanUsername = m091UsernameToRemove.trim().replace(/^@/, '')
+      const res = await window.guidegram.botsRemoveUsernameRaw(targetId, {
+        botId: m091BotId.trim(),
+        username: cleanUsername,
+      })
+      if (res) {
+        setM091Status({
+          type: 'success',
+          message: `نام کاربری @${cleanUsername} با موفقیت از ربات حذف گردید.`,
+        })
+        setM091UsernameToRemove('')
+      } else {
+        setM091Status({ type: 'error', message: 'حذف نام کاربری انجام نشد.' })
+      }
+    } catch (err: any) {
+      setM091Status({ type: 'error', message: err?.message || 'خطا در حذف نام کاربری ربات (bots.removeUsername)' })
+    } finally {
+      setM091LoadingOp(null)
+    }
+  }
+
+  const handleM091ReorderUsernames = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsReorderUsernamesRaw || !m091BotId.trim() || !m091UsernamesOrder.trim()) return
+    setM091LoadingOp('reorderUsernames')
+    setM091Status(null)
+    try {
+      const order = m091UsernamesOrder
+        .split(/[\s,]+/)
+        .map((u) => u.trim().replace(/^@/, ''))
+        .filter(Boolean)
+      const res = await window.guidegram.botsReorderUsernamesRaw(targetId, {
+        botId: m091BotId.trim(),
+        order,
+      })
+      if (res) {
+        setM091Status({
+          type: 'success',
+          message: `ترتیب ${order.length} نام کاربری با موفقیت بروزرسانی شد.`,
+        })
+      } else {
+        setM091Status({ type: 'error', message: 'تغییر چیدمان یوزرنیم‌ها انجام نشد.' })
+      }
+    } catch (err: any) {
+      setM091Status({ type: 'error', message: err?.message || 'خطا در مرتب‌سازی یوزرنیم‌های ربات (bots.reorderUsernames)' })
+    } finally {
+      setM091LoadingOp(null)
+    }
+  }
+
+  const handleM091ResetBotCommands = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsResetBotCommandsRaw) return
+    setM091LoadingOp('resetBotCommands')
+    setM091Status(null)
+    try {
+      const res = await window.guidegram.botsResetBotCommandsRaw(targetId, {
+        scope: { _: 'botCommandScopeDefault' },
+        langCode: m091ResetLangCode.trim(),
+      })
+      if (res) {
+        setM091Status({
+          type: 'success',
+          message: `کلیه دستورات ربات برای زبان "${m091ResetLangCode.trim() || 'پیش‌فرض'}" با موفقیت ریست شد.`,
+        })
+      } else {
+        setM091Status({ type: 'error', message: 'عملیات ریست دستورات تایید نشد.' })
+      }
+    } catch (err: any) {
+      setM091Status({ type: 'error', message: err?.message || 'خطا در ریست دستورات ربات (bots.resetBotCommands)' })
+    } finally {
+      setM091LoadingOp(null)
+    }
+  }
+
+  const handleM091RequestWebViewButton = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsRequestWebViewButtonRaw || !m091BotId.trim()) return
+    setM091LoadingOp('requestButton')
+    setM091Status(null)
+    setM091ButtonResult(null)
+    try {
+      const buttonObj = m091ButtonUrl.trim()
+        ? { _: 'keyboardButtonSimpleWebView', text: m091ButtonText.trim() || 'باز کردن برنامه', url: m091ButtonUrl.trim() }
+        : { _: 'keyboardButtonWebView', text: m091ButtonText.trim() || 'باز کردن برنامه', url: 'https://telegram.org' }
+      const res = await window.guidegram.botsRequestWebViewButtonRaw(targetId, {
+        botId: m091BotId.trim(),
+        button: buttonObj,
+      })
+      setM091ButtonResult(res)
+      setM091Status({
+        type: 'success',
+        message: `درخواست دکمه وب‌ویو با موفقیت ارسال شد (شناسه: ${res?.queryId || res?._ || 'تایید شد'}).`,
+      })
+    } catch (err: any) {
+      setM091Status({ type: 'error', message: err?.message || 'خطا در درخواست دکمه وب‌ویو (bots.requestWebViewButton)' })
+    } finally {
+      setM091LoadingOp(null)
+    }
+  }
+
+  const handleM091GetRequestedWebViewButton = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetRequestedWebViewButtonRaw || !m091BotId.trim() || !m091WebappReqId.trim()) return
+    setM091LoadingOp('getRequestedButton')
+    setM091Status(null)
+    setM091ButtonResult(null)
+    try {
+      const res = await window.guidegram.botsGetRequestedWebViewButtonRaw(targetId, {
+        botId: m091BotId.trim(),
+        webappReqId: m091WebappReqId.trim(),
+      })
+      setM091ButtonResult(res)
+      setM091Status({
+        type: 'success',
+        message: `دکمه وب‌ویو درخواست‌شده با شناسه ${m091WebappReqId.trim()} استعلام شد.`,
+      })
+    } catch (err: any) {
+      setM091Status({ type: 'error', message: err?.message || 'خطا در استعلام دکمه وب‌ویو (bots.getRequestedWebViewButton)' })
+    } finally {
+      setM091LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -25435,6 +25615,246 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setM090Status(null)}
+                          className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                        >
+                          تلاش مجدد
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Microphase 091: Bots Domain Suite Part 4 (7 RPCs) */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/20 via-dark-850 to-dark-900 border border-indigo-500/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          وب‌ویو سفارشی، یوزرنیم‌ها و دکمه‌های ربات (Bots Domain Suite Part 4)
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+                            7 RPCs
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-gray-400">
+                          مدیریت متدهای سفارشی وب‌ویو، حذف و مرتب‌سازی نام‌های کاربری، تنظیم دکمه‌های وب‌اپلیکیشن و ریست دستورات
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Target Bot ID & Identifier Input */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-medium text-gray-400 block mb-1">شناسه یا یوزرنیم ربات (Bot ID / Username):</label>
+                      <input
+                        type="text"
+                        value={m091BotId}
+                        onChange={(e) => setM091BotId(e.target.value)}
+                        placeholder="e.g. 123456789 یا @MySuperBot"
+                        className="w-full px-3 py-1.5 rounded-xl bg-dark-900/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-gray-400 block mb-1">کد زبان ریست دستورات:</label>
+                      <input
+                        type="text"
+                        value={m091ResetLangCode}
+                        onChange={(e) => setM091ResetLangCode(e.target.value)}
+                        placeholder="fa / en (خالی = همه)"
+                        className="w-full px-3 py-1.5 rounded-xl bg-dark-900/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Operation 1: bots.invokeWebViewCustomMethod */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۱. اجرای متد سفارشی وب‌ویو (bots.invokeWebViewCustomMethod)</span>
+                      <button
+                        type="button"
+                        onClick={handleM091InvokeWebViewCustomMethod}
+                        disabled={m091LoadingOp === 'invokeCustom' || !m091BotId.trim() || !m091CustomMethod.trim()}
+                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
+                      >
+                        {m091LoadingOp === 'invokeCustom' ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>در حال اجرا...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Code className="w-3 h-3" />
+                            <span>اجرای متد</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <input
+                          type="text"
+                          value={m091CustomMethod}
+                          onChange={(e) => setM091CustomMethod(e.target.value)}
+                          placeholder="نام متد سفارشی (e.g. getMiniAppConfig)"
+                          className="w-full px-3 py-1.5 rounded-lg bg-dark-800/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          value={m091CustomParams}
+                          onChange={(e) => setM091CustomParams(e.target.value)}
+                          placeholder='پارامترها به‌صورت JSON (e.g. {"version": 1})'
+                          className="w-full px-3 py-1.5 rounded-lg bg-dark-800/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none font-mono text-[11px]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Custom Method Result Display */}
+                    {m091CustomResult !== null && (
+                      <div className="p-2.5 rounded-lg bg-dark-800/60 border border-white/5 space-y-1">
+                        <div className="text-[11px] font-semibold text-indigo-400">نتیجه خروجی متد وب‌ویو:</div>
+                        <pre className="text-[10px] font-mono text-gray-300 overflow-x-auto max-h-32 p-2 rounded bg-dark-950/60 border border-white/5">
+                          {JSON.stringify(m091CustomResult, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Operation 2: bots.removeUsername & bots.reorderUsernames */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <span className="text-xs font-semibold text-gray-200">۲. مدیریت نام‌های کاربری ربات (removeUsername & reorderUsernames)</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Remove Username */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-gray-400 block">حذف نام کاربری اختصاص‌یافته:</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={m091UsernameToRemove}
+                            onChange={(e) => setM091UsernameToRemove(e.target.value)}
+                            placeholder="@old_username"
+                            className="flex-1 px-3 py-1.5 rounded-lg bg-dark-800/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-rose-500/50 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleM091RemoveUsername}
+                            disabled={m091LoadingOp === 'removeUsername' || !m091BotId.trim() || !m091UsernameToRemove.trim()}
+                            className="px-2.5 py-1.5 bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/30 text-rose-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                          >
+                            {m091LoadingOp === 'removeUsername' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            <span>حذف</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Reorder Usernames */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-gray-400 block">مرتب‌سازی ترتیب یوزرنیم‌ها (جداشده با ویرگول):</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={m091UsernamesOrder}
+                            onChange={(e) => setM091UsernamesOrder(e.target.value)}
+                            placeholder="user1, user2, user3"
+                            className="flex-1 px-3 py-1.5 rounded-lg bg-dark-800/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleM091ReorderUsernames}
+                            disabled={m091LoadingOp === 'reorderUsernames' || !m091BotId.trim() || !m091UsernamesOrder.trim()}
+                            className="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                          >
+                            {m091LoadingOp === 'reorderUsernames' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            <span>بروزرسانی</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operation 3: bots.requestWebViewButton, getRequestedWebViewButton & resetBotCommands */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۳. وب‌اپلیکیشن، دکمه وب‌ویو و ریست دستورات</span>
+                      <button
+                        type="button"
+                        onClick={handleM091ResetBotCommands}
+                        disabled={m091LoadingOp === 'resetBotCommands'}
+                        className="px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/40 border border-amber-500/30 text-amber-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                      >
+                        {m091LoadingOp === 'resetBotCommands' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        <span>ریست دستورات (resetBotCommands)</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={m091ButtonText}
+                          onChange={(e) => setM091ButtonText(e.target.value)}
+                          placeholder="متن دکمه وب‌ویو"
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-dark-800/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM091RequestWebViewButton}
+                          disabled={m091LoadingOp === 'requestButton' || !m091BotId.trim()}
+                          className="px-2.5 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/30 text-emerald-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m091LoadingOp === 'requestButton' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'درخواست دکمه'}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={m091WebappReqId}
+                          onChange={(e) => setM091WebappReqId(e.target.value)}
+                          placeholder="شناسه درخواست (webappReqId)"
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-dark-800/80 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-indigo-500/50 outline-none font-mono text-[11px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM091GetRequestedWebViewButton}
+                          disabled={m091LoadingOp === 'getRequestedButton' || !m091BotId.trim() || !m091WebappReqId.trim()}
+                          className="px-2.5 py-1.5 bg-sky-600/30 hover:bg-sky-600/50 border border-sky-500/30 text-sky-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m091LoadingOp === 'getRequestedButton' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Button Result Display */}
+                    {m091ButtonResult !== null && (
+                      <div className="p-2.5 rounded-lg bg-dark-800/60 border border-white/5 space-y-1">
+                        <div className="text-[11px] font-semibold text-emerald-400">جزئیات دکمه درخواستی:</div>
+                        <pre className="text-[10px] font-mono text-gray-300 overflow-x-auto max-h-28 p-2 rounded bg-dark-950/60 border border-white/5">
+                          {JSON.stringify(m091ButtonResult, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feedback Status / Error / Success / Retry */}
+                  {m091Status && (
+                    <div
+                      className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                        m091Status.type === 'success'
+                          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                          : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                      }`}
+                    >
+                      <span>{m091Status.message}</span>
+                      {m091Status.type === 'error' && (
+                        <button
+                          type="button"
+                          onClick={() => setM091Status(null)}
                           className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                         >
                           تلاش مجدد
