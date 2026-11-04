@@ -3297,6 +3297,21 @@ const guidegramAPI = {
   chatlistsLeaveChatlistRaw: (accountId: string, params: { chatlist: any; peers: string[] | string }): Promise<any> =>
     ipcRenderer.invoke('telegram:chatlists:leave-chatlist-raw', { accountId, ...params }),
 
+  // --- Microphase 120: Stories Domain Suite Part 1 ---
+  storiesActivateStealthModeRaw: (accountId: string, params: { past?: boolean; future?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:activate-stealth-mode-raw', { accountId, ...params }),
+  storiesCanSendStoryRaw: (accountId: string, params: { peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:can-send-story-raw', { accountId, ...params }),
+  storiesCreateAlbumRaw: (accountId: string, params: { peerId?: string; title?: string; stories?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:create-album-raw', { accountId, ...params }),
+  storiesDeleteAlbumRaw: (accountId: string, params: { peerId?: string; albumId?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:delete-album-raw', { accountId, ...params }),
+  storiesDeleteStoriesRaw: (accountId: string, params: { peerId?: string; id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:delete-stories-raw', { accountId, ...params }),
+  storiesEditStoryRaw: (accountId: string, params: { peerId?: string; id?: number; media?: any; mediaAreas?: any; caption?: string; entities?: any; privacyRules?: any; music?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:edit-story-raw', { accountId, ...params }),
+  storiesExportStoryLinkRaw: (accountId: string, params: { peerId?: string; id?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stories:export-story-link-raw', { accountId, ...params }),
 
   setEmojiStatus: (
     accountId: string,

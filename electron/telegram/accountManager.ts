@@ -23515,7 +23515,92 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.chatlists_leaveChatlist(holder as any, accountId, params)
   }
+
+  // --- Microphase 120: Stories Domain Suite Part 1 ---
+  public async storiesActivateStealthModeRaw(
+    accountId: string,
+    params: { past?: boolean; future?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_activateStealthMode(holder as any, params?.past, params?.future)
+  }
+
+  public async storiesCanSendStoryRaw(
+    accountId: string,
+    params: { peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_canSendStory(holder as any, accountId, params?.peerId)
+  }
+
+  public async storiesCreateAlbumRaw(
+    accountId: string,
+    params: { peerId?: string; title?: string; stories?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_createAlbum(holder as any, accountId, params?.peerId, params?.title, params?.stories)
+  }
+
+  public async storiesDeleteAlbumRaw(
+    accountId: string,
+    params: { peerId?: string; albumId?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_deleteAlbum(holder as any, accountId, params?.peerId, params?.albumId)
+  }
+
+  public async storiesDeleteStoriesRaw(
+    accountId: string,
+    params: { peerId?: string; id?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_deleteStories(holder as any, accountId, params?.peerId, params?.id)
+  }
+
+  public async storiesEditStoryRaw(
+    accountId: string,
+    params: {
+      peerId?: string
+      id?: number
+      media?: any
+      mediaAreas?: any
+      caption?: string
+      entities?: any
+      privacyRules?: any
+      music?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_editStory(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.id,
+      params?.media,
+      params?.mediaAreas,
+      params?.caption,
+      params?.entities,
+      params?.privacyRules,
+      params?.music
+    )
+  }
+
+  public async storiesExportStoryLinkRaw(
+    accountId: string,
+    params: { peerId?: string; id?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.messagingService.stories_exportStoryLink(holder as any, accountId, params?.peerId, params?.id)
+  }
 }
+
 
 
 

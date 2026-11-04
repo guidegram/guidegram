@@ -11040,6 +11040,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stories Domain Suite Part 1 IPC (Microphase 120)
+  ipcMain.handle('telegram:stories:activate-stealth-mode-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesActivateStealthModeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesActivateStealthModeRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:can-send-story-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesCanSendStoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesCanSendStoryRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:create-album-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesCreateAlbumRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesCreateAlbumRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:delete-album-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesDeleteAlbumRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesDeleteAlbumRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:delete-stories-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesDeleteStoriesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesDeleteStoriesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:edit-story-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesEditStoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesEditStoryRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stories:export-story-link-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.storiesExportStoryLinkRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] storiesExportStoryLinkRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

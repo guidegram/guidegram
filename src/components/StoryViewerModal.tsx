@@ -18,6 +18,10 @@ import {
   Check,
   Heart,
   Smile,
+  Edit3,
+  FolderPlus,
+  FolderMinus,
+  ShieldAlert,
 } from 'lucide-react'
 import { PeerStoriesPayload } from '../types/telegram'
 import { motion, AnimatePresence } from 'motion/react'
@@ -83,6 +87,30 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [activeReaction, setActiveReaction] = useState<string | null>(null)
   const [reactionFeedback, setReactionFeedback] = useState<string | null>(null)
   const [storyTab, setStoryTab] = useState<'active' | 'pinned' | 'archive'>(initialTab || 'active')
+
+  // --- Microphase 120: Stories Domain Suite Part 1 States ---
+  const [canSendStoryStatus, setCanSendStoryStatus] = useState<boolean | null>(null)
+  const [canSendStoryLoading, setCanSendStoryLoading] = useState(false)
+
+  // Stealth Mode State (stories.activateStealthMode)
+  const [stealthModalOpen, setStealthModalOpen] = useState(false)
+  const [stealthPast, setStealthPast] = useState(true)
+  const [stealthFuture, setStealthFuture] = useState(true)
+  const [stealthLoading, setStealthLoading] = useState(false)
+  const [stealthFeedback, setStealthFeedback] = useState<string | null>(null)
+
+  // Edit Story State (stories.editStory)
+  const [editCaptionModalOpen, setEditCaptionModalOpen] = useState(false)
+  const [newCaptionText, setNewCaptionText] = useState('')
+  const [editingStoryLoading, setEditingStoryLoading] = useState(false)
+  const [editStoryFeedback, setEditStoryFeedback] = useState<string | null>(null)
+
+  // Album State (stories.createAlbum & stories.deleteAlbum)
+  const [albumModalOpen, setAlbumModalOpen] = useState(false)
+  const [albumTitle, setAlbumTitle] = useState('')
+  const [albumDeleteId, setAlbumDeleteId] = useState('')
+  const [albumLoading, setAlbumLoading] = useState(false)
+  const [albumFeedback, setAlbumFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialTab) {
@@ -286,14 +314,21 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   const handleDeleteStory = useCallback(async () => {
     if (!currentStoryId || deleting) return
-    if (!window.confirm('Delete this story? This cannot be undone.')) return
+    if (!window.confirm(isPersian ? 'آیا از حذف این استوری اطمینان دارید؟' : 'Delete this story? This cannot be undone.')) return
 
     setDeleting(true)
     setDeleteError(null)
     try {
-      const removed = await window.guidegram.deleteStory(accountId, currentStoryId, peerId)
+      let removed = false
+      if ((window as any).guidegram?.storiesDeleteStoriesRaw) {
+        const rawRes = await (window as any).guidegram.storiesDeleteStoriesRaw(accountId, { peerId, id: [currentStoryId] })
+        removed = Boolean(rawRes && !rawRes.error)
+      }
+      if (!removed && window.guidegram?.deleteStory) {
+        removed = await window.guidegram.deleteStory(accountId, currentStoryId, peerId)
+      }
       if (!removed) {
-        setDeleteError('Unable to delete this story.')
+        setDeleteError(isPersian ? 'امکان حذف این استوری وجود ندارد' : 'Unable to delete this story.')
         return
       }
 
@@ -313,13 +348,20 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     } finally {
       setDeleting(false)
     }
-  }, [accountId, currentStoryId, deleting, onClose, onDeleted, peerId])
+  }, [accountId, currentStoryId, deleting, onClose, onDeleted, peerId, isPersian])
 
   const handleCopyLink = useCallback(async () => {
     if (!currentStoryId || copyingLink) return
     setCopyingLink(true)
     try {
-      const link = await window.guidegram.exportStoryLink(accountId, peerId, currentStoryId)
+      let link: string | null = null
+      if ((window as any).guidegram?.storiesExportStoryLinkRaw) {
+        const rawRes = await (window as any).guidegram.storiesExportStoryLinkRaw(accountId, { peerId, id: currentStoryId })
+        link = rawRes?.link || (typeof rawRes === 'string' ? rawRes : null)
+      }
+      if (!link && window.guidegram?.exportStoryLink) {
+        link = await window.guidegram.exportStoryLink(accountId, peerId, currentStoryId)
+      }
       if (link) {
         await navigator.clipboard.writeText(link)
         setTimeout(() => setCopyingLink(false), 2000)
@@ -343,6 +385,152 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       setPinning(false)
     }
   }, [accountId, peerId, currentStoryId, pinning, pinnedState, currentStory])
+
+  // Check canSendStory (stories.canSendStory)
+  const checkCanSendStory = useCallback(async () => {
+    if (!accountId || !peerId) return
+    setCanSendStoryLoading(true)
+    try {
+      if ((window as any).guidegram?.storiesCanSendStoryRaw) {
+        const res = await (window as any).guidegram.storiesCanSendStoryRaw(accountId, { peerId })
+        setCanSendStoryStatus(res?.can_send ?? (typeof res === 'boolean' ? res : true))
+      }
+    } catch (_) {
+      setCanSendStoryStatus(null)
+    } finally {
+      setCanSendStoryLoading(false)
+    }
+  }, [accountId, peerId])
+
+  useEffect(() => {
+    if (isOpen) {
+      checkCanSendStory()
+    }
+  }, [isOpen, checkCanSendStory])
+
+  // Activate Telegram Stealth Mode (stories.activateStealthMode)
+  const handleActivateStealthMode = useCallback(async () => {
+    if (!accountId) return
+    setStealthLoading(true)
+    setStealthFeedback(null)
+    try {
+      let res: any = null
+      if ((window as any).guidegram?.storiesActivateStealthModeRaw) {
+        res = await (window as any).guidegram.storiesActivateStealthModeRaw(accountId, {
+          past: stealthPast,
+          future: stealthFuture,
+        })
+      }
+      if (res?.error) {
+        setStealthFeedback(`خطا: ${res.error}`)
+      } else {
+        setStealthFeedback(isPersian ? 'حالت روح تلگرام با موفقیت فعال شد' : 'Telegram Stealth Mode activated')
+        setLocalGhostMode(true)
+        setTimeout(() => setStealthModalOpen(false), 1600)
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Error activating stealth mode'
+      setStealthFeedback(msg.includes('FLOOD_WAIT') ? 'محدودیت زمانی تلگرام (FLOOD_WAIT)' : msg)
+    } finally {
+      setStealthLoading(false)
+    }
+  }, [accountId, stealthPast, stealthFuture, isPersian])
+
+  // Open Edit Caption Modal
+  const handleOpenEditCaption = useCallback(() => {
+    setNewCaptionText(currentStory?.caption || '')
+    setEditStoryFeedback(null)
+    setEditCaptionModalOpen(true)
+    setPaused(true)
+  }, [currentStory])
+
+  // Save Edited Story Caption (stories.editStory)
+  const handleSaveEditedStory = useCallback(async () => {
+    if (!accountId || !peerId || !currentStoryId) return
+    setEditingStoryLoading(true)
+    setEditStoryFeedback(null)
+    try {
+      let res: any = null
+      if ((window as any).guidegram?.storiesEditStoryRaw) {
+        res = await (window as any).guidegram.storiesEditStoryRaw(accountId, {
+          peerId,
+          id: currentStoryId,
+          caption: newCaptionText,
+        })
+      }
+      if (res?.error) {
+        setEditStoryFeedback(`خطا: ${res.error}`)
+      } else {
+        setEditStoryFeedback(isPersian ? 'کپشن با موفقیت به‌روزرسانی شد' : 'Caption updated')
+        if (peerStories) {
+          const updated = peerStories.stories.map((st) =>
+            st.id === currentStoryId ? { ...st, caption: newCaptionText } : st
+          )
+          setPeerStories({ ...peerStories, stories: updated })
+        }
+        setTimeout(() => setEditCaptionModalOpen(false), 1400)
+      }
+    } catch (err: any) {
+      setEditStoryFeedback(err?.message || 'Error updating story caption')
+    } finally {
+      setEditingStoryLoading(false)
+    }
+  }, [accountId, peerId, currentStoryId, newCaptionText, peerStories, isPersian])
+
+  // Create Album (stories.createAlbum)
+  const handleCreateAlbum = useCallback(async () => {
+    if (!accountId || !peerId || !albumTitle.trim()) return
+    setAlbumLoading(true)
+    setAlbumFeedback(null)
+    try {
+      let res: any = null
+      if ((window as any).guidegram?.storiesCreateAlbumRaw) {
+        res = await (window as any).guidegram.storiesCreateAlbumRaw(accountId, {
+          peerId,
+          title: albumTitle.trim(),
+          stories: currentStoryId ? [currentStoryId] : undefined,
+        })
+      }
+      if (res?.error) {
+        setAlbumFeedback(`خطا: ${res.error}`)
+      } else {
+        setAlbumFeedback(isPersian ? 'آلبوم استوری با موفقیت ایجاد شد' : 'Story album created')
+        setAlbumTitle('')
+        setTimeout(() => setAlbumModalOpen(false), 1500)
+      }
+    } catch (err: any) {
+      setAlbumFeedback(err?.message || 'Error creating story album')
+    } finally {
+      setAlbumLoading(false)
+    }
+  }, [accountId, peerId, albumTitle, currentStoryId, isPersian])
+
+  // Delete Album (stories.deleteAlbum)
+  const handleDeleteAlbum = useCallback(async () => {
+    if (!accountId || !peerId || !albumDeleteId.trim()) return
+    setAlbumLoading(true)
+    setAlbumFeedback(null)
+    try {
+      let res: any = null
+      if ((window as any).guidegram?.storiesDeleteAlbumRaw) {
+        res = await (window as any).guidegram.storiesDeleteAlbumRaw(accountId, {
+          peerId,
+          albumId: parseInt(albumDeleteId.trim(), 10),
+        })
+      }
+      if (res?.error) {
+        setAlbumFeedback(`خطا: ${res.error}`)
+      } else {
+        setAlbumFeedback(isPersian ? 'آلبوم استوری حذف شد' : 'Story album deleted')
+        setAlbumDeleteId('')
+        setTimeout(() => setAlbumModalOpen(false), 1500)
+      }
+    } catch (err: any) {
+      setAlbumFeedback(err?.message || 'Error deleting story album')
+    } finally {
+      setAlbumLoading(false)
+    }
+  }, [accountId, peerId, albumDeleteId, isPersian])
 
   useEffect(() => {
     if (!isOpen || !currentStoryId || !mediaUrl || mediaLoading || isVideo) return
@@ -482,7 +670,21 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               className="shrink-0"
             />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-white">{peerTitle}</div>
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-semibold text-white">{peerTitle}</span>
+                {canSendStoryStatus !== null && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-semibold border ${
+                      canSendStoryStatus
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}
+                    title={canSendStoryStatus ? 'ارسال استوری به این صفحه مجاز است' : 'امکان ارسال استوری محدود است'}
+                  >
+                    {canSendStoryStatus ? '✓ ارسال مجاز' : '✕ محدود'}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 text-[11px] text-white/65">
                 <Calendar className="h-3 w-3" />
                 <span>{formatStoryTime(currentStory?.date)}</span>
@@ -491,6 +693,52 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Microphase 120 Action Buttons */}
+            <button
+              type="button"
+              onClick={() => {
+                setPaused(true)
+                setStealthModalOpen(true)
+              }}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                localGhostMode
+                  ? 'bg-accent-cyan text-black font-bold'
+                  : 'bg-black/35 text-white/90 hover:bg-black/60 hover:text-white'
+              }`}
+              title={isPersian ? 'حالت روح رسمی تلگرام (Stealth Mode)' : 'Telegram Stealth Mode'}
+              aria-label="Stealth mode"
+            >
+              <ShieldAlert className="h-4 w-4" />
+            </button>
+
+            {currentStoryId && !loading && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPaused(true)
+                  setAlbumModalOpen(true)
+                }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-indigo-600/70 hover:text-white"
+                title={isPersian ? 'مدیریت آلبوم استوری‌ها' : 'Story Albums'}
+                aria-label="Story albums"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </button>
+            )}
+
+            {isOwnStory && currentStoryId && !loading && (
+              <button
+                type="button"
+                onClick={handleOpenEditCaption}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/35 text-white/90 transition-colors hover:bg-sky-500/70 hover:text-white"
+                title={isPersian ? 'ویرایش کپشن استوری' : 'Edit story caption'}
+                aria-label="Edit story"
+              >
+                <Edit3 className="h-4 w-4" />
+              </button>
+            )}
+
             {currentStoryId && !loading && (
               <button
                 type="button"
@@ -848,6 +1096,256 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             <span>Space to pause</span>
           </span>
         </div>
+
+        {/* Telegram Stealth Mode Sheet (Microphase 120: stories.activateStealthMode) */}
+        <AnimatePresence>
+          {stealthModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 top-20 z-50 rounded-2xl border border-white/15 bg-black/90 p-4 backdrop-blur-xl shadow-2xl text-white"
+              dir={isPersian ? 'rtl' : 'ltr'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-accent-cyan" />
+                  <span className="text-xs font-bold">
+                    {isPersian ? 'حالت روح رسمی تلگرام (Stealth Mode)' : 'Telegram Stealth Mode'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStealthModalOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="text-[11px] text-gray-300 mb-3 leading-relaxed">
+                {isPersian
+                  ? 'با فعال‌سازی حالت روح رسمی، بازدیدهای اخیر شما پنهان شده و تا مدت مشخصی بازدیدهای بعدی نیز ثبت نمی‌شود.'
+                  : 'Activate official Telegram stealth mode to hide past and upcoming story views.'}
+              </p>
+
+              <div className="space-y-2 mb-4 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={stealthPast}
+                    onChange={(e) => setStealthPast(e.target.checked)}
+                    className="rounded border-white/20 bg-white/10 text-accent-cyan focus:ring-0"
+                  />
+                  <span>{isPersian ? 'پنهان‌سازی بازدیدهای ۵ دقیقه گذشته' : 'Hide views from past 5 minutes'}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={stealthFuture}
+                    onChange={(e) => setStealthFuture(e.target.checked)}
+                    className="rounded border-white/20 bg-white/10 text-accent-cyan focus:ring-0"
+                  />
+                  <span>{isPersian ? 'پنهان‌سازی بازدیدها برای ۲۵ دقیقه آینده' : 'Hide views for next 25 minutes'}</span>
+                </label>
+              </div>
+
+              {stealthFeedback && (
+                <div
+                  className={`text-[11px] p-2 rounded-lg mb-3 ${
+                    stealthFeedback.startsWith('خطا') || stealthFeedback.startsWith('Error')
+                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {stealthFeedback}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStealthModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 text-xs hover:bg-white/20 transition-colors"
+                >
+                  {isPersian ? 'انصراف' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleActivateStealthMode}
+                  disabled={stealthLoading || (!stealthPast && !stealthFuture)}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent-cyan text-black font-semibold text-xs hover:bg-accent-cyan/90 transition-colors disabled:opacity-50"
+                >
+                  {stealthLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{isPersian ? 'فعال‌سازی حالت روح' : 'Activate'}</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Edit Story Caption Sheet (Microphase 120: stories.editStory) */}
+        <AnimatePresence>
+          {editCaptionModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 top-20 z-50 rounded-2xl border border-white/15 bg-black/90 p-4 backdrop-blur-xl shadow-2xl text-white"
+              dir={isPersian ? 'rtl' : 'ltr'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="h-5 w-5 text-sky-400" />
+                  <span className="text-xs font-bold">
+                    {isPersian ? 'ویرایش کپشن استوری' : 'Edit Story Caption'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditCaptionModalOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <textarea
+                value={newCaptionText}
+                onChange={(e) => setNewCaptionText(e.target.value)}
+                placeholder={isPersian ? 'کپشن جدید را وارد کنید...' : 'Enter new caption...'}
+                className="w-full h-24 rounded-lg bg-white/10 border border-white/15 p-2.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-sky-400 resize-none mb-3"
+              />
+
+              {editStoryFeedback && (
+                <div
+                  className={`text-[11px] p-2 rounded-lg mb-3 ${
+                    editStoryFeedback.startsWith('خطا') || editStoryFeedback.startsWith('Error')
+                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {editStoryFeedback}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditCaptionModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 text-xs hover:bg-white/20 transition-colors"
+                >
+                  {isPersian ? 'انصراف' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditedStory}
+                  disabled={editingStoryLoading}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-sky-500 text-white font-semibold text-xs hover:bg-sky-600 transition-colors disabled:opacity-50"
+                >
+                  {editingStoryLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{isPersian ? 'ذخیره تغییرات' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Story Albums Sheet (Microphase 120: stories.createAlbum & stories.deleteAlbum) */}
+        <AnimatePresence>
+          {albumModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute inset-x-4 top-16 z-50 rounded-2xl border border-white/15 bg-black/90 p-4 backdrop-blur-xl shadow-2xl text-white max-h-[80%] overflow-y-auto"
+              dir={isPersian ? 'rtl' : 'ltr'}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <FolderPlus className="h-5 w-5 text-indigo-400" />
+                  <span className="text-xs font-bold">
+                    {isPersian ? 'مدیریت آلبوم‌های استوری' : 'Story Albums Management'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAlbumModalOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Create Album */}
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-300 mb-2">
+                  <FolderPlus className="h-4 w-4" />
+                  <span>{isPersian ? 'ایجاد آلبوم با این استوری' : 'Create Album with this Story'}</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={albumTitle}
+                    onChange={(e) => setAlbumTitle(e.target.value)}
+                    placeholder={isPersian ? 'عنوان آلبوم...' : 'Album title...'}
+                    className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateAlbum}
+                    disabled={albumLoading || !albumTitle.trim()}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-500 text-white font-semibold text-xs hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                  >
+                    {albumLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                    <span>{isPersian ? 'ایجاد' : 'Create'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Delete Album */}
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-300 mb-2">
+                  <FolderMinus className="h-4 w-4" />
+                  <span>{isPersian ? 'حذف آلبوم استوری' : 'Delete Story Album'}</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={albumDeleteId}
+                    onChange={(e) => setAlbumDeleteId(e.target.value)}
+                    placeholder={isPersian ? 'شناسه آلبوم (Album ID)...' : 'Album ID...'}
+                    className="flex-1 rounded-lg bg-black/40 border border-white/15 px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDeleteAlbum}
+                    disabled={albumLoading || !albumDeleteId.trim()}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold text-xs hover:bg-rose-700 transition-colors disabled:opacity-50"
+                  >
+                    {albumLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                    <span>{isPersian ? 'حذف' : 'Delete'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {albumFeedback && (
+                <div
+                  className={`text-[11px] p-2 rounded-lg mb-2 ${
+                    albumFeedback.startsWith('خطا') || albumFeedback.startsWith('Error')
+                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {albumFeedback}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   )
