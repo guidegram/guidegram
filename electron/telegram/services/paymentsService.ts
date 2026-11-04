@@ -42,28 +42,50 @@ export class PaymentsService {
     return { _: 'inputUser', userId: BigInt(userId), accessHash: 0n }
   }
 
-  public async getPaymentForm(holder: RpcClientHolder, invoice: any, themeParams?: any): Promise<any> {
+  public async getPaymentForm(holder: RpcClientHolder, accountIdOrInvoice: any, invoiceOrTheme?: any, themeParams?: any): Promise<any> {
     try {
+      let accountId = 'default'
+      let invoice = accountIdOrInvoice
+      let theme = invoiceOrTheme
+
+      if (typeof accountIdOrInvoice === 'string' && (invoiceOrTheme !== undefined)) {
+        accountId = accountIdOrInvoice
+        invoice = invoiceOrTheme
+        theme = themeParams
+      }
+
+      let resolvedInvoice = invoice
+      if (typeof invoice === 'string') {
+        resolvedInvoice = { _: 'inputInvoiceSlug', slug: invoice.trim() }
+      } else if (invoice && !invoice._ && invoice.slug) {
+        resolvedInvoice = { _: 'inputInvoiceSlug', slug: String(invoice.slug).trim() }
+      } else if (invoice && !invoice._ && invoice.chatId && invoice.msgId) {
+        const peer = await this.resolveInputPeer(accountId, invoice.chatId)
+        resolvedInvoice = { _: 'inputInvoiceMessage', peer, msgId: Number(invoice.msgId) }
+      }
+
       return await holder.client.call({
         _: 'payments.getPaymentForm',
-        invoice, themeParams,
-      })
+        invoice: resolvedInvoice,
+        themeParams: theme ? (typeof theme === 'string' ? { _: 'dataJSON', data: theme } : theme) : undefined,
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getPaymentForm error:', err)
-      return null
+      throw err
     }
   }
 
   public async getPaymentReceipt(holder: RpcClientHolder, accountId: string, peerId: string, msgId: number): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.getPaymentReceipt',
-        peer, msgId,
-      })
+        peer,
+        msgId: Number(msgId),
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getPaymentReceipt error:', err)
-      return null
+      throw err
     }
   }
 
@@ -175,10 +197,10 @@ export class PaymentsService {
       return await holder.client.call({
         _: 'payments.getPremiumGiftCodeOptions',
         boostPeer,
-      })
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getPremiumGiftCodeOptions error:', err)
-      return null
+      throw err
     }
   }
 
@@ -927,25 +949,28 @@ export class PaymentsService {
     }
   }
 
-  public async getOnrampProviders(holder: RpcClientHolder): Promise<any> {
+  public async getOnrampProviders(holder: RpcClientHolder, cryptoCurrency?: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getOnrampProviders',
-      })
+        cryptoCurrency: cryptoCurrency ? String(cryptoCurrency).trim() : undefined,
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getOnrampProviders error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getOnrampBaseCurrencies(holder: RpcClientHolder): Promise<any> {
+  public async getOnrampBaseCurrencies(holder: RpcClientHolder, provider?: string, cryptoCurrency?: string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getOnrampBaseCurrencies',
-      })
+        provider: String(provider || 'neocrypto').trim(),
+        cryptoCurrency: String(cryptoCurrency || 'TON').trim(),
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getOnrampBaseCurrencies error:', err)
-      return null
+      throw err
     }
   }
 
@@ -963,27 +988,70 @@ export class PaymentsService {
     }
   }
 
-  public async getOnrampLimits(holder: RpcClientHolder, provider: string, currency: string): Promise<any> {
+  public async getOnrampLimits(
+    holder: RpcClientHolder,
+    provider: string,
+    cryptoCurrency?: string,
+    baseCurrency?: string,
+    paymentMethod?: string
+  ): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.getOnrampLimits',
-        provider, currency,
-      })
+        provider: String(provider || '').trim(),
+        cryptoCurrency: String(cryptoCurrency || 'TON').trim(),
+        baseCurrency: String(baseCurrency || 'USD').trim(),
+        paymentMethod: paymentMethod ? String(paymentMethod).trim() : undefined,
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getOnrampLimits error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getOnrampQuote(holder: RpcClientHolder, provider: string, amount: number, fromCurrency: string, toCurrency: string): Promise<any> {
+  public async getOnrampQuote(
+    holder: RpcClientHolder,
+    provider: string,
+    cryptoCurrencyOrAmount: string | number,
+    baseCurrencyOrFrom?: string,
+    baseAmountOrTo?: string | number,
+    cryptoAmount?: string | number,
+    paymentMethod?: string
+  ): Promise<any> {
     try {
+      let cryptoCurrency = 'TON'
+      let baseCurrency = 'USD'
+      let baseAmount: string | undefined = undefined
+      let cAmount: string | undefined = undefined
+      let method = paymentMethod
+
+      if (typeof cryptoCurrencyOrAmount === 'number' && typeof baseCurrencyOrFrom === 'string' && typeof baseAmountOrTo === 'string') {
+        baseAmount = String(cryptoCurrencyOrAmount)
+        baseCurrency = baseCurrencyOrFrom
+        cryptoCurrency = baseAmountOrTo
+      } else {
+        cryptoCurrency = String(cryptoCurrencyOrAmount || 'TON').trim()
+        baseCurrency = String(baseCurrencyOrFrom || 'USD').trim()
+        if (baseAmountOrTo !== undefined && baseAmountOrTo !== null) {
+          baseAmount = String(baseAmountOrTo).trim()
+        }
+        if (cryptoAmount !== undefined && cryptoAmount !== null) {
+          cAmount = String(cryptoAmount).trim()
+        }
+      }
+
       return await holder.client.call({
         _: 'payments.getOnrampQuote',
-        provider, amount, fromCurrency, toCurrency,
-      })
+        provider: String(provider || '').trim(),
+        cryptoCurrency,
+        baseCurrency,
+        baseAmount,
+        cryptoAmount: cAmount,
+        paymentMethod: method ? String(method).trim() : undefined,
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] getOnrampQuote error:', err)
-      return null
+      throw err
     }
   }
 

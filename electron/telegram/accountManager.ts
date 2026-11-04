@@ -21886,6 +21886,78 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.paymentsService.getOnrampAvailability(holder as any, params.provider, params.cryptoCurrency, params.baseCurrency)
   }
+
+  // --- Microphase 098: payments onramp, checkout, payment form/receipt & gift code options ---
+  public async paymentsGetOnrampBaseCurrenciesRaw(
+    accountId: string,
+    params: { provider: string; cryptoCurrency: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getOnrampBaseCurrencies(holder as any, params?.provider, params?.cryptoCurrency)
+  }
+
+  public async paymentsGetOnrampLimitsRaw(
+    accountId: string,
+    params: { provider: string; cryptoCurrency: string; baseCurrency: string; paymentMethod?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getOnrampLimits(holder as any, params?.provider, params?.cryptoCurrency, params?.baseCurrency, params?.paymentMethod)
+  }
+
+  public async paymentsGetOnrampProvidersRaw(
+    accountId: string,
+    params?: { cryptoCurrency?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getOnrampProviders(holder as any, params?.cryptoCurrency)
+  }
+
+  public async paymentsGetOnrampQuoteRaw(
+    accountId: string,
+    params: { provider: string; cryptoCurrency: string; baseCurrency: string; baseAmount?: string; cryptoAmount?: string; paymentMethod?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getOnrampQuote(
+      holder as any,
+      params?.provider,
+      params?.cryptoCurrency,
+      params?.baseCurrency,
+      params?.baseAmount,
+      params?.cryptoAmount,
+      params?.paymentMethod
+    )
+  }
+
+  public async paymentsGetPaymentFormRaw(
+    accountId: string,
+    params: { invoice: any; themeParams?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getPaymentForm(holder as any, accountId, params?.invoice, params?.themeParams)
+  }
+
+  public async paymentsGetPaymentReceiptRaw(
+    accountId: string,
+    params: { peerId: string; msgId: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getPaymentReceipt(holder as any, accountId, params?.peerId, params?.msgId)
+  }
+
+  public async paymentsGetPremiumGiftCodeOptionsRaw(
+    accountId: string,
+    params?: { boostPeerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getPremiumGiftCodeOptions(holder as any, accountId, params?.boostPeerId)
+  }
 }
 
 

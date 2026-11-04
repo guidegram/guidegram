@@ -15,6 +15,18 @@ import {
   Radio,
   Plus,
   QrCode,
+  CreditCard,
+  Receipt,
+  Gift,
+  Coins,
+  Send,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  ArrowRight,
+  Hash,
+  ShoppingBag,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -42,13 +54,169 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
   onClose,
 }) => {
   const { t, isRTL } = useI18n()
-  const [activeTab, setActiveTab] = useState<'wallet' | 'tonconnect' | 'stars'>('wallet')
+  const [activeTab, setActiveTab] = useState<'wallet' | 'tonconnect' | 'stars' | 'onramp'>('wallet')
   const [sessions, setSessions] = useState<TonConnectSessionItem[]>([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
   const [copiedAddress, setCopiedAddress] = useState(false)
   const [newManifestUrl, setNewManifestUrl] = useState('')
   const [isConnectingDapp, setIsConnectingDapp] = useState(false)
   const [showQr, setShowQr] = useState(false)
+
+  // --- Microphase 098: Onramp, Limits, Quotes, Payment Form, Receipt, Gift Options ---
+  const [onrampProviders, setOnrampProviders] = useState<any[]>([])
+  const [isLoadingProviders, setIsLoadingProviders] = useState(false)
+  const [providersError, setProvidersError] = useState<string | null>(null)
+
+  const [onrampProvider, setOnrampProvider] = useState('neocrypto')
+  const [cryptoCurrency, setCryptoCurrency] = useState('TON')
+  const [baseCurrencies, setBaseCurrencies] = useState<string[]>([])
+  const [selectedBaseCurrency, setSelectedBaseCurrency] = useState('USD')
+  const [isLoadingBaseCurrencies, setIsLoadingBaseCurrencies] = useState(false)
+  const [baseCurrenciesError, setBaseCurrenciesError] = useState<string | null>(null)
+
+  const [onrampLimits, setOnrampLimits] = useState<any>(null)
+  const [isLoadingLimits, setIsLoadingLimits] = useState(false)
+  const [limitsError, setLimitsError] = useState<string | null>(null)
+
+  const [quoteAmount, setQuoteAmount] = useState('50')
+  const [quotePaymentMethod, setQuotePaymentMethod] = useState('card')
+  const [onrampQuote, setOnrampQuote] = useState<any>(null)
+  const [isLoadingQuote, setIsLoadingQuote] = useState(false)
+  const [quoteError, setQuoteError] = useState<string | null>(null)
+
+  const [invoiceInput, setInvoiceInput] = useState('')
+  const [paymentForm, setPaymentForm] = useState<any>(null)
+  const [isLoadingPaymentForm, setIsLoadingPaymentForm] = useState(false)
+  const [paymentFormError, setPaymentFormError] = useState<string | null>(null)
+
+  const [receiptPeerId, setReceiptPeerId] = useState('')
+  const [receiptMsgId, setReceiptMsgId] = useState('')
+  const [paymentReceipt, setPaymentReceipt] = useState<any>(null)
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false)
+  const [receiptError, setReceiptError] = useState<string | null>(null)
+
+  const [giftCodeBoostPeer, setGiftCodeBoostPeer] = useState('')
+  const [giftCodeOptions, setGiftCodeOptions] = useState<any[]>([])
+  const [isLoadingGiftOptions, setIsLoadingGiftOptions] = useState(false)
+  const [giftOptionsError, setGiftOptionsError] = useState<string | null>(null)
+
+  const handleFetchOnrampProviders = async () => {
+    if (!window.guidegram?.paymentsGetOnrampProvidersRaw) return
+    setIsLoadingProviders(true)
+    setProvidersError(null)
+    try {
+      const res = await window.guidegram.paymentsGetOnrampProvidersRaw(accountId, { cryptoCurrency })
+      setOnrampProviders(Array.isArray(res) ? res : (res?.providers || []))
+    } catch (err: any) {
+      setProvidersError(err?.message || 'Failed to load onramp providers')
+    } finally {
+      setIsLoadingProviders(false)
+    }
+  }
+
+  const handleFetchBaseCurrencies = async () => {
+    if (!window.guidegram?.paymentsGetOnrampBaseCurrenciesRaw) return
+    setIsLoadingBaseCurrencies(true)
+    setBaseCurrenciesError(null)
+    try {
+      const res = await window.guidegram.paymentsGetOnrampBaseCurrenciesRaw(accountId, { provider: onrampProvider, cryptoCurrency })
+      const list = Array.isArray(res) ? res : (res?.currencies || ['USD', 'EUR', 'GBP'])
+      setBaseCurrencies(list)
+      if (list.length > 0 && !list.includes(selectedBaseCurrency)) {
+        setSelectedBaseCurrency(list[0])
+      }
+    } catch (err: any) {
+      setBaseCurrenciesError(err?.message || 'Failed to load base currencies')
+    } finally {
+      setIsLoadingBaseCurrencies(false)
+    }
+  }
+
+  const handleFetchLimits = async () => {
+    if (!window.guidegram?.paymentsGetOnrampLimitsRaw) return
+    setIsLoadingLimits(true)
+    setLimitsError(null)
+    try {
+      const res = await window.guidegram.paymentsGetOnrampLimitsRaw(accountId, {
+        provider: onrampProvider,
+        cryptoCurrency,
+        baseCurrency: selectedBaseCurrency,
+        paymentMethod: quotePaymentMethod,
+      })
+      setOnrampLimits(res)
+    } catch (err: any) {
+      setLimitsError(err?.message || 'Failed to load onramp limits')
+    } finally {
+      setIsLoadingLimits(false)
+    }
+  }
+
+  const handleFetchQuote = async () => {
+    if (!window.guidegram?.paymentsGetOnrampQuoteRaw) return
+    setIsLoadingQuote(true)
+    setQuoteError(null)
+    try {
+      const res = await window.guidegram.paymentsGetOnrampQuoteRaw(accountId, {
+        provider: onrampProvider,
+        cryptoCurrency,
+        baseCurrency: selectedBaseCurrency,
+        baseAmount: quoteAmount,
+        paymentMethod: quotePaymentMethod,
+      })
+      setOnrampQuote(res)
+    } catch (err: any) {
+      setQuoteError(err?.message || 'Failed to get onramp quote')
+    } finally {
+      setIsLoadingQuote(false)
+    }
+  }
+
+  const handleFetchPaymentForm = async () => {
+    if (!invoiceInput.trim() || !window.guidegram?.paymentsGetPaymentFormRaw) return
+    setIsLoadingPaymentForm(true)
+    setPaymentFormError(null)
+    try {
+      const res = await window.guidegram.paymentsGetPaymentFormRaw(accountId, { invoice: invoiceInput.trim() })
+      setPaymentForm(res)
+    } catch (err: any) {
+      setPaymentFormError(err?.message || 'Failed to load payment form')
+    } finally {
+      setIsLoadingPaymentForm(false)
+    }
+  }
+
+  const handleFetchPaymentReceipt = async () => {
+    if (!receiptPeerId.trim() || !receiptMsgId.trim() || !window.guidegram?.paymentsGetPaymentReceiptRaw) return
+    setIsLoadingReceipt(true)
+    setReceiptError(null)
+    try {
+      const res = await window.guidegram.paymentsGetPaymentReceiptRaw(accountId, {
+        peerId: receiptPeerId.trim(),
+        msgId: Number(receiptMsgId.trim()),
+      })
+      setPaymentReceipt(res)
+    } catch (err: any) {
+      setReceiptError(err?.message || 'Failed to load payment receipt')
+    } finally {
+      setIsLoadingReceipt(false)
+    }
+  }
+
+  const handleFetchGiftCodeOptions = async () => {
+    if (!window.guidegram?.paymentsGetPremiumGiftCodeOptionsRaw) return
+    setIsLoadingGiftOptions(true)
+    setGiftOptionsError(null)
+    try {
+      const res = await window.guidegram.paymentsGetPremiumGiftCodeOptionsRaw(accountId, {
+        boostPeerId: giftCodeBoostPeer.trim() || undefined,
+      })
+      setGiftCodeOptions(Array.isArray(res) ? res : [])
+    } catch (err: any) {
+      setGiftOptionsError(err?.message || 'Failed to load gift code options')
+    } finally {
+      setIsLoadingGiftOptions(false)
+    }
+  }
 
   // Derived or pseudo-deterministic TON wallet address for account
   const walletAddress = React.useMemo(() => {
@@ -206,6 +374,18 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Telegram Stars</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('onramp')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'onramp'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Onramp & Checkout</span>
           </button>
         </div>
 
@@ -407,6 +587,407 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
                 <p className="text-[11px] text-gray-300 leading-relaxed">
                   Telegram Stars power digital goods in bots and mini-apps, unlock paid reaction messages, channel subscriptions, and media posts with end-to-end MTProto compliance.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Microphase 098: Onramp, Limits, Quotes, Payment Form, Receipt, Gift Code Options */}
+          {activeTab === 'onramp' && (
+            <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+              {/* Card 1: Onramp Providers & Base Currencies */}
+              <div className="p-5 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white">Onramp Providers & Base Currencies</h3>
+                      <p className="text-[10px] text-gray-400 font-mono">payments.getOnrampProviders & payments.getOnrampBaseCurrencies</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleFetchOnrampProviders}
+                      disabled={isLoadingProviders}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingProviders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      <span>Fetch Providers</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFetchBaseCurrencies}
+                      disabled={isLoadingBaseCurrencies}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingBaseCurrencies ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}
+                      <span>Base Currencies</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Crypto Currency</label>
+                    <input
+                      type="text"
+                      value={cryptoCurrency}
+                      onChange={(e) => setCryptoCurrency(e.target.value.toUpperCase())}
+                      placeholder="TON, USDT"
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Provider ID</label>
+                    <input
+                      type="text"
+                      value={onrampProvider}
+                      onChange={(e) => setOnrampProvider(e.target.value)}
+                      placeholder="neocrypto, dreamwalkers"
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {isLoadingProviders && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/5 animate-pulse flex items-center gap-3">
+                    <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                    <span className="text-xs text-gray-300">Loading Telegram verified onramp providers...</span>
+                  </div>
+                )}
+
+                {providersError && (
+                  <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-rose-300 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{providersError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleFetchOnrampProviders}
+                      className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[10px] font-semibold transition-colors cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {!isLoadingProviders && onrampProviders.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold text-gray-400">Available Providers:</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {onrampProviders.map((p, idx) => (
+                        <div
+                          key={p.name || idx}
+                          onClick={() => setOnrampProvider(p.name || p.id || 'neocrypto')}
+                          className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                            onrampProvider === (p.name || p.id)
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
+                              : 'bg-black/30 border-white/5 text-gray-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="font-bold flex items-center justify-between">
+                            <span>{p.title || p.name || `Provider #${idx + 1}`}</span>
+                            {p.fee && <span className="text-[10px] text-gray-400 font-mono">Fee: {p.fee}</span>}
+                          </div>
+                          {p.url && <div className="text-[10px] text-gray-500 truncate mt-1">{p.url}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {baseCurrencies.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-white/5">
+                    <div className="text-[11px] text-gray-400 font-semibold">Supported Base Fiat Currencies:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {baseCurrencies.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setSelectedBaseCurrency(c)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold transition-all cursor-pointer ${
+                            selectedBaseCurrency === c
+                              ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                              : 'bg-black/40 border border-white/10 text-gray-300 hover:bg-white/10'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 2: Onramp Limits & Real-Time Quote */}
+              <div className="p-5 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                      <Coins className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white">Onramp Limits & Real-Time Quote</h3>
+                      <p className="text-[10px] text-gray-400 font-mono">payments.getOnrampLimits & payments.getOnrampQuote</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleFetchLimits}
+                      disabled={isLoadingLimits}
+                      className="px-3 py-1.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingLimits ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                      <span>Get Limits</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFetchQuote}
+                      disabled={isLoadingQuote}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingQuote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                      <span>Calculate Quote</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Base Amount ({selectedBaseCurrency})</label>
+                    <input
+                      type="number"
+                      value={quoteAmount}
+                      onChange={(e) => setQuoteAmount(e.target.value)}
+                      placeholder="50"
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Payment Method</label>
+                    <select
+                      value={quotePaymentMethod}
+                      onChange={(e) => setQuotePaymentMethod(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="card">Bank Card (Visa / Mastercard)</option>
+                      <option value="applepay">Apple Pay</option>
+                      <option value="googlepay">Google Pay</option>
+                      <option value="sepa">SEPA Bank Transfer</option>
+                    </select>
+                  </div>
+                </div>
+
+                {onrampLimits && (
+                  <div className="p-3.5 rounded-xl bg-black/40 border border-amber-500/20 space-y-1.5">
+                    <div className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Provider Purchase Limits:</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
+                      <div>Min Amount: <span className="font-mono text-white">{onrampLimits.minAmount || onrampLimits.min || '10'} {selectedBaseCurrency}</span></div>
+                      <div>Max Amount: <span className="font-mono text-white">{onrampLimits.maxAmount || onrampLimits.max || '10,000'} {selectedBaseCurrency}</span></div>
+                    </div>
+                  </div>
+                )}
+
+                {onrampQuote && (
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 via-dark-800 to-dark-850 border border-emerald-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-emerald-300 font-semibold">Estimated Crypto Payout:</span>
+                      <span className="text-lg font-bold font-mono text-emerald-400">
+                        {onrampQuote.cryptoAmount || onrampQuote.amount || '~'} {cryptoCurrency}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 font-mono">
+                      <span>Rate: 1 {cryptoCurrency} ≈ {onrampQuote.rate || 'market'} {selectedBaseCurrency}</span>
+                      {onrampQuote.networkFee && <span>Network Fee: {onrampQuote.networkFee}</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 3: Interactive Payment Form & Checkout */}
+              <div className="p-5 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
+                      <ShoppingBag className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white">Payment Form & Invoice Lookup</h3>
+                      <p className="text-[10px] text-gray-400 font-mono">payments.getPaymentForm</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFetchPaymentForm}
+                    disabled={isLoadingPaymentForm || !invoiceInput.trim()}
+                    className="px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isLoadingPaymentForm ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Receipt className="w-3.5 h-3.5" />}
+                    <span>Load Invoice Form</span>
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-1">Invoice Slug or URL</label>
+                  <input
+                    type="text"
+                    value={invoiceInput}
+                    onChange={(e) => setInvoiceInput(e.target.value)}
+                    placeholder="e.g. https://t.me/$invoice_slug or slug"
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                {isLoadingPaymentForm && (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/5 animate-pulse flex items-center gap-3">
+                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                    <span className="text-xs text-gray-300">Fetching native Telegram Payment Form...</span>
+                  </div>
+                )}
+
+                {paymentFormError && (
+                  <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-rose-300 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{paymentFormError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleFetchPaymentForm}
+                      className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[10px] font-semibold transition-colors cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {paymentForm && (
+                  <div className="p-4 rounded-xl bg-black/40 border border-purple-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white">{paymentForm.title || 'Telegram Verified Invoice'}</span>
+                      <span className="text-xs font-mono font-bold text-purple-300">
+                        {paymentForm.totalAmount ? (Number(paymentForm.totalAmount) / 100).toFixed(2) : '0.00'} {paymentForm.currency || 'USD'}
+                      </span>
+                    </div>
+                    {paymentForm.description && (
+                      <p className="text-[11px] text-gray-300">{paymentForm.description}</p>
+                    )}
+                    <div className="text-[10px] text-gray-500 font-mono">
+                      Form ID: {paymentForm.formId || paymentForm.id || 'N/A'} | Native Provider: {paymentForm.nativeProvider || 'Telegram Stars/Stripe'}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 4: Receipts & Premium Gift Code Options */}
+              <div className="p-5 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center">
+                      <Gift className="w-4 h-4 text-rose-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-white">Receipts & Premium Gift Code Options</h3>
+                      <p className="text-[10px] text-gray-400 font-mono">payments.getPaymentReceipt & payments.getPremiumGiftCodeOptions</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleFetchPaymentReceipt}
+                      disabled={isLoadingReceipt || !receiptPeerId.trim() || !receiptMsgId.trim()}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingReceipt ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Receipt className="w-3.5 h-3.5" />}
+                      <span>Fetch Receipt</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFetchGiftCodeOptions}
+                      disabled={isLoadingGiftOptions}
+                      className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-[11px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingGiftOptions ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
+                      <span>Gift Code Tiers</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Receipt Peer ID</label>
+                    <input
+                      type="text"
+                      value={receiptPeerId}
+                      onChange={(e) => setReceiptPeerId(e.target.value)}
+                      placeholder="Channel/User ID"
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Receipt Msg ID</label>
+                    <input
+                      type="number"
+                      value={receiptMsgId}
+                      onChange={(e) => setReceiptMsgId(e.target.value)}
+                      placeholder="12345"
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Boost Peer ID (Optional)</label>
+                    <input
+                      type="text"
+                      value={giftCodeBoostPeer}
+                      onChange={(e) => setGiftCodeBoostPeer(e.target.value)}
+                      placeholder="Channel to Boost"
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
+                    />
+                  </div>
+                </div>
+
+                {paymentReceipt && (
+                  <div className="p-4 rounded-xl bg-black/40 border border-blue-500/30 space-y-1.5">
+                    <div className="text-xs font-bold text-white flex items-center gap-2">
+                      <Receipt className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Payment Receipt Confirmed</span>
+                    </div>
+                    <div className="text-xs text-gray-300">
+                      Total: <span className="font-mono text-white font-bold">{paymentReceipt.totalAmount ? (Number(paymentReceipt.totalAmount) / 100).toFixed(2) : '0.00'} {paymentReceipt.currency || 'USD'}</span>
+                    </div>
+                    {paymentReceipt.date && (
+                      <div className="text-[10px] text-gray-500 font-mono">Date: {new Date(paymentReceipt.date * 1000).toLocaleString()}</div>
+                    )}
+                  </div>
+                )}
+
+                {giftCodeOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold text-gray-400">Available Premium Gift Code Tiers:</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {giftCodeOptions.map((opt, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-gradient-to-b from-rose-950/30 to-dark-850 border border-rose-500/20 text-center">
+                          <div className="text-xs font-bold text-white">{opt.months || opt.duration || 3} Months</div>
+                          <div className="text-sm font-bold font-mono text-rose-300 my-1">
+                            {opt.amount ? (Number(opt.amount) / 100).toFixed(2) : '—'} {opt.currency || 'USD'}
+                          </div>
+                          {opt.discount && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-semibold">
+                              Save {opt.discount}%
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

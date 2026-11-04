@@ -9879,6 +9879,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 098: Payments Domain Suite Part 5 IPC Handlers
+  ipcMain.handle('telegram:payments:get-onramp-base-currencies-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetOnrampBaseCurrenciesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetOnrampBaseCurrenciesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-onramp-limits-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetOnrampLimitsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetOnrampLimitsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-onramp-providers-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetOnrampProvidersRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetOnrampProvidersRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-onramp-quote-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetOnrampQuoteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetOnrampQuoteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-payment-form-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetPaymentFormRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetPaymentFormRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-payment-receipt-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetPaymentReceiptRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetPaymentReceiptRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:get-premium-gift-code-options-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsGetPremiumGiftCodeOptionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsGetPremiumGiftCodeOptionsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

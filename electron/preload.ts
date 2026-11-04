@@ -3024,6 +3024,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:get-giveaway-info-raw', { accountId, ...params }),
   paymentsGetOnrampAvailabilityRaw: (accountId: string, params: { provider: string; cryptoCurrency: string; baseCurrency?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:get-onramp-availability-raw', { accountId, ...params }),
+  // Microphase 098: Payments Domain Suite Part 5 (7 RPCs)
+  paymentsGetOnrampBaseCurrenciesRaw: (accountId: string, params: { provider: string; cryptoCurrency: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-onramp-base-currencies-raw', { accountId, ...params }),
+  paymentsGetOnrampLimitsRaw: (accountId: string, params: { provider: string; cryptoCurrency: string; baseCurrency: string; paymentMethod?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-onramp-limits-raw', { accountId, ...params }),
+  paymentsGetOnrampProvidersRaw: (accountId: string, params?: { cryptoCurrency?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-onramp-providers-raw', { accountId, ...params }),
+  paymentsGetOnrampQuoteRaw: (accountId: string, params: { provider: string; cryptoCurrency: string; baseCurrency: string; baseAmount?: string; cryptoAmount?: string; paymentMethod?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-onramp-quote-raw', { accountId, ...params }),
+  paymentsGetPaymentFormRaw: (accountId: string, params: { invoice: any; themeParams?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-payment-form-raw', { accountId, ...params }),
+  paymentsGetPaymentReceiptRaw: (accountId: string, params: { peerId: string; msgId: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-payment-receipt-raw', { accountId, ...params }),
+  paymentsGetPremiumGiftCodeOptionsRaw: (accountId: string, params?: { boostPeerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-premium-gift-code-options-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
