@@ -11003,6 +11003,43 @@ function setupIpcHandlers() {
     }
   })
 
+  // Chatlists Domain Suite Part 2 IPC (Microphase 119)
+  ipcMain.handle('telegram:chatlists:hide-chatlist-updates-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsHideChatlistUpdatesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsHideChatlistUpdatesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:join-chatlist-invite-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsJoinChatlistInviteRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsJoinChatlistInviteRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:join-chatlist-updates-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsJoinChatlistUpdatesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsJoinChatlistUpdatesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:chatlists:leave-chatlist-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.chatlistsLeaveChatlistRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] chatlistsLeaveChatlistRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

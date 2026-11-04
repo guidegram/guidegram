@@ -239,6 +239,22 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
   const [isLoadingLeaveSuggestions, setIsLoadingLeaveSuggestions] = useState(false)
   const [leaveSuggestionsFeedback, setLeaveSuggestionsFeedback] = useState<string | null>(null)
 
+  // Microphase 119: Chatlists Domain Suite Part 2
+  const [clJoinPeers, setClJoinPeers] = useState('')
+  const [isJoiningInvite, setIsJoiningInvite] = useState(false)
+  const [joinInviteFeedback, setJoinInviteFeedback] = useState<string | null>(null)
+
+  const [clJoinUpdatesPeers, setClJoinUpdatesPeers] = useState('')
+  const [isJoiningUpdates, setIsJoiningUpdates] = useState(false)
+  const [joinUpdatesFeedback, setJoinUpdatesFeedback] = useState<string | null>(null)
+
+  const [isHidingUpdates, setIsHidingUpdates] = useState(false)
+  const [hideUpdatesFeedback, setHideUpdatesFeedback] = useState<string | null>(null)
+
+  const [clLeavePeers, setClLeavePeers] = useState('')
+  const [isLeavingChatlist, setIsLeavingChatlist] = useState(false)
+  const [leaveChatlistFeedback, setLeaveChatlistFeedback] = useState<string | null>(null)
+
   const formatDate = (unixSeconds?: number): string => {
     if (!unixSeconds) return t('invite_links.never')
     try {
@@ -947,6 +963,92 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
       setLeaveSuggestionsFeedback(err?.message || 'خطا در دریافت پیشنهادهای ترک چت‌لیست.')
     } finally {
       setIsLoadingLeaveSuggestions(false)
+    }
+  }
+
+  // --- Microphase 119: Chatlists Domain Suite Part 2 Handlers ---
+  const handleJoinChatlistInvite = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!window.guidegram?.chatlistsJoinChatlistInviteRaw || !clCheckSlug.trim()) return
+    setIsJoiningInvite(true)
+    setJoinInviteFeedback(null)
+    try {
+      const cleanSlug = clCheckSlug.replace(/^https?:\/\/t\.me\/addlist\//, '').trim()
+      const peersList = clJoinPeers.trim()
+        ? clJoinPeers.split(',').map((s) => s.trim()).filter(Boolean)
+        : [chatId]
+      const res = await window.guidegram.chatlistsJoinChatlistInviteRaw(accountId, {
+        slug: cleanSlug,
+        peers: peersList,
+      })
+      const count = Array.isArray(res?.missing_peers) ? res.missing_peers.length : 0
+      setJoinInviteFeedback(count > 0 ? `با موفقیت به پوشه اشتراکی پیوستید (${count} گفتگو در صف تایید).` : 'با موفقیت به تمام گفتگوهای این پوشه اشتراکی ملحق شدید.')
+    } catch (err: any) {
+      setJoinInviteFeedback(err?.message || 'خطا در عضویت در پوشه اشتراکی.')
+    } finally {
+      setIsJoiningInvite(false)
+    }
+  }
+
+  const handleJoinChatlistUpdates = async () => {
+    if (!window.guidegram?.chatlistsJoinChatlistUpdatesRaw) return
+    setIsJoiningUpdates(true)
+    setJoinUpdatesFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      const peersList = clJoinUpdatesPeers.trim()
+        ? clJoinUpdatesPeers.split(',').map((s) => s.trim()).filter(Boolean)
+        : [chatId]
+      await window.guidegram.chatlistsJoinChatlistUpdatesRaw(accountId, {
+        chatlist: folderIdNum,
+        peers: peersList,
+      })
+      setJoinUpdatesFeedback('گفتگوهای جدید با موفقیت به پوشه اضافه شدند.')
+      void handleGetChatlistUpdates()
+    } catch (err: any) {
+      setJoinUpdatesFeedback(err?.message || 'خطا در افزودن آپدیت‌های چت‌لیست.')
+    } finally {
+      setIsJoiningUpdates(false)
+    }
+  }
+
+  const handleHideChatlistUpdates = async () => {
+    if (!window.guidegram?.chatlistsHideChatlistUpdatesRaw) return
+    setIsHidingUpdates(true)
+    setHideUpdatesFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      await window.guidegram.chatlistsHideChatlistUpdatesRaw(accountId, {
+        chatlist: folderIdNum,
+      })
+      setHideUpdatesFeedback('آپدیت‌های معلق این پوشه با موفقیت مخفی شدند.')
+      setClUpdates(null)
+    } catch (err: any) {
+      setHideUpdatesFeedback(err?.message || 'خطا در مخفی‌سازی آپدیت‌های چت‌لیست.')
+    } finally {
+      setIsHidingUpdates(false)
+    }
+  }
+
+  const handleLeaveChatlist = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!window.guidegram?.chatlistsLeaveChatlistRaw) return
+    setIsLeavingChatlist(true)
+    setLeaveChatlistFeedback(null)
+    try {
+      const folderIdNum = parseInt(clFolderId, 10) || 1
+      const peersList = clLeavePeers.trim()
+        ? clLeavePeers.split(',').map((s) => s.trim()).filter(Boolean)
+        : [chatId]
+      await window.guidegram.chatlistsLeaveChatlistRaw(accountId, {
+        chatlist: folderIdNum,
+        peers: peersList,
+      })
+      setLeaveChatlistFeedback(`پوشه ${folderIdNum} با موفقیت ترک شد و گفتگوهای تعیین‌شده پاکسازی شدند.`)
+    } catch (err: any) {
+      setLeaveChatlistFeedback(err?.message || 'خطا در خروج از پوشه اشتراکی.')
+    } finally {
+      setIsLeavingChatlist(false)
     }
   }
 
@@ -2142,6 +2244,29 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                     <span>بررسی تغییرات چت‌ها</span>
                   </button>
                   {updatesFeedback && <div className="text-[10px] text-cyan-300 bg-cyan-500/10 rounded-lg p-2">{updatesFeedback}</div>}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleJoinChatlistUpdates}
+                      disabled={isJoiningUpdates}
+                      className="flex-1 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                      title="پیوستن به چت‌های جدید اضافه شده به پوشه"
+                    >
+                      {isJoiningUpdates ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                      <span>پیوستن به آپدیت‌ها</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleHideChatlistUpdates}
+                      disabled={isHidingUpdates}
+                      className="py-1 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 text-[11px] font-semibold cursor-pointer disabled:opacity-40"
+                      title="نادیده گرفتن آپدیت‌ها"
+                    >
+                      {isHidingUpdates ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مخفی‌سازی'}
+                    </button>
+                  </div>
+                  {joinUpdatesFeedback && <div className="text-[10px] text-accent-emerald">{joinUpdatesFeedback}</div>}
+                  {hideUpdatesFeedback && <div className="text-[10px] text-gray-400">{hideUpdatesFeedback}</div>}
                 </div>
 
                 <div className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
@@ -2163,6 +2288,63 @@ export const ChatInviteLinksModal: React.FC<ChatInviteLinksModalProps> = ({
                   </button>
                   {leaveSuggestionsFeedback && <div className="text-[10px] text-rose-300 bg-rose-500/10 rounded-lg p-2">{leaveSuggestionsFeedback}</div>}
                 </div>
+              </div>
+
+              {/* 5. joinChatlistInvite & leaveChatlist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* joinChatlistInvite */}
+                <form onSubmit={handleJoinChatlistInvite} className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-accent-emerald" />
+                      ۶. عضویت در پوشه (joinChatlistInvite)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">joinChatlistInvite</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={clJoinPeers}
+                    onChange={(e) => setClJoinPeers(e.target.value)}
+                    placeholder="شناسه چت‌های انتخابی (خالی = همه)"
+                    className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isJoiningInvite || !clCheckSlug.trim()}
+                    className="w-full py-1.5 rounded-xl bg-accent-emerald/20 hover:bg-accent-emerald/30 border border-accent-emerald/30 text-accent-emerald text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isJoiningInvite ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    <span>پیوستن به پوشه بررسی‌شده</span>
+                  </button>
+                  {joinInviteFeedback && <div className="text-[10px] text-accent-emerald bg-accent-emerald/10 rounded-lg p-2">{joinInviteFeedback}</div>}
+                </form>
+
+                {/* leaveChatlist */}
+                <form onSubmit={handleLeaveChatlist} className="p-4 rounded-2xl bg-dark-850/90 border border-white/5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                      <Ban className="w-4 h-4 text-rose-400" />
+                      ۷. خروج از پوشه (leaveChatlist)
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">leaveChatlist</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={clLeavePeers}
+                    onChange={(e) => setClLeavePeers(e.target.value)}
+                    placeholder="شناسه چت‌های خروجی (خالی = چت فعلی)"
+                    className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-400 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLeavingChatlist}
+                    className="w-full py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    {isLeavingChatlist ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    <span>ترک قطعی پوشه اشتراکی</span>
+                  </button>
+                  {leaveChatlistFeedback && <div className="text-[10px] text-rose-300 bg-rose-500/10 rounded-lg p-2">{leaveChatlistFeedback}</div>}
+                </form>
               </div>
             </div>
           ) : loading ? (

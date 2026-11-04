@@ -3287,6 +3287,16 @@ const guidegramAPI = {
   chatlistsGetLeaveChatlistSuggestionsRaw: (accountId: string, params: { chatlist: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:chatlists:get-leave-chatlist-suggestions-raw', { accountId, ...params }),
 
+  // --- Microphase 119: Chatlists Domain Suite Part 2 ---
+  chatlistsHideChatlistUpdatesRaw: (accountId: string, params: { chatlist: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:hide-chatlist-updates-raw', { accountId, ...params }),
+  chatlistsJoinChatlistInviteRaw: (accountId: string, params: { slug: string; peers: string[] | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:join-chatlist-invite-raw', { accountId, ...params }),
+  chatlistsJoinChatlistUpdatesRaw: (accountId: string, params: { chatlist: any; peers: string[] | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:join-chatlist-updates-raw', { accountId, ...params }),
+  chatlistsLeaveChatlistRaw: (accountId: string, params: { chatlist: any; peers: string[] | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:chatlists:leave-chatlist-raw', { accountId, ...params }),
+
 
   setEmojiStatus: (
     accountId: string,

@@ -23478,6 +23478,43 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.chatlists_getLeaveChatlistSuggestions(holder as any, params)
   }
+
+  // --- Microphase 119: Chatlists Domain Suite Part 2 ---
+  public async chatlistsHideChatlistUpdatesRaw(
+    accountId: string,
+    params: { chatlist: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_hideChatlistUpdates(holder as any, params)
+  }
+
+  public async chatlistsJoinChatlistInviteRaw(
+    accountId: string,
+    params: { slug: string; peers: string[] | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_joinChatlistInvite(holder as any, accountId, params)
+  }
+
+  public async chatlistsJoinChatlistUpdatesRaw(
+    accountId: string,
+    params: { chatlist: any; peers: string[] | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_joinChatlistUpdates(holder as any, accountId, params)
+  }
+
+  public async chatlistsLeaveChatlistRaw(
+    accountId: string,
+    params: { chatlist: any; peers: string[] | string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.chatlists_leaveChatlist(holder as any, accountId, params)
+  }
 }
 
 
