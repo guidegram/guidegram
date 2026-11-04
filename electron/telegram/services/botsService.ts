@@ -283,45 +283,6 @@ export class BotsService {
     }
   }
 
-  public async editPreviewMedia(
-    holder: RpcClientHolder,
-    accountId: string,
-    botId: string,
-    media: any,
-    newMedia: any,
-    langCode = ''
-  ): Promise<any> {
-    try {
-      const bot = await this.toInputUser(accountId, botId)
-      return await holder.client.call({
-        _: 'bots.editPreviewMedia',
-        bot,
-        langCode,
-        media,
-        newMedia,
-      })
-    } catch (err) {
-      Logger.warn('[BotsService] editPreviewMedia error:', err)
-      return null
-    }
-  }
-
-  public async deletePreviewMedia(holder: RpcClientHolder, accountId: string, botId: string, media: any, langCode = ''): Promise<boolean> {
-    try {
-      const bot = await this.toInputUser(accountId, botId)
-      const res = await holder.client.call({
-        _: 'bots.deletePreviewMedia',
-        bot,
-        langCode,
-        media,
-      })
-      return Boolean(res)
-    } catch (err) {
-      Logger.warn('[BotsService] deletePreviewMedia error:', err)
-      return false
-    }
-  }
-
   public async getPreviewMedias(holder: RpcClientHolder, accountId: string, botId: string): Promise<any[]> {
     try {
       const bot = await this.toInputUser(accountId, botId)
@@ -445,48 +406,6 @@ export class BotsService {
     }
   }
 
-  public async getAdminedBots(holder: RpcClientHolder): Promise<any[]> {
-    try {
-      const res = await holder.client.call({
-        _: 'bots.getAdminedBots',
-      })
-      if (res && Array.isArray(res.users)) return res.users
-      return Array.isArray(res) ? res : []
-    } catch (err) {
-      Logger.warn('[BotsService] getAdminedBots error:', err)
-      return []
-    }
-  }
-
-  public async createBot(holder: RpcClientHolder, name: string, username: string, viaDeeplink = false, managerId?: any): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'bots.createBot',
-        name,
-        username,
-        viaDeeplink,
-        managerId,
-      })
-    } catch (err) {
-      Logger.warn('[BotsService] createBot error:', err)
-      return null
-    }
-  }
-
-  public async exportBotToken(holder: RpcClientHolder, accountId: string, botId: string, revoke = false): Promise<any> {
-    try {
-      const bot = await this.toInputUser(accountId, botId)
-      return await holder.client.call({
-        _: 'bots.exportBotToken',
-        bot,
-        revoke,
-      })
-    } catch (err) {
-      Logger.warn('[BotsService] exportBotToken error:', err)
-      return null
-    }
-  }
-
   public async checkUsername(holder: RpcClientHolder, username: string, additional?: boolean): Promise<boolean> {
     try {
       const res = await holder.client.call({
@@ -587,42 +506,6 @@ export class BotsService {
     }
   }
 
-  public async getAccessSettings(holder: RpcClientHolder, accountId: string, botId: string): Promise<any> {
-    try {
-      const bot = await this.toInputUser(accountId, botId)
-      return await holder.client.call({
-        _: 'bots.getAccessSettings',
-        bot,
-      })
-    } catch (err) {
-      Logger.warn('[BotsService] getAccessSettings error:', err)
-      return null
-    }
-  }
-
-  public async editAccessSettings(
-    holder: RpcClientHolder,
-    accountId: string,
-    botId: string,
-    restricted = false,
-    addUsers?: string[]
-  ): Promise<boolean> {
-    try {
-      const bot = await this.toInputUser(accountId, botId)
-      const inputUsers = addUsers ? await Promise.all(addUsers.map((u) => this.toInputUser(accountId, u))) : undefined
-      const res = await holder.client.call({
-        _: 'bots.editAccessSettings',
-        bot,
-        restricted,
-        addUsers: inputUsers,
-      })
-      return Boolean(res)
-    } catch (err) {
-      Logger.warn('[BotsService] editAccessSettings error:', err)
-      return false
-    }
-  }
-
   public async getRequestedWebViewButton(holder: RpcClientHolder, accountId: string, botId: string, webappReqId: string): Promise<any> {
     try {
       const bot = await this.toInputUser(accountId, botId)
@@ -662,6 +545,169 @@ export class BotsService {
     } catch (err) {
       Logger.warn('[BotsService] setJoinChatResults error:', err)
       return false
+    }
+  }
+
+  public async createBot(
+    holder: RpcClientHolder,
+    accountId: string,
+    params: {
+      viaDeeplink?: boolean
+      name: string
+      username: string
+      managerId?: string | any
+    }
+  ): Promise<any> {
+    try {
+      const managerUser = params.managerId
+        ? (typeof params.managerId === 'string' ? await this.toInputUser(accountId, params.managerId) : params.managerId)
+        : { _: 'inputUserSelf' }
+
+      return await holder.client.call({
+        _: 'bots.createBot',
+        viaDeeplink: params.viaDeeplink ? true : undefined,
+        name: params.name,
+        username: params.username.replace(/^@/, ''),
+        managerId: managerUser,
+      })
+    } catch (err) {
+      Logger.warn('[BotsService] createBot error:', err)
+      throw err
+    }
+  }
+
+  public async deletePreviewMedia(
+    holder: RpcClientHolder,
+    accountId: string,
+    params: {
+      botId: string | any
+      langCode?: string
+      media: any[]
+    }
+  ): Promise<boolean> {
+    try {
+      const bot = typeof params.botId === 'string' ? await this.toInputUser(accountId, params.botId) : params.botId
+      const mediaList = Array.isArray(params.media) ? params.media : [params.media]
+      const res = await holder.client.call({
+        _: 'bots.deletePreviewMedia',
+        bot,
+        langCode: params.langCode || '',
+        media: mediaList,
+      })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[BotsService] deletePreviewMedia error:', err)
+      throw err
+    }
+  }
+
+  public async editAccessSettings(
+    holder: RpcClientHolder,
+    accountId: string,
+    params: {
+      botId: string | any
+      restricted?: boolean
+      addUsers?: (string | any)[]
+    }
+  ): Promise<boolean> {
+    try {
+      const bot = typeof params.botId === 'string' ? await this.toInputUser(accountId, params.botId) : params.botId
+      let resolvedUsers: any[] | undefined
+      if (params.addUsers && Array.isArray(params.addUsers)) {
+        resolvedUsers = await Promise.all(
+          params.addUsers.map(async (u) => (typeof u === 'string' ? await this.toInputUser(accountId, u) : u))
+        )
+      }
+      const res = await holder.client.call({
+        _: 'bots.editAccessSettings',
+        bot,
+        restricted: params.restricted ? true : undefined,
+        addUsers: resolvedUsers,
+      })
+      return Boolean(res)
+    } catch (err) {
+      Logger.warn('[BotsService] editAccessSettings error:', err)
+      throw err
+    }
+  }
+
+  public async editPreviewMedia(
+    holder: RpcClientHolder,
+    accountId: string,
+    params: {
+      botId: string | any
+      langCode?: string
+      media: any
+      newMedia: any
+    }
+  ): Promise<any> {
+    try {
+      const bot = typeof params.botId === 'string' ? await this.toInputUser(accountId, params.botId) : params.botId
+      return await holder.client.call({
+        _: 'bots.editPreviewMedia',
+        bot,
+        langCode: params.langCode || '',
+        media: params.media,
+        newMedia: params.newMedia,
+      })
+    } catch (err) {
+      Logger.warn('[BotsService] editPreviewMedia error:', err)
+      throw err
+    }
+  }
+
+  public async exportBotToken(
+    holder: RpcClientHolder,
+    accountId: string,
+    params: {
+      botId: string | any
+      revoke?: boolean
+    }
+  ): Promise<any> {
+    try {
+      const bot = typeof params.botId === 'string' ? await this.toInputUser(accountId, params.botId) : params.botId
+      return await holder.client.call({
+        _: 'bots.exportBotToken',
+        bot,
+        revoke: Boolean(params.revoke),
+      })
+    } catch (err) {
+      Logger.warn('[BotsService] exportBotToken error:', err)
+      throw err
+    }
+  }
+
+  public async getAccessSettings(
+    holder: RpcClientHolder,
+    accountId: string,
+    params: {
+      botId: string | any
+    }
+  ): Promise<any> {
+    try {
+      const bot = typeof params.botId === 'string' ? await this.toInputUser(accountId, params.botId) : params.botId
+      return await holder.client.call({
+        _: 'bots.getAccessSettings',
+        bot,
+      })
+    } catch (err) {
+      Logger.warn('[BotsService] getAccessSettings error:', err)
+      throw err
+    }
+  }
+
+  public async getAdminedBots(
+    holder: RpcClientHolder
+  ): Promise<any[]> {
+    try {
+      const res = await holder.client.call({
+        _: 'bots.getAdminedBots',
+      })
+      if (res && Array.isArray((res as any).users)) return (res as any).users
+      return Array.isArray(res) ? res : []
+    } catch (err) {
+      Logger.warn('[BotsService] getAdminedBots error:', err)
+      return []
     }
   }
 }

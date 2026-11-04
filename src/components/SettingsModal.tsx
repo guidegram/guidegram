@@ -9704,6 +9704,129 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 089 State & Handlers (Bots Domain Part 2 - 7 RPCs)
+  const [m089Status, setM089Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m089LoadingOp, setM089LoadingOp] = useState<string | null>(null)
+  const [m089BotId, setM089BotId] = useState('')
+  const [m089NewBotName, setM089NewBotName] = useState('')
+  const [m089NewBotUsername, setM089NewBotUsername] = useState('')
+  const [m089AdminedBotsList, setM089AdminedBotsList] = useState<any[] | null>(null)
+  const [m089AccessRestricted, setM089AccessRestricted] = useState(false)
+  const [m089AccessUsers, setM089AccessUsers] = useState('')
+  const [m089ExportRevoke, setM089ExportRevoke] = useState(false)
+  const [m089ExportedToken, setM089ExportedToken] = useState<string | null>(null)
+
+  const handleM089CreateBot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsCreateBotRaw || !m089NewBotName.trim() || !m089NewBotUsername.trim()) return
+    setM089LoadingOp('createBot')
+    setM089Status(null)
+    try {
+      const res = await window.guidegram.botsCreateBotRaw(targetId, {
+        name: m089NewBotName.trim(),
+        username: m089NewBotUsername.trim(),
+      })
+      setM089Status({
+        type: 'success',
+        message: `ربات جدید با موفقیت ساخته شد: @${m089NewBotUsername.replace(/^@/, '')} (شناسه: ${res?.id || 'تایید شد'})`,
+      })
+      setM089NewBotName('')
+      setM089NewBotUsername('')
+    } catch (err: any) {
+      setM089Status({ type: 'error', message: err?.message || 'خطا در ساخت ربات جدید (bots.createBot)' })
+    } finally {
+      setM089LoadingOp(null)
+    }
+  }
+
+  const handleM089GetAdminedBots = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetAdminedBotsRaw) return
+    setM089LoadingOp('getAdminedBots')
+    setM089Status(null)
+    setM089AdminedBotsList(null)
+    try {
+      const res = await window.guidegram.botsGetAdminedBotsRaw(targetId)
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.users) ? res.users : [])
+      setM089AdminedBotsList(list)
+      setM089Status({
+        type: 'success',
+        message: `تعداد ${list.length} ربات مدیریت‌شده توسط شما دریافت شد.`,
+      })
+    } catch (err: any) {
+      setM089Status({ type: 'error', message: err?.message || 'خطا در دریافت لیست ربات‌ها (bots.getAdminedBots)' })
+    } finally {
+      setM089LoadingOp(null)
+    }
+  }
+
+  const handleM089ExportBotToken = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsExportBotTokenRaw || !m089BotId.trim()) return
+    setM089LoadingOp('exportBotToken')
+    setM089Status(null)
+    try {
+      const res = await window.guidegram.botsExportBotTokenRaw(targetId, {
+        botId: m089BotId.trim(),
+        revoke: m089ExportRevoke,
+      })
+      const token = res?.token || res?.botToken || 'توکن صادر شد'
+      setM089ExportedToken(token)
+      setM089Status({
+        type: 'success',
+        message: `توکن ربات صادر شد: ${token.substring(0, 10)}...`,
+      })
+    } catch (err: any) {
+      setM089Status({ type: 'error', message: err?.message || 'خطا در دریافت توکن ربات (bots.exportBotToken)' })
+    } finally {
+      setM089LoadingOp(null)
+    }
+  }
+
+  const handleM089GetAccessSettings = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetAccessSettingsRaw || !m089BotId.trim()) return
+    setM089LoadingOp('getAccessSettings')
+    setM089Status(null)
+    try {
+      const res = await window.guidegram.botsGetAccessSettingsRaw(targetId, {
+        botId: m089BotId.trim(),
+      })
+      setM089Status({
+        type: 'success',
+        message: `تنظیمات دسترسی ربات واکشی شد: ${res?.restricted ? 'دسترسی محدود' : 'دسترسی عمومی'}`,
+      })
+    } catch (err: any) {
+      setM089Status({ type: 'error', message: err?.message || 'خطا در دریافت تنظیمات دسترسی (bots.getAccessSettings)' })
+    } finally {
+      setM089LoadingOp(null)
+    }
+  }
+
+  const handleM089EditAccessSettings = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsEditAccessSettingsRaw || !m089BotId.trim()) return
+    setM089LoadingOp('editAccessSettings')
+    setM089Status(null)
+    try {
+      const usersList = m089AccessUsers.split(',').map((u) => u.trim()).filter(Boolean)
+      await window.guidegram.botsEditAccessSettingsRaw(targetId, {
+        botId: m089BotId.trim(),
+        restricted: m089AccessRestricted,
+        addUsers: usersList.length > 0 ? usersList : undefined,
+      })
+      setM089Status({
+        type: 'success',
+        message: `تنظیمات دسترسی ربات با موفقیت به‌روزرسانی شد.`,
+      })
+    } catch (err: any) {
+      setM089Status({ type: 'error', message: err?.message || 'خطا در ویرایش دسترسی (bots.editAccessSettings)' })
+    } finally {
+      setM089LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -24703,6 +24826,213 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Microphase 089 UI Card: Bots Domain Suite Part 2 (7 RPCs) */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4 text-right" dir="rtl">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <h4 className="text-sm font-bold text-white">میکروفاز ۰۸۹: ساخت، توکن و دسترسی‌های ربات (Bots Domain Part 2)</h4>
+                    </div>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      MTProto Layer 232 • 7 RPCs
+                    </span>
+                  </div>
+
+                  {/* Operation 1: bots.createBot */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۱. ساخت ربات جدید نیتیو تلگرام (createBot)</span>
+                      <span className="text-[10px] font-mono text-gray-500">bots.createBot</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      ایجاد مستقیم ربات روی هسته تلگرام بدون نیاز به BotFather، با ثبت مستقیم در دیتابیس هویت‌ها.
+                    </p>
+                    <form onSubmit={handleM089CreateBot} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m089NewBotName}
+                          onChange={(e) => setM089NewBotName(e.target.value)}
+                          placeholder="نام نمایشی ربات (Bot Name)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-gray-200"
+                        />
+                        <input
+                          type="text"
+                          value={m089NewBotUsername}
+                          onChange={(e) => setM089NewBotUsername(e.target.value)}
+                          placeholder="نام‌کاربری با پسوند bot (مانند my_sample_bot)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-gray-200"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m089LoadingOp === 'createBot' || !m089NewBotName.trim() || !m089NewBotUsername.trim()}
+                        className="w-full py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/30 text-emerald-200 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                      >
+                        {m089LoadingOp === 'createBot' ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>در حال ایجاد ربات...</span>
+                          </>
+                        ) : (
+                          'ساخت ربات تلگرام'
+                        )}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Operation 2: bots.getAdminedBots */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۲. ربات‌های مدیریت‌شده توسط کاربر (getAdminedBots)</span>
+                      <button
+                        type="button"
+                        onClick={handleM089GetAdminedBots}
+                        disabled={m089LoadingOp === 'getAdminedBots'}
+                        className="px-3 py-1 bg-primary-600/30 hover:bg-primary-600/50 border border-primary-500/30 text-primary-200 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                      >
+                        {m089LoadingOp === 'getAdminedBots' ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <span>استعلام لیست ربات‌ها</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Honest Empty & Loaded Bot List */}
+                    {m089AdminedBotsList !== null && (
+                      <div className="space-y-1.5 pt-1">
+                        {m089AdminedBotsList.length === 0 ? (
+                          <div className="p-3 rounded-lg bg-dark-800/40 border border-white/5 text-center text-xs text-gray-500">
+                            هیچ ربات مدیریت‌شده‌ای برای این حساب کاربری یافت نشد (وضعیت صادقانه صفر).
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {m089AdminedBotsList.map((bot: any, idx: number) => (
+                              <div
+                                key={bot.id || idx}
+                                onClick={() => setM089BotId(String(bot.id || ''))}
+                                className="p-2.5 rounded-lg bg-dark-800/60 border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer flex items-center justify-between"
+                              >
+                                <div>
+                                  <div className="text-xs font-medium text-white">{bot.firstName || bot.title || 'ربات'}</div>
+                                  <div className="text-[11px] font-mono text-emerald-400">@{bot.username || bot.id}</div>
+                                </div>
+                                <span className="text-[10px] text-gray-500">انتخاب جهت توکن</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Operation 3 & 4: bots.exportBotToken & bots.getAccessSettings */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۳. صدور توکن و تنظیمات دسترسی (Token & Access)</span>
+                      <span className="text-[10px] font-mono text-gray-500">exportBotToken • accessSettings</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={m089BotId}
+                        onChange={(e) => setM089BotId(e.target.value)}
+                        placeholder="شناسه یا یوزرنیم ربات هدف..."
+                        className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-gray-200"
+                      />
+                      <label className="flex items-center gap-1 text-[11px] text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m089ExportRevoke}
+                          onChange={(e) => setM089ExportRevoke(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-rose-500"
+                        />
+                        <span>ابطال توکن قبلی</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleM089ExportBotToken}
+                        disabled={m089LoadingOp === 'exportBotToken' || !m089BotId.trim()}
+                        className="px-3 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/30 text-amber-200 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                      >
+                        {m089LoadingOp === 'exportBotToken' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'صدور توکن'}
+                      </button>
+                    </div>
+
+                    {m089ExportedToken && (
+                      <div className="p-2.5 rounded-lg bg-dark-800/80 border border-amber-500/30 flex items-center justify-between">
+                        <div className="text-[11px] font-mono text-amber-300 break-all">{m089ExportedToken}</div>
+                        <span className="text-[10px] text-gray-400 mr-2 shrink-0">توکن فعال ربات</span>
+                      </div>
+                    )}
+
+                    {/* Access Settings Controls */}
+                    <div className="pt-2 border-t border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m089AccessRestricted}
+                            onChange={(e) => setM089AccessRestricted(e.target.checked)}
+                            className="rounded border-white/20 bg-dark-900 text-primary-500"
+                          />
+                          <span>محدودسازی دسترسی به ربات (Restricted Access)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleM089GetAccessSettings}
+                          disabled={m089LoadingOp === 'getAccessSettings' || !m089BotId.trim()}
+                          className="text-[11px] text-cyan-400 hover:underline cursor-pointer disabled:opacity-40"
+                        >
+                          استعلام دسترسی
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m089AccessUsers}
+                          onChange={(e) => setM089AccessUsers(e.target.value)}
+                          placeholder="کاربران مجاز (با کاما جدا کنید)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2.5 py-1 text-xs text-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM089EditAccessSettings}
+                          disabled={m089LoadingOp === 'editAccessSettings' || !m089BotId.trim()}
+                          className="px-3 py-1 bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/30 text-cyan-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m089LoadingOp === 'editAccessSettings' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت دسترسی'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feedback Status / Error / Success / Retry */}
+                  {m089Status && (
+                    <div
+                      className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                        m089Status.type === 'success'
+                          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                          : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                      }`}
+                    >
+                      <span>{m089Status.message}</span>
+                      {m089Status.type === 'error' && (
+                        <button
+                          type="button"
+                          onClick={() => setM089Status(null)}
+                          className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                        >
+                          تلاش مجدد
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

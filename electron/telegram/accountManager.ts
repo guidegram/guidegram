@@ -21193,6 +21193,91 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.botsService.checkUsername(holder as any, params.username, params.additional)
   }
+
+  public async botsCreateBotRaw(
+    accountId: string,
+    params: {
+      viaDeeplink?: boolean
+      name: string
+      username: string
+      managerId?: string | any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.createBot(holder as any, accountId, params)
+  }
+
+  public async botsDeletePreviewMediaRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      langCode?: string
+      media: any[]
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.deletePreviewMedia(holder as any, accountId, params)
+  }
+
+  public async botsEditAccessSettingsRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      restricted?: boolean
+      addUsers?: (string | any)[]
+    }
+  ): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.botsService.editAccessSettings(holder as any, accountId, params)
+  }
+
+  public async botsEditPreviewMediaRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      langCode?: string
+      media: any
+      newMedia: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.editPreviewMedia(holder as any, accountId, params)
+  }
+
+  public async botsExportBotTokenRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      revoke?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.exportBotToken(holder as any, accountId, params)
+  }
+
+  public async botsGetAccessSettingsRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getAccessSettings(holder as any, accountId, params)
+  }
+
+  public async botsGetAdminedBotsRaw(
+    accountId: string
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getAdminedBots(holder as any)
+  }
 }
 
 

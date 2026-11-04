@@ -2895,6 +2895,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:bots:check-download-file-params-raw', { accountId, ...params }),
   botsCheckUsernameRaw: (accountId: string, params: { username: string; additional?: boolean }): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bots:check-username-raw', { accountId, ...params }),
+  botsCreateBotRaw: (accountId: string, params: { viaDeeplink?: boolean; name: string; username: string; managerId?: string | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:create-bot-raw', { accountId, ...params }),
+  botsDeletePreviewMediaRaw: (accountId: string, params: { botId: string | any; langCode?: string; media: any[] }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:delete-preview-media-raw', { accountId, ...params }),
+  botsEditAccessSettingsRaw: (accountId: string, params: { botId: string | any; restricted?: boolean; addUsers?: (string | any)[] }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:bots:edit-access-settings-raw', { accountId, ...params }),
+  botsEditPreviewMediaRaw: (accountId: string, params: { botId: string | any; langCode?: string; media: any; newMedia: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:edit-preview-media-raw', { accountId, ...params }),
+  botsExportBotTokenRaw: (accountId: string, params: { botId: string | any; revoke?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:export-bot-token-raw', { accountId, ...params }),
+  botsGetAccessSettingsRaw: (accountId: string, params: { botId: string | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-access-settings-raw', { accountId, ...params }),
+  botsGetAdminedBotsRaw: (accountId: string): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-admined-bots-raw', { accountId }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
