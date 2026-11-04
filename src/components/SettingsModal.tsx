@@ -9510,6 +9510,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 087 State & Handlers (Channels Domain Part 9 - Final)
+  const [m087Status, setM087Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m087LoadingOp, setM087LoadingOp] = useState<string | null>(null)
+  const [m087ChannelId, setM087ChannelId] = useState('')
+  const [m087PaidStars, setM087PaidStars] = useState<number>(10)
+  const [m087BroadcastAllowed, setM087BroadcastAllowed] = useState<boolean>(true)
+  const [m087Username, setM087Username] = useState('')
+
+  const handleM087UpdatePaidMessagesPrice = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsUpdatePaidMessagesPriceRaw || !m087ChannelId.trim()) return
+    setM087LoadingOp('updatePaidMessagesPrice')
+    setM087Status(null)
+    try {
+      await window.guidegram.channelsUpdatePaidMessagesPriceRaw(targetId, {
+        channelId: m087ChannelId.trim(),
+        stars: BigInt(m087PaidStars || 0),
+        broadcastAllowed: m087BroadcastAllowed,
+      })
+      setM087Status({
+        type: 'success',
+        message: `تعرفه پیام‌های پولی با موفقیت روی ${m087PaidStars} ستاره تنظیم شد (ارسال برودکست: ${m087BroadcastAllowed ? 'مجاز' : 'غیرمجاز'})`,
+      })
+    } catch (err: any) {
+      setM087Status({ type: 'error', message: err?.message || 'خطا در channels.updatePaidMessagesPrice' })
+    } finally {
+      setM087LoadingOp(null)
+    }
+  }
+
+  const handleM087UpdateUsername = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsUpdateUsernameRaw || !m087ChannelId.trim() || !m087Username.trim()) return
+    setM087LoadingOp('updateUsername')
+    setM087Status(null)
+    try {
+      await window.guidegram.channelsUpdateUsernameRaw(targetId, {
+        channelId: m087ChannelId.trim(),
+        username: m087Username.trim(),
+      })
+      setM087Status({
+        type: 'success',
+        message: `نام کاربری کانال با موفقیت به @${m087Username.replace(/^@/, '')} به‌روزرسانی شد`,
+      })
+    } catch (err: any) {
+      setM087Status({ type: 'error', message: err?.message || 'خطا در channels.updateUsername' })
+    } finally {
+      setM087LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -24171,6 +24222,142 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           ثبت استاتوس
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Microphase 087 UI Card: Channels Part 9 (Final - updatePaidMessagesPrice & updateUsername) */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4 text-right" dir="rtl">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <h4 className="text-sm font-bold text-white">میکروفاز ۰۸۷: پیام‌های پولی و نام‌کاربری کانال (تکمیل ۱۰۰٪ Channels)</h4>
+                    </div>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      MTProto Layer 232 • 2 RPCs
+                    </span>
+                  </div>
+
+                  {/* Channel ID Input */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">شناسه یا یوزرنیم کانال / ابرگروه (Channel ID / Username):</label>
+                    <input
+                      type="text"
+                      value={m087ChannelId}
+                      onChange={(e) => setM087ChannelId(e.target.value)}
+                      placeholder="مثال: -1001234567890 یا mychannel"
+                      className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                    />
+                  </div>
+
+                  {/* 4-State Indicators */}
+                  {m087LoadingOp && (
+                    <div className="p-3 rounded-xl bg-primary-500/10 border border-primary-500/20 text-primary-300 text-xs flex items-center gap-2 backdrop-blur-sm">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-primary-400" />
+                      <span>در حال ارسال درخواست به لایه تلگرام ({m087LoadingOp})...</span>
+                    </div>
+                  )}
+
+                  {!m087ChannelId.trim() && !m087LoadingOp && (
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-gray-400 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>برای مدیریت تعرفه پیام‌های پولی و نام‌کاربری، لطفاً شناسه کانال را وارد کنید.</span>
+                    </div>
+                  )}
+
+                  {m087Status && (
+                    <div
+                      className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+                        m087Status.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                          : 'bg-red-500/10 border-red-500/20 text-red-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {m087Status.type === 'success' ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                        )}
+                        <span>{m087Status.message}</span>
+                      </div>
+                      {m087Status.type === 'error' && (
+                        <button
+                          type="button"
+                          onClick={() => setM087Status(null)}
+                          className="text-[10px] underline hover:text-white cursor-pointer mr-2"
+                        >
+                          تلاش مجدد
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {/* Operation 1: updatePaidMessagesPrice */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-200">تعرفه پیام‌های پولی (Stars)</span>
+                        <span className="text-[10px] text-gray-400 font-mono">channels.updatePaidMessagesPrice</span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                        تعیین هزینه ستاره‌های تلگرام برای ارسال پیام‌های غیرعضو یا اختصاصی به کانال.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          value={m087PaidStars}
+                          onChange={(e) => setM087PaidStars(Number(e.target.value))}
+                          placeholder="تعداد ستاره..."
+                          className="w-24 bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-xs text-gray-200"
+                        />
+                        <label className="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m087BroadcastAllowed}
+                            onChange={(e) => setM087BroadcastAllowed(e.target.checked)}
+                            className="rounded border-white/20 bg-dark-900 text-primary-500"
+                          />
+                          <span>مجوز برودکست</span>
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM087UpdatePaidMessagesPrice}
+                        disabled={m087LoadingOp === 'updatePaidMessagesPrice' || !m087ChannelId.trim()}
+                        className="w-full py-1.5 bg-primary-600/30 hover:bg-primary-600/50 border border-primary-500/30 text-primary-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        ثبت تعرفه پیام‌های پولی
+                      </button>
+                    </div>
+
+                    {/* Operation 2: updateUsername */}
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-200">به‌روزرسانی نام‌کاربری کانال</span>
+                        <span className="text-[10px] text-gray-400 font-mono">channels.updateUsername</span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                        تنظیم یا تعویض شناسه کاربری عمومی کانال یا ابرگروه (Public Username).
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m087Username}
+                          onChange={(e) => setM087Username(e.target.value)}
+                          placeholder="نام‌کاربری جدید بدون @..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2 py-1 text-xs text-gray-200"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM087UpdateUsername}
+                        disabled={m087LoadingOp === 'updateUsername' || !m087ChannelId.trim() || !m087Username.trim()}
+                        className="w-full py-1.5 bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/30 text-accent-cyan text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        به‌روزرسانی نام‌کاربری کانال
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -21137,6 +21137,19 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.channelsService.updateEmojiStatus(holder as any, accountId, params.channelId, params.emojiStatus)
   }
+
+  // Microphase 087 Channels Domain Suite Part 9 (Final)
+  public async channelsUpdatePaidMessagesPriceRaw(accountId: string, params: { channelId: string; stars: bigint | number | string; broadcastAllowed?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.updatePaidMessagesPrice(holder as any, accountId, params.channelId, params.stars, params.broadcastAllowed ?? true)
+  }
+
+  public async channelsUpdateUsernameRaw(accountId: string, params: { channelId: string; username: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.updateUsername(holder as any, accountId, params.channelId, params.username)
+  }
 }
 
 

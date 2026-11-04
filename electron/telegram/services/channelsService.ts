@@ -268,12 +268,12 @@ export class ChannelsService {
       const res = await holder.client.call({
         _: 'channels.updateUsername',
         channel,
-        username: username.replace(/^@/, ''),
+        username: String(username || '').replace(/^@/, '').trim(),
       })
       return Boolean(res)
     } catch (err) {
       Logger.warn('[ChannelsService] updateUsername error:', err)
-      return false
+      throw err
     }
   }
 
@@ -905,18 +905,18 @@ export class ChannelsService {
     }
   }
 
-  public async updatePaidMessagesPrice(holder: RpcClientHolder, accountId: string, channelId: string, stars: bigint, broadcastAllowed = true): Promise<any> {
+  public async updatePaidMessagesPrice(holder: RpcClientHolder, accountId: string, channelId: string, stars: bigint | number | string, broadcastAllowed = true): Promise<any> {
     try {
       const channel = await this.toInputChannel(accountId, channelId)
       return await holder.client.call({
         _: 'channels.updatePaidMessagesPrice',
         channel,
-        sendPaidMessagesStars: BigInt(stars),
+        sendPaidMessagesStars: typeof stars === 'bigint' ? stars : BigInt(stars || 0),
         broadcastMessagesAllowed: Boolean(broadcastAllowed),
       })
     } catch (err) {
       Logger.warn('[ChannelsService] updatePaidMessagesPrice error:', err)
-      return null
+      throw err
     }
   }
 

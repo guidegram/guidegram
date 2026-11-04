@@ -2877,6 +2877,10 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:update-color-raw', { accountId, ...params }),
   channelsUpdateEmojiStatusRaw: (accountId: string, params: { channelId: string; emojiStatus: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:channels:update-emoji-status-raw', { accountId, ...params }),
+  channelsUpdatePaidMessagesPriceRaw: (accountId: string, params: { channelId: string; stars: bigint | number | string; broadcastAllowed?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:update-paid-messages-price-raw', { accountId, ...params }),
+  channelsUpdateUsernameRaw: (accountId: string, params: { channelId: string; username: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:update-username-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

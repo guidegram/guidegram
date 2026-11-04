@@ -9238,6 +9238,25 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 087 IPC Handlers (Channels Domain Part 9 - Final)
+  ipcMain.handle('telegram:channels:update-paid-messages-price-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsUpdatePaidMessagesPriceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsUpdatePaidMessagesPriceRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:channels:update-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsUpdateUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsUpdateUsernameRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
