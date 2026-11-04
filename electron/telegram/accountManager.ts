@@ -20538,6 +20538,37 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.updates_getChannelDifference(holder as any, accountId, params?.force, params?.channel, params?.filter, params?.pts, params?.limit)
   }
+
+  // Layer 232 Photos Suite (Microphase 072)
+  public async photosUpdateProfilePhotoRaw(accountId: string, params: { fallback?: boolean; botId?: string; id?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.photos_updateProfilePhoto(holder as any, accountId, params?.fallback, params?.botId, params?.id)
+  }
+
+  public async photosUploadProfilePhotoRaw(accountId: string, params: { fallback?: boolean; botId?: string; file?: any; video?: any; videoStartTs?: any; videoEmojiMarkup?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.photos_uploadProfilePhoto(holder as any, accountId, params?.fallback, params?.botId, params?.file, params?.video, params?.videoStartTs, params?.videoEmojiMarkup)
+  }
+
+  public async photosDeletePhotosRaw(accountId: string, params: { id?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.photos_deletePhotos(holder as any, params?.id)
+  }
+
+  public async photosGetUserPhotosRaw(accountId: string, params: { userId?: string; offset?: number; maxId?: bigint | number | string; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.photos_getUserPhotos(holder as any, accountId, params?.userId, params?.offset, params?.maxId, params?.limit)
+  }
+
+  public async photosUploadContactProfilePhotoRaw(accountId: string, params: { suggest?: boolean; save?: boolean; userId?: string; file?: any; video?: any; videoStartTs?: any; videoEmojiMarkup?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.photos_uploadContactProfilePhoto(holder as any, accountId, params?.suggest, params?.save, params?.userId, params?.file, params?.video, params?.videoStartTs, params?.videoEmojiMarkup)
+  }
 }
 
 

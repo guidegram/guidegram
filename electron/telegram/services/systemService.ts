@@ -254,11 +254,20 @@ export class SystemService {
 
   public async photos_updateProfilePhoto(holder: RpcClientHolder, accountId: string, fallback?: boolean, botId?: string, id?: any): Promise<any> {
     try {
+      let photoObj = id
+      if (typeof id === 'string' || typeof id === 'number' || typeof id === 'bigint') {
+        photoObj = {
+          _: 'inputPhoto',
+          id: BigInt(id),
+          accessHash: 0n,
+          fileReference: new Uint8Array(),
+        }
+      }
       return await holder.client.call({
         _: 'photos.updateProfilePhoto',
-        'fallback': fallback,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'id': id,
+        fallback: fallback || undefined,
+        bot: botId ? await this.toInputUser(accountId, botId) : undefined,
+        id: photoObj || { _: 'inputPhotoEmpty' },
       })
     } catch (err) {
       Logger.warn('[SystemService] photos.updateProfilePhoto error:', err)
@@ -270,12 +279,12 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'photos.uploadProfilePhoto',
-        'fallback': fallback,
-        'bot': botId ? await this.toInputUser(accountId, botId) : undefined,
-        'file': file,
-        'video': video,
-        'video_start_ts': videoStartTs,
-        'video_emoji_markup': videoEmojiMarkup,
+        fallback: fallback || undefined,
+        bot: botId ? await this.toInputUser(accountId, botId) : undefined,
+        file: file || undefined,
+        video: video || undefined,
+        videoStartTs: videoStartTs || undefined,
+        videoEmojiMarkup: videoEmojiMarkup || undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] photos.uploadProfilePhoto error:', err)
@@ -285,9 +294,19 @@ export class SystemService {
 
   public async photos_deletePhotos(holder: RpcClientHolder, id?: any): Promise<any> {
     try {
+      const rawList = Array.isArray(id) ? id : [id]
+      const inputPhotos = rawList.map((item: any) => {
+        if (typeof item === 'object' && item && item._) return item
+        return {
+          _: 'inputPhoto',
+          id: BigInt(item || 0),
+          accessHash: 0n,
+          fileReference: new Uint8Array(),
+        }
+      })
       return await holder.client.call({
         _: 'photos.deletePhotos',
-        'id': id,
+        id: inputPhotos,
       })
     } catch (err) {
       Logger.warn('[SystemService] photos.deletePhotos error:', err)
@@ -295,14 +314,15 @@ export class SystemService {
     }
   }
 
-  public async photos_getUserPhotos(holder: RpcClientHolder, accountId: string, userIdId?: string, offset?: number, maxId?: bigint | number, limit?: number): Promise<any> {
+  public async photos_getUserPhotos(holder: RpcClientHolder, accountId: string, userIdId?: string, offset?: number, maxId?: bigint | number | string, limit?: number): Promise<any> {
     try {
+      const targetUser = userIdId ? await this.toInputUser(accountId, userIdId) : { _: 'inputUserSelf' }
       return await holder.client.call({
         _: 'photos.getUserPhotos',
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'offset': offset,
-        'max_id': maxId,
-        'limit': limit,
+        userId: targetUser,
+        offset: offset ?? 0,
+        maxId: maxId ? BigInt(maxId) : 0n,
+        limit: limit ?? 20,
       })
     } catch (err) {
       Logger.warn('[SystemService] photos.getUserPhotos error:', err)
@@ -312,15 +332,16 @@ export class SystemService {
 
   public async photos_uploadContactProfilePhoto(holder: RpcClientHolder, accountId: string, suggest?: boolean, save?: boolean, userIdId?: string, file?: any, video?: any, videoStartTs?: any, videoEmojiMarkup?: any): Promise<any> {
     try {
+      const targetUser = userIdId ? await this.toInputUser(accountId, userIdId) : { _: 'inputUserSelf' }
       return await holder.client.call({
         _: 'photos.uploadContactProfilePhoto',
-        'suggest': suggest,
-        'save': save,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'file': file,
-        'video': video,
-        'video_start_ts': videoStartTs,
-        'video_emoji_markup': videoEmojiMarkup,
+        suggest: suggest || undefined,
+        save: save || undefined,
+        userId: targetUser,
+        file: file || undefined,
+        video: video || undefined,
+        videoStartTs: videoStartTs || undefined,
+        videoEmojiMarkup: videoEmojiMarkup || undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] photos.uploadContactProfilePhoto error:', err)

@@ -2193,8 +2193,8 @@
         "uploadProfilePhoto"
       ],
       "method_count": 5,
-      "ui_component": "src/components/MyProfileDrawer.tsx",
-      "status": "PENDING",
+      "ui_component": "src/components/SettingsModal.tsx",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,

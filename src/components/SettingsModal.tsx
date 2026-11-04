@@ -7465,6 +7465,111 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 072 State & Handlers (Photos Domain Part 1)
+  const [m072Status, setM072Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m072LoadingOp, setM072LoadingOp] = useState<string | null>(null)
+
+  // 1. photos.getUserPhotos
+  const [m072UserPhotosUserId, setM072UserPhotosUserId] = useState('')
+  const [m072UserPhotosResult, setM072UserPhotosResult] = useState<any[] | null>(null)
+  const handleM072GetUserPhotos = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.photosGetUserPhotosRaw) return
+    setM072LoadingOp('getUserPhotos')
+    setM072Status(null)
+    try {
+      const res = await window.guidegram.photosGetUserPhotosRaw(targetId, {
+        userId: m072UserPhotosUserId.trim() || undefined,
+        limit: 10,
+      })
+      const photos = res?.photos || (Array.isArray(res) ? res : [])
+      setM072UserPhotosResult(photos)
+      setM072Status({ type: 'success', message: `${photos.length} تصویر پروفایل دریافت شد.` })
+    } catch (err: any) {
+      setM072Status({ type: 'error', message: err?.message || 'خطا در دریافت تصاویر پروفایل' })
+    } finally {
+      setM072LoadingOp(null)
+    }
+  }
+
+  // 2. photos.deletePhotos
+  const [m072DeletePhotoId, setM072DeletePhotoId] = useState('')
+  const handleM072DeletePhotos = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.photosDeletePhotosRaw) return
+    if (!m072DeletePhotoId.trim()) {
+      setM072Status({ type: 'error', message: 'شناسه تصویر الزامی است' })
+      return
+    }
+    setM072LoadingOp('deletePhotos')
+    setM072Status(null)
+    try {
+      const res = await window.guidegram.photosDeletePhotosRaw(targetId, {
+        id: [m072DeletePhotoId.trim()],
+      })
+      setM072Status({ type: 'success', message: `تصویر با شناسه ${m072DeletePhotoId} حذف شد: ${res ? 'تایید' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM072Status({ type: 'error', message: err?.message || 'خطا در حذف تصویر' })
+    } finally {
+      setM072LoadingOp(null)
+    }
+  }
+
+  // 3. photos.updateProfilePhoto
+  const [m072UpdatePhotoId, setM072UpdatePhotoId] = useState('')
+  const [m072UpdateFallback, setM072UpdateFallback] = useState(false)
+  const handleM072UpdateProfilePhoto = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.photosUpdateProfilePhotoRaw) return
+    if (!m072UpdatePhotoId.trim()) {
+      setM072Status({ type: 'error', message: 'شناسه تصویر الزامی است' })
+      return
+    }
+    setM072LoadingOp('updateProfilePhoto')
+    setM072Status(null)
+    try {
+      const res = await window.guidegram.photosUpdateProfilePhotoRaw(targetId, {
+        id: m072UpdatePhotoId.trim(),
+        fallback: m072UpdateFallback,
+      })
+      setM072Status({ type: 'success', message: `تصویر پروفایل فعال شد: ${res?._ || 'تایید شد'}` })
+    } catch (err: any) {
+      setM072Status({ type: 'error', message: err?.message || 'خطا در به‌روزرسانی تصویر پروفایل' })
+    } finally {
+      setM072LoadingOp(null)
+    }
+  }
+
+  // 4. photos.uploadContactProfilePhoto
+  const [m072ContactUserId, setM072ContactUserId] = useState('')
+  const [m072ContactSuggest, setM072ContactSuggest] = useState(false)
+  const handleM072UploadContactProfilePhoto = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.photosUploadContactProfilePhotoRaw) return
+    if (!m072ContactUserId.trim()) {
+      setM072Status({ type: 'error', message: 'شناسه مخاطب الزامی است' })
+      return
+    }
+    setM072LoadingOp('uploadContactPhoto')
+    setM072Status(null)
+    try {
+      const res = await window.guidegram.photosUploadContactProfilePhotoRaw(targetId, {
+        userId: m072ContactUserId.trim(),
+        suggest: m072ContactSuggest,
+        save: true,
+      })
+      setM072Status({ type: 'success', message: `تصویر مخاطب ثبت گردید: ${res?._ || 'تایید شد'}` })
+    } catch (err: any) {
+      setM072Status({ type: 'error', message: err?.message || 'خطا در تنظیم تصویر مخاطب' })
+    } finally {
+      setM072LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -19404,6 +19509,181 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       >
                         {m071LoadingOp === 'getChannelDifference' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'بررسی کانال'}
                       </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 072: Photos Domain Suite Part 1 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-pink-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۲: مدیریت و گالری تصاویر پروفایل (Photos Domain Part 1)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-pink-400/80 font-mono px-2 py-0.5 rounded-full bg-pink-400/10 border border-pink-400/20">
+                      لایه ۲۳۲ | دامنه Photos
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    مدیریت عکس‌های پروفایل کاربر و مخاطبان، استعلام تاریخچه تصاویر، فعال‌سازی عکس پیشین و حذف عکس‌ها:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m072Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m072Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m072Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m072Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM072Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+                    {/* 1. photos.getUserPhotos */}
+                    <form
+                      onSubmit={handleM072GetUserPhotos}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. استعلام تصاویر (getUserPhotos)</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m072UserPhotosUserId}
+                          onChange={(e) => setM072UserPhotosUserId(e.target.value)}
+                          placeholder="شناسه کاربر (خالی = خود اکانت)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m072LoadingOp === 'getUserPhotos'}
+                          className="px-3 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m072LoadingOp === 'getUserPhotos' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت'}
+                        </button>
+                      </div>
+                      {m072UserPhotosResult && (
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          تعداد تصاویر موجود: {m072UserPhotosResult.length}
+                        </div>
+                      )}
+                    </form>
+
+                    {/* 2. photos.updateProfilePhoto */}
+                    <form
+                      onSubmit={handleM072UpdateProfilePhoto}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۲. فعال‌سازی عکس پروفایل (updateProfilePhoto)</span>
+                        <label className="flex items-center gap-1 text-[10px] text-gray-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m072UpdateFallback}
+                            onChange={(e) => setM072UpdateFallback(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          فالبک
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m072UpdatePhotoId}
+                          onChange={(e) => setM072UpdatePhotoId(e.target.value)}
+                          placeholder="شناسه Photo ID..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m072LoadingOp === 'updateProfilePhoto'}
+                          className="px-3 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m072LoadingOp === 'updateProfilePhoto' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم عکس'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 3. photos.deletePhotos */}
+                    <form
+                      onSubmit={handleM072DeletePhotos}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. حذف تصویر (deletePhotos)</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m072DeletePhotoId}
+                          onChange={(e) => setM072DeletePhotoId(e.target.value)}
+                          placeholder="شناسه Photo ID جهت حذف..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-rose-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m072LoadingOp === 'deletePhotos'}
+                          className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m072LoadingOp === 'deletePhotos' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* 4. photos.uploadContactProfilePhoto */}
+                    <form
+                      onSubmit={handleM072UploadContactProfilePhoto}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
+                        <span>۴. عکس اختصاصی مخاطب (uploadContactPhoto)</span>
+                        <label className="flex items-center gap-1 text-[10px] text-gray-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={m072ContactSuggest}
+                            onChange={(e) => setM072ContactSuggest(e.target.checked)}
+                            className="rounded border-white/10"
+                          />
+                          پیشنهاد به او
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m072ContactUserId}
+                          onChange={(e) => setM072ContactUserId(e.target.value)}
+                          placeholder="شناسه کاربری مخاطب..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-pink-500/40"
+                        />
+                        <button
+                          type="submit"
+                          disabled={m072LoadingOp === 'uploadContactPhoto'}
+                          className="px-3 py-1.5 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m072LoadingOp === 'uploadContactPhoto' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم'}
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </div>

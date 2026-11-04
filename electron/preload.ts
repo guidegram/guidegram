@@ -2679,6 +2679,16 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:updates:get-difference-raw', { accountId, ...params }),
   updatesGetChannelDifferenceRaw: (accountId: string, params: { force?: boolean; channel: any; filter?: any; pts?: number; limit?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:updates:get-channel-difference-raw', { accountId, ...params }),
+  photosUpdateProfilePhotoRaw: (accountId: string, params: { fallback?: boolean; botId?: string; id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:photos:update-profile-photo-raw', { accountId, ...params }),
+  photosUploadProfilePhotoRaw: (accountId: string, params: { fallback?: boolean; botId?: string; file?: any; video?: any; videoStartTs?: any; videoEmojiMarkup?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:photos:upload-profile-photo-raw', { accountId, ...params }),
+  photosDeletePhotosRaw: (accountId: string, params: { id?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:photos:delete-photos-raw', { accountId, ...params }),
+  photosGetUserPhotosRaw: (accountId: string, params: { userId?: string; offset?: number; maxId?: bigint | number | string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:photos:get-user-photos-raw', { accountId, ...params }),
+  photosUploadContactProfilePhotoRaw: (accountId: string, params: { suggest?: boolean; save?: boolean; userId?: string; file?: any; video?: any; videoStartTs?: any; videoEmojiMarkup?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:photos:upload-contact-profile-photo-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

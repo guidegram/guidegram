@@ -8377,6 +8377,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 072 IPC Handlers (Photos Domain Part 1)
+  ipcMain.handle('telegram:photos:update-profile-photo-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.photosUpdateProfilePhotoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] photosUpdateProfilePhotoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:photos:upload-profile-photo-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.photosUploadProfilePhotoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] photosUploadProfilePhotoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:photos:delete-photos-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.photosDeletePhotosRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] photosDeletePhotosRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:photos:get-user-photos-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.photosGetUserPhotosRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] photosGetUserPhotosRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:photos:upload-contact-profile-photo-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.photosUploadContactProfilePhotoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] photosUploadContactProfilePhotoRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
