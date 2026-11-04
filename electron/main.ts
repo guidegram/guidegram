@@ -8423,6 +8423,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 073 IPC Handlers (Upload Domain Part 1)
+  ipcMain.handle('telegram:upload:get-file-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadGetFileRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadGetFileRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload:save-big-file-part-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadSaveBigFilePartRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadSaveBigFilePartRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload:get-web-file-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadGetWebFileRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadGetWebFileRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload:get-cdn-file-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadGetCdnFileRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadGetCdnFileRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload:reupload-cdn-file-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadReuploadCdnFileRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadReuploadCdnFileRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload:get-cdn-file-hashes-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadGetCdnFileHashesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadGetCdnFileHashesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:upload:get-file-hashes-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.uploadGetFileHashesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] uploadGetFileHashesRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

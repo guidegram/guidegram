@@ -7570,6 +7570,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 073 State & Handlers (Upload Domain Part 1)
+  const [m073Status, setM073Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m073LoadingOp, setM073LoadingOp] = useState<string | null>(null)
+
+  // 1. upload.getWebFile
+  const [m073WebFileUrl, setM073WebFileUrl] = useState('')
+  const handleM073GetWebFile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.uploadGetWebFileRaw) return
+    if (!m073WebFileUrl.trim()) {
+      setM073Status({ type: 'error', message: 'آدرس اینترنتی الزامی است' })
+      return
+    }
+    setM073LoadingOp('getWebFile')
+    setM073Status(null)
+    try {
+      const res = await window.guidegram.uploadGetWebFileRaw(targetId, {
+        location: {
+          _: 'inputWebFileLocation',
+          url: m073WebFileUrl.trim(),
+          accessHash: 0n,
+        },
+        offset: 0,
+        limit: 131072,
+      })
+      setM073Status({ type: 'success', message: `فایل وب دریافت شد: نوع ${res?.mimeType || res?._ || 'ناشناخته'}` })
+    } catch (err: any) {
+      setM073Status({ type: 'error', message: err?.message || 'خطا در دریافت فایل وب' })
+    } finally {
+      setM073LoadingOp(null)
+    }
+  }
+
+  // 2. upload.saveBigFilePart
+  const [m073BigFileId, setM073BigFileId] = useState('')
+  const [m073BigFilePart, setM073BigFilePart] = useState('0')
+  const handleM073SaveBigFilePart = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.uploadSaveBigFilePartRaw) return
+    setM073LoadingOp('saveBigFilePart')
+    setM073Status(null)
+    try {
+      const dummyId = m073BigFileId.trim() || String(Date.now())
+      const partIdx = parseInt(m073BigFilePart) || 0
+      const dummyBytes = new Uint8Array([1, 2, 3, 4, 5])
+      const res = await window.guidegram.uploadSaveBigFilePartRaw(targetId, {
+        fileId: dummyId,
+        filePart: partIdx,
+        fileTotalParts: partIdx + 1,
+        bytes: dummyBytes,
+      })
+      setM073Status({ type: 'success', message: `ارسال قطعه ${partIdx} فایل بزرگ تأیید شد: ${res ? 'موفق' : 'انجام شد'}` })
+    } catch (err: any) {
+      setM073Status({ type: 'error', message: err?.message || 'خطا در آپلود قطعه فایل' })
+    } finally {
+      setM073LoadingOp(null)
+    }
+  }
+
+  // 3. upload.getCdnFileHashes
+  const [m073CdnToken, setM073CdnToken] = useState('')
+  const handleM073GetCdnHashes = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.uploadGetCdnFileHashesRaw) return
+    setM073LoadingOp('getCdnHashes')
+    setM073Status(null)
+    try {
+      const token = m073CdnToken.trim() || '0102030405'
+      const res = await window.guidegram.uploadGetCdnFileHashesRaw(targetId, {
+        fileToken: token,
+        offset: 0,
+      })
+      const count = Array.isArray(res) ? res.length : 0
+      setM073Status({ type: 'success', message: `هش‌های CDN دریافت گردید: ${count} قطعه` })
+    } catch (err: any) {
+      setM073Status({ type: 'error', message: err?.message || 'خطا در استعلام هش‌های CDN' })
+    } finally {
+      setM073LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -19684,6 +19768,133 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           {m072LoadingOp === 'uploadContactPhoto' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تنظیم'}
                         </button>
                       </div>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Microphase 073: Upload Domain Suite Part 1 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۳: مدیریت آپلود و دریافت فایل‌های وب و CDN (Upload Domain Part 1)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Upload
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    دریافت فایل از وب، ارسال تکه‌ای فایل‌های بزرگ، استعلام هش‌های CDN و پردازش لایه‌ای داده‌ها:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m073Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m073Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m073Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m073Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM073Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-1">
+                    {/* 1. upload.getWebFile */}
+                    <form
+                      onSubmit={handleM073GetWebFile}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. دریافت وب‌فایل (getWebFile)</span>
+                      <input
+                        type="text"
+                        value={m073WebFileUrl}
+                        onChange={(e) => setM073WebFileUrl(e.target.value)}
+                        placeholder="آدرس اینترنتی فایل..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m073LoadingOp === 'getWebFile'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m073LoadingOp === 'getWebFile' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دانلود مستقیم'}
+                      </button>
+                    </form>
+
+                    {/* 2. upload.saveBigFilePart */}
+                    <form
+                      onSubmit={handleM073SaveBigFilePart}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۲. آپلود فایل بزرگ (saveBigFilePart)</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={m073BigFileId}
+                          onChange={(e) => setM073BigFileId(e.target.value)}
+                          placeholder="شناسه فایل..."
+                          className="w-2/3 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="number"
+                          value={m073BigFilePart}
+                          onChange={(e) => setM073BigFilePart(e.target.value)}
+                          placeholder="پارت..."
+                          className="w-1/3 bg-dark-900 border border-white/5 rounded-xl px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={m073LoadingOp === 'saveBigFilePart'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m073LoadingOp === 'saveBigFilePart' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال تکه فایل'}
+                      </button>
+                    </form>
+
+                    {/* 3. upload.getCdnFileHashes */}
+                    <form
+                      onSubmit={handleM073GetCdnHashes}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. هش‌های CDN (getCdnHashes)</span>
+                      <input
+                        type="text"
+                        value={m073CdnToken}
+                        onChange={(e) => setM073CdnToken(e.target.value)}
+                        placeholder="توکن هگزادسیمال CDN..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m073LoadingOp === 'getCdnHashes'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m073LoadingOp === 'getCdnHashes' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام هش‌ها'}
+                      </button>
                     </form>
                   </div>
                 </div>

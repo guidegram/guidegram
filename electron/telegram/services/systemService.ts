@@ -363,15 +363,27 @@ export class SystemService {
     }
   }
 
-  public async upload_getFile(holder: RpcClientHolder, precise?: boolean, cdnSupported?: boolean, location?: any, offset?: bigint | number, limit?: number): Promise<any> {
+  private toUint8Array(data: any): Uint8Array {
+    if (data instanceof Uint8Array) return data
+    if (Buffer.isBuffer(data)) return new Uint8Array(data)
+    if (typeof data === 'string') {
+      if (/^[0-9a-fA-F]+$/.test(data) && data.length % 2 === 0) {
+        return new Uint8Array(Buffer.from(data, 'hex'))
+      }
+      return new Uint8Array(Buffer.from(data, 'utf-8'))
+    }
+    return new Uint8Array()
+  }
+
+  public async upload_getFile(holder: RpcClientHolder, precise?: boolean, cdnSupported?: boolean, location?: any, offset?: bigint | number | string, limit?: number): Promise<any> {
     try {
       return await holder.client.call({
         _: 'upload.getFile',
-        'precise': precise,
-        'cdn_supported': cdnSupported,
-        'location': location,
-        'offset': offset,
-        'limit': limit,
+        precise: precise || undefined,
+        cdnSupported: cdnSupported || undefined,
+        location: location || { _: 'inputDocumentFileLocation', id: 0n, accessHash: 0n, fileReference: new Uint8Array(), thumbSize: '' },
+        offset: offset ? BigInt(offset) : 0n,
+        limit: limit ?? 1048576,
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.getFile error:', err)
@@ -379,14 +391,14 @@ export class SystemService {
     }
   }
 
-  public async upload_saveBigFilePart(holder: RpcClientHolder, fileId?: bigint | number, filePart?: number, fileTotalParts?: number, bytes?: any): Promise<any> {
+  public async upload_saveBigFilePart(holder: RpcClientHolder, fileId?: bigint | number | string, filePart?: number, fileTotalParts?: number, bytes?: any): Promise<any> {
     try {
       return await holder.client.call({
         _: 'upload.saveBigFilePart',
-        'file_id': fileId,
-        'file_part': filePart,
-        'file_total_parts': fileTotalParts,
-        'bytes': bytes,
+        fileId: fileId ? BigInt(fileId) : 0n,
+        filePart: filePart ?? 0,
+        fileTotalParts: fileTotalParts ?? 1,
+        bytes: this.toUint8Array(bytes),
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.saveBigFilePart error:', err)
@@ -398,9 +410,9 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'upload.getWebFile',
-        'location': location,
-        'offset': offset,
-        'limit': limit,
+        location: location || { _: 'inputWebFileLocation', url: '', accessHash: 0n },
+        offset: offset ?? 0,
+        limit: limit ?? 131072,
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.getWebFile error:', err)
@@ -408,13 +420,13 @@ export class SystemService {
     }
   }
 
-  public async upload_getCdnFile(holder: RpcClientHolder, fileToken?: any, offset?: bigint | number, limit?: number): Promise<any> {
+  public async upload_getCdnFile(holder: RpcClientHolder, fileToken?: any, offset?: bigint | number | string, limit?: number): Promise<any> {
     try {
       return await holder.client.call({
         _: 'upload.getCdnFile',
-        'file_token': fileToken,
-        'offset': offset,
-        'limit': limit,
+        fileToken: this.toUint8Array(fileToken),
+        offset: offset ? BigInt(offset) : 0n,
+        limit: limit ?? 1048576,
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.getCdnFile error:', err)
@@ -426,8 +438,8 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'upload.reuploadCdnFile',
-        'file_token': fileToken,
-        'request_token': requestToken,
+        fileToken: this.toUint8Array(fileToken),
+        requestToken: this.toUint8Array(requestToken),
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.reuploadCdnFile error:', err)
@@ -435,12 +447,12 @@ export class SystemService {
     }
   }
 
-  public async upload_getCdnFileHashes(holder: RpcClientHolder, fileToken?: any, offset?: bigint | number): Promise<any> {
+  public async upload_getCdnFileHashes(holder: RpcClientHolder, fileToken?: any, offset?: bigint | number | string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'upload.getCdnFileHashes',
-        'file_token': fileToken,
-        'offset': offset,
+        fileToken: this.toUint8Array(fileToken),
+        offset: offset ? BigInt(offset) : 0n,
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.getCdnFileHashes error:', err)
@@ -448,12 +460,12 @@ export class SystemService {
     }
   }
 
-  public async upload_getFileHashes(holder: RpcClientHolder, location?: any, offset?: bigint | number): Promise<any> {
+  public async upload_getFileHashes(holder: RpcClientHolder, location?: any, offset?: bigint | number | string): Promise<any> {
     try {
       return await holder.client.call({
         _: 'upload.getFileHashes',
-        'location': location,
-        'offset': offset,
+        location: location || { _: 'inputDocumentFileLocation', id: 0n, accessHash: 0n, fileReference: new Uint8Array(), thumbSize: '' },
+        offset: offset ? BigInt(offset) : 0n,
       })
     } catch (err) {
       Logger.warn('[SystemService] upload.getFileHashes error:', err)

@@ -2689,6 +2689,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:photos:get-user-photos-raw', { accountId, ...params }),
   photosUploadContactProfilePhotoRaw: (accountId: string, params: { suggest?: boolean; save?: boolean; userId?: string; file?: any; video?: any; videoStartTs?: any; videoEmojiMarkup?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:photos:upload-contact-profile-photo-raw', { accountId, ...params }),
+  uploadGetFileRaw: (accountId: string, params: { precise?: boolean; cdnSupported?: boolean; location?: any; offset?: bigint | number | string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:get-file-raw', { accountId, ...params }),
+  uploadSaveBigFilePartRaw: (accountId: string, params: { fileId?: bigint | number | string; filePart?: number; fileTotalParts?: number; bytes?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:save-big-file-part-raw', { accountId, ...params }),
+  uploadGetWebFileRaw: (accountId: string, params: { location?: any; offset?: number; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:get-web-file-raw', { accountId, ...params }),
+  uploadGetCdnFileRaw: (accountId: string, params: { fileToken?: any; offset?: bigint | number | string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:get-cdn-file-raw', { accountId, ...params }),
+  uploadReuploadCdnFileRaw: (accountId: string, params: { fileToken?: any; requestToken?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:reupload-cdn-file-raw', { accountId, ...params }),
+  uploadGetCdnFileHashesRaw: (accountId: string, params: { fileToken?: any; offset?: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:get-cdn-file-hashes-raw', { accountId, ...params }),
+  uploadGetFileHashesRaw: (accountId: string, params: { location?: any; offset?: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:upload:get-file-hashes-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

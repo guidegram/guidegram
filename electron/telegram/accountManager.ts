@@ -20569,6 +20569,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.photos_uploadContactProfilePhoto(holder as any, accountId, params?.suggest, params?.save, params?.userId, params?.file, params?.video, params?.videoStartTs, params?.videoEmojiMarkup)
   }
+
+  // Layer 232 Upload Suite Part 1 (Microphase 073)
+  public async uploadGetFileRaw(accountId: string, params: { precise?: boolean; cdnSupported?: boolean; location?: any; offset?: bigint | number | string; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_getFile(holder as any, params?.precise, params?.cdnSupported, params?.location, params?.offset, params?.limit)
+  }
+
+  public async uploadSaveBigFilePartRaw(accountId: string, params: { fileId?: bigint | number | string; filePart?: number; fileTotalParts?: number; bytes?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_saveBigFilePart(holder as any, params?.fileId, params?.filePart, params?.fileTotalParts, params?.bytes)
+  }
+
+  public async uploadGetWebFileRaw(accountId: string, params: { location?: any; offset?: number; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_getWebFile(holder as any, params?.location, params?.offset, params?.limit)
+  }
+
+  public async uploadGetCdnFileRaw(accountId: string, params: { fileToken?: any; offset?: bigint | number | string; limit?: number }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_getCdnFile(holder as any, params?.fileToken, params?.offset, params?.limit)
+  }
+
+  public async uploadReuploadCdnFileRaw(accountId: string, params: { fileToken?: any; requestToken?: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_reuploadCdnFile(holder as any, params?.fileToken, params?.requestToken)
+  }
+
+  public async uploadGetCdnFileHashesRaw(accountId: string, params: { fileToken?: any; offset?: bigint | number | string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_getCdnFileHashes(holder as any, params?.fileToken, params?.offset)
+  }
+
+  public async uploadGetFileHashesRaw(accountId: string, params: { location?: any; offset?: bigint | number | string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.upload_getFileHashes(holder as any, params?.location, params?.offset)
+  }
 }
 
 
