@@ -20834,6 +20834,49 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.channelsService.deleteHistory(holder as any, accountId, params.channelId, params.maxId, params.forEveryone)
   }
+
+  // Layer 232 Channels Domain Part 2 (Microphase 080)
+  public async channelsDeleteMessagesRaw(accountId: string, params: { channelId: string; id: number[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.deleteMessages(holder as any, accountId, params.channelId, params.id)
+  }
+
+  public async channelsDeleteParticipantHistoryRaw(accountId: string, params: { channelId: string; participantId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.deleteParticipantHistory(holder as any, accountId, params.channelId, params.participantId)
+  }
+
+  public async channelsEditAdminRaw(accountId: string, params: { channelId: string; userId: string; adminRights: any; rank?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.editAdmin(holder as any, accountId, params.channelId, params.userId, params.adminRights, params.rank)
+  }
+
+  public async channelsEditBannedRaw(accountId: string, params: { channelId: string; participantId: string; bannedRights: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.editBanned(holder as any, accountId, params.channelId, params.participantId, params.bannedRights)
+  }
+
+  public async channelsEditLocationRaw(accountId: string, params: { channelId: string; lat: number; long: number; address: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.editLocation(holder as any, accountId, params.channelId, params.lat, params.long, params.address)
+  }
+
+  public async channelsEditPhotoRaw(accountId: string, params: { channelId: string; photo: any }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.editPhoto(holder as any, accountId, params.channelId, params.photo)
+  }
+
+  public async channelsEditTitleRaw(accountId: string, params: { channelId: string; title: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.editTitle(holder as any, accountId, params.channelId, params.title)
+  }
 }
 
 

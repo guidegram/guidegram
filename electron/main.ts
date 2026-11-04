@@ -8790,6 +8790,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 080 IPC Handlers (Channels Domain Part 2)
+  ipcMain.handle('telegram:channels:delete-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsDeleteMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsDeleteMessagesRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:delete-participant-history-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsDeleteParticipantHistoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsDeleteParticipantHistoryRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:edit-admin-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsEditAdminRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsEditAdminRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:edit-banned-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsEditBannedRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsEditBannedRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:edit-location-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsEditLocationRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsEditLocationRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:edit-photo-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsEditPhotoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsEditPhotoRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:edit-title-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsEditTitleRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsEditTitleRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

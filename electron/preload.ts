@@ -2779,6 +2779,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:delete-channel-raw', { accountId, ...params }),
   channelsDeleteHistoryRaw: (accountId: string, params: { channelId: string; maxId: number; forEveryone?: boolean }): Promise<any> =>
     ipcRenderer.invoke('telegram:channels:delete-history-raw', { accountId, ...params }),
+  channelsDeleteMessagesRaw: (accountId: string, params: { channelId: string; id: number[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:delete-messages-raw', { accountId, ...params }),
+  channelsDeleteParticipantHistoryRaw: (accountId: string, params: { channelId: string; participantId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:delete-participant-history-raw', { accountId, ...params }),
+  channelsEditAdminRaw: (accountId: string, params: { channelId: string; userId: string; adminRights: any; rank?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:edit-admin-raw', { accountId, ...params }),
+  channelsEditBannedRaw: (accountId: string, params: { channelId: string; participantId: string; bannedRights: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:edit-banned-raw', { accountId, ...params }),
+  channelsEditLocationRaw: (accountId: string, params: { channelId: string; lat: number; long: number; address: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:edit-location-raw', { accountId, ...params }),
+  channelsEditPhotoRaw: (accountId: string, params: { channelId: string; photo: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:edit-photo-raw', { accountId, ...params }),
+  channelsEditTitleRaw: (accountId: string, params: { channelId: string; title: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:edit-title-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

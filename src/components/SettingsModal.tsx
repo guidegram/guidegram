@@ -8295,6 +8295,208 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 080 State & Handlers (Channels Domain Part 2)
+  const [m080Status, setM080Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m080LoadingOp, setM080LoadingOp] = useState<string | null>(null)
+  const [m080ChannelId, setM080ChannelId] = useState('')
+  const [m080MsgIds, setM080MsgIds] = useState('')
+  const [m080ParticipantId, setM080ParticipantId] = useState('')
+  const [m080AdminUserId, setM080AdminUserId] = useState('')
+  const [m080AdminRank, setM080AdminRank] = useState('')
+  const [m080NewTitle, setM080NewTitle] = useState('')
+  const [m080GeoLat, setM080GeoLat] = useState('35.6892')
+  const [m080GeoLong, setM080GeoLong] = useState('51.3890')
+  const [m080GeoAddress, setM080GeoAddress] = useState('Tehran, Iran')
+
+  const handleM080DeleteMessages = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsDeleteMessagesRaw || !m080ChannelId.trim() || !m080MsgIds.trim()) return
+    setM080LoadingOp('deleteMessages')
+    setM080Status(null)
+    try {
+      const ids = m080MsgIds.split(',').map((id) => parseInt(id.trim(), 10)).filter((n) => !isNaN(n))
+      await window.guidegram.channelsDeleteMessagesRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        id: ids,
+      })
+      setM080Status({
+        type: 'success',
+        message: `پیام‌ها با موفقیت حذف شدند (تعداد: ${ids.length})`,
+      })
+      setM080MsgIds('')
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.deleteMessages' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
+  const handleM080DeleteParticipantHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsDeleteParticipantHistoryRaw || !m080ChannelId.trim() || !m080ParticipantId.trim()) return
+    setM080LoadingOp('deleteParticipantHistory')
+    setM080Status(null)
+    try {
+      await window.guidegram.channelsDeleteParticipantHistoryRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        participantId: m080ParticipantId.trim(),
+      })
+      setM080Status({
+        type: 'success',
+        message: 'تمام پیام‌های این کاربر در کانال با موفقیت پاکسازی شد',
+      })
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.deleteParticipantHistory' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
+  const handleM080EditAdmin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsEditAdminRaw || !m080ChannelId.trim() || !m080AdminUserId.trim()) return
+    setM080LoadingOp('editAdmin')
+    setM080Status(null)
+    try {
+      await window.guidegram.channelsEditAdminRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        userId: m080AdminUserId.trim(),
+        adminRights: {
+          _: 'chatAdminRights',
+          changeInfo: true,
+          postMessages: true,
+          editMessages: true,
+          deleteMessages: true,
+          banUsers: true,
+          inviteUsers: true,
+          pinMessages: true,
+          addAdmins: false,
+          manageCall: true,
+          manageTopics: true,
+        },
+        rank: m080AdminRank.trim() || undefined,
+      })
+      setM080Status({
+        type: 'success',
+        message: `دسترسی ادمین با موفقیت اعطا شد (عنوان: ${m080AdminRank || 'Admin'})`,
+      })
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.editAdmin' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
+  const handleM080EditBanned = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsEditBannedRaw || !m080ChannelId.trim() || !m080ParticipantId.trim()) return
+    setM080LoadingOp('editBanned')
+    setM080Status(null)
+    try {
+      await window.guidegram.channelsEditBannedRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        participantId: m080ParticipantId.trim(),
+        bannedRights: {
+          _: 'chatBannedRights',
+          viewMessages: false,
+          sendMessages: true,
+          sendMedia: true,
+          sendStickers: true,
+          sendGifs: true,
+          sendGames: true,
+          sendInline: true,
+          embedLinks: true,
+          sendPolls: true,
+          changeInfo: true,
+          inviteUsers: true,
+          pinMessages: true,
+          manageTopics: true,
+          untilDate: 0,
+        },
+      })
+      setM080Status({
+        type: 'success',
+        message: 'محدودیت‌های کاربر (Banned Rights) با موفقیت اعمال شد',
+      })
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.editBanned' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
+  const handleM080EditLocation = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsEditLocationRaw || !m080ChannelId.trim()) return
+    setM080LoadingOp('editLocation')
+    setM080Status(null)
+    try {
+      const ok = await window.guidegram.channelsEditLocationRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        lat: parseFloat(m080GeoLat) || 0,
+        long: parseFloat(m080GeoLong) || 0,
+        address: m080GeoAddress.trim(),
+      })
+      setM080Status({
+        type: ok ? 'success' : 'error',
+        message: ok ? 'موقعیت مکانی گروه محلی (Geogroup) به‌روزرسانی شد' : 'خطا در تغییر لوکیشن',
+      })
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.editLocation' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
+  const handleM080DeletePhoto = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsEditPhotoRaw || !m080ChannelId.trim()) return
+    setM080LoadingOp('editPhoto')
+    setM080Status(null)
+    try {
+      await window.guidegram.channelsEditPhotoRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        photo: { _: 'inputChatPhotoEmpty' },
+      })
+      setM080Status({
+        type: 'success',
+        message: 'عکس پروفایل کانال با موفقیت حذف گردید',
+      })
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.editPhoto' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
+  const handleM080EditTitle = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsEditTitleRaw || !m080ChannelId.trim() || !m080NewTitle.trim()) return
+    setM080LoadingOp('editTitle')
+    setM080Status(null)
+    try {
+      await window.guidegram.channelsEditTitleRaw(targetId, {
+        channelId: m080ChannelId.trim(),
+        title: m080NewTitle.trim(),
+      })
+      setM080Status({
+        type: 'success',
+        message: `عنوان کانال به «${m080NewTitle.trim()}» تغییر یافت`,
+      })
+      setM080NewTitle('')
+    } catch (err: any) {
+      setM080Status({ type: 'error', message: err?.message || 'خطا در channels.editTitle' })
+    } finally {
+      setM080LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -21418,6 +21620,240 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m079LoadingOp === 'deleteChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف دائمی کانال'}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Microphase 080: Channels Domain Suite Part 2 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۸۰: مدیریت پیام‌ها، اعضا، ادمین‌ها و موقعیت کانال (Channels Domain Part 2)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    حذف پیام‌های گروهی، پاکسازی تاریخچه کاربر، ویرایش ادمین و مسدودی، تغییر لوکیشن، عکس و عنوان:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m080Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m080Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m080Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m080Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM080Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال هدف:</span>
+                    <input
+                      type="text"
+                      value={m080ChannelId}
+                      onChange={(e) => setM080ChannelId(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال (مثلاً 123456789 یا @mychannel)..."
+                      className="w-full bg-transparent text-xs text-cyan-300 placeholder-gray-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.deleteMessages */}
+                    <form
+                      onSubmit={handleM080DeleteMessages}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. حذف پیام‌ها (deleteMessages)</span>
+                      <input
+                        type="text"
+                        value={m080MsgIds}
+                        onChange={(e) => setM080MsgIds(e.target.value)}
+                        placeholder="شناسه‌ها با کاما (مثلاً 101, 102)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m080LoadingOp === 'deleteMessages' || !m080ChannelId.trim() || !m080MsgIds.trim()}
+                        className="w-full py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'deleteMessages' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف پیام‌های انتخابی'}
+                      </button>
+                    </form>
+
+                    {/* 2. channels.deleteParticipantHistory */}
+                    <form
+                      onSubmit={handleM080DeleteParticipantHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۲. پاکسازی سابقه کاربر (deleteParticipantHistory)</span>
+                      <input
+                        type="text"
+                        value={m080ParticipantId}
+                        onChange={(e) => setM080ParticipantId(e.target.value)}
+                        placeholder="شناسه کاربر یا پیر..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m080LoadingOp === 'deleteParticipantHistory' || !m080ChannelId.trim() || !m080ParticipantId.trim()}
+                        className="w-full py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'deleteParticipantHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف تمام پیام‌های کاربر'}
+                      </button>
+                    </form>
+
+                    {/* 3. channels.editAdmin */}
+                    <form
+                      onSubmit={handleM080EditAdmin}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. تعیین ادمین (editAdmin)</span>
+                      <input
+                        type="text"
+                        value={m080AdminUserId}
+                        onChange={(e) => setM080AdminUserId(e.target.value)}
+                        placeholder="شناسه یا یوزرنیم کاربر..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <input
+                        type="text"
+                        value={m080AdminRank}
+                        onChange={(e) => setM080AdminRank(e.target.value)}
+                        placeholder="عنوان سفارشی ادمین (مثلاً Boss)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m080LoadingOp === 'editAdmin' || !m080ChannelId.trim() || !m080AdminUserId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'editAdmin' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعطای مدیریت'}
+                      </button>
+                    </form>
+
+                    {/* 4. channels.editBanned */}
+                    <form
+                      onSubmit={handleM080EditBanned}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۴. محدودسازی کاربر (editBanned)</span>
+                      <input
+                        type="text"
+                        value={m080ParticipantId}
+                        onChange={(e) => setM080ParticipantId(e.target.value)}
+                        placeholder="شناسه کاربر..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m080LoadingOp === 'editBanned' || !m080ChannelId.trim() || !m080ParticipantId.trim()}
+                        className="w-full py-1.5 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'editBanned' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'اعمال محدودیت'}
+                      </button>
+                    </form>
+
+                    {/* 5. channels.editLocation */}
+                    <form
+                      onSubmit={handleM080EditLocation}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۵. موقعیت مکانی گروه (editLocation)</span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m080GeoLat}
+                          onChange={(e) => setM080GeoLat(e.target.value)}
+                          placeholder="Lat"
+                          className="w-1/2 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                        <input
+                          type="text"
+                          value={m080GeoLong}
+                          onChange={(e) => setM080GeoLong(e.target.value)}
+                          placeholder="Long"
+                          className="w-1/2 bg-dark-900 border border-white/5 rounded-xl px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={m080GeoAddress}
+                        onChange={(e) => setM080GeoAddress(e.target.value)}
+                        placeholder="آدرس متنی..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m080LoadingOp === 'editLocation' || !m080ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'editLocation' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت موقعیت جغرافیایی'}
+                      </button>
+                    </form>
+
+                    {/* 6. channels.editPhoto */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۶. تصویر کانال (editPhoto)</span>
+                      <p className="text-[10px] text-gray-400">حذف عکس فعلی یا جایگزینی تصویر جدید برای کانال</p>
+                      <button
+                        type="button"
+                        onClick={handleM080DeletePhoto}
+                        disabled={m080LoadingOp === 'editPhoto' || !m080ChannelId.trim()}
+                        className="w-full py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'editPhoto' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف عکس کانال'}
+                      </button>
+                    </div>
+
+                    {/* 7. channels.editTitle */}
+                    <form
+                      onSubmit={handleM080EditTitle}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۷. تغییر عنوان (editTitle)</span>
+                      <input
+                        type="text"
+                        value={m080NewTitle}
+                        onChange={(e) => setM080NewTitle(e.target.value)}
+                        placeholder="نام جدید کانال..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m080LoadingOp === 'editTitle' || !m080ChannelId.trim() || !m080NewTitle.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m080LoadingOp === 'editTitle' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'تغییر عنوان کانال'}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>
