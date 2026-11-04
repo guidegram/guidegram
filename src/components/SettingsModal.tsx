@@ -8131,6 +8131,170 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 079 State & Handlers (Channels Domain Part 1)
+  const [m079Status, setM079Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m079LoadingOp, setM079LoadingOp] = useState<string | null>(null)
+  const [m079SearchQuery, setM079SearchQuery] = useState('')
+  const [m079ChannelId, setM079ChannelId] = useState('')
+  const [m079Username, setM079Username] = useState('')
+  const [m079CreateTitle, setM079CreateTitle] = useState('')
+  const [m079CreateAbout, setM079CreateAbout] = useState('')
+  const [m079IsMegagroup, setM079IsMegagroup] = useState(false)
+  const [m079DeleteMaxId, setM079DeleteMaxId] = useState('')
+
+  const handleM079CheckSearchPostsFlood = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsCheckSearchPostsFloodRaw) return
+    setM079LoadingOp('checkSearchPostsFlood')
+    setM079Status(null)
+    try {
+      const res = await window.guidegram.channelsCheckSearchPostsFloodRaw(targetId, {
+        query: m079SearchQuery.trim() || undefined,
+      })
+      setM079Status({
+        type: 'success',
+        message: `بررسی فلود جستجو: ${res?._ || 'درخواست مجاز است'}`,
+      })
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.checkSearchPostsFlood' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
+  const handleM079CheckUsername = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsCheckUsernameRaw || !m079ChannelId.trim() || !m079Username.trim()) return
+    setM079LoadingOp('checkUsername')
+    setM079Status(null)
+    try {
+      const ok = await window.guidegram.channelsCheckUsernameRaw(targetId, {
+        channelId: m079ChannelId.trim(),
+        username: m079Username.trim().replace(/^@/, ''),
+      })
+      setM079Status({
+        type: ok ? 'success' : 'error',
+        message: ok ? 'نام کاربری در دسترس است' : 'نام کاربری در دسترس نیست یا نامعتبر است',
+      })
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.checkUsername' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
+  const handleM079ConvertToGigagroup = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsConvertToGigagroupRaw || !m079ChannelId.trim()) return
+    setM079LoadingOp('convertToGigagroup')
+    setM079Status(null)
+    try {
+      await window.guidegram.channelsConvertToGigagroupRaw(targetId, {
+        channelId: m079ChannelId.trim(),
+      })
+      setM079Status({
+        type: 'success',
+        message: 'گروه با موفقیت به گیگاباکس (Broadcast Group) تبدیل شد',
+      })
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.convertToGigagroup' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
+  const handleM079CreateChannel = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsCreateChannelRaw || !m079CreateTitle.trim()) return
+    setM079LoadingOp('createChannel')
+    setM079Status(null)
+    try {
+      const res = await window.guidegram.channelsCreateChannelRaw(targetId, {
+        title: m079CreateTitle.trim(),
+        about: m079CreateAbout.trim() || undefined,
+        broadcast: !m079IsMegagroup,
+        megagroup: m079IsMegagroup,
+      })
+      setM079Status({
+        type: 'success',
+        message: `کانال با موفقیت ایجاد گردید (${res?._ || 'Created'})`,
+      })
+      setM079CreateTitle('')
+      setM079CreateAbout('')
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.createChannel' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
+  const handleM079DeactivateAllUsernames = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsDeactivateAllUsernamesRaw || !m079ChannelId.trim()) return
+    setM079LoadingOp('deactivateAllUsernames')
+    setM079Status(null)
+    try {
+      await window.guidegram.channelsDeactivateAllUsernamesRaw(targetId, {
+        channelId: m079ChannelId.trim(),
+      })
+      setM079Status({
+        type: 'success',
+        message: 'تمام نام‌های کاربری فرعی کانال غیرفعال گردید',
+      })
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.deactivateAllUsernames' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
+  const handleM079DeleteChannel = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsDeleteChannelRaw || !m079ChannelId.trim()) return
+    if (!confirm('آیا از حذف کامل کانال اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')) return
+    setM079LoadingOp('deleteChannel')
+    setM079Status(null)
+    try {
+      await window.guidegram.channelsDeleteChannelRaw(targetId, {
+        channelId: m079ChannelId.trim(),
+      })
+      setM079Status({
+        type: 'success',
+        message: 'کانال با موفقیت حذف شد',
+      })
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.deleteChannel' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
+  const handleM079DeleteHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsDeleteHistoryRaw || !m079ChannelId.trim()) return
+    setM079LoadingOp('deleteHistory')
+    setM079Status(null)
+    try {
+      await window.guidegram.channelsDeleteHistoryRaw(targetId, {
+        channelId: m079ChannelId.trim(),
+        maxId: parseInt(m079DeleteMaxId) || 0,
+        forEveryone: true,
+      })
+      setM079Status({
+        type: 'success',
+        message: 'تاریخچه پیام‌های کانال با موفقیت حذف گردید',
+      })
+    } catch (err: any) {
+      setM079Status({ type: 'error', message: err?.message || 'خطا در channels.deleteHistory' })
+    } finally {
+      setM079LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -21043,6 +21207,217 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m078LoadingOp === 'setBotUpdatesStatus' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت وضعیت آپدیت'}
                       </button>
                     </form>
+                  </div>
+                </div>
+
+                {/* Microphase 079: Channels Domain Suite Part 1 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۷۹: ساخت و مدیریت کانال و سوپرگروه (Channels Domain Part 1)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    ایجاد کانال/سوپرگروه، اعتبارسنجی نام کاربری، ارتقا به گیگاباکس، حذف تاریخچه و حذف کانال:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m079Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m079Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m079Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m079Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM079Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال هدف:</span>
+                    <input
+                      type="text"
+                      value={m079ChannelId}
+                      onChange={(e) => setM079ChannelId(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال (مثلاً 123456789 یا @mychannel)..."
+                      className="w-full bg-transparent text-xs text-cyan-300 placeholder-gray-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.createChannel */}
+                    <form
+                      onSubmit={handleM079CreateChannel}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۱. ساخت کانال/سوپرگروه (createChannel)</span>
+                      <input
+                        type="text"
+                        value={m079CreateTitle}
+                        onChange={(e) => setM079CreateTitle(e.target.value)}
+                        placeholder="عنوان کانال..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <input
+                        type="text"
+                        value={m079CreateAbout}
+                        onChange={(e) => setM079CreateAbout(e.target.value)}
+                        placeholder="درباره کانال (اختیاری)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <label className="flex items-center gap-2 text-[11px] text-gray-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={m079IsMegagroup}
+                          onChange={(e) => setM079IsMegagroup(e.target.checked)}
+                          className="rounded border-white/20 bg-dark-900 text-cyan-500"
+                        />
+                        سوپرگروه (Megagroup)
+                      </label>
+                      <button
+                        type="submit"
+                        disabled={m079LoadingOp === 'createChannel' || !m079CreateTitle.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'createChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ایجاد کانال'}
+                      </button>
+                    </form>
+
+                    {/* 2. channels.checkUsername */}
+                    <form
+                      onSubmit={handleM079CheckUsername}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۲. بررسی یوزرنیم (checkUsername)</span>
+                      <input
+                        type="text"
+                        value={m079Username}
+                        onChange={(e) => setM079Username(e.target.value)}
+                        placeholder="نام کاربری جدید..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m079LoadingOp === 'checkUsername' || !m079ChannelId.trim() || !m079Username.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'checkUsername' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام یوزرنیم'}
+                      </button>
+                    </form>
+
+                    {/* 3. channels.checkSearchPostsFlood */}
+                    <form
+                      onSubmit={handleM079CheckSearchPostsFlood}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. فلود جستجو (checkSearchPostsFlood)</span>
+                      <input
+                        type="text"
+                        value={m079SearchQuery}
+                        onChange={(e) => setM079SearchQuery(e.target.value)}
+                        placeholder="عبارت جستجو..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m079LoadingOp === 'checkSearchPostsFlood'}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'checkSearchPostsFlood' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'بررسی وضعیت اسپم'}
+                      </button>
+                    </form>
+
+                    {/* 4. channels.convertToGigagroup */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۴. تبدیل به گیگاباکس (convertToGigagroup)</span>
+                      <p className="text-[10px] text-gray-400">ارتقا گروه به کانال برودکست با ظرفیت نامحدود اعضا</p>
+                      <button
+                        type="button"
+                        onClick={handleM079ConvertToGigagroup}
+                        disabled={m079LoadingOp === 'convertToGigagroup' || !m079ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'convertToGigagroup' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارتقا به گیگاباکس'}
+                      </button>
+                    </div>
+
+                    {/* 5. channels.deactivateAllUsernames */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۵. غیرفعال‌سازی نام‌ها (deactivateAllUsernames)</span>
+                      <p className="text-[10px] text-gray-400">غیرفعال‌سازی همه نام‌های کاربری اضافه اختصاص داده‌شده</p>
+                      <button
+                        type="button"
+                        onClick={handleM079DeactivateAllUsernames}
+                        disabled={m079LoadingOp === 'deactivateAllUsernames' || !m079ChannelId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'deactivateAllUsernames' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'غیرفعال‌سازی یوزرنیم‌ها'}
+                      </button>
+                    </div>
+
+                    {/* 6. channels.deleteHistory */}
+                    <form
+                      onSubmit={handleM079DeleteHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۶. حذف تاریخچه (deleteHistory)</span>
+                      <input
+                        type="number"
+                        value={m079DeleteMaxId}
+                        onChange={(e) => setM079DeleteMaxId(e.target.value)}
+                        placeholder="حداکثر شناسه پیام (0 = کل تاریخچه)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m079LoadingOp === 'deleteHistory' || !m079ChannelId.trim()}
+                        className="w-full py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'deleteHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف تاریخچه کانال'}
+                      </button>
+                    </form>
+
+                    {/* 7. channels.deleteChannel */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-rose-500/10 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-rose-300 font-medium">۷. حذف کامل کانال (deleteChannel)</span>
+                      <p className="text-[10px] text-gray-400">حذف همیشگی کانال یا سوپرگروه به همراه تمام محتوا</p>
+                      <button
+                        type="button"
+                        onClick={handleM079DeleteChannel}
+                        disabled={m079LoadingOp === 'deleteChannel' || !m079ChannelId.trim()}
+                        className="w-full py-1.5 bg-rose-600/30 hover:bg-rose-600/40 border border-rose-500/40 text-rose-200 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m079LoadingOp === 'deleteChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'حذف دائمی کانال'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

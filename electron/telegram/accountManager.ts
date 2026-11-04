@@ -20773,6 +20773,67 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.help_setBotUpdatesStatus(holder as any, params?.pendingUpdatesCount, params?.message)
   }
+
+  // Layer 232 Channels Domain Part 1 (Microphase 079)
+  public async channelsCheckSearchPostsFloodRaw(accountId: string, params: { query?: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.checkSearchPostsFlood(holder as any, params?.query)
+  }
+
+  public async channelsCheckUsernameRaw(accountId: string, params: { channelId: string; username: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.checkUsername(holder as any, accountId, params.channelId, params.username)
+  }
+
+  public async channelsConvertToGigagroupRaw(accountId: string, params: { channelId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.convertToGigagroup(holder as any, accountId, params.channelId)
+  }
+
+  public async channelsCreateChannelRaw(accountId: string, params: {
+    title: string
+    about?: string
+    broadcast?: boolean
+    megagroup?: boolean
+    forImport?: boolean
+    forum?: boolean
+    ttlPeriod?: number
+    address?: string
+    geoPoint?: any
+  }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.createChannel(holder as any, params.title, params.about || '', {
+      broadcast: params.broadcast,
+      megagroup: params.megagroup,
+      forImport: params.forImport,
+      forum: params.forum,
+      ttlPeriod: params.ttlPeriod,
+      address: params.address,
+      geoPoint: params.geoPoint,
+    })
+  }
+
+  public async channelsDeactivateAllUsernamesRaw(accountId: string, params: { channelId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.deactivateAllUsernames(holder as any, accountId, params.channelId)
+  }
+
+  public async channelsDeleteChannelRaw(accountId: string, params: { channelId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.deleteChannel(holder as any, accountId, params.channelId)
+  }
+
+  public async channelsDeleteHistoryRaw(accountId: string, params: { channelId: string; maxId: number; forEveryone?: boolean }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.deleteHistory(holder as any, accountId, params.channelId, params.maxId, params.forEveryone)
+  }
 }
 
 

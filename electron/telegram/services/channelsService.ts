@@ -164,8 +164,11 @@ export class ChannelsService {
     options?: {
       broadcast?: boolean
       megagroup?: boolean
+      forImport?: boolean
       forum?: boolean
       ttlPeriod?: number
+      address?: string
+      geoPoint?: any
     }
   ): Promise<any> {
     try {
@@ -173,10 +176,13 @@ export class ChannelsService {
         _: 'channels.createChannel',
         broadcast: Boolean(options?.broadcast),
         megagroup: Boolean(options?.megagroup ?? true),
-        forum: Boolean(options?.forum),
+        forImport: options?.forImport ? Boolean(options.forImport) : undefined,
+        forum: options?.forum ? Boolean(options.forum) : undefined,
         title,
         about,
         ttlPeriod: options?.ttlPeriod ? Number(options.ttlPeriod) : undefined,
+        address: options?.address,
+        geoPoint: options?.geoPoint,
       })
     } catch (err) {
       Logger.warn('[ChannelsService] createChannel error:', err)

@@ -2755,6 +2755,30 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:help:save-app-log-raw', { accountId, ...params }),
   helpSetBotUpdatesStatusRaw: (accountId: string, params: { pendingUpdatesCount?: number; message?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:help:set-bot-updates-status-raw', { accountId, ...params }),
+  channelsCheckSearchPostsFloodRaw: (accountId: string, params: { query?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:check-search-posts-flood-raw', { accountId, ...params }),
+  channelsCheckUsernameRaw: (accountId: string, params: { channelId: string; username: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:check-username-raw', { accountId, ...params }),
+  channelsConvertToGigagroupRaw: (accountId: string, params: { channelId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:convert-to-gigagroup-raw', { accountId, ...params }),
+  channelsCreateChannelRaw: (accountId: string, params: {
+    title: string
+    about?: string
+    broadcast?: boolean
+    megagroup?: boolean
+    forImport?: boolean
+    forum?: boolean
+    ttlPeriod?: number
+    address?: string
+    geoPoint?: any
+  }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:create-channel-raw', { accountId, ...params }),
+  channelsDeactivateAllUsernamesRaw: (accountId: string, params: { channelId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:deactivate-all-usernames-raw', { accountId, ...params }),
+  channelsDeleteChannelRaw: (accountId: string, params: { channelId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:delete-channel-raw', { accountId, ...params }),
+  channelsDeleteHistoryRaw: (accountId: string, params: { channelId: string; maxId: number; forEveryone?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:delete-history-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

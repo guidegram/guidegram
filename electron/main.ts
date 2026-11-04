@@ -8726,6 +8726,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 079 IPC Handlers (Channels Domain Part 1)
+  ipcMain.handle('telegram:channels:check-search-posts-flood-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsCheckSearchPostsFloodRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsCheckSearchPostsFloodRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:check-username-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsCheckUsernameRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsCheckUsernameRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:convert-to-gigagroup-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsConvertToGigagroupRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsConvertToGigagroupRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:create-channel-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsCreateChannelRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsCreateChannelRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:deactivate-all-usernames-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsDeactivateAllUsernamesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsDeactivateAllUsernamesRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:delete-channel-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsDeleteChannelRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsDeleteChannelRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:delete-history-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsDeleteHistoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsDeleteHistoryRaw error:', err)
+      return null
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
