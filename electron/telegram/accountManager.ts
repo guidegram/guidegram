@@ -23268,6 +23268,139 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.folders_editPeerFolders(holder as any, params)
   }
+
+  // --- Microphase 116: Stats Domain Suite Part 1 Raw RPCs ---
+  public async statsGetBroadcastStatsRaw(
+    accountId: string,
+    params: {
+      channel: string
+      dark?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const peer = await this.resolveInputPeer(accountId, String(params.channel))
+    const inputChannel = (peer as any)._ === 'inputPeerChannel'
+      ? { _: 'inputChannel' as const, channelId: (peer as any).channelId, accessHash: (peer as any).accessHash }
+      : peer
+    return this.systemService.stats_getBroadcastStats(holder as any, inputChannel, params.dark)
+  }
+
+  public async statsGetMegagroupStatsRaw(
+    accountId: string,
+    params: {
+      channel: string
+      dark?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const peer = await this.resolveInputPeer(accountId, String(params.channel))
+    const inputChannel = (peer as any)._ === 'inputPeerChannel'
+      ? { _: 'inputChannel' as const, channelId: (peer as any).channelId, accessHash: (peer as any).accessHash }
+      : peer
+    return this.systemService.stats_getMegagroupStats(holder as any, inputChannel, params.dark)
+  }
+
+  public async statsGetMessagePublicForwardsRaw(
+    accountId: string,
+    params: {
+      channel: string
+      msgId: number
+      offset?: string
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const peer = await this.resolveInputPeer(accountId, String(params.channel))
+    const inputChannel = (peer as any)._ === 'inputPeerChannel'
+      ? { _: 'inputChannel' as const, channelId: (peer as any).channelId, accessHash: (peer as any).accessHash }
+      : peer
+    return this.systemService.stats_getMessagePublicForwards(
+      holder as any,
+      inputChannel,
+      params.msgId,
+      params.offset,
+      params.limit
+    )
+  }
+
+  public async statsGetMessageStatsRaw(
+    accountId: string,
+    params: {
+      channel: string
+      msgId: number
+      dark?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    const peer = await this.resolveInputPeer(accountId, String(params.channel))
+    const inputChannel = (peer as any)._ === 'inputPeerChannel'
+      ? { _: 'inputChannel' as const, channelId: (peer as any).channelId, accessHash: (peer as any).accessHash }
+      : peer
+    return this.systemService.stats_getMessageStats(holder as any, inputChannel, params.msgId, params.dark)
+  }
+
+  public async statsGetPollStatsRaw(
+    accountId: string,
+    params: {
+      peer: string
+      msgId: number
+      dark?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stats_getPollStats(
+      holder as any,
+      accountId,
+      params.peer,
+      params.msgId,
+      params.dark
+    )
+  }
+
+  public async statsGetStoryPublicForwardsRaw(
+    accountId: string,
+    params: {
+      peer: string
+      id: number
+      offset?: string
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stats_getStoryPublicForwards(
+      holder as any,
+      accountId,
+      params.peer,
+      params.id,
+      params.offset,
+      params.limit
+    )
+  }
+
+  public async statsGetStoryStatsRaw(
+    accountId: string,
+    params: {
+      peer: string
+      id: number
+      dark?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.stats_getStoryStats(
+      holder as any,
+      accountId,
+      params.peer,
+      params.id,
+      params.dark
+    )
+  }
 }
 
 

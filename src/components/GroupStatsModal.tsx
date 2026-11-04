@@ -26,6 +26,8 @@ import {
   ChevronDown,
   BadgeCheck,
   Info,
+  AlertCircle,
+  Copy,
 } from 'lucide-react'
 import { DialogItem, MessageItem, ChatDetails, ChatStatsPayload, StatsValuePair } from '../types/telegram'
 import { Avatar } from './Avatar'
@@ -213,9 +215,89 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
   const isPersian = language === 'fa'
 
   const [timeframe, setTimeframe] = useState<Timeframe>('today')
-  const [activeTab, setActiveTab] = useState<'overview' | 'senders' | 'hours' | 'words' | 'media' | 'joins'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'senders' | 'hours' | 'words' | 'media' | 'joins' | 'mtproto'>('overview')
   const [copied, setCopied] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+
+  // MTProto Layer 232 Server Stats State (Microphase 116)
+  const [mtprotoRpc, setMtprotoRpc] = useState<
+    'broadcast' | 'megagroup' | 'messageForwards' | 'messageStats' | 'pollStats' | 'storyForwards' | 'storyStats'
+  >('broadcast')
+  const [mtprotoDark, setMtprotoDark] = useState<boolean>(true)
+  const [mtprotoMsgId, setMtprotoMsgId] = useState<number>(messages[0]?.id || 1)
+  const [mtprotoStoryId, setMtprotoStoryId] = useState<number>(1)
+  const [mtprotoOffset, setMtprotoOffset] = useState<string>('')
+  const [mtprotoLimit, setMtprotoLimit] = useState<number>(50)
+  const [mtprotoLoading, setMtprotoLoading] = useState<boolean>(false)
+  const [mtprotoError, setMtprotoError] = useState<string | null>(null)
+  const [mtprotoData, setMtprotoData] = useState<any | null>(null)
+  const [mtprotoCopied, setMtprotoCopied] = useState<boolean>(false)
+
+  const handleExecuteMtprotoRpc = async () => {
+    if (!chat.accountId) return
+    setMtprotoLoading(true)
+    setMtprotoError(null)
+    setMtprotoData(null)
+    try {
+      let res: any = null
+      switch (mtprotoRpc) {
+        case 'broadcast':
+          res = await window.guidegram.statsGetBroadcastStatsRaw(chat.accountId, {
+            channel: chat.id,
+            dark: mtprotoDark,
+          })
+          break
+        case 'megagroup':
+          res = await window.guidegram.statsGetMegagroupStatsRaw(chat.accountId, {
+            channel: chat.id,
+            dark: mtprotoDark,
+          })
+          break
+        case 'messageForwards':
+          res = await window.guidegram.statsGetMessagePublicForwardsRaw(chat.accountId, {
+            channel: chat.id,
+            msgId: Number(mtprotoMsgId) || 1,
+            offset: mtprotoOffset,
+            limit: Number(mtprotoLimit) || 50,
+          })
+          break
+        case 'messageStats':
+          res = await window.guidegram.statsGetMessageStatsRaw(chat.accountId, {
+            channel: chat.id,
+            msgId: Number(mtprotoMsgId) || 1,
+            dark: mtprotoDark,
+          })
+          break
+        case 'pollStats':
+          res = await window.guidegram.statsGetPollStatsRaw(chat.accountId, {
+            peer: chat.id,
+            msgId: Number(mtprotoMsgId) || 1,
+            dark: mtprotoDark,
+          })
+          break
+        case 'storyForwards':
+          res = await window.guidegram.statsGetStoryPublicForwardsRaw(chat.accountId, {
+            peer: chat.id,
+            id: Number(mtprotoStoryId) || 1,
+            offset: mtprotoOffset,
+            limit: Number(mtprotoLimit) || 50,
+          })
+          break
+        case 'storyStats':
+          res = await window.guidegram.statsGetStoryStatsRaw(chat.accountId, {
+            peer: chat.id,
+            id: Number(mtprotoStoryId) || 1,
+            dark: mtprotoDark,
+          })
+          break
+      }
+      setMtprotoData(res)
+    } catch (err: any) {
+      setMtprotoError(err?.message || String(err) || 'MTProto RPC execution failed')
+    } finally {
+      setMtprotoLoading(false)
+    }
+  }
 
   // Accumulate local + server historical messages so stats can evaluate yesterday, week, month
   const [allMessages, setAllMessages] = useState<MessageItem[]>(messages)
@@ -1216,6 +1298,18 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
             <Calendar className="w-3.5 h-3.5" />
             <span>{t('stats.joins')} ({formatNumber(memberJoins.length)})</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('mtproto')}
+            className={`py-2.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'mtproto'
+                ? 'border-primary-500 text-primary-400 font-bold'
+                : 'border-transparent hover:text-gray-200'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5 text-accent-cyan" />
+            <span>MTProto Server Stats</span>
+          </button>
         </div>
 
         {/* Modal Body */}
@@ -1795,6 +1889,238 @@ export const GroupStatsModal: React.FC<GroupStatsModalProps> = ({
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 7: MTPROTO LAYER 232 SERVER STATS SUITE (Microphase 116) */}
+          {activeTab === 'mtproto' && (
+            <div className="space-y-4">
+              {/* Header Card */}
+              <div className="p-4 rounded-2xl bg-dark-850/80 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-bold text-white flex items-center gap-2">
+                    <BarChart2 className="w-4 h-4 text-accent-cyan" />
+                    <span>Telegram MTProto Layer 232 Server Statistics Engine</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-1">
+                    Direct access to official Telegram DC analytical and metrics RPCs for channels, supergroups, messages, stories & polls.
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2.5 py-1 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 text-accent-cyan font-mono text-[10px] font-bold">
+                    Layer 232
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-primary-500/10 border border-primary-500/20 text-primary-300 font-mono text-[10px] font-bold">
+                    Target: {chat.id}
+                  </span>
+                </div>
+              </div>
+
+              {/* RPC Selector Pills */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: 'broadcast', label: 'Broadcast Stats', rpc: 'stats.getBroadcastStats' },
+                  { id: 'megagroup', label: 'Megagroup Stats', rpc: 'stats.getMegagroupStats' },
+                  { id: 'messageStats', label: 'Message Stats', rpc: 'stats.getMessageStats' },
+                  { id: 'messageForwards', label: 'Message Forwards', rpc: 'stats.getMessagePublicForwards' },
+                  { id: 'pollStats', label: 'Poll Stats', rpc: 'stats.getPollStats' },
+                  { id: 'storyStats', label: 'Story Stats', rpc: 'stats.getStoryStats' },
+                  { id: 'storyForwards', label: 'Story Forwards', rpc: 'stats.getStoryPublicForwards' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setMtprotoRpc(item.id as any)
+                      setMtprotoData(null)
+                      setMtprotoError(null)
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      mtprotoRpc === item.id
+                        ? 'bg-primary-500/20 border-primary-500/40 text-white shadow-sm shadow-primary-500/10'
+                        : 'bg-dark-850/60 border-white/5 text-gray-400 hover:text-gray-200 hover:bg-dark-800/80'
+                    }`}
+                  >
+                    <div className="text-xs font-semibold truncate">{item.label}</div>
+                    <div className="text-[10px] font-mono text-gray-500 truncate mt-0.5">{item.rpc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Inputs & Parameters Card */}
+              <div className="p-4 rounded-2xl bg-dark-850/60 border border-white/5 space-y-3">
+                <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                  <span>RPC Request Parameters</span>
+                  <label className="flex items-center gap-2 cursor-pointer text-[11px] text-gray-400 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={mtprotoDark}
+                      onChange={(e) => setMtprotoDark(e.target.checked)}
+                      className="rounded bg-dark-900 border-white/20 text-primary-500 focus:ring-0"
+                    />
+                    <span>Dark Theme Graphs (`dark: true`)</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {['messageStats', 'messageForwards', 'pollStats'].includes(mtprotoRpc) && (
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">Message ID (`msgId`)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={mtprotoMsgId}
+                        onChange={(e) => setMtprotoMsgId(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-white text-xs font-mono focus:border-primary-500 focus:outline-none"
+                        placeholder="e.g. 1"
+                      />
+                    </div>
+                  )}
+
+                  {['storyStats', 'storyForwards'].includes(mtprotoRpc) && (
+                    <div>
+                      <label className="block text-[11px] text-gray-400 mb-1">Story ID (`id`)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={mtprotoStoryId}
+                        onChange={(e) => setMtprotoStoryId(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full px-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-white text-xs font-mono focus:border-primary-500 focus:outline-none"
+                        placeholder="e.g. 1"
+                      />
+                    </div>
+                  )}
+
+                  {['messageForwards', 'storyForwards'].includes(mtprotoRpc) && (
+                    <>
+                      <div>
+                        <label className="block text-[11px] text-gray-400 mb-1">Offset (`offset`)</label>
+                        <input
+                          type="text"
+                          value={mtprotoOffset}
+                          onChange={(e) => setMtprotoOffset(e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-white text-xs font-mono focus:border-primary-500 focus:outline-none"
+                          placeholder="Pagination offset (optional)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-gray-400 mb-1">Limit (`limit`)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={mtprotoLimit}
+                          onChange={(e) => setMtprotoLimit(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
+                          className="w-full px-3 py-1.5 rounded-xl bg-dark-900 border border-white/10 text-white text-xs font-mono focus:border-primary-500 focus:outline-none"
+                          placeholder="Default: 50"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleExecuteMtprotoRpc}
+                    disabled={mtprotoLoading}
+                    className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-sm shadow-primary-600/30"
+                  >
+                    {mtprotoLoading ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Querying Telegram DC...</span>
+                      </>
+                    ) : (
+                      <>
+                        <BarChart2 className="w-3.5 h-3.5" />
+                        <span>Execute MTProto RPC</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* 4-State Response Presentation */}
+              {mtprotoLoading && (
+                <div className="p-8 rounded-2xl bg-dark-850/50 border border-white/5 flex flex-col items-center justify-center gap-3">
+                  <RefreshCw className="w-6 h-6 text-primary-400 animate-spin" />
+                  <div className="text-xs text-gray-300 font-medium">Fetching raw TL telemetry from Telegram servers...</div>
+                  <div className="text-[10px] text-gray-500 font-mono">Invoking MTProto Layer 232 stats method</div>
+                </div>
+              )}
+
+              {mtprotoError && !mtprotoLoading && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-200 flex items-start gap-3">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1 flex-1">
+                    <div className="text-xs font-bold text-rose-300">Telegram RPC Error Encountered</div>
+                    <div className="text-[11px] font-mono text-rose-200/90 break-all">{mtprotoError}</div>
+                    <div className="text-[10px] text-rose-300/70 pt-1">
+                      Note: Channel statistics require Administrator rights with 'View Statistics' permission and channel member threshold (usually 50+ members).
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExecuteMtprotoRpc}
+                    className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!mtprotoData && !mtprotoError && !mtprotoLoading && (
+                <div className="p-8 rounded-2xl bg-dark-850/30 border border-dashed border-white/10 text-center space-y-2">
+                  <BarChart2 className="w-8 h-8 text-gray-600 mx-auto" />
+                  <div className="text-xs font-medium text-gray-400">Ready to query MTProto Server Statistics</div>
+                  <div className="text-[11px] text-gray-500 max-w-sm mx-auto">
+                    Select any of the 7 RPC methods above and click "Execute MTProto RPC" to inspect live server analytics.
+                  </div>
+                </div>
+              )}
+
+              {mtprotoData && !mtprotoLoading && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-2xl bg-dark-850/80 border border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-bold text-white">MTProto Response Received</span>
+                      <span className="text-[10px] font-mono text-gray-400">
+                        ({typeof mtprotoData === 'object' && mtprotoData?._ ? mtprotoData._ : 'TypeStats'})
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyTextToClipboard(JSON.stringify(mtprotoData, null, 2))
+                        setMtprotoCopied(true)
+                        setTimeout(() => setMtprotoCopied(false), 2000)
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {mtprotoCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">Copied JSON!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy JSON</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Raw Data JSON Viewer */}
+                  <div className="p-3.5 rounded-2xl bg-dark-900 border border-white/5 overflow-x-auto max-h-96">
+                    <pre className="text-[11px] font-mono text-gray-300 leading-relaxed">
+                      {JSON.stringify(mtprotoData, null, 2)}
+                    </pre>
+                  </div>
                 </div>
               )}
             </div>

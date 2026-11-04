@@ -2549,16 +2549,18 @@ export class SystemService {
     }
   }
 
-  public async stats_getBroadcastStats(holder: RpcClientHolder, dark?: boolean, channel?: any): Promise<any> {
+  public async stats_getBroadcastStats(holder: RpcClientHolder, channelOrDark: any, maybeChannel?: any): Promise<any> {
     try {
+      const dark = typeof channelOrDark === 'boolean' ? channelOrDark : Boolean(maybeChannel)
+      const channel = typeof channelOrDark === 'boolean' ? maybeChannel : channelOrDark
       return await holder.client.call({
         _: 'stats.getBroadcastStats',
-        'dark': dark,
-        'channel': channel,
+        dark: dark,
+        channel: channel,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getBroadcastStats error:', err)
-      return null
+      throw err
     }
   }
 
@@ -2571,20 +2573,22 @@ export class SystemService {
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.loadAsyncGraph error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stats_getMegagroupStats(holder: RpcClientHolder, dark?: boolean, channel?: any): Promise<any> {
+  public async stats_getMegagroupStats(holder: RpcClientHolder, channelOrDark: any, maybeChannel?: any): Promise<any> {
     try {
+      const dark = typeof channelOrDark === 'boolean' ? channelOrDark : Boolean(maybeChannel)
+      const channel = typeof channelOrDark === 'boolean' ? maybeChannel : channelOrDark
       return await holder.client.call({
         _: 'stats.getMegagroupStats',
-        'dark': dark,
-        'channel': channel,
+        dark: dark,
+        channel: channel,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getMegagroupStats error:', err)
-      return null
+      throw err
     }
   }
 
@@ -2592,42 +2596,66 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'stats.getMessagePublicForwards',
-        'channel': channel,
-        'msg_id': msgId,
-        'offset': offset,
-        'limit': limit,
+        channel: channel,
+        msg_id: msgId || 0,
+        offset: offset || '',
+        limit: limit || 50,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getMessagePublicForwards error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stats_getMessageStats(holder: RpcClientHolder, dark?: boolean, channel?: any, msgId?: number): Promise<any> {
+  public async stats_getMessageStats(holder: RpcClientHolder, channelOrDark: any, maybeChannelOrMsgId?: any, maybeMsgId?: any): Promise<any> {
     try {
+      let dark = false
+      let channel: any
+      let msgId = 0
+      if (typeof channelOrDark === 'boolean') {
+        dark = channelOrDark
+        channel = maybeChannelOrMsgId
+        msgId = maybeMsgId || 0
+      } else {
+        channel = channelOrDark
+        msgId = typeof maybeChannelOrMsgId === 'number' ? maybeChannelOrMsgId : 0
+        dark = Boolean(maybeMsgId)
+      }
       return await holder.client.call({
         _: 'stats.getMessageStats',
-        'dark': dark,
-        'channel': channel,
-        'msg_id': msgId,
+        dark: dark,
+        channel: channel,
+        msg_id: msgId,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getMessageStats error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stats_getStoryStats(holder: RpcClientHolder, accountId: string, dark?: boolean, peerId?: string, id?: number): Promise<any> {
+  public async stats_getStoryStats(holder: RpcClientHolder, accountId: string, peerIdOrDark?: any, idOrPeerId?: any, darkOrId?: any): Promise<any> {
     try {
+      let dark = false
+      let peerId = ''
+      let id = 0
+      if (typeof peerIdOrDark === 'boolean') {
+        dark = peerIdOrDark
+        peerId = String(idOrPeerId || '')
+        id = Number(darkOrId) || 0
+      } else {
+        peerId = String(peerIdOrDark || '')
+        id = Number(idOrPeerId) || 0
+        dark = Boolean(darkOrId)
+      }
       return await holder.client.call({
         _: 'stats.getStoryStats',
-        'dark': dark,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
+        dark: dark,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        id: id,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getStoryStats error:', err)
-      return null
+      throw err
     }
   }
 
@@ -2635,28 +2663,40 @@ export class SystemService {
     try {
       return await holder.client.call({
         _: 'stats.getStoryPublicForwards',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'id': id,
-        'offset': offset,
-        'limit': limit,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        id: id || 0,
+        offset: offset || '',
+        limit: limit || 50,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getStoryPublicForwards error:', err)
-      return null
+      throw err
     }
   }
 
-  public async stats_getPollStats(holder: RpcClientHolder, accountId: string, dark?: boolean, peerId?: string, msgId?: number): Promise<any> {
+  public async stats_getPollStats(holder: RpcClientHolder, accountId: string, peerIdOrDark?: any, msgIdOrPeerId?: any, darkOrMsgId?: any): Promise<any> {
     try {
+      let dark = false
+      let peerId = ''
+      let msgId = 0
+      if (typeof peerIdOrDark === 'boolean') {
+        dark = peerIdOrDark
+        peerId = String(msgIdOrPeerId || '')
+        msgId = Number(darkOrMsgId) || 0
+      } else {
+        peerId = String(peerIdOrDark || '')
+        msgId = Number(msgIdOrPeerId) || 0
+        dark = Boolean(darkOrMsgId)
+      }
       return await holder.client.call({
         _: 'stats.getPollStats',
-        'dark': dark,
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'msg_id': msgId,
+        dark: dark,
+        peer: peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
+        msg_id: msgId,
       })
     } catch (err) {
       Logger.warn('[SystemService] stats.getPollStats error:', err)
-      return null
+      throw err
     }
   }
 

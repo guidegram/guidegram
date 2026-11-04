@@ -10865,6 +10865,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Stats Domain Suite Part 1 IPC (Microphase 116)
+  ipcMain.handle('telegram:stats:get-broadcast-stats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetBroadcastStatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetBroadcastStatsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stats:get-megagroup-stats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetMegagroupStatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetMegagroupStatsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stats:get-message-public-forwards-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetMessagePublicForwardsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetMessagePublicForwardsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stats:get-message-stats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetMessageStatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetMessageStatsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stats:get-poll-stats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetPollStatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetPollStatsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stats:get-story-public-forwards-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetStoryPublicForwardsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetStoryPublicForwardsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:stats:get-story-stats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.statsGetStoryStatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] statsGetStoryStatsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

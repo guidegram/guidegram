@@ -3254,6 +3254,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:langpack:get-strings-raw', { accountId, ...params }),
   foldersEditPeerFoldersRaw: (accountId: string, params: { folderPeers: Array<{ peer: any; folderId: number }> }): Promise<any> =>
     ipcRenderer.invoke('telegram:folders:edit-peer-folders-raw', { accountId, ...params }),
+  statsGetBroadcastStatsRaw: (accountId: string, params: { channel: string; dark?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-broadcast-stats-raw', { accountId, ...params }),
+  statsGetMegagroupStatsRaw: (accountId: string, params: { channel: string; dark?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-megagroup-stats-raw', { accountId, ...params }),
+  statsGetMessagePublicForwardsRaw: (accountId: string, params: { channel: string; msgId: number; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-message-public-forwards-raw', { accountId, ...params }),
+  statsGetMessageStatsRaw: (accountId: string, params: { channel: string; msgId: number; dark?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-message-stats-raw', { accountId, ...params }),
+  statsGetPollStatsRaw: (accountId: string, params: { peer: string; msgId: number; dark?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-poll-stats-raw', { accountId, ...params }),
+  statsGetStoryPublicForwardsRaw: (accountId: string, params: { peer: string; id: number; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-story-public-forwards-raw', { accountId, ...params }),
+  statsGetStoryStatsRaw: (accountId: string, params: { peer: string; id: number; dark?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:stats:get-story-stats-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (
