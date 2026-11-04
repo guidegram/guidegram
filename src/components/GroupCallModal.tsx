@@ -192,6 +192,32 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   // 7: phone.sendConferenceCallBroadcast
   const [confBroadcastBlock, setConfBroadcastBlock] = useState('01020304')
 
+  // Microphase 112: Phone Domain Suite Part 6 States
+  // 1: phone.startScheduledGroupCall
+  const [scheduledStartCallId, setScheduledStartCallId] = useState('')
+  // 2: phone.toggleGroupCallRecord
+  const [recordStart, setRecordStart] = useState(true)
+  const [recordVideo, setRecordVideo] = useState(false)
+  const [recordPortrait, setRecordPortrait] = useState(false)
+  const [recordTitle, setRecordTitle] = useState('')
+  // 3: phone.toggleGroupCallSettings
+  const [settingsResetInviteHash, setSettingsResetInviteHash] = useState(false)
+  const [settingsJoinMuted, setSettingsJoinMuted] = useState(false)
+  const [settingsMessagesEnabled, setSettingsMessagesEnabled] = useState(true)
+  const [settingsPaidStars, setSettingsPaidStars] = useState('')
+  // 4: phone.sendGroupCallMessage
+  const [groupCallMsgText, setGroupCallMsgText] = useState('')
+  const [groupCallMsgStars, setGroupCallMsgStars] = useState('')
+  const [groupCallMsgSendAs, setGroupCallMsgSendAs] = useState('')
+  // 5: phone.sendGroupCallEncryptedMessage
+  const [confEncryptedMsg, setConfEncryptedMsg] = useState('')
+  // 6: phone.setCallRating
+  const [callRatingStars, setCallRatingStars] = useState(5)
+  const [callRatingComment, setCallRatingComment] = useState('')
+  const [callRatingUserInitiative, setCallRatingUserInitiative] = useState(true)
+  // 7: phone.sendSignalingData
+  const [signalingDataHex, setSignalingDataHex] = useState('')
+
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -1455,6 +1481,215 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Microphase 112: 1. Start Scheduled Group Call (phone.startScheduledGroupCall)
+  const handleStartScheduledGroupCall = async () => {
+    const targetCallId = scheduledStartCallId.trim() || callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('شناسه تماس گروهی زمان‌بندی‌شده الزامی است')
+      return
+    }
+    setLoadingOp('start_scheduled_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneStartScheduledGroupCallRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+      })
+      setLastOpResult(res)
+      setSuccessMsg('تماس زمان‌بندی‌شده با موفقیت فعال شد (phone.startScheduledGroupCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] startScheduledGroupCall error:', err)
+      setErrorMsg(err?.message || 'خطا در فعال‌سازی تماس زمان‌بندی‌شده')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 112: 2. Toggle Group Call Record (phone.toggleGroupCallRecord)
+  const handleToggleGroupCallRecord = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('toggle_call_record')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneToggleGroupCallRecordRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        start: recordStart,
+        video: recordVideo,
+        videoPortrait: recordPortrait,
+        title: recordTitle.trim() || undefined,
+      })
+      setLastOpResult(res)
+      setSuccessMsg(recordStart ? 'ضبط تماس آغاز گردید (phone.toggleGroupCallRecord)' : 'ضبط تماس متوقف گردید')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] toggleGroupCallRecord error:', err)
+      setErrorMsg(err?.message || 'خطا در تغییر وضعیت ضبط تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 112: 3. Toggle Group Call Settings (phone.toggleGroupCallSettings)
+  const handleToggleGroupCallSettings = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('toggle_call_settings')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneToggleGroupCallSettingsRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        resetInviteHash: settingsResetInviteHash,
+        joinMuted: settingsJoinMuted,
+        messagesEnabled: settingsMessagesEnabled,
+        sendPaidMessagesStars: settingsPaidStars.trim() ? Number(settingsPaidStars.trim()) : undefined,
+      })
+      setLastOpResult(res)
+      setSuccessMsg('تنظیمات تماس گروهی بروزرسانی شد (phone.toggleGroupCallSettings)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] toggleGroupCallSettings error:', err)
+      setErrorMsg(err?.message || 'خطا در بروزرسانی تنظیمات تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 112: 4. Send Group Call Message (phone.sendGroupCallMessage)
+  const handleSendGroupCallMessage = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!groupCallMsgText.trim()) {
+      setErrorMsg('متن پیام یا ری‌اکشن لایو الزامی است')
+      return
+    }
+    setLoadingOp('send_call_message')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSendGroupCallMessageRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        message: groupCallMsgText.trim(),
+        allowPaidStars: groupCallMsgStars.trim() ? Number(groupCallMsgStars.trim()) : undefined,
+        sendAs: groupCallMsgSendAs.trim() || undefined,
+      })
+      setLastOpResult(res)
+      setGroupCallMsgText('')
+      setSuccessMsg('پیام با موفقیت در تماس مخابره شد (phone.sendGroupCallMessage)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] sendGroupCallMessage error:', err)
+      setErrorMsg(err?.message || 'خطا در ارسال پیام به تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 112: 5. Send Group Call Encrypted Message (phone.sendGroupCallEncryptedMessage)
+  const handleSendGroupCallEncryptedMessage = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس یا کنفرانس فعال یافت نشد')
+      return
+    }
+    if (!confEncryptedMsg.trim()) {
+      setErrorMsg('پیام یا دیتای رمزنگاری‌شده الزامی است')
+      return
+    }
+    setLoadingOp('send_conf_encrypted_message')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSendGroupCallEncryptedMessageRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        encryptedMessage: confEncryptedMsg.trim(),
+      })
+      setLastOpResult(res)
+      setConfEncryptedMsg('')
+      setSuccessMsg('پیام E2E رمزنگاری‌شده با موفقیت ارسال شد (phone.sendGroupCallEncryptedMessage)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] sendGroupCallEncryptedMessage error:', err)
+      setErrorMsg(err?.message || 'خطا در ارسال پیام رمزنگاری‌شده')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 112: 6. Set Call Rating (phone.setCallRating)
+  const handleSetCallRating = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!p2pCallId || !p2pAccessHash) {
+      setErrorMsg('شناسه و هش دسترسی تماس P2P الزامی است')
+      return
+    }
+    setLoadingOp('set_call_rating')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSetCallRatingRaw?.(accountId, {
+        peer: { id: p2pCallId, accessHash: p2pAccessHash },
+        rating: callRatingStars,
+        comment: callRatingComment.trim() || undefined,
+        userInitiative: callRatingUserInitiative,
+      })
+      setLastOpResult(res)
+      setSuccessMsg('امتیاز و بازخورد کیفیت تماس ثبت شد (phone.setCallRating)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] setCallRating error:', err)
+      setErrorMsg(err?.message || 'خطا در ثبت امتیاز تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 112: 7. Send Signaling Data (phone.sendSignalingData)
+  const handleSendSignalingData = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!p2pCallId || !p2pAccessHash) {
+      setErrorMsg('شناسه و هش دسترسی تماس P2P الزامی است')
+      return
+    }
+    if (!signalingDataHex.trim()) {
+      setErrorMsg('دیتای باینری یا سیگنالینگ WebRTC الزامی است')
+      return
+    }
+    setLoadingOp('send_signaling_data')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSendSignalingDataRaw?.(accountId, {
+        peer: { id: p2pCallId, accessHash: p2pAccessHash },
+        data: signalingDataHex.trim(),
+      })
+      setLastOpResult(res)
+      setSuccessMsg('سیگنالینگ صوتی/تصویری P2P مخابره شد (phone.sendSignalingData)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] sendSignalingData error:', err)
+      setErrorMsg(err?.message || 'خطا در مخابره داده سیگنالینگ')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -2352,6 +2587,180 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       <span>ذخیره هویت ارسال پیش‌فرض</span>
                     </button>
                   </div>
+
+                  {/* Microphase 112: Start Scheduled Group Call (phone.startScheduledGroupCall) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>فعال‌سازی تماس زمان‌بندی‌شده (phone.startScheduledGroupCall)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={scheduledStartCallId}
+                      onChange={(e) => setScheduledStartCallId(e.target.value)}
+                      placeholder="شناسه تماس زمان‌بندی‌شده (پیش‌فرض: تماس جاری)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleStartScheduledGroupCall}
+                      disabled={loadingOp === 'start_scheduled_call'}
+                      className="w-full py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'start_scheduled_call' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                      <span>شروع فوری تماس زمان‌بندی‌شده</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 112: Toggle Group Call Record (phone.toggleGroupCallRecord) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-rose-400" />
+                      <span>مدیریت ضبط تماس و لایو استریم (phone.toggleGroupCallRecord)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={recordTitle}
+                      onChange={(e) => setRecordTitle(e.target.value)}
+                      placeholder="عنوان فایل ذخیره ضبط (اختیاری)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                    />
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={recordStart}
+                          onChange={(e) => setRecordStart(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                        />
+                        <span>شروع ضبط</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={recordVideo}
+                          onChange={(e) => setRecordVideo(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                        />
+                        <span>ضبط ویدئویی</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={recordPortrait}
+                          onChange={(e) => setRecordPortrait(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                        />
+                        <span>حالت عمودی</span>
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleGroupCallRecord}
+                      disabled={loadingOp === 'toggle_call_record'}
+                      className={`w-full py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1 ${
+                        recordStart
+                          ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300'
+                          : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                      }`}
+                    >
+                      {loadingOp === 'toggle_call_record' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                      <span>{recordStart ? 'آغاز ضبط تماس/لایو' : 'توقف فرآیند ضبط'}</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 112: Toggle Group Call Settings (phone.toggleGroupCallSettings) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Settings className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>تنظیمات پیشرفته و کامنت پولی (phone.toggleGroupCallSettings)</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsResetInviteHash}
+                          onChange={(e) => setSettingsResetInviteHash(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                        />
+                        <span>ریست لینک</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsJoinMuted}
+                          onChange={(e) => setSettingsJoinMuted(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                        />
+                        <span>ورود بی‌صدا</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settingsMessagesEnabled}
+                          onChange={(e) => setSettingsMessagesEnabled(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                        />
+                        <span>ارسال پیام</span>
+                      </label>
+                    </div>
+                    <input
+                      type="number"
+                      value={settingsPaidStars}
+                      onChange={(e) => setSettingsPaidStars(e.target.value)}
+                      placeholder="حداقل ستاره مورد نیاز برای ارسال پیام (اختیاری)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleToggleGroupCallSettings}
+                      disabled={loadingOp === 'toggle_call_settings'}
+                      className="w-full py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'toggle_call_settings' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Settings className="w-3.5 h-3.5" />}
+                      <span>اعمال تنظیمات تماس گروهی</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 112: Send Group Call Message (phone.sendGroupCallMessage) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <SendHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                      <span>ارسال پیام و کامنت با ستاره (phone.sendGroupCallMessage)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={groupCallMsgText}
+                      onChange={(e) => setGroupCallMsgText(e.target.value)}
+                      placeholder="متن پیام، واکنش یا تشویق در لایو..."
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                    />
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="number"
+                        value={groupCallMsgStars}
+                        onChange={(e) => setGroupCallMsgStars(e.target.value)}
+                        placeholder="تعداد ستاره حمایتی"
+                        className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                      />
+                      <input
+                        type="text"
+                        value={groupCallMsgSendAs}
+                        onChange={(e) => setGroupCallMsgSendAs(e.target.value)}
+                        placeholder="ارسال با هویت کانال (اختیاری)"
+                        className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSendGroupCallMessage}
+                      disabled={loadingOp === 'send_call_message'}
+                      className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'send_call_message' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <SendHorizontal className="w-3.5 h-3.5" />}
+                      <span>ارسال پیام درون لایو/تماس</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -2632,6 +3041,81 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       <span>ثبت لاگ فایل تماس (saveCallLog)</span>
                     </button>
                   </div>
+
+                  {/* Microphase 112: Set Call Rating (phone.setCallRating) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Star className="w-3.5 h-3.5 text-amber-400" />
+                      <span>ثبت امتیاز و بازخورد تماس (phone.setCallRating)</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setCallRatingStars(star)}
+                            className="cursor-pointer transition-transform hover:scale-110"
+                          >
+                            <Star
+                              className={`w-4 h-4 ${
+                                star <= callRatingStars ? 'text-amber-400 fill-amber-400' : 'text-neutral-600'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={callRatingUserInitiative}
+                          onChange={(e) => setCallRatingUserInitiative(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-amber-500 focus:ring-0"
+                        />
+                        <span>ابتکار کاربر</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      value={callRatingComment}
+                      onChange={(e) => setCallRatingComment(e.target.value)}
+                      placeholder="متن بازخورد یا کیفیت صدا/تصویر (اختیاری)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSetCallRating}
+                      disabled={loadingOp === 'set_call_rating'}
+                      className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'set_call_rating' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5" />}
+                      <span>ثبت امتیاز کیفیت تماس</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 112: Send Signaling Data (phone.sendSignalingData) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-blue-400" />
+                      <span>تبادل سیگنالینگ WebRTC (phone.sendSignalingData)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={signalingDataHex}
+                      onChange={(e) => setSignalingDataHex(e.target.value)}
+                      placeholder="داده سیگنالینگ هگز یا باینری WebRTC (مثلاً a1b2c3d4)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendSignalingData}
+                      disabled={loadingOp === 'send_signaling_data'}
+                      className="w-full py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'send_signaling_data' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                      <span>مخابره پکت سیگنالینگ تماس</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -2831,6 +3315,32 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                         >
                           {loadingOp === 'send_conf_broadcast' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
                           <span>ارسال برودکست</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Microphase 112: Send Group Call Encrypted Message (phone.sendGroupCallEncryptedMessage) */}
+                    <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>ارسال پیام و داده رمزنگاری‌شده E2E کنفرانس (phone.sendGroupCallEncryptedMessage)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={confEncryptedMsg}
+                          onChange={(e) => setConfEncryptedMsg(e.target.value)}
+                          placeholder="پیام یا پی‌لود رمزنگاری‌شده سرتاسری (E2E Encrypted Payload)"
+                          className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSendGroupCallEncryptedMessage}
+                          disabled={loadingOp === 'send_conf_encrypted_message'}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                        >
+                          {loadingOp === 'send_conf_encrypted_message' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                          <span>ارسال پیام امن</span>
                         </button>
                       </div>
                     </div>

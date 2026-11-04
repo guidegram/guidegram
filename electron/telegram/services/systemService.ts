@@ -1331,18 +1331,35 @@ export class SystemService {
     }
   }
 
-  public async phone_setCallRating(holder: RpcClientHolder, userInitiative?: boolean, peer?: any, rating?: number, comment?: string): Promise<any> {
+  public async phone_setCallRating(
+    holder: RpcClientHolder,
+    paramsOrInitiative?: any,
+    peer?: any,
+    rating?: number,
+    comment?: string
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrInitiative === 'object' && paramsOrInitiative !== null && !paramsOrInitiative._ && paramsOrInitiative.peer !== undefined) {
+        p = paramsOrInitiative
+      } else {
+        p = {
+          userInitiative: paramsOrInitiative,
+          peer,
+          rating,
+          comment,
+        }
+      }
       return await holder.client.call({
         _: 'phone.setCallRating',
-        'user_initiative': userInitiative,
-        'peer': peer,
-        'rating': rating,
-        'comment': comment,
+        user_initiative: p.userInitiative !== undefined ? !!p.userInitiative : undefined,
+        peer: this.toInputPhoneCall(p.peer),
+        rating: Number(p.rating || 5),
+        comment: String(p.comment || ''),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.setCallRating error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1373,16 +1390,28 @@ export class SystemService {
     }
   }
 
-  public async phone_sendSignalingData(holder: RpcClientHolder, peer?: any, data?: any): Promise<any> {
+  public async phone_sendSignalingData(holder: RpcClientHolder, peerOrParams?: any, data?: any): Promise<any> {
     try {
+      let peer = peerOrParams
+      let d = data
+      if (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && peerOrParams.peer !== undefined) {
+        peer = peerOrParams.peer
+        d = peerOrParams.data
+      }
+      let resolvedData = d
+      if (typeof d === 'string') {
+        resolvedData = Buffer.from(d, 'hex')
+      } else if (!d) {
+        resolvedData = new Uint8Array(0)
+      }
       return await holder.client.call({
         _: 'phone.sendSignalingData',
-        'peer': peer,
-        'data': data,
+        peer: this.toInputPhoneCall(peer),
+        data: resolvedData,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.sendSignalingData error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1548,21 +1577,6 @@ export class SystemService {
     }
   }
 
-  public async phone_toggleGroupCallSettings(holder: RpcClientHolder, resetInviteHash?: boolean, call?: any, joinMuted?: boolean, messagesEnabled?: boolean, sendPaidMessagesStars?: bigint | number): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'phone.toggleGroupCallSettings',
-        'reset_invite_hash': resetInviteHash,
-        'call': call,
-        'join_muted': joinMuted,
-        'messages_enabled': messagesEnabled,
-        'send_paid_messages_stars': sendPaidMessagesStars,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] phone.toggleGroupCallSettings error:', err)
-      return null
-    }
-  }
 
   public async phone_getGroupCall(holder: RpcClientHolder, callOrParams?: any, limit?: number): Promise<any> {
     try {
@@ -1656,19 +1670,74 @@ export class SystemService {
     }
   }
 
-  public async phone_toggleGroupCallRecord(holder: RpcClientHolder, start?: boolean, video?: boolean, call?: any, title?: string, videoPortrait?: boolean): Promise<any> {
+  public async phone_toggleGroupCallRecord(
+    holder: RpcClientHolder,
+    paramsOrStart?: any,
+    video?: boolean,
+    call?: any,
+    title?: string,
+    videoPortrait?: boolean
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrStart === 'object' && paramsOrStart !== null && !paramsOrStart._ && paramsOrStart.call !== undefined) {
+        p = paramsOrStart
+      } else {
+        p = {
+          start: paramsOrStart,
+          video,
+          call,
+          title,
+          videoPortrait,
+        }
+      }
       return await holder.client.call({
         _: 'phone.toggleGroupCallRecord',
-        'start': start,
-        'video': video,
-        'call': call,
-        'title': title,
-        'video_portrait': videoPortrait,
+        start: p.start !== undefined ? !!p.start : undefined,
+        video: p.video !== undefined ? !!p.video : undefined,
+        call: this.toInputGroupCall(p.call),
+        title: p.title !== undefined ? String(p.title) : undefined,
+        video_portrait: p.videoPortrait !== undefined || p.video_portrait !== undefined ? !!(p.videoPortrait ?? p.video_portrait) : undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.toggleGroupCallRecord error:', err)
-      return null
+      throw err
+    }
+  }
+
+  public async phone_toggleGroupCallSettings(
+    holder: RpcClientHolder,
+    callOrParams?: any,
+    resetInviteHash?: boolean,
+    joinMuted?: boolean,
+    messagesEnabled?: boolean,
+    sendPaidMessagesStars?: bigint | number
+  ): Promise<any> {
+    try {
+      let p: any = {}
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        p = callOrParams
+      } else {
+        p = {
+          call: callOrParams,
+          resetInviteHash,
+          joinMuted,
+          messagesEnabled,
+          sendPaidMessagesStars,
+        }
+      }
+      const rawStars = p.sendPaidMessagesStars ?? p.send_paid_messages_stars
+      return await holder.client.call({
+        _: 'phone.toggleGroupCallSettings',
+        reset_invite_hash: p.resetInviteHash !== undefined || p.reset_invite_hash !== undefined ? !!(p.resetInviteHash ?? p.reset_invite_hash) : undefined,
+        call: this.toInputGroupCall(p.call),
+        join_muted: p.joinMuted !== undefined || p.join_muted !== undefined ? !!(p.joinMuted ?? p.join_muted) : undefined,
+        messages_enabled: p.messagesEnabled !== undefined || p.messages_enabled !== undefined ? !!(p.messagesEnabled ?? p.messages_enabled) : undefined,
+        send_paid_messages_stars: rawStars !== undefined ? BigInt(rawStars) : undefined,
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] phone.toggleGroupCallSettings error:', err)
+      throw err
     }
   }
 
@@ -1925,15 +1994,18 @@ export class SystemService {
     }
   }
 
-  public async phone_startScheduledGroupCall(holder: RpcClientHolder, call?: any): Promise<any> {
+  public async phone_startScheduledGroupCall(holder: RpcClientHolder, callOrParams?: any): Promise<any> {
     try {
+      const call = (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined)
+        ? callOrParams.call
+        : callOrParams
       return await holder.client.call({
         _: 'phone.startScheduledGroupCall',
-        'call': call,
+        call: this.toInputGroupCall(call),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.startScheduledGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -2188,32 +2260,99 @@ export class SystemService {
     }
   }
 
-  public async phone_sendGroupCallMessage(holder: RpcClientHolder, accountId: string, call?: any, randomId?: bigint | number, message?: any, allowPaidStars?: bigint | number, sendAsId?: string): Promise<any> {
+  public async phone_sendGroupCallMessage(
+    holder: RpcClientHolder,
+    accountId: string,
+    callOrParams?: any,
+    randomId?: bigint | number | string,
+    message?: any,
+    allowPaidStars?: bigint | number | string,
+    sendAsId?: string
+  ): Promise<any> {
     try {
+      let call = callOrParams
+      let rid = randomId
+      let msg = message
+      let stars = allowPaidStars
+      let sendAs = sendAsId
+
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        rid = callOrParams.randomId ?? callOrParams.random_id ?? rid
+        msg = callOrParams.message ?? msg
+        stars = callOrParams.allowPaidStars ?? callOrParams.allow_paid_stars ?? stars
+        sendAs = callOrParams.sendAs ?? callOrParams.send_as ?? sendAs
+      }
+
+      const formattedRandomId = (rid !== undefined && rid !== null && rid !== 0 && rid !== '0')
+        ? BigInt(rid)
+        : BigInt(Math.floor(Math.random() * 1e15) + 1)
+
+      let formattedMessage: any = msg
+      if (typeof msg === 'string') {
+        formattedMessage = {
+          _: 'textWithEntities',
+          text: msg,
+          entities: [],
+        }
+      } else if (!msg || typeof msg !== 'object') {
+        formattedMessage = {
+          _: 'textWithEntities',
+          text: '',
+          entities: [],
+        }
+      }
+
       return await holder.client.call({
         _: 'phone.sendGroupCallMessage',
-        'call': call,
-        'random_id': randomId,
-        'message': message,
-        'allow_paid_stars': allowPaidStars,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        call: this.toInputGroupCall(call),
+        random_id: formattedRandomId,
+        message: formattedMessage,
+        allow_paid_stars: (stars !== undefined && stars !== null) ? BigInt(stars) : undefined,
+        send_as: sendAs ? await this.resolveInputPeer(accountId, String(sendAs)) : undefined,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.sendGroupCallMessage error:', err)
-      return null
+      throw err
     }
   }
 
-  public async phone_sendGroupCallEncryptedMessage(holder: RpcClientHolder, call?: any, encryptedMessage?: any): Promise<any> {
+  public async phone_sendGroupCallEncryptedMessage(
+    holder: RpcClientHolder,
+    callOrParams?: any,
+    encryptedMessage?: any
+  ): Promise<any> {
     try {
+      let call = callOrParams
+      let data = encryptedMessage
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        data = callOrParams.encryptedMessage ?? callOrParams.encrypted_message ?? data
+      }
+
+      let payload: Uint8Array
+      if (data instanceof Uint8Array) {
+        payload = data
+      } else if (typeof data === 'string') {
+        if (/^[0-9a-fA-F]+$/.test(data) && data.length % 2 === 0) {
+          payload = Buffer.from(data, 'hex')
+        } else {
+          payload = Buffer.from(data, 'utf-8')
+        }
+      } else if (Array.isArray(data)) {
+        payload = new Uint8Array(data)
+      } else {
+        payload = new Uint8Array(0)
+      }
+
       return await holder.client.call({
         _: 'phone.sendGroupCallEncryptedMessage',
-        'call': call,
-        'encrypted_message': encryptedMessage,
+        call: this.toInputGroupCall(call),
+        encrypted_message: payload,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.sendGroupCallEncryptedMessage error:', err)
-      return null
+      throw err
     }
   }
 

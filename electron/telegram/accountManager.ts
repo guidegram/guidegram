@@ -23090,6 +23090,100 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_sendConferenceCallBroadcast(holder as any, params)
   }
+
+  public async phoneSendGroupCallEncryptedMessageRaw(
+    accountId: string,
+    params: {
+      call: any
+      encryptedMessage: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_sendGroupCallEncryptedMessage(holder as any, params)
+  }
+
+  public async phoneSendGroupCallMessageRaw(
+    accountId: string,
+    params: {
+      call: any
+      randomId?: any
+      message: any
+      allowPaidStars?: any
+      sendAs?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_sendGroupCallMessage(holder as any, accountId, params)
+  }
+
+  public async phoneSendSignalingDataRaw(
+    accountId: string,
+    params: {
+      peer: any
+      data: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_sendSignalingData(holder as any, params)
+  }
+
+  public async phoneSetCallRatingRaw(
+    accountId: string,
+    params: {
+      peer: any
+      rating: number
+      comment?: string
+      userInitiative?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_setCallRating(holder as any, params)
+  }
+
+  public async phoneStartScheduledGroupCallRaw(
+    accountId: string,
+    params: {
+      call: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_startScheduledGroupCall(holder as any, params)
+  }
+
+  public async phoneToggleGroupCallRecordRaw(
+    accountId: string,
+    params: {
+      call: any
+      start?: boolean
+      video?: boolean
+      title?: string
+      videoPortrait?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_toggleGroupCallRecord(holder as any, params)
+  }
+
+  public async phoneToggleGroupCallSettingsRaw(
+    accountId: string,
+    params: {
+      call: any
+      resetInviteHash?: boolean
+      joinMuted?: boolean
+      messagesEnabled?: boolean
+      sendPaidMessagesStars?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_toggleGroupCallSettings(holder as any, params)
+  }
 }
 
 

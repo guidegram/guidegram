@@ -3226,6 +3226,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:save-default-send-as-raw', { accountId, ...params }),
   phoneSendConferenceCallBroadcastRaw: (accountId: string, params: { call: any; block?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:send-conference-call-broadcast-raw', { accountId, ...params }),
+  phoneSendGroupCallEncryptedMessageRaw: (accountId: string, params: { call: any; encryptedMessage: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:send-group-call-encrypted-message-raw', { accountId, ...params }),
+  phoneSendGroupCallMessageRaw: (accountId: string, params: { call: any; randomId?: any; message: any; allowPaidStars?: any; sendAs?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:send-group-call-message-raw', { accountId, ...params }),
+  phoneSendSignalingDataRaw: (accountId: string, params: { peer: any; data: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:send-signaling-data-raw', { accountId, ...params }),
+  phoneSetCallRatingRaw: (accountId: string, params: { peer: any; rating: number; comment?: string; userInitiative?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:set-call-rating-raw', { accountId, ...params }),
+  phoneStartScheduledGroupCallRaw: (accountId: string, params: { call: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:start-scheduled-group-call-raw', { accountId, ...params }),
+  phoneToggleGroupCallRecordRaw: (accountId: string, params: { call: any; start?: boolean; video?: boolean; title?: string; videoPortrait?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:toggle-group-call-record-raw', { accountId, ...params }),
+  phoneToggleGroupCallSettingsRaw: (accountId: string, params: { call: any; resetInviteHash?: boolean; joinMuted?: boolean; messagesEnabled?: boolean; sendPaidMessagesStars?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:toggle-group-call-settings-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

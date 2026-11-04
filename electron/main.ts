@@ -10739,6 +10739,69 @@ function setupIpcHandlers() {
     }
   })
 
+  ipcMain.handle('telegram:phone:send-group-call-encrypted-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSendGroupCallEncryptedMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSendGroupCallEncryptedMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:send-group-call-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSendGroupCallMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSendGroupCallMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:send-signaling-data-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSendSignalingDataRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSendSignalingDataRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:set-call-rating-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSetCallRatingRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSetCallRatingRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:start-scheduled-group-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneStartScheduledGroupCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneStartScheduledGroupCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:toggle-group-call-record-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneToggleGroupCallRecordRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneToggleGroupCallRecordRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:toggle-group-call-settings-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneToggleGroupCallSettingsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneToggleGroupCallSettingsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
