@@ -23003,6 +23003,93 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_leaveGroupCallPresentation(holder as any, params)
   }
+
+  // Microphase 111: Phone Domain Suite Part 5 Raw Methods
+  public async phoneReceivedCallRaw(
+    accountId: string,
+    params: {
+      peer: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_receivedCall(holder as any, params)
+  }
+
+  public async phoneRequestCallRaw(
+    accountId: string,
+    params: {
+      video?: boolean
+      userId: any
+      randomId?: number
+      gAHash?: any
+      protocol?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_requestCall(holder as any, accountId, params)
+  }
+
+  public async phoneSaveCallDebugRaw(
+    accountId: string,
+    params: {
+      peer: any
+      debug: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_saveCallDebug(holder as any, params)
+  }
+
+  public async phoneSaveCallLogRaw(
+    accountId: string,
+    params: {
+      peer: any
+      file: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_saveCallLog(holder as any, params)
+  }
+
+  public async phoneSaveDefaultGroupCallJoinAsRaw(
+    accountId: string,
+    params: {
+      peer: any
+      joinAs: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_saveDefaultGroupCallJoinAs(holder as any, accountId, params)
+  }
+
+  public async phoneSaveDefaultSendAsRaw(
+    accountId: string,
+    params: {
+      call: any
+      sendAs: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_saveDefaultSendAs(holder as any, accountId, params)
+  }
+
+  public async phoneSendConferenceCallBroadcastRaw(
+    accountId: string,
+    params: {
+      call: any
+      block?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_sendConferenceCallBroadcast(holder as any, params)
+  }
 }
 
 

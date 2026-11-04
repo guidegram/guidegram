@@ -3211,6 +3211,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:leave-group-call-raw', { accountId, ...params }),
   phoneLeaveGroupCallPresentationRaw: (accountId: string, params: { call: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:leave-group-call-presentation-raw', { accountId, ...params }),
+  // Layer 232 Phone Suite (Microphase 111)
+  phoneReceivedCallRaw: (accountId: string, params: { peer: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:received-call-raw', { accountId, ...params }),
+  phoneRequestCallRaw: (accountId: string, params: { video?: boolean; userId: any; randomId?: number; gAHash?: any; protocol?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:request-call-raw', { accountId, ...params }),
+  phoneSaveCallDebugRaw: (accountId: string, params: { peer: any; debug: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:save-call-debug-raw', { accountId, ...params }),
+  phoneSaveCallLogRaw: (accountId: string, params: { peer: any; file: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:save-call-log-raw', { accountId, ...params }),
+  phoneSaveDefaultGroupCallJoinAsRaw: (accountId: string, params: { peer: any; joinAs: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:save-default-group-call-join-as-raw', { accountId, ...params }),
+  phoneSaveDefaultSendAsRaw: (accountId: string, params: { call: any; sendAs: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:save-default-send-as-raw', { accountId, ...params }),
+  phoneSendConferenceCallBroadcastRaw: (accountId: string, params: { call: any; block?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:send-conference-call-broadcast-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

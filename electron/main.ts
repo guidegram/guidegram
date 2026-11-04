@@ -10675,6 +10675,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 111: Phone Domain Part 5 IPC Handlers
+  ipcMain.handle('telegram:phone:received-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneReceivedCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneReceivedCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:request-call-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneRequestCallRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneRequestCallRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:save-call-debug-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSaveCallDebugRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSaveCallDebugRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:save-call-log-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSaveCallLogRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSaveCallLogRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:save-default-group-call-join-as-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSaveDefaultGroupCallJoinAsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSaveDefaultGroupCallJoinAsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:save-default-send-as-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSaveDefaultSendAsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSaveDefaultSendAsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:phone:send-conference-call-broadcast-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.phoneSendConferenceCallBroadcastRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] phoneSendConferenceCallBroadcastRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

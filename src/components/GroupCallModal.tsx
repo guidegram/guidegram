@@ -39,6 +39,10 @@ import {
   ExternalLink,
   UserPlus,
   MonitorUp,
+  PhoneOutgoing,
+  Bug,
+  FileText,
+  SendHorizontal,
 } from 'lucide-react'
 import { GroupCallInfo, GroupCallParticipantItem } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -173,6 +177,20 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
 
   // 6: phone.leaveGroupCall
   const [leaveCallSourceId, setLeaveCallSourceId] = useState('0')
+
+  // Microphase 111: Phone Domain Suite Part 5 States
+  // 1 & 2: phone.receivedCall & phone.requestCall
+  const [requestCallUserId, setRequestCallUserId] = useState('')
+  const [requestCallVideo, setRequestCallVideo] = useState(false)
+  const [requestCallGAHash, setRequestCallGAHash] = useState('')
+  // 3 & 4: phone.saveCallDebug & phone.saveCallLog
+  const [callDebugPayload, setCallDebugPayload] = useState('{"connection":"p2p","loss":0}')
+  const [callLogFileName, setCallLogFileName] = useState('call_diagnostics.log')
+  // 5 & 6: phone.saveDefaultGroupCallJoinAs & phone.saveDefaultSendAs
+  const [defaultJoinAsPeer, setDefaultJoinAsPeer] = useState('')
+  const [defaultSendAsPeer, setDefaultSendAsPeer] = useState('')
+  // 7: phone.sendConferenceCallBroadcast
+  const [confBroadcastBlock, setConfBroadcastBlock] = useState('01020304')
 
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
@@ -1229,6 +1247,214 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Microphase 111: 1. Received Call (phone.receivedCall)
+  const handleReceivedCall = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!p2pCallId || !p2pAccessHash) {
+      setErrorMsg('شناسه و هش دسترسی تماس P2P الزامی است')
+      return
+    }
+    setLoadingOp('received_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneReceivedCallRaw?.(accountId, {
+        peer: { id: p2pCallId, accessHash: p2pAccessHash },
+      })
+      setLastOpResult(res)
+      setSuccessMsg('دریافت تماس به سرور تلگرام اعلام گردید (phone.receivedCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] receivedCall error:', err)
+      setErrorMsg(err?.message || 'خطا در ثبت دریافت تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 111: 2. Request Call (phone.requestCall)
+  const handleRequestCall = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!requestCallUserId.trim()) {
+      setErrorMsg('شناسه کاربری جهت برقراری تماس الزامی است')
+      return
+    }
+    setLoadingOp('request_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const randomId = Math.floor(Math.random() * 0x7fffffff)
+      const res = await api?.phoneRequestCallRaw?.(accountId, {
+        video: requestCallVideo,
+        userId: requestCallUserId.trim(),
+        randomId,
+        gAHash: requestCallGAHash.trim() || undefined,
+      })
+      setLastOpResult(res)
+      if (res?.phone_call?.id || res?.phoneCall?.id) {
+        const c = res.phone_call || res.phoneCall
+        setP2pCallId(String(c.id))
+        if (c.access_hash || c.accessHash) setP2pAccessHash(String(c.access_hash || c.accessHash))
+      }
+      setSuccessMsg('درخواست برقراری تماس با موفقیت ارسال شد (phone.requestCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] requestCall error:', err)
+      setErrorMsg(err?.message || 'خطا در درخواست برقراری تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 111: 3. Save Call Debug (phone.saveCallDebug)
+  const handleSaveCallDebug = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!p2pCallId || !p2pAccessHash) {
+      setErrorMsg('شناسه و هش دسترسی تماس P2P الزامی است')
+      return
+    }
+    setLoadingOp('save_call_debug')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSaveCallDebugRaw?.(accountId, {
+        peer: { id: p2pCallId, accessHash: p2pAccessHash },
+        debug: callDebugPayload.trim() || '{}',
+      })
+      setLastOpResult(res)
+      setSuccessMsg('گزارش دیباگ تماس صوتی ارسال گردید (phone.saveCallDebug)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] saveCallDebug error:', err)
+      setErrorMsg(err?.message || 'خطا در ذخیره دیباگ تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 111: 4. Save Call Log (phone.saveCallLog)
+  const handleSaveCallLog = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!p2pCallId || !p2pAccessHash) {
+      setErrorMsg('شناسه و هش دسترسی تماس P2P الزامی است')
+      return
+    }
+    setLoadingOp('save_call_log')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSaveCallLogRaw?.(accountId, {
+        peer: { id: p2pCallId, accessHash: p2pAccessHash },
+        file: {
+          id: Date.now(),
+          parts: 1,
+          name: callLogFileName.trim() || 'call_log.txt',
+          md5Checksum: '',
+        },
+      })
+      setLastOpResult(res)
+      setSuccessMsg('لاگ کیفیت تماس ثبت گردید (phone.saveCallLog)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] saveCallLog error:', err)
+      setErrorMsg(err?.message || 'خطا در ثبت لاگ تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 111: 5. Save Default Group Call Join As (phone.saveDefaultGroupCallJoinAs)
+  const handleSaveDefaultGroupCallJoinAs = async () => {
+    if (!accountId) {
+      setErrorMsg('اکانت فعال یافت نشد')
+      return
+    }
+    if (!defaultJoinAsPeer.trim()) {
+      setErrorMsg('شناسه پیر یا کانال پیش‌فرض جهت ورود الزامی است')
+      return
+    }
+    setLoadingOp('save_default_join_as')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSaveDefaultGroupCallJoinAsRaw?.(accountId, {
+        peer: chatId,
+        joinAs: defaultJoinAsPeer.trim(),
+      })
+      setLastOpResult(res)
+      setSuccessMsg('هویت پیش‌فرض ورود به تماس گروهی ذخیره شد (phone.saveDefaultGroupCallJoinAs)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] saveDefaultGroupCallJoinAs error:', err)
+      setErrorMsg(err?.message || 'خطا در ذخیره هویت پیش‌فرض ورود به تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 111: 6. Save Default Send As (phone.saveDefaultSendAs)
+  const handleSaveDefaultSendAs = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!defaultSendAsPeer.trim()) {
+      setErrorMsg('شناسه پیر جهت ارسال کامنت/واکنش الزامی است')
+      return
+    }
+    setLoadingOp('save_default_send_as')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSaveDefaultSendAsRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        sendAs: defaultSendAsPeer.trim(),
+      })
+      setLastOpResult(res)
+      setSuccessMsg('هویت پیش‌فرض ارسال در لایو/تماس ذخیره شد (phone.saveDefaultSendAs)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] saveDefaultSendAs error:', err)
+      setErrorMsg(err?.message || 'خطا در ذخیره هویت پیش‌فرض ارسال')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 111: 7. Send Conference Call Broadcast (phone.sendConferenceCallBroadcast)
+  const handleSendConferenceCallBroadcast = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی/کنفرانس فعال یافت نشد')
+      return
+    }
+    setLoadingOp('send_conf_broadcast')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneSendConferenceCallBroadcastRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        block: confBroadcastBlock.trim() || '01020304',
+      })
+      setLastOpResult(res)
+      setSuccessMsg('بسته برودکست کنفرانس به کلیه اعضا مخابره شد (phone.sendConferenceCallBroadcast)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] sendConferenceCallBroadcast error:', err)
+      setErrorMsg(err?.message || 'خطا در ارسال برودکست کنفرانس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -2078,6 +2304,54 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       </button>
                     </div>
                   </div>
+
+                  {/* Microphase 111: Save Default Group Call Join As (phone.saveDefaultGroupCallJoinAs) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>تنظیم هویت پیش‌فرض ورود به تماس (phone.saveDefaultGroupCallJoinAs)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={defaultJoinAsPeer}
+                      onChange={(e) => setDefaultJoinAsPeer(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال/پروفایل پیش‌فرض ورود"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveDefaultGroupCallJoinAs}
+                      disabled={loadingOp === 'save_default_join_as'}
+                      className="w-full py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'save_default_join_as' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                      <span>ذخیره هویت ورود پیش‌فرض</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 111: Save Default Send As (phone.saveDefaultSendAs) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <SendHorizontal className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>تنظیم هویت پیش‌فرض ارسال پیام و واکنش (phone.saveDefaultSendAs)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={defaultSendAsPeer}
+                      onChange={(e) => setDefaultSendAsPeer(e.target.value)}
+                      placeholder="شناسه کانال یا پروفایل جهت ارسال در تماس/لایو"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveDefaultSendAs}
+                      disabled={loadingOp === 'save_default_send_as'}
+                      className="w-full py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'save_default_send_as' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <SendHorizontal className="w-3.5 h-3.5" />}
+                      <span>ذخیره هویت ارسال پیش‌فرض</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -2245,6 +2519,118 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                         </pre>
                       </div>
                     )}
+                  </div>
+
+                  {/* Microphase 111: Request P2P Call (phone.requestCall) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <PhoneOutgoing className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>برقراری تماس مستقیم صوتی/ویدئویی (phone.requestCall)</span>
+                      </div>
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={requestCallVideo}
+                          onChange={(e) => setRequestCallVideo(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-0"
+                        />
+                        <span>ویدئو</span>
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="text"
+                        value={requestCallUserId}
+                        onChange={(e) => setRequestCallUserId(e.target.value)}
+                        placeholder="شناسه کاربر مقصد (@username / id)"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                      />
+                      <input
+                        type="text"
+                        value={requestCallGAHash}
+                        onChange={(e) => setRequestCallGAHash(e.target.value)}
+                        placeholder="g_a_hash (هگز اختیاری)"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRequestCall}
+                      disabled={loadingOp === 'request_call'}
+                      className="w-full py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'request_call' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <PhoneOutgoing className="w-3.5 h-3.5" />}
+                      <span>برقراری تماس (requestCall)</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 111: Acknowledge Received Call (phone.receivedCall) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <PhoneIncoming className="w-3.5 h-3.5 text-blue-400" />
+                      <span>تأیید دریافت تماس ورودی (phone.receivedCall)</span>
+                    </div>
+                    <div className="text-[11px] text-neutral-400">
+                      ثبت رسید تماس دریافتی به سرور تلگرام با شناسه تماس فعال در تب.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleReceivedCall}
+                      disabled={loadingOp === 'received_call'}
+                      className="w-full py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'received_call' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      <span>ثبت رسید دریافت تماس (receivedCall)</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 111: Save Call Debug (phone.saveCallDebug) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Bug className="w-3.5 h-3.5 text-amber-400" />
+                      <span>گزارش دیباگ کیفیت تماس (phone.saveCallDebug)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={callDebugPayload}
+                      onChange={(e) => setCallDebugPayload(e.target.value)}
+                      placeholder='JSON دیباگ (مثلاً {"jitter": 12, "loss": 0})'
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveCallDebug}
+                      disabled={loadingOp === 'save_call_debug'}
+                      className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'save_call_debug' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bug className="w-3.5 h-3.5" />}
+                      <span>ارسال دیباگ تماس (saveCallDebug)</span>
+                    </button>
+                  </div>
+
+                  {/* Microphase 111: Save Call Log (phone.saveCallLog) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-purple-400" />
+                      <span>بارگذاری فایل لاگ تماس (phone.saveCallLog)</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={callLogFileName}
+                      onChange={(e) => setCallLogFileName(e.target.value)}
+                      placeholder="نام فایل لاگ (مثلاً call_diagnostics.log)"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveCallLog}
+                      disabled={loadingOp === 'save_call_log'}
+                      className="w-full py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      {loadingOp === 'save_call_log' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                      <span>ثبت لاگ فایل تماس (saveCallLog)</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -2419,6 +2805,32 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                         >
                           {loadingOp === 'invite_conf_part' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
                           <span>ارسال دعوت کنفرانس</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Microphase 111: Send Conference Call Broadcast (phone.sendConferenceCallBroadcast) */}
+                    <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                      <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                        <Radio className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>مخابره بسته عمومی به اعضای کنفرانس (phone.sendConferenceCallBroadcast)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={confBroadcastBlock}
+                          onChange={(e) => setConfBroadcastBlock(e.target.value)}
+                          placeholder="هگز بلاک برودکست (مثلاً 01020304)"
+                          className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSendConferenceCallBroadcast}
+                          disabled={loadingOp === 'send_conf_broadcast'}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                        >
+                          {loadingOp === 'send_conf_broadcast' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Radio className="w-3.5 h-3.5" />}
+                          <span>ارسال برودکست</span>
                         </button>
                       </div>
                     </div>

@@ -1167,19 +1167,54 @@ export class SystemService {
     }
   }
 
-  public async phone_requestCall(holder: RpcClientHolder, accountId: string, video?: boolean, userIdId?: string, randomId?: number, gAHash?: any, protocol?: any): Promise<any> {
+  public async phone_requestCall(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrVideo?: any,
+    userIdId?: string,
+    randomId?: number,
+    gAHash?: any,
+    protocol?: any
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrVideo === 'object' && paramsOrVideo !== null && !paramsOrVideo._) {
+        p = paramsOrVideo
+      } else {
+        p = {
+          video: paramsOrVideo,
+          userId: userIdId,
+          randomId,
+          gAHash,
+          protocol,
+        }
+      }
+      const targetUser = p.userId ?? p.user_id
+      const resolvedUser = targetUser ? await this.toInputUser(accountId, targetUser) : undefined
+      const resolvedRandomId = p.randomId ?? p.random_id ?? Math.floor(Math.random() * 0x7fffffff)
+      const rawHash = p.gAHash ?? p.g_a_hash
+      const resolvedHash = typeof rawHash === 'string'
+        ? Buffer.from(rawHash, 'hex')
+        : (rawHash || new Uint8Array(32))
+      const resolvedProtocol = p.protocol || {
+        _: 'phoneCallProtocol',
+        min_layer: 93,
+        max_layer: 93,
+        udp_p2p: true,
+        udp_reflector: true,
+        library_versions: ['1.0.0'],
+      }
       return await holder.client.call({
         _: 'phone.requestCall',
-        'video': video,
-        'user_id': userIdId ? await this.toInputUser(accountId, userIdId) : undefined,
-        'random_id': randomId,
-        'g_a_hash': gAHash,
-        'protocol': protocol,
+        video: !!p.video,
+        user_id: resolvedUser,
+        random_id: resolvedRandomId,
+        g_a_hash: resolvedHash,
+        protocol: resolvedProtocol,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.requestCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1236,15 +1271,18 @@ export class SystemService {
     }
   }
 
-  public async phone_receivedCall(holder: RpcClientHolder, peer?: any): Promise<any> {
+  public async phone_receivedCall(holder: RpcClientHolder, peerOrParams?: any): Promise<any> {
     try {
+      const peer = (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && peerOrParams.peer !== undefined)
+        ? peerOrParams.peer
+        : peerOrParams
       return await holder.client.call({
         _: 'phone.receivedCall',
-        'peer': peer,
+        peer: this.toInputPhoneCall(peer),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.receivedCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1308,16 +1346,30 @@ export class SystemService {
     }
   }
 
-  public async phone_saveCallDebug(holder: RpcClientHolder, peer?: any, debug?: any): Promise<any> {
+  public async phone_saveCallDebug(holder: RpcClientHolder, peerOrParams?: any, debug?: any): Promise<any> {
     try {
+      let peer = peerOrParams
+      let dbg = debug
+      if (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && peerOrParams.peer !== undefined) {
+        peer = peerOrParams.peer
+        dbg = peerOrParams.debug
+      }
+      let dataJSON = dbg
+      if (typeof dbg === 'string') {
+        dataJSON = { _: 'dataJSON', data: dbg }
+      } else if (typeof dbg === 'object' && dbg !== null && !dbg._) {
+        dataJSON = { _: 'dataJSON', data: JSON.stringify(dbg) }
+      } else if (!dbg) {
+        dataJSON = { _: 'dataJSON', data: '{}' }
+      }
       return await holder.client.call({
         _: 'phone.saveCallDebug',
-        'peer': peer,
-        'debug': debug,
+        peer: this.toInputPhoneCall(peer),
+        debug: dataJSON,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.saveCallDebug error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1885,16 +1937,27 @@ export class SystemService {
     }
   }
 
-  public async phone_saveDefaultGroupCallJoinAs(holder: RpcClientHolder, accountId: string, peerId?: string, joinAsId?: string): Promise<any> {
+  public async phone_saveDefaultGroupCallJoinAs(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrPeer?: any,
+    joinAsId?: string
+  ): Promise<any> {
     try {
+      let peer = paramsOrPeer
+      let joinAs = joinAsId
+      if (typeof paramsOrPeer === 'object' && paramsOrPeer !== null && !paramsOrPeer._ && paramsOrPeer.peer !== undefined) {
+        peer = paramsOrPeer.peer
+        joinAs = paramsOrPeer.joinAs ?? paramsOrPeer.join_as
+      }
       return await holder.client.call({
         _: 'phone.saveDefaultGroupCallJoinAs',
-        'peer': peerId ? await this.resolveInputPeer(accountId, peerId) : undefined,
-        'join_as': joinAsId ? await this.resolveInputPeer(accountId, joinAsId) : undefined,
+        peer: peer ? await this.resolveInputPeer(accountId, String(peer)) : { _: 'inputPeerSelf' },
+        join_as: joinAs ? await this.resolveInputPeer(accountId, String(joinAs)) : { _: 'inputPeerSelf' },
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.saveDefaultGroupCallJoinAs error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1943,16 +2006,32 @@ export class SystemService {
     }
   }
 
-  public async phone_saveCallLog(holder: RpcClientHolder, peer?: any, file?: any): Promise<any> {
+  public async phone_saveCallLog(holder: RpcClientHolder, peerOrParams?: any, file?: any): Promise<any> {
     try {
+      let peer = peerOrParams
+      let f = file
+      if (typeof peerOrParams === 'object' && peerOrParams !== null && !peerOrParams._ && peerOrParams.peer !== undefined) {
+        peer = peerOrParams.peer
+        f = peerOrParams.file
+      }
+      let resolvedFile = f
+      if (f && !f._) {
+        resolvedFile = {
+          _: 'inputFile',
+          id: f.id !== undefined ? BigInt(f.id) : 0n,
+          parts: Number(f.parts || 1),
+          name: String(f.name || 'call_log.txt'),
+          md5_checksum: String(f.md5Checksum || f.md5_checksum || ''),
+        }
+      }
       return await holder.client.call({
         _: 'phone.saveCallLog',
-        'peer': peer,
-        'file': file,
+        peer: this.toInputPhoneCall(peer),
+        file: resolvedFile,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.saveCallLog error:', err)
-      return null
+      throw err
     }
   }
 
@@ -2038,16 +2117,28 @@ export class SystemService {
     }
   }
 
-  public async phone_sendConferenceCallBroadcast(holder: RpcClientHolder, call?: any, block?: any): Promise<any> {
+  public async phone_sendConferenceCallBroadcast(holder: RpcClientHolder, callOrParams?: any, block?: any): Promise<any> {
     try {
+      let call = callOrParams
+      let blk = block
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        blk = callOrParams.block
+      }
+      let resolvedBlock = blk
+      if (typeof blk === 'string') {
+        resolvedBlock = Buffer.from(blk, 'hex')
+      } else if (!blk) {
+        resolvedBlock = new Uint8Array(0)
+      }
       return await holder.client.call({
         _: 'phone.sendConferenceCallBroadcast',
-        'call': call,
-        'block': block,
+        call: this.toInputGroupCall(call),
+        block: resolvedBlock,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.sendConferenceCallBroadcast error:', err)
-      return null
+      throw err
     }
   }
 
@@ -2143,16 +2234,27 @@ export class SystemService {
     }
   }
 
-  public async phone_saveDefaultSendAs(holder: RpcClientHolder, accountId: string, call?: any, sendAsId?: string): Promise<any> {
+  public async phone_saveDefaultSendAs(
+    holder: RpcClientHolder,
+    accountId: string,
+    callOrParams?: any,
+    sendAsId?: string
+  ): Promise<any> {
     try {
+      let call = callOrParams
+      let sendAs = sendAsId
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        sendAs = callOrParams.sendAs ?? callOrParams.send_as
+      }
       return await holder.client.call({
         _: 'phone.saveDefaultSendAs',
-        'call': call,
-        'send_as': sendAsId ? await this.resolveInputPeer(accountId, sendAsId) : undefined,
+        call: this.toInputGroupCall(call),
+        send_as: sendAs ? await this.resolveInputPeer(accountId, String(sendAs)) : { _: 'inputPeerSelf' },
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.saveDefaultSendAs error:', err)
-      return null
+      throw err
     }
   }
 
