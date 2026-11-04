@@ -3084,6 +3084,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:payments:get-stars-topup-options-raw', { accountId }),
   paymentsGetStarsTransactionsRaw: (accountId: string, params?: { peerId?: string; offset?: string; limit?: number; inbound?: boolean; outbound?: boolean; ascending?: boolean; subscriptionId?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:payments:get-stars-transactions-raw', { accountId, ...params }),
+  // Microphase 102: Payments Domain Suite Part 9 (7 RPCs: Transactions By ID, Ref Bots, Unique Gift Info, Prepaid Giveaway, Refund, Reorder Collections)
+  paymentsGetStarsTransactionsByIDRaw: (accountId: string, params: { peerId: string; id: string[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-stars-transactions-by-id-raw', { accountId, ...params }),
+  paymentsGetSuggestedStarRefBotsRaw: (accountId: string, params?: { peerId?: string; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-suggested-star-ref-bots-raw', { accountId, ...params }),
+  paymentsGetUniqueStarGiftRaw: (accountId: string, params: { slug: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-unique-star-gift-raw', { accountId, ...params }),
+  paymentsGetUniqueStarGiftValueInfoRaw: (accountId: string, params: { slug: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:get-unique-star-gift-value-info-raw', { accountId, ...params }),
+  paymentsLaunchPrepaidGiveawayRaw: (accountId: string, params: { peerId: string; giveawayId: bigint | number | string; purpose: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:launch-prepaid-giveaway-raw', { accountId, ...params }),
+  paymentsRefundStarsChargeRaw: (accountId: string, params: { userId: string; chargeId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:refund-stars-charge-raw', { accountId, ...params }),
+  paymentsReorderStarGiftCollectionsRaw: (accountId: string, params: { peerId: string; order: number[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:reorder-star-gift-collections-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

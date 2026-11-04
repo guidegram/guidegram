@@ -58,7 +58,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
@@ -114,6 +114,24 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   const [m101LoadingOp, setM101LoadingOp] = useState<string | null>(null)
   const [m101Error, setM101Error] = useState<string | null>(null)
   const [m101SuccessMessage, setM101SuccessMessage] = useState<string | null>(null)
+
+  // Microphase 102: Payments Domain Suite Part 9 (Unique Star Gifts, Valuation, Tx by ID, Ref Bots, Giveaways, Refund, Reorder)
+  const [m102Slug, setM102Slug] = useState<string>('')
+  const [m102UniqueGift, setM102UniqueGift] = useState<any | null>(null)
+  const [m102UniqueValueInfo, setM102UniqueValueInfo] = useState<any | null>(null)
+  const [m102TxIds, setM102TxIds] = useState<string>('')
+  const [m102TxData, setM102TxData] = useState<any | null>(null)
+  const [m102RefBots, setM102RefBots] = useState<any | null>(null)
+  const [m102GiveawayId, setM102GiveawayId] = useState<string>('')
+  const [m102PrepaidResult, setM102PrepaidResult] = useState<any | null>(null)
+  const [m102RefundUserId, setM102RefundUserId] = useState<string>('')
+  const [m102RefundChargeId, setM102RefundChargeId] = useState<string>('')
+  const [m102RefundResult, setM102RefundResult] = useState<any | null>(null)
+  const [m102ReorderList, setM102ReorderList] = useState<string>('')
+  const [m102ReorderResult, setM102ReorderResult] = useState<any | null>(null)
+  const [m102LoadingOp, setM102LoadingOp] = useState<string | null>(null)
+  const [m102Error, setM102Error] = useState<string | null>(null)
+  const [m102SuccessMessage, setM102SuccessMessage] = useState<string | null>(null)
 
   const loadM101StarsStatus = async () => {
     if (!accountId) return
@@ -255,6 +273,165 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
       setM101Error(err?.message || 'خطا در دریافت لینک برداشت ستاره (payments.getStarsRevenueWithdrawalUrl)')
     } finally {
       setM101LoadingOp(null)
+    }
+  }
+
+  // Microphase 102 Handlers (payments domain suite part 9)
+  const loadM102UniqueGift = async () => {
+    if (!accountId || !m102Slug.trim()) {
+      setM102Error('لطفاً Slug گیفت منحصربه‌فرد را وارد کنید (مثلاً pepe-101)')
+      return
+    }
+    setM102LoadingOp('uniqueGift')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetUniqueStarGiftRaw?.(accountId, {
+        slug: m102Slug.trim(),
+      })
+      setM102UniqueGift(res)
+      setM102SuccessMessage('اطلاعات گیفت نایاب با موفقیت استعلام شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM102UniqueGift error:', err)
+      setM102Error(err?.message || 'خطا در دریافت اطلاعات گیفت منحصربه‌فرد (payments.getUniqueStarGift)')
+    } finally {
+      setM102LoadingOp(null)
+    }
+  }
+
+  const loadM102UniqueGiftValueInfo = async () => {
+    if (!accountId || !m102Slug.trim()) {
+      setM102Error('لطفاً Slug گیفت منحصربه‌فرد را وارد کنید')
+      return
+    }
+    setM102LoadingOp('uniqueValue')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetUniqueStarGiftValueInfoRaw?.(accountId, {
+        slug: m102Slug.trim(),
+      })
+      setM102UniqueValueInfo(res)
+      setM102SuccessMessage('ارزش‌گذاری و دیتای معاملاتی گیفت نایاب دریافت شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM102UniqueGiftValueInfo error:', err)
+      setM102Error(err?.message || 'خطا در دریافت ارزش‌گذاری گیفت نایاب (payments.getUniqueStarGiftValueInfo)')
+    } finally {
+      setM102LoadingOp(null)
+    }
+  }
+
+  const loadM102TransactionsByID = async () => {
+    if (!accountId || !m102TxIds.trim()) {
+      setM102Error('شناسه حداقل یک تراکنش را وارد کنید')
+      return
+    }
+    setM102LoadingOp('txById')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const ids = m102TxIds.split(',').map((s) => s.trim()).filter(Boolean)
+      const res = await (window as any).guidegramAPI?.paymentsGetStarsTransactionsByIDRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+        id: ids,
+      })
+      setM102TxData(res)
+      setM102SuccessMessage('تراکنش‌های مدنظر با موفقیت بازخوانی شدند.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM102TransactionsByID error:', err)
+      setM102Error(err?.message || 'خطا در دریافت تراکنش‌ها بر اساس شناسه (payments.getStarsTransactionsByID)')
+    } finally {
+      setM102LoadingOp(null)
+    }
+  }
+
+  const loadM102SuggestedStarRefBots = async () => {
+    if (!accountId) return
+    setM102LoadingOp('refBots')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsGetSuggestedStarRefBotsRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+      })
+      setM102RefBots(res)
+      setM102SuccessMessage('بات‌های پیشنهادی ارجاع ستاره با موفقیت دریافت شدند.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] loadM102SuggestedStarRefBots error:', err)
+      setM102Error(err?.message || 'خطا در دریافت بات‌های رفرال ستاره (payments.getSuggestedStarRefBots)')
+    } finally {
+      setM102LoadingOp(null)
+    }
+  }
+
+  const launchM102PrepaidGiveaway = async () => {
+    if (!accountId || !m102GiveawayId.trim()) {
+      setM102Error('شناسه قرعه‌کشی (Giveaway ID) را وارد کنید')
+      return
+    }
+    setM102LoadingOp('giveaway')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsLaunchPrepaidGiveawayRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+        giveawayId: BigInt(m102GiveawayId.trim()),
+        purpose: { _: 'inputStorePaymentStarsGiveaway' },
+      })
+      setM102PrepaidResult(res)
+      setM102SuccessMessage('قرعه‌کشی با موفقیت در کانال فعال شد (payments.launchPrepaidGiveaway)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] launchM102PrepaidGiveaway error:', err)
+      setM102Error(err?.message || 'خطا در اجرای قرعه‌کشی از پیش‌پرداخت‌شده')
+    } finally {
+      setM102LoadingOp(null)
+    }
+  }
+
+  const submitM102RefundStarsCharge = async () => {
+    if (!accountId || !m102RefundUserId.trim() || !m102RefundChargeId.trim()) {
+      setM102Error('شناسه کاربر و شناسه تراکنش شارژ الزامی است')
+      return
+    }
+    setM102LoadingOp('refund')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsRefundStarsChargeRaw?.(accountId, {
+        userId: m102RefundUserId.trim(),
+        chargeId: m102RefundChargeId.trim(),
+      })
+      setM102RefundResult(res)
+      setM102SuccessMessage('مبلغ ستاره با موفقیت به کاربر ریفاند شد (payments.refundStarsCharge)')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] submitM102RefundStarsCharge error:', err)
+      setM102Error(err?.message || 'خطا در استرداد ستاره')
+    } finally {
+      setM102LoadingOp(null)
+    }
+  }
+
+  const submitM102ReorderStarGiftCollections = async () => {
+    if (!accountId || !m102ReorderList.trim()) {
+      setM102Error('ترتیب جدید کالکشن‌ها را به صورت اعداد با کاما وارد کنید (مثلاً 1, 2, 0)')
+      return
+    }
+    setM102LoadingOp('reorder')
+    setM102Error(null)
+    setM102SuccessMessage(null)
+    try {
+      const order = m102ReorderList.split(',').map((s) => Number(s.trim())).filter((n) => !isNaN(n))
+      const res = await (window as any).guidegramAPI?.paymentsReorderStarGiftCollectionsRaw?.(accountId, {
+        peerId: m101PeerId.trim() || undefined,
+        order,
+      })
+      setM102ReorderResult(res)
+      setM102SuccessMessage('چینش کالکشن‌ها در سرور تلگرام بروزرسانی شد.')
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] submitM102ReorderStarGiftCollections error:', err)
+      setM102Error(err?.message || 'خطا در ذخیره ترتیب کالکشن‌های گیفت')
+    } finally {
+      setM102LoadingOp(null)
     }
   }
 
@@ -1101,6 +1278,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                 <Coins className="w-3.5 h-3.5" />
                 <span>Revenue & Stars</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('unique_giveaways')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'unique_giveaways'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span>Unique & Giveaways</span>
+              </button>
             </div>
 
             {/* Ultra-Refined Minimalist Sorting & Filter Bar (/minimalist-ui) */}
@@ -1871,7 +2060,7 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : activeTab === 'revenue' ? (
                 /* Microphase 101: Revenue, Status, Subscriptions, Topup Options & Transactions */
                 <div className="space-y-4">
                   {/* Status & Feedback Banners */}
@@ -2223,7 +2412,307 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     )}
                   </div>
                 </div>
-              )}
+              ) : activeTab === 'unique_giveaways' ? (
+                /* Microphase 102: Unique Gifts, Valuation, Transactions By ID, Ref Bots, Prepaid Giveaways & Refunds */
+                <div className="space-y-4" dir="rtl">
+                  {/* Feedback Banner for Microphase 102 */}
+                  {m102Error && (
+                    <div className="p-3 rounded-2xl bg-rose-950/40 border border-rose-500/30 flex items-start justify-between gap-3 text-xs text-rose-300">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-semibold">خطا در عملیات ستاره/گیفت نایاب</div>
+                          <div className="text-[11px] opacity-80 mt-0.5">{m102Error}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM102Error(null)}
+                        className="px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-medium"
+                      >
+                        بستن
+                      </button>
+                    </div>
+                  )}
+
+                  {m102SuccessMessage && (
+                    <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs text-emerald-300">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>{m102SuccessMessage}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setM102SuccessMessage(null)}
+                        className="text-emerald-400 hover:underline text-[11px]"
+                      >
+                        متوجه شدم
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Card 1: Unique Star Gift Valuation & Details */}
+                  <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-400" />
+                        <span className="text-xs font-bold text-neutral-200">
+                          استعلام گیفت‌های نایاب و ارزش‌گذاری بازار (Unique Gifts & Valuation)
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-neutral-500 font-mono">
+                        payments.getUniqueStarGift / ValueInfo
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="text"
+                        value={m102Slug}
+                        onChange={(e) => setM102Slug(e.target.value)}
+                        placeholder="شناسه یا Slug گیفت نایاب (مثال: pepe-101)"
+                        className="flex-1 min-w-[200px] px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-amber-400/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={loadM102UniqueGift}
+                        disabled={m102LoadingOp === 'uniqueGift'}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {m102LoadingOp === 'uniqueGift' ? (
+                          <div className="w-3.5 h-3.5 rounded-full border border-amber-400/40 border-t-amber-400 animate-spin" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                        <span>مشخصات گیفت</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={loadM102UniqueGiftValueInfo}
+                        disabled={m102LoadingOp === 'uniqueValue'}
+                        className="px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {m102LoadingOp === 'uniqueValue' ? (
+                          <div className="w-3.5 h-3.5 rounded-full border border-purple-400/40 border-t-purple-400 animate-spin" />
+                        ) : (
+                          <TrendingUp className="w-3.5 h-3.5" />
+                        )}
+                        <span>ارزش‌گذاری و قیمت</span>
+                      </button>
+                    </div>
+
+                    {/* 4-State Display for Unique Gift Info */}
+                    {m102LoadingOp === 'uniqueGift' || m102LoadingOp === 'uniqueValue' ? (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2 text-xs text-neutral-400">
+                        <div className="w-6 h-6 rounded-full border-2 border-amber-500/40 border-t-amber-400 animate-spin" />
+                        <span>در حال استعلام اطلاعات گیفت نایاب از سرور تلگرام...</span>
+                      </div>
+                    ) : m102UniqueGift || m102UniqueValueInfo ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        {m102UniqueGift && (
+                          <div className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-2 text-xs">
+                            <div className="text-amber-400 font-semibold flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>اطلاعات گیفت نایاب (Unique Gift)</span>
+                            </div>
+                            <div className="text-[11px] font-mono text-neutral-300 space-y-1">
+                              <div>عنوان: {m102UniqueGift.gift?.title || m102UniqueGift.title || m102Slug}</div>
+                              <div>شماره نامبر: #{m102UniqueGift.gift?.num || m102UniqueGift.num || '1'}</div>
+                              <div>مالک کنونی: {m102UniqueGift.gift?.ownerId || 'ثبت شده'}</div>
+                            </div>
+                          </div>
+                        )}
+                        {m102UniqueValueInfo && (
+                          <div className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-2 text-xs">
+                            <div className="text-purple-400 font-semibold flex items-center gap-1.5">
+                              <Coins className="w-3.5 h-3.5" />
+                              <span>ارزش‌گذاری بازار (Value Info)</span>
+                            </div>
+                            <div className="text-[11px] font-mono text-neutral-300 space-y-1">
+                              <div>ارزش تقریبی: {m102UniqueValueInfo.value || m102UniqueValueInfo.estimatedValue || 'محاسبه شده'} ⭐</div>
+                              <div>آخرین فروش: {m102UniqueValueInfo.lastSalePrice || 'توافقی'}</div>
+                              <div>کارمزد انتقال: {m102UniqueValueInfo.transferStars || 0} ⭐</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="py-4 px-3 rounded-xl bg-black/20 border border-dashed border-white/5 text-center text-xs text-neutral-500">
+                        برای مشاهده متادیتا و ارزش‌گذاری گیفت نایاب، Slug آن را وارد و یکی از دکمه‌ها را فراخوانی کنید.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card 2: Transactions By ID & Suggested Referral Bots */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Subcard 2A: Transactions By ID */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Receipt className="w-4 h-4 text-cyan-400" />
+                        <span className="text-xs font-bold text-neutral-200">
+                          تراکنش‌ها بر اساس شناسه (Tx By ID)
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={m102TxIds}
+                          onChange={(e) => setM102TxIds(e.target.value)}
+                          placeholder="شناسه‌ها با کاما (مثال: tx101, tx102)"
+                          className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-cyan-400/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={loadM102TransactionsByID}
+                          disabled={m102LoadingOp === 'txById'}
+                          className="w-full py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          {m102LoadingOp === 'txById' ? (
+                            <div className="w-3.5 h-3.5 rounded-full border border-cyan-400/40 border-t-cyan-400 animate-spin" />
+                          ) : (
+                            <Search className="w-3.5 h-3.5" />
+                          )}
+                          <span>استعلام تراکنش‌های خاص</span>
+                        </button>
+                      </div>
+
+                      {m102TxData && (
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 text-[11px] font-mono text-neutral-300 max-h-36 overflow-y-auto">
+                          {m102TxData.transactions?.length > 0 ? (
+                            m102TxData.transactions.map((tx: any, i: number) => (
+                              <div key={i} className="py-1 border-b border-white/5 last:border-none flex justify-between">
+                                <span>{tx.id || `تراکنش #${i + 1}`}</span>
+                                <span className="text-amber-400">{tx.stars || 0} ⭐</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-neutral-500 text-center py-2">هیچ تراکنشی یافت نشد.</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Subcard 2B: Suggested Referral Bots */}
+                    <div className="p-4 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-bold text-neutral-200">
+                          بات‌های رفرال ستاره (Suggested Ref Bots)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadM102SuggestedStarRefBots}
+                        disabled={m102LoadingOp === 'refBots'}
+                        className="w-full py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {m102LoadingOp === 'refBots' ? (
+                          <div className="w-3.5 h-3.5 rounded-full border border-emerald-400/40 border-t-emerald-400 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                        <span>دریافت لیست بات‌های پیشنهادی</span>
+                      </button>
+
+                      {m102RefBots && (
+                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 text-[11px] font-mono text-neutral-300 max-h-36 overflow-y-auto">
+                          {m102RefBots.bots?.length > 0 ? (
+                            m102RefBots.bots.map((b: any, i: number) => (
+                              <div key={i} className="py-1 border-b border-white/5 last:border-none flex justify-between">
+                                <span>{b.title || b.username || `Bot #${i + 1}`}</span>
+                                <span className="text-emerald-400">{b.commission || 0}% پورسانت</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-neutral-500 text-center py-2">بات پیشنهادی یافت نشد (Genesis State).</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card 3: Prepaid Giveaways, Star Refund & Reordering */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Launch Prepaid Giveaway */}
+                    <div className="p-3.5 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-200">
+                        <Gift className="w-3.5 h-3.5 text-amber-400" />
+                        <span>قرعه‌کشی از پیش‌پرداخت‌شده</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={m102GiveawayId}
+                        onChange={(e) => setM102GiveawayId(e.target.value)}
+                        placeholder="شناسه قرعه‌کشی (Giveaway ID)"
+                        className="w-full px-2.5 py-1 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={launchM102PrepaidGiveaway}
+                        disabled={m102LoadingOp === 'giveaway'}
+                        className="w-full py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <span>راه‌اندازی قرعه‌کشی</span>
+                      </button>
+                    </div>
+
+                    {/* Refund Stars Charge */}
+                    <div className="p-3.5 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-200">
+                        <Wallet className="w-3.5 h-3.5 text-rose-400" />
+                        <span>استرداد ستاره (Refund)</span>
+                      </div>
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={m102RefundUserId}
+                          onChange={(e) => setM102RefundUserId(e.target.value)}
+                          placeholder="شناسه کاربر (User ID)"
+                          className="w-full px-2 py-1 rounded-xl bg-black/40 border border-white/10 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={m102RefundChargeId}
+                          onChange={(e) => setM102RefundChargeId(e.target.value)}
+                          placeholder="شناسه شارژ (Charge ID)"
+                          className="w-full px-2 py-1 rounded-xl bg-black/40 border border-white/10 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={submitM102RefundStarsCharge}
+                        disabled={m102LoadingOp === 'refund'}
+                        className="w-full py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <span>استرداد وجه ستاره</span>
+                      </button>
+                    </div>
+
+                    {/* Reorder Star Gift Collections */}
+                    <div className="p-3.5 rounded-2xl bg-neutral-900/60 border border-white/5 space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-200">
+                        <Layers className="w-3.5 h-3.5 text-purple-400" />
+                        <span>چینش کالکشن‌ها</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={m102ReorderList}
+                        onChange={(e) => setM102ReorderList(e.target.value)}
+                        placeholder="ترتیب کالکشن‌ها (مثال: 0, 1, 2)"
+                        className="w-full px-2.5 py-1 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={submitM102ReorderStarGiftCollections}
+                        disabled={m102LoadingOp === 'reorder'}
+                        className="w-full py-1 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <span>ذخیره چینش جدید</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {/* Editorial Footer */}
@@ -2239,6 +2728,8 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ? 'Telegram MTProto payments.getStarGiftActiveAuctions & Resale'
                     : activeTab === 'upgrades'
                     ? 'Telegram MTProto payments.getStarGiftCollections, Upgrades & Giveaways'
+                    : activeTab === 'unique_giveaways'
+                    ? 'Telegram MTProto payments.getUniqueStarGift, TransactionsByID, RefBots & Giveaways'
                     : 'Telegram MTProto payments.getStarsStatus, RevenueStats, TopupOptions & Transactions'}
                 </span>
               </div>

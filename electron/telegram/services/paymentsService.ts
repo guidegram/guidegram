@@ -244,16 +244,24 @@ export class PaymentsService {
     }
   }
 
-  public async launchPrepaidGiveaway(holder: RpcClientHolder, accountId: string, peerId: string, giveawayId: bigint, purpose: any): Promise<any> {
+  public async launchPrepaidGiveaway(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerId: string,
+    giveawayId: bigint | number | Long | string,
+    purpose?: any
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.launchPrepaidGiveaway',
-        peer, giveawayId, purpose,
+        peer,
+        giveawayId: toLong(giveawayId),
+        purpose: purpose || { _: 'inputStorePaymentStarsGiveaway', stars: 100 },
       })
     } catch (err) {
       Logger.warn('[PaymentsService] launchPrepaidGiveaway error:', err)
-      return null
+      throw err
     }
   }
 
@@ -325,15 +333,22 @@ export class PaymentsService {
     }
   }
 
-  public async refundStarsCharge(holder: RpcClientHolder, accountId: string, userId: string, chargeId: string): Promise<any> {
+  public async refundStarsCharge(
+    holder: RpcClientHolder,
+    accountId: string,
+    userId: string,
+    chargeId: string
+  ): Promise<any> {
     try {
+      const inputUser = await this.toInputUser(accountId, userId)
       return await holder.client.call({
         _: 'payments.refundStarsCharge',
-        user: await this.toInputUser(accountId, userId), chargeId,
+        userId: inputUser || { _: 'inputUserSelf' },
+        chargeId: String(chargeId || '').trim(),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] refundStarsCharge error:', err)
-      return null
+      throw err
     }
   }
 
@@ -394,16 +409,34 @@ export class PaymentsService {
     }
   }
 
-  public async getStarsTransactionsByID(holder: RpcClientHolder, accountId: string, peerId: string, id: any[]): Promise<any> {
+  public async getStarsTransactionsByID(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerId: string,
+    id: any[],
+    ton?: boolean
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+      const txIds = (id || []).map((item) => {
+        if (typeof item === 'string') {
+          return { _: 'inputStarsTransaction' as const, id: item }
+        }
+        return {
+          _: 'inputStarsTransaction' as const,
+          id: item.id,
+          refund: Boolean(item.refund),
+        }
+      })
       return await holder.client.call({
         _: 'payments.getStarsTransactionsByID',
-        peer, id,
+        peer,
+        id: txIds,
+        ton: Boolean(ton),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getStarsTransactionsByID error:', err)
-      return null
+      throw err
     }
   }
 
@@ -575,16 +608,40 @@ export class PaymentsService {
     }
   }
 
-  public async getSuggestedStarRefBots(holder: RpcClientHolder, accountId: string, peerId: string, offset = '', limit = 50, orderByRevenue?: boolean, orderByDate?: boolean): Promise<any> {
+  public async getSuggestedStarRefBots(
+    holder: RpcClientHolder,
+    accountId: string,
+    peerId: string,
+    offsetOrOptions: any = '',
+    limit = 20,
+    orderByRevenue?: boolean,
+    orderByDate?: boolean
+  ): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
+      let offset = ''
+      let effLimit = limit
+      let rev = Boolean(orderByRevenue)
+      let date = Boolean(orderByDate)
+      if (typeof offsetOrOptions === 'object' && offsetOrOptions !== null) {
+        offset = offsetOrOptions.offset || ''
+        effLimit = offsetOrOptions.limit || limit
+        rev = Boolean(offsetOrOptions.orderByRevenue)
+        date = Boolean(offsetOrOptions.orderByDate)
+      } else if (typeof offsetOrOptions === 'string') {
+        offset = offsetOrOptions
+      }
       return await holder.client.call({
         _: 'payments.getSuggestedStarRefBots',
-        peer, offset, limit, orderByRevenue, orderByDate,
+        peer,
+        offset,
+        limit: effLimit,
+        orderByRevenue: rev,
+        orderByDate: date,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getSuggestedStarRefBots error:', err)
-      return null
+      throw err
     }
   }
 
@@ -657,11 +714,11 @@ export class PaymentsService {
     try {
       return await holder.client.call({
         _: 'payments.getUniqueStarGift',
-        slug,
+        slug: String(slug || '').trim(),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getUniqueStarGift error:', err)
-      return null
+      throw err
     }
   }
 
@@ -844,14 +901,15 @@ export class PaymentsService {
 
   public async reorderStarGiftCollections(holder: RpcClientHolder, accountId: string, peerId: string, order: number[]): Promise<any> {
     try {
-      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerEmpty' }
+      const peer = peerId ? await this.resolveInputPeer(accountId, peerId) : { _: 'inputPeerSelf' }
       return await holder.client.call({
         _: 'payments.reorderStarGiftCollections',
-        peer, order,
+        peer,
+        order: (order || []).map(Number),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] reorderStarGiftCollections error:', err)
-      return null
+      throw err
     }
   }
 
@@ -873,11 +931,11 @@ export class PaymentsService {
     try {
       return await holder.client.call({
         _: 'payments.getUniqueStarGiftValueInfo',
-        slug,
+        slug: String(slug || '').trim(),
       })
     } catch (err) {
       Logger.warn('[PaymentsService] getUniqueStarGiftValueInfo error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1396,4 +1454,5 @@ export class PaymentsService {
     }
   }
 }
+
 

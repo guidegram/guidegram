@@ -22167,6 +22167,120 @@ export class AccountManager {
       params?.subscriptionId
     )
   }
+
+  // =========================================================================
+  // Microphase 102: Payments Domain Suite Part 9 (7 RPCs)
+  // =========================================================================
+
+  public async paymentsGetStarsTransactionsByIDRaw(
+    accountId: string,
+    params: {
+      peerId?: string
+      ids: Array<string | { id: string; refund?: boolean }>
+      ton?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getStarsTransactionsByID(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params?.ids || [],
+      params?.ton
+    )
+  }
+
+  public async paymentsGetSuggestedStarRefBotsRaw(
+    accountId: string,
+    params?: {
+      peerId?: string
+      offset?: string
+      limit?: number
+      orderByRevenue?: boolean
+      orderByDate?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getSuggestedStarRefBots(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params
+    )
+  }
+
+  public async paymentsGetUniqueStarGiftRaw(
+    accountId: string,
+    params: { slug: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getUniqueStarGift(holder as any, params?.slug)
+  }
+
+  public async paymentsGetUniqueStarGiftValueInfoRaw(
+    accountId: string,
+    params: { slug: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.getUniqueStarGiftValueInfo(holder as any, params?.slug)
+  }
+
+  public async paymentsLaunchPrepaidGiveawayRaw(
+    accountId: string,
+    params: {
+      peerId?: string
+      giveawayId: bigint | number | any | string
+      purpose?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.launchPrepaidGiveaway(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params?.giveawayId,
+      params?.purpose
+    )
+  }
+
+  public async paymentsRefundStarsChargeRaw(
+    accountId: string,
+    params: {
+      userId: string
+      chargeId: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.refundStarsCharge(
+      holder as any,
+      accountId,
+      params?.userId,
+      params?.chargeId
+    )
+  }
+
+  public async paymentsReorderStarGiftCollectionsRaw(
+    accountId: string,
+    params: {
+      peerId?: string
+      order: number[]
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.reorderStarGiftCollections(
+      holder as any,
+      accountId,
+      params?.peerId || '',
+      params?.order || []
+    )
+  }
 }
 
 
