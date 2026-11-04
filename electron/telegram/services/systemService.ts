@@ -1248,19 +1248,48 @@ export class SystemService {
     }
   }
 
-  public async phone_discardCall(holder: RpcClientHolder, video?: boolean, peer?: any, duration?: number, reason?: any, connectionId?: bigint | number): Promise<any> {
+  public async phone_discardCall(
+    holder: RpcClientHolder,
+    paramsOrVideo?: any,
+    peer?: any,
+    duration?: number,
+    reason?: any,
+    connectionId?: bigint | number
+  ): Promise<any> {
     try {
+      let p: any = {}
+      if (typeof paramsOrVideo === 'object' && paramsOrVideo !== null && !paramsOrVideo._) {
+        p = paramsOrVideo
+      } else {
+        p = {
+          video: paramsOrVideo,
+          peer,
+          duration,
+          reason,
+          connectionId,
+        }
+      }
+
+      let resolvedReason = p.reason || { _: 'phoneCallDiscardReasonHangup' }
+      if (typeof resolvedReason === 'string') {
+        const lower = resolvedReason.toLowerCase()
+        if (lower === 'busy') resolvedReason = { _: 'phoneCallDiscardReasonBusy' }
+        else if (lower === 'missed') resolvedReason = { _: 'phoneCallDiscardReasonMissed' }
+        else if (lower === 'disconnect') resolvedReason = { _: 'phoneCallDiscardReasonDisconnect' }
+        else resolvedReason = { _: 'phoneCallDiscardReasonHangup' }
+      }
+
       return await holder.client.call({
         _: 'phone.discardCall',
-        'video': video,
-        'peer': peer,
-        'duration': duration,
-        'reason': reason,
-        'connection_id': connectionId,
+        video: !!p.video,
+        peer: this.toInputPhoneCall(p.peer),
+        duration: Number(p.duration || 0),
+        reason: resolvedReason,
+        connection_id: p.connectionId !== undefined ? BigInt(p.connectionId) : 0n,
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.discardCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1387,15 +1416,18 @@ export class SystemService {
     }
   }
 
-  public async phone_discardGroupCall(holder: RpcClientHolder, call?: any): Promise<any> {
+  public async phone_discardGroupCall(holder: RpcClientHolder, callOrParams?: any): Promise<any> {
     try {
+      const call = (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined)
+        ? callOrParams.call
+        : callOrParams
       return await holder.client.call({
         _: 'phone.discardGroupCall',
-        'call': call,
+        call: this.toInputGroupCall(call),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.discardGroupCall error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1485,35 +1517,129 @@ export class SystemService {
     }
   }
 
-  public async phone_editGroupCallParticipant(holder: RpcClientHolder, accountId: string, call?: any, participantId?: string, muted?: boolean, volume?: number, raiseHand?: boolean, videoStopped?: boolean, videoPaused?: boolean, presentationPaused?: boolean): Promise<any> {
+  public async phone_deleteGroupCallMessages(
+    holder: RpcClientHolder,
+    callOrParams?: any,
+    messages?: any,
+    reportSpam?: boolean
+  ): Promise<any> {
     try {
+      let call = callOrParams
+      let msgs = messages
+      let spam = reportSpam
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        msgs = callOrParams.messages
+        spam = callOrParams.reportSpam ?? callOrParams.report_spam
+      }
+      let resolvedMsgs: number[] = []
+      if (Array.isArray(msgs)) {
+        resolvedMsgs = msgs.map(Number)
+      } else if (msgs !== undefined) {
+        resolvedMsgs = [Number(msgs)]
+      }
       return await holder.client.call({
-        _: 'phone.editGroupCallParticipant',
-        'call': call,
-        'participant': participantId ? await this.resolveInputPeer(accountId, participantId) : undefined,
-        'muted': muted,
-        'volume': volume,
-        'raise_hand': raiseHand,
-        'video_stopped': videoStopped,
-        'video_paused': videoPaused,
-        'presentation_paused': presentationPaused,
+        _: 'phone.deleteGroupCallMessages',
+        report_spam: !!spam,
+        call: this.toInputGroupCall(call),
+        messages: resolvedMsgs,
       })
     } catch (err) {
-      Logger.warn('[SystemService] phone.editGroupCallParticipant error:', err)
-      return null
+      Logger.warn('[SystemService] phone.deleteGroupCallMessages error:', err)
+      throw err
     }
   }
 
-  public async phone_editGroupCallTitle(holder: RpcClientHolder, call?: any, title?: string): Promise<any> {
+  public async phone_deleteGroupCallParticipantMessages(
+    holder: RpcClientHolder,
+    accountId: string,
+    callOrParams?: any,
+    participantId?: any,
+    reportSpam?: boolean
+  ): Promise<any> {
     try {
+      let call = callOrParams
+      let part = participantId
+      let spam = reportSpam
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && (callOrParams.call !== undefined || callOrParams.participant !== undefined)) {
+        call = callOrParams.call
+        part = callOrParams.participant ?? callOrParams.participantId
+        spam = callOrParams.reportSpam ?? callOrParams.report_spam
+      }
+      return await holder.client.call({
+        _: 'phone.deleteGroupCallParticipantMessages',
+        report_spam: !!spam,
+        call: this.toInputGroupCall(call),
+        participant: await this.resolveInputPeer(accountId, part),
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] phone.deleteGroupCallParticipantMessages error:', err)
+      throw err
+    }
+  }
+
+  public async phone_editGroupCallParticipant(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrCall?: any,
+    participantId?: any,
+    muted?: boolean,
+    volume?: number,
+    raiseHand?: boolean,
+    videoStopped?: boolean,
+    videoPaused?: boolean,
+    presentationPaused?: boolean
+  ): Promise<any> {
+    try {
+      let p: any = {}
+      if (typeof paramsOrCall === 'object' && paramsOrCall !== null && !paramsOrCall._ && (paramsOrCall.call !== undefined || paramsOrCall.participant !== undefined)) {
+        p = paramsOrCall
+      } else {
+        p = {
+          call: paramsOrCall,
+          participant: participantId,
+          muted,
+          volume,
+          raiseHand,
+          videoStopped,
+          videoPaused,
+          presentationPaused,
+        }
+      }
+      const part = p.participant ?? p.participantId ?? p.peer
+      return await holder.client.call({
+        _: 'phone.editGroupCallParticipant',
+        call: this.toInputGroupCall(p.call),
+        participant: await this.resolveInputPeer(accountId, part),
+        muted: p.muted !== undefined ? !!p.muted : undefined,
+        volume: p.volume !== undefined ? Number(p.volume) : undefined,
+        raise_hand: p.raiseHand !== undefined ? !!p.raiseHand : (p.raise_hand !== undefined ? !!p.raise_hand : undefined),
+        video_stopped: p.videoStopped !== undefined ? !!p.videoStopped : (p.video_stopped !== undefined ? !!p.video_stopped : undefined),
+        video_paused: p.videoPaused !== undefined ? !!p.videoPaused : (p.video_paused !== undefined ? !!p.video_paused : undefined),
+        presentation_paused: p.presentationPaused !== undefined ? !!p.presentationPaused : (p.presentation_paused !== undefined ? !!p.presentation_paused : undefined),
+      })
+    } catch (err) {
+      Logger.warn('[SystemService] phone.editGroupCallParticipant error:', err)
+      throw err
+    }
+  }
+
+  public async phone_editGroupCallTitle(holder: RpcClientHolder, callOrParams?: any, title?: string): Promise<any> {
+    try {
+      let call = callOrParams
+      let t = title
+      if (typeof callOrParams === 'object' && callOrParams !== null && !callOrParams._ && callOrParams.call !== undefined) {
+        call = callOrParams.call
+        t = callOrParams.title
+      }
       return await holder.client.call({
         _: 'phone.editGroupCallTitle',
-        'call': call,
-        'title': title,
+        call: this.toInputGroupCall(call),
+        title: String(t || ''),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.editGroupCallTitle error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1529,16 +1655,24 @@ export class SystemService {
     }
   }
 
-  public async phone_exportGroupCallInvite(holder: RpcClientHolder, canSelfUnmute?: boolean, call?: any): Promise<any> {
+  public async phone_exportGroupCallInvite(holder: RpcClientHolder, paramsOrCanSelfUnmute?: any, call?: any): Promise<any> {
     try {
+      let canSelfUnmute = false
+      let c = call
+      if (typeof paramsOrCanSelfUnmute === 'object' && paramsOrCanSelfUnmute !== null && !paramsOrCanSelfUnmute._ && paramsOrCanSelfUnmute.call !== undefined) {
+        canSelfUnmute = !!(paramsOrCanSelfUnmute.canSelfUnmute ?? paramsOrCanSelfUnmute.can_self_unmute)
+        c = paramsOrCanSelfUnmute.call
+      } else {
+        canSelfUnmute = !!paramsOrCanSelfUnmute
+      }
       return await holder.client.call({
         _: 'phone.exportGroupCallInvite',
-        'can_self_unmute': canSelfUnmute,
-        'call': call,
+        can_self_unmute: canSelfUnmute,
+        call: this.toInputGroupCall(c),
       })
     } catch (err) {
       Logger.warn('[SystemService] phone.exportGroupCallInvite error:', err)
-      return null
+      throw err
     }
   }
 
@@ -1812,33 +1946,7 @@ export class SystemService {
     }
   }
 
-  public async phone_deleteGroupCallMessages(holder: RpcClientHolder, reportSpam?: boolean, call?: any, messages?: number): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'phone.deleteGroupCallMessages',
-        'report_spam': reportSpam,
-        'call': call,
-        'messages': messages,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] phone.deleteGroupCallMessages error:', err)
-      return null
-    }
-  }
 
-  public async phone_deleteGroupCallParticipantMessages(holder: RpcClientHolder, accountId: string, reportSpam?: boolean, call?: any, participantId?: string): Promise<any> {
-    try {
-      return await holder.client.call({
-        _: 'phone.deleteGroupCallParticipantMessages',
-        'report_spam': reportSpam,
-        'call': call,
-        'participant': participantId ? await this.resolveInputPeer(accountId, participantId) : undefined,
-      })
-    } catch (err) {
-      Logger.warn('[SystemService] phone.deleteGroupCallParticipantMessages error:', err)
-      return null
-    }
-  }
 
   public async phone_getGroupCallStars(holder: RpcClientHolder, call?: any): Promise<any> {
     try {

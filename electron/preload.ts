@@ -3166,6 +3166,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:phone:decline-conference-call-invite-raw', { accountId, ...params }),
   phoneDeleteConferenceCallParticipantsRaw: (accountId: string, params: { onlyLeft?: boolean; kick?: boolean; call: any; ids: (bigint | number)[]; block?: any }): Promise<any> =>
     ipcRenderer.invoke('telegram:phone:delete-conference-call-participants-raw', { accountId, ...params }),
+  // Layer 232 Phone Suite (Microphase 108)
+  phoneDeleteGroupCallMessagesRaw: (accountId: string, params: { call: any; messages: number[]; reportSpam?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:delete-group-call-messages-raw', { accountId, ...params }),
+  phoneDeleteGroupCallParticipantMessagesRaw: (accountId: string, params: { call: any; participant: any; reportSpam?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:delete-group-call-participant-messages-raw', { accountId, ...params }),
+  phoneDiscardCallRaw: (accountId: string, params: { peer: any; duration?: number; reason?: any; connectionId?: bigint | number; video?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:discard-call-raw', { accountId, ...params }),
+  phoneDiscardGroupCallRaw: (accountId: string, params: { call: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:discard-group-call-raw', { accountId, ...params }),
+  phoneEditGroupCallParticipantRaw: (accountId: string, params: { call: any; participant: any; muted?: boolean; volume?: number; raiseHand?: boolean; videoStopped?: boolean; videoPaused?: boolean; presentationPaused?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:edit-group-call-participant-raw', { accountId, ...params }),
+  phoneEditGroupCallTitleRaw: (accountId: string, params: { call: any; title: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:edit-group-call-title-raw', { accountId, ...params }),
+  phoneExportGroupCallInviteRaw: (accountId: string, params: { call: any; canSelfUnmute?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:phone:export-group-call-invite-raw', { accountId, ...params }),
 
 
   setEmojiStatus: (

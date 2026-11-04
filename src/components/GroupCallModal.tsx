@@ -27,6 +27,11 @@ import {
   Calendar,
   SlidersHorizontal,
   UserX,
+  Link,
+  Edit3,
+  MessageSquare,
+  Share2,
+  Copy,
 } from 'lucide-react'
 import { GroupCallInfo, GroupCallParticipantItem } from '../types/telegram'
 import { useI18n } from '../i18n'
@@ -96,6 +101,32 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
   const [delConfKick, setDelConfKick] = useState(false)
   const [delConfOnlyLeft, setDelConfOnlyLeft] = useState(false)
   const [delConfParticipantIds, setDelConfParticipantIds] = useState('')
+
+  // Microphase 108: Phone Domain Suite Part 2 States
+  // 1 & 2: Delete Call Messages
+  const [delCallMessagesInput, setDelCallMessagesInput] = useState('')
+  const [delCallMessagesSpam, setDelCallMessagesSpam] = useState(false)
+  const [delPartMsgPeer, setDelPartMsgPeer] = useState('')
+  const [delPartMsgSpam, setDelPartMsgSpam] = useState(false)
+
+  // 3: Discard P2P Call
+  const [discardP2pDuration, setDiscardP2pDuration] = useState('0')
+  const [discardP2pReason, setDiscardP2pReason] = useState<'hangup' | 'busy' | 'missed' | 'disconnect'>('hangup')
+  const [discardP2pVideo, setDiscardP2pVideo] = useState(false)
+
+  // 4: Edit Group Call Title
+  const [editCallTitleInput, setEditCallTitleInput] = useState('')
+
+  // 5: Edit Group Call Participant
+  const [editPartPeerId, setEditPartPeerId] = useState('')
+  const [editPartMuted, setEditPartMuted] = useState(false)
+  const [editPartVolume, setEditPartVolume] = useState(100)
+  const [editPartRaiseHand, setEditPartRaiseHand] = useState(false)
+  const [editPartVideoStopped, setEditPartVideoStopped] = useState(false)
+
+  // 6: Export Group Call Invite
+  const [exportCanSelfUnmute, setExportCanSelfUnmute] = useState(true)
+  const [exportedInviteLink, setExportedInviteLink] = useState<string | null>(null)
 
   // UI Feedback States
   const [loadingOp, setLoadingOp] = useState<string | null>(null)
@@ -529,6 +560,223 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
     }
   }
 
+  // Microphase 108: 1. Delete Group Call Messages (phone.deleteGroupCallMessages)
+  const handleDeleteGroupCallMessages = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('شناسه تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!delCallMessagesInput.trim()) {
+      setErrorMsg('شناسه پیام‌ها (Message IDs) الزامی است')
+      return
+    }
+    setLoadingOp('del_call_msgs')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const msgs = delCallMessagesInput
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !isNaN(n))
+      const res = await api?.phoneDeleteGroupCallMessagesRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        messages: msgs,
+        reportSpam: delCallMessagesSpam,
+      })
+      setLastOpResult(res)
+      setSuccessMsg('پیام‌های تماس گروهی با موفقیت حذف شدند (phone.deleteGroupCallMessages)')
+      setDelCallMessagesInput('')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] deleteGroupCallMessages error:', err)
+      setErrorMsg(err?.message || 'خطا در حذف پیام‌های تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 108: 2. Delete Participant Messages (phone.deleteGroupCallParticipantMessages)
+  const handleDeleteParticipantMessages = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('شناسه تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!delPartMsgPeer.trim()) {
+      setErrorMsg('شناسه شرکت‌کننده (Participant ID) الزامی است')
+      return
+    }
+    setLoadingOp('del_part_msgs')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneDeleteGroupCallParticipantMessagesRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        participant: delPartMsgPeer.trim(),
+        reportSpam: delPartMsgSpam,
+      })
+      setLastOpResult(res)
+      setSuccessMsg(`پیام‌های شرکت‌کننده ${delPartMsgPeer} در تماس حذف شدند (phone.deleteGroupCallParticipantMessages)`)
+      setDelPartMsgPeer('')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] deleteGroupCallParticipantMessages error:', err)
+      setErrorMsg(err?.message || 'خطا در حذف پیام‌های شرکت‌کننده تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 108: 3. Discard P2P Call (phone.discardCall)
+  const handleDiscardCall = async () => {
+    if (!accountId || !p2pCallId.trim()) {
+      setErrorMsg('شناسه تماس P2P (Call ID) الزامی است')
+      return
+    }
+    setLoadingOp('discard_p2p_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneDiscardCallRaw?.(accountId, {
+        peer: { id: p2pCallId.trim(), accessHash: p2pAccessHash.trim() || '0' },
+        duration: Number(discardP2pDuration || 0),
+        reason: discardP2pReason,
+        video: discardP2pVideo,
+      })
+      setLastOpResult(res)
+      setSuccessMsg('تماس P2P با موفقیت پایان یافت (phone.discardCall)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] discardCall error:', err)
+      setErrorMsg(err?.message || 'خطا در پایان دادن به تماس P2P')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 108: 4. Discard Group Call (phone.discardGroupCall)
+  const handleDiscardGroupCall = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال برای پایان دادن یافت نشد')
+      return
+    }
+    setLoadingOp('discard_group_call')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneDiscardGroupCallRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+      })
+      setLastOpResult(res)
+      setSuccessMsg('تماس گروهی با موفقیت خاتمه یافت (phone.discardGroupCall)')
+      setCallInfo(null)
+      onClose()
+    } catch (err: any) {
+      console.warn('[GroupCallModal] discardGroupCall error:', err)
+      setErrorMsg(err?.message || 'خطا در خاتمه دادن به تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 108: 5. Edit Group Call Participant (phone.editGroupCallParticipant)
+  const handleEditGroupCallParticipant = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!editPartPeerId.trim()) {
+      setErrorMsg('شناسه شرکت‌کننده (Participant ID) الزامی است')
+      return
+    }
+    setLoadingOp('edit_participant')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneEditGroupCallParticipantRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        participant: editPartPeerId.trim(),
+        muted: editPartMuted,
+        volume: Number(editPartVolume || 100),
+        raiseHand: editPartRaiseHand,
+        videoStopped: editPartVideoStopped,
+      })
+      setLastOpResult(res)
+      setSuccessMsg(`تنظیمات شرکت‌کننده ${editPartPeerId} با موفقیت بروزرسانی شد (phone.editGroupCallParticipant)`)
+    } catch (err: any) {
+      console.warn('[GroupCallModal] editGroupCallParticipant error:', err)
+      setErrorMsg(err?.message || 'خطا در ویرایش تنظیمات شرکت‌کننده')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 108: 6. Edit Group Call Title (phone.editGroupCallTitle)
+  const handleEditGroupCallTitle = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    if (!editCallTitleInput.trim()) {
+      setErrorMsg('عنوان جدید تماس الزامی است')
+      return
+    }
+    setLoadingOp('edit_call_title')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneEditGroupCallTitleRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        title: editCallTitleInput.trim(),
+      })
+      setLastOpResult(res)
+      setSuccessMsg(`عنوان تماس به "${editCallTitleInput.trim()}" تغییر یافت (phone.editGroupCallTitle)`)
+      if (callInfo) {
+        setCallInfo({ ...callInfo, title: editCallTitleInput.trim() })
+      }
+      setEditCallTitleInput('')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] editGroupCallTitle error:', err)
+      setErrorMsg(err?.message || 'خطا در ویرایش عنوان تماس گروهی')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
+  // Microphase 108: 7. Export Group Call Invite (phone.exportGroupCallInvite)
+  const handleExportGroupCallInvite = async () => {
+    const targetCallId = callInfo?.id || initialCallId
+    const targetAccessHash = callInfo?.accessHash || initialAccessHash
+    if (!accountId || !targetCallId) {
+      setErrorMsg('تماس گروهی فعال یافت نشد')
+      return
+    }
+    setLoadingOp('export_call_invite')
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await api?.phoneExportGroupCallInviteRaw?.(accountId, {
+        call: { id: targetCallId, accessHash: targetAccessHash },
+        canSelfUnmute: exportCanSelfUnmute,
+      })
+      setLastOpResult(res)
+      const link = res?.link || res?.url || (typeof res === 'string' ? res : JSON.stringify(res))
+      setExportedInviteLink(link)
+      setSuccessMsg('لینک دعوت تماس با موفقیت صادر شد (phone.exportGroupCallInvite)')
+    } catch (err: any) {
+      console.warn('[GroupCallModal] exportGroupCallInvite error:', err)
+      setErrorMsg(err?.message || 'خطا در صدور لینک دعوت تماس')
+    } finally {
+      setLoadingOp(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -763,6 +1011,217 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Edit Call Title & Export Invite Link */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <Edit3 className="w-3.5 h-3.5 text-accent-cyan" />
+                      <span>عنوان و لینک دعوت (phone.editGroupCallTitle / exportGroupCallInvite)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={editCallTitleInput}
+                        onChange={(e) => setEditCallTitleInput(e.target.value)}
+                        placeholder="عنوان جدید تماس..."
+                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleEditGroupCallTitle}
+                        disabled={loadingOp === 'edit_call_title'}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {loadingOp === 'edit_call_title' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'تغییر عنوان'}
+                      </button>
+                    </div>
+
+                    <div className="pt-1 border-t border-white/5 flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportCanSelfUnmute}
+                          onChange={(e) => setExportCanSelfUnmute(e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-cyan-500 focus:ring-0"
+                        />
+                        <span>اجازه خروج از میوت (can_self_unmute)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleExportGroupCallInvite}
+                        disabled={loadingOp === 'export_call_invite'}
+                        className="px-2.5 py-1 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {loadingOp === 'export_call_invite' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Link className="w-3 h-3" />}
+                        <span>صدور لینک دعوت</span>
+                      </button>
+                    </div>
+                    {exportedInviteLink && (
+                      <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between gap-2 text-[11px] font-mono text-purple-300">
+                        <span className="truncate">{exportedInviteLink}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(exportedInviteLink)
+                            setSuccessMsg('لینک دعوت در کلیپ‌بورد کپی شد')
+                          }}
+                          className="p-1 hover:bg-purple-500/20 rounded cursor-pointer shrink-0"
+                          title="کپی"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Discard Call & Participant Moderation */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                        <span>مدیریت شرکت‌کننده و پایان تماس</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDiscardGroupCall}
+                        disabled={loadingOp === 'discard_group_call'}
+                        className="px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {loadingOp === 'discard_group_call' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <PhoneOff className="w-3 h-3" />}
+                        <span>خاتمه تماس (discardGroupCall)</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <input
+                        type="text"
+                        value={editPartPeerId}
+                        onChange={(e) => setEditPartPeerId(e.target.value)}
+                        placeholder="شناسه کاربر / شرکت‌کننده (مثلاً @username یا peerId)"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none"
+                      />
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-neutral-300">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editPartMuted}
+                            onChange={(e) => setEditPartMuted(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-amber-500 focus:ring-0"
+                          />
+                          <span>Mute</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editPartRaiseHand}
+                            onChange={(e) => setEditPartRaiseHand(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-amber-500 focus:ring-0"
+                          />
+                          <span>Raise Hand</span>
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editPartVideoStopped}
+                            onChange={(e) => setEditPartVideoStopped(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-amber-500 focus:ring-0"
+                          />
+                          <span>Stop Video</span>
+                        </label>
+                        <span className="text-neutral-400">ولوم: {editPartVolume}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={editPartVolume}
+                        onChange={(e) => setEditPartVolume(Number(e.target.value))}
+                        className="w-full accent-amber-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleEditGroupCallParticipant}
+                        disabled={loadingOp === 'edit_participant'}
+                        className="w-full py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {loadingOp === 'edit_participant' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <SlidersHorizontal className="w-3.5 h-3.5" />}
+                        <span>اعمال تنظیمات شرکت‌کننده (phone.editGroupCallParticipant)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Group Call Message Cleansing (Full Width across 2 cols) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-rose-400" />
+                      <span>حذف پیام‌های چت تماس گروهی (phone.deleteGroupCallMessages / ParticipantMessages)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      {/* Delete Specific Messages */}
+                      <div className="space-y-1.5 p-2 rounded-xl bg-black/20 border border-white/5">
+                        <span className="text-[11px] text-neutral-400">حذف پیام‌های مشخص با شناسه:</span>
+                        <input
+                          type="text"
+                          value={delCallMessagesInput}
+                          onChange={(e) => setDelCallMessagesInput(e.target.value)}
+                          placeholder="شناسه پیام‌ها با کاما (مثلاً: 101, 102)"
+                          className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                        />
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-1 text-[11px] text-neutral-400 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={delCallMessagesSpam}
+                              onChange={(e) => setDelCallMessagesSpam(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                            />
+                            <span>گزارش اسپم</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleDeleteGroupCallMessages}
+                            disabled={loadingOp === 'del_call_msgs'}
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {loadingOp === 'del_call_msgs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                            <span>حذف پیام‌ها</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Delete Participant Messages */}
+                      <div className="space-y-1.5 p-2 rounded-xl bg-black/20 border border-white/5">
+                        <span className="text-[11px] text-neutral-400">حذف تمام پیام‌های یک شرکت‌کننده:</span>
+                        <input
+                          type="text"
+                          value={delPartMsgPeer}
+                          onChange={(e) => setDelPartMsgPeer(e.target.value)}
+                          placeholder="شناسه شرکت‌کننده (مثلاً @user یا ID)"
+                          className="w-full px-2 py-1 rounded-lg bg-black/40 border border-white/10 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none font-mono"
+                        />
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-1 text-[11px] text-neutral-400 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={delPartMsgSpam}
+                              onChange={(e) => setDelPartMsgSpam(e.target.checked)}
+                              className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                            />
+                            <span>گزارش اسپم</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleDeleteParticipantMessages}
+                            disabled={loadingOp === 'del_part_msgs'}
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {loadingOp === 'del_part_msgs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : <UserX className="w-3 h-3" />}
+                            <span>پاکسازی پیام‌های کاربر</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -848,6 +1307,59 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({
                       )}
                       <span>تأیید تماس (confirmCall)</span>
                     </button>
+                  </div>
+
+                  {/* Discard P2P Call (Full Width) */}
+                  <div className="p-3 rounded-2xl bg-neutral-900/70 border border-white/5 space-y-2 md:col-span-2">
+                    <div className="text-xs font-semibold text-neutral-200 flex items-center gap-1.5">
+                      <PhoneOff className="w-3.5 h-3.5 text-rose-400" />
+                      <span>پایان دادن و ثبت نتیجه تماس (phone.discardCall)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">مدت تماس (ثانیه):</label>
+                        <input
+                          type="number"
+                          value={discardP2pDuration}
+                          onChange={(e) => setDiscardP2pDuration(e.target.value)}
+                          min="0"
+                          className="w-full px-2 py-1 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 focus:outline-none font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-neutral-400 block mb-0.5">دلیل پایان تماس:</label>
+                        <select
+                          value={discardP2pReason}
+                          onChange={(e) => setDiscardP2pReason(e.target.value as any)}
+                          className="w-full px-2 py-1 rounded-xl bg-black/40 border border-white/10 text-xs text-neutral-200 focus:outline-none"
+                        >
+                          <option value="hangup">قطع عادی (Hangup)</option>
+                          <option value="busy">مشغول (Busy)</option>
+                          <option value="missed">بی‌پاسخ (Missed)</option>
+                          <option value="disconnect">قطع ناگهانی (Disconnect)</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end justify-between gap-2">
+                        <label className="flex items-center gap-1 text-[11px] text-neutral-300 cursor-pointer pb-1">
+                          <input
+                            type="checkbox"
+                            checked={discardP2pVideo}
+                            onChange={(e) => setDiscardP2pVideo(e.target.checked)}
+                            className="rounded border-white/20 bg-black/40 text-rose-500 focus:ring-0"
+                          />
+                          <span>تماس ویدئویی بود</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleDiscardCall}
+                          disabled={loadingOp === 'discard_p2p_call'}
+                          className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {loadingOp === 'discard_p2p_call' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <PhoneOff className="w-3.5 h-3.5" />}
+                          <span>پایان تماس (discardCall)</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

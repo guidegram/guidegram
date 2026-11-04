@@ -22732,6 +22732,101 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.phone_deleteConferenceCallParticipants(holder as any, params)
   }
+
+  // Layer 232 Phone Suite (Microphase 108)
+  public async phoneDeleteGroupCallMessagesRaw(
+    accountId: string,
+    params: {
+      call: any
+      messages: number[]
+      reportSpam?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_deleteGroupCallMessages(holder as any, params)
+  }
+
+  public async phoneDeleteGroupCallParticipantMessagesRaw(
+    accountId: string,
+    params: {
+      call: any
+      participant: any
+      reportSpam?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_deleteGroupCallParticipantMessages(holder as any, accountId, params)
+  }
+
+  public async phoneDiscardCallRaw(
+    accountId: string,
+    params: {
+      peer: any
+      duration?: number
+      reason?: any
+      connectionId?: bigint | number
+      video?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_discardCall(holder as any, params)
+  }
+
+  public async phoneDiscardGroupCallRaw(
+    accountId: string,
+    params: {
+      call: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_discardGroupCall(holder as any, params)
+  }
+
+  public async phoneEditGroupCallParticipantRaw(
+    accountId: string,
+    params: {
+      call: any
+      participant: any
+      muted?: boolean
+      volume?: number
+      raiseHand?: boolean
+      videoStopped?: boolean
+      videoPaused?: boolean
+      presentationPaused?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_editGroupCallParticipant(holder as any, accountId, params)
+  }
+
+  public async phoneEditGroupCallTitleRaw(
+    accountId: string,
+    params: {
+      call: any
+      title: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_editGroupCallTitle(holder as any, params)
+  }
+
+  public async phoneExportGroupCallInviteRaw(
+    accountId: string,
+    params: {
+      call: any
+      canSelfUnmute?: boolean
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.phone_exportGroupCallInvite(holder as any, params)
+  }
 }
 
 
