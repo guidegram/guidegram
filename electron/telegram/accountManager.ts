@@ -21606,7 +21606,78 @@ export class AccountManager {
     if (!holder?.client) return false
     return this.botsService.updateUserEmojiStatus(holder as any, accountId, params)
   }
+
+  // Microphase 094: Payments Domain Suite Part 1 (7 RPCs)
+  public async paymentsApplyGiftCodeRaw(
+    accountId: string,
+    params: { slug: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.applyGiftCode(holder as any, params.slug)
+  }
+
+  public async paymentsAssignAppStoreTransactionRaw(
+    accountId: string,
+    params: { receipt: any; purpose?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.assignAppStoreTransaction(holder as any, params.receipt, params.purpose)
+  }
+
+  public async paymentsAssignPlayMarketTransactionRaw(
+    accountId: string,
+    params: { receipt: any; purpose?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.assignPlayMarketTransaction(holder as any, params.receipt, params.purpose)
+  }
+
+  public async paymentsBotCancelStarsSubscriptionRaw(
+    accountId: string,
+    params: { userId: string; chargeId: string; restore?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.botCancelStarsSubscription(holder as any, accountId, params)
+  }
+
+  public async paymentsCanPurchaseStoreRaw(
+    accountId: string,
+    params: { purpose?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.canPurchaseStore(holder as any, params.purpose)
+  }
+
+  public async paymentsChangeStarsSubscriptionRaw(
+    accountId: string,
+    params: { peerId: string; subscriptionId: string; canceled: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.changeStarsSubscription(
+      holder as any,
+      accountId,
+      params.peerId,
+      params.subscriptionId,
+      params.canceled
+    )
+  }
+
+  public async paymentsCheckCanSendGiftRaw(
+    accountId: string,
+    params: { giftId: bigint | Long | string | number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.paymentsService.checkCanSendGift(holder as any, params.giftId)
+  }
 }
+
 
 
 

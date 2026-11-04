@@ -2964,6 +2964,21 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:bots:update-star-ref-program-raw', { accountId, ...params }),
   botsUpdateUserEmojiStatusRaw: (accountId: string, params: { userId?: string | any; targetUserId?: string | any; emojiStatus: any }): Promise<boolean> =>
     ipcRenderer.invoke('telegram:bots:update-user-emoji-status-raw', { accountId, ...params }),
+  // Microphase 094: Payments Domain Suite Part 1 (7 RPCs)
+  paymentsApplyGiftCodeRaw: (accountId: string, params: { slug: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:apply-gift-code-raw', { accountId, ...params }),
+  paymentsAssignAppStoreTransactionRaw: (accountId: string, params: { receipt: any; purpose?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:assign-app-store-transaction-raw', { accountId, ...params }),
+  paymentsAssignPlayMarketTransactionRaw: (accountId: string, params: { receipt: any; purpose?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:assign-play-market-transaction-raw', { accountId, ...params }),
+  paymentsBotCancelStarsSubscriptionRaw: (accountId: string, params: { userId: string; chargeId: string; restore?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:bot-cancel-stars-subscription-raw', { accountId, ...params }),
+  paymentsCanPurchaseStoreRaw: (accountId: string, params: { purpose?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:can-purchase-store-raw', { accountId, ...params }),
+  paymentsChangeStarsSubscriptionRaw: (accountId: string, params: { peerId: string; subscriptionId: string; canceled: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:change-stars-subscription-raw', { accountId, ...params }),
+  paymentsCheckCanSendGiftRaw: (accountId: string, params: { giftId: bigint | number | string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:payments:check-can-send-gift-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

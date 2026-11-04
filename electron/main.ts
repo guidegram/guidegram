@@ -9623,6 +9623,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 094: Payments Domain Suite Part 1 (7 RPCs)
+  ipcMain.handle('telegram:payments:apply-gift-code-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsApplyGiftCodeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsApplyGiftCodeRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:assign-app-store-transaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsAssignAppStoreTransactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsAssignAppStoreTransactionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:assign-play-market-transaction-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsAssignPlayMarketTransactionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsAssignPlayMarketTransactionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:bot-cancel-stars-subscription-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsBotCancelStarsSubscriptionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsBotCancelStarsSubscriptionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:can-purchase-store-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsCanPurchaseStoreRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsCanPurchaseStoreRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:change-stars-subscription-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsChangeStarsSubscriptionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsChangeStarsSubscriptionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:payments:check-can-send-gift-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.paymentsCheckCanSendGiftRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] paymentsCheckCanSendGiftRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

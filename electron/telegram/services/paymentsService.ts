@@ -1,4 +1,11 @@
 import { Logger } from '../logger'
+import { Long } from '@mtcute/core'
+
+function toLong(val: any): Long {
+  if (!val) return Long.ZERO
+  if (Long.isLong(val)) return val
+  return Long.fromValue(val as any)
+}
 
 export interface RpcClientHolder {
   client: {
@@ -133,9 +140,12 @@ export class PaymentsService {
 
   public async assignAppStoreTransaction(holder: RpcClientHolder, receipt: any, purpose: any): Promise<any> {
     try {
+      const receiptBytes = typeof receipt === 'string' ? Buffer.from(receipt, 'base64') : (receipt || Buffer.alloc(0))
+      const storePurpose = purpose && purpose._ ? purpose : { _: 'inputStorePaymentPurposeStars', currency: 'USD', amount: 0 }
       return await holder.client.call({
         _: 'payments.assignAppStoreTransaction',
-        receipt, purpose,
+        receipt: receiptBytes,
+        purpose: storePurpose,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] assignAppStoreTransaction error:', err)
@@ -145,9 +155,12 @@ export class PaymentsService {
 
   public async assignPlayMarketTransaction(holder: RpcClientHolder, receipt: any, purpose: any): Promise<any> {
     try {
+      const receiptData = typeof receipt === 'string' ? { _: 'dataJSON', data: receipt } : (receipt || { _: 'dataJSON', data: '{}' })
+      const storePurpose = purpose && purpose._ ? purpose : { _: 'inputStorePaymentPurposeStars', currency: 'USD', amount: 0 }
       return await holder.client.call({
         _: 'payments.assignPlayMarketTransaction',
-        receipt, purpose,
+        receipt: receiptData,
+        purpose: storePurpose,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] assignPlayMarketTransaction error:', err)
@@ -182,9 +195,10 @@ export class PaymentsService {
 
   public async applyGiftCode(holder: RpcClientHolder, slug: string): Promise<any> {
     try {
+      const cleanSlug = String(slug || '').replace(/^https?:\/\/t\.me\/giftcode\//i, '').trim()
       return await holder.client.call({
         _: 'payments.applyGiftCode',
-        slug,
+        slug: cleanSlug,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] applyGiftCode error:', err)
@@ -429,12 +443,34 @@ export class PaymentsService {
     }
   }
 
-  public async botCancelStarsSubscription(holder: RpcClientHolder, accountId: string, userId: string, chargeId: string, restore = false): Promise<any> {
+  public async botCancelStarsSubscription(
+    holder: RpcClientHolder,
+    accountId: string,
+    userIdOrParams: string | { userId: string; chargeId: string; restore?: boolean },
+    chargeId?: string,
+    restore = false
+  ): Promise<any> {
     try {
+      let uid: string
+      let cid: string
+      let rest = false
+      if (typeof userIdOrParams === 'object' && userIdOrParams !== null) {
+        uid = String(userIdOrParams.userId)
+        cid = userIdOrParams.chargeId
+        rest = Boolean(userIdOrParams.restore)
+      } else {
+        uid = String(userIdOrParams)
+        cid = String(chargeId)
+        rest = Boolean(restore)
+      }
+      const inputUser = await this.toInputUser(accountId, uid)
       return await holder.client.call({
         _: 'payments.botCancelStarsSubscription',
-        user: await this.toInputUser(accountId, userId), chargeId, restore,
-      })
+        restore: rest,
+        user: inputUser,
+        userId: inputUser,
+        chargeId: cid,
+      } as any)
     } catch (err) {
       Logger.warn('[PaymentsService] botCancelStarsSubscription error:', err)
       return null
@@ -619,9 +655,15 @@ export class PaymentsService {
 
   public async canPurchaseStore(holder: RpcClientHolder, purpose: any): Promise<any> {
     try {
+      let finalPurpose = purpose
+      if (typeof purpose === 'string') {
+        finalPurpose = { _: 'inputStorePaymentPurposePremiumGiftCodes', boostPeer: { _: 'inputPeerEmpty' }, currency: 'USD', amount: 0, users: [] }
+      } else if (!purpose || !purpose._) {
+        finalPurpose = { _: 'inputStorePaymentPurposeStars', currency: 'XTR', amount: 1 }
+      }
       return await holder.client.call({
         _: 'payments.canPurchaseStore',
-        purpose,
+        purpose: finalPurpose,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] canPurchaseStore error:', err)
@@ -730,11 +772,11 @@ export class PaymentsService {
     }
   }
 
-  public async checkCanSendGift(holder: RpcClientHolder, giftId: bigint): Promise<any> {
+  public async checkCanSendGift(holder: RpcClientHolder, giftId: bigint | Long | string | number): Promise<any> {
     try {
       return await holder.client.call({
         _: 'payments.checkCanSendGift',
-        giftId,
+        giftId: toLong(giftId) as any,
       })
     } catch (err) {
       Logger.warn('[PaymentsService] checkCanSendGift error:', err)

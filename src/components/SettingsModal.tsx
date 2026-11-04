@@ -10580,6 +10580,225 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // --- Microphase 094 State: Payments Domain Suite Part 1 (7 RPCs) ---
+  const [m094Status, setM094Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m094LoadingOp, setM094LoadingOp] = useState<string | null>(null)
+  const [m094GiftSlug, setM094GiftSlug] = useState('')
+  const [m094AppStoreReceipt, setM094AppStoreReceipt] = useState('')
+  const [m094PlayMarketReceipt, setM094PlayMarketReceipt] = useState('')
+  const [m094BotCancelUserId, setM094BotCancelUserId] = useState('')
+  const [m094BotCancelChargeId, setM094BotCancelChargeId] = useState('')
+  const [m094BotCancelRestore, setM094BotCancelRestore] = useState(false)
+  const [m094StoreCurrency, setM094StoreCurrency] = useState('USD')
+  const [m094StoreAmount, setM094StoreAmount] = useState('1000')
+  const [m094SubPeerId, setM094SubPeerId] = useState('')
+  const [m094SubscriptionId, setM094SubscriptionId] = useState('')
+  const [m094SubCanceled, setM094SubCanceled] = useState(true)
+  const [m094GiftId, setM094GiftId] = useState('')
+  const [m094OpResult, setM094OpResult] = useState<any | null>(null)
+
+  const handleM094ApplyGiftCode = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m094GiftSlug.trim()) {
+      setM094Status({ type: 'error', message: 'کد هدیه یا لینک گیفت الزامی است.' })
+      return
+    }
+    setM094LoadingOp('applyGiftCode')
+    setM094Status(null)
+    setM094OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsApplyGiftCodeRaw(targetId, {
+        slug: m094GiftSlug.trim(),
+      })
+      if (res) {
+        setM094OpResult(res)
+        setM094Status({ type: 'success', message: 'کد هدیه با موفقیت فعال و اشتراک پریمیوم اعمال شد.' })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در فعال‌سازی کد هدیه تلگرام.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.applyGiftCode' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
+  const handleM094AssignAppStoreTransaction = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m094AppStoreReceipt.trim()) {
+      setM094Status({ type: 'error', message: 'رسید اپ استور (Receipt Base64) الزامی است.' })
+      return
+    }
+    setM094LoadingOp('assignAppStore')
+    setM094Status(null)
+    setM094OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsAssignAppStoreTransactionRaw(targetId, {
+        receipt: m094AppStoreReceipt.trim(),
+        purpose: { _: 'inputStorePaymentPurposeStars', currency: 'USD', amount: 0 },
+      })
+      if (res) {
+        setM094OpResult(res)
+        setM094Status({ type: 'success', message: 'تراکنش App Store اپل با موفقیت ثبت و تأیید شد.' })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در تأیید رسید تراکنش App Store.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.assignAppStoreTransaction' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
+  const handleM094AssignPlayMarketTransaction = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m094PlayMarketReceipt.trim()) {
+      setM094Status({ type: 'error', message: 'اطلاعات رسید خرید گوگل پلی استور الزامی است.' })
+      return
+    }
+    setM094LoadingOp('assignPlayMarket')
+    setM094Status(null)
+    setM094OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsAssignPlayMarketTransactionRaw(targetId, {
+        receipt: m094PlayMarketReceipt.trim(),
+        purpose: { _: 'inputStorePaymentPurposeStars', currency: 'USD', amount: 0 },
+      })
+      if (res) {
+        setM094OpResult(res)
+        setM094Status({ type: 'success', message: 'تراکنش Google Play Market با موفقیت تأیید و ستاره‌ها افزوده شدند.' })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در ثبت تراکنش پلی استور گوگل.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.assignPlayMarketTransaction' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
+  const handleM094BotCancelStarsSubscription = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m094BotCancelUserId.trim() || !m094BotCancelChargeId.trim()) {
+      setM094Status({ type: 'error', message: 'شناسه کاربر و شناسه تراکنش شارژ (Charge ID) الزامی است.' })
+      return
+    }
+    setM094LoadingOp('botCancelStarsSubscription')
+    setM094Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsBotCancelStarsSubscriptionRaw(targetId, {
+        userId: m094BotCancelUserId.trim(),
+        chargeId: m094BotCancelChargeId.trim(),
+        restore: m094BotCancelRestore,
+      })
+      if (res !== null && res !== false) {
+        setM094Status({
+          type: 'success',
+          message: `اشتراک ستاره ربات با موفقیت ${m094BotCancelRestore ? 'احیا' : 'لغو'} شد.`,
+        })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در تغییر وضعیت اشتراک ستاره ربات.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.botCancelStarsSubscription' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
+  const handleM094CanPurchaseStore = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    setM094LoadingOp('canPurchaseStore')
+    setM094Status(null)
+    try {
+      const amt = parseInt(m094StoreAmount, 10) || 1000
+      const res = await (window as any).guidegramAPI?.paymentsCanPurchaseStoreRaw(targetId, {
+        purpose: {
+          _: 'inputStorePaymentPurposeStars',
+          currency: m094StoreCurrency.trim() || 'USD',
+          amount: amt,
+        },
+      })
+      if (res !== null) {
+        setM094Status({
+          type: 'success',
+          message: res ? 'امکان خرید این بسته از استور فعال و تأیید شد.' : 'خرید از استور در این منطقه یا حساب مجاز نیست.',
+        })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در بررسی امکان خرید استور.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.canPurchaseStore' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
+  const handleM094ChangeStarsSubscription = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m094SubPeerId.trim() || !m094SubscriptionId.trim()) {
+      setM094Status({ type: 'error', message: 'شناسه طرف مکالمه/کانال و شناسه اشتراک الزامی است.' })
+      return
+    }
+    setM094LoadingOp('changeStarsSubscription')
+    setM094Status(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsChangeStarsSubscriptionRaw(targetId, {
+        peerId: m094SubPeerId.trim(),
+        subscriptionId: m094SubscriptionId.trim(),
+        canceled: m094SubCanceled,
+      })
+      if (res !== null && res !== false) {
+        setM094Status({
+          type: 'success',
+          message: `اشتراک ستاره‌ها با شناسه ${m094SubscriptionId.trim()} با موفقیت ${m094SubCanceled ? 'لغو' : 'فعال'} شد.`,
+        })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در تغییر وضعیت اشتراک ستاره‌ها.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.changeStarsSubscription' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
+  const handleM094CheckCanSendGift = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId) return
+    if (!m094GiftId.trim()) {
+      setM094Status({ type: 'error', message: 'شناسه گیفت (Gift ID) الزامی است.' })
+      return
+    }
+    setM094LoadingOp('checkCanSendGift')
+    setM094Status(null)
+    setM094OpResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.paymentsCheckCanSendGiftRaw(targetId, {
+        giftId: m094GiftId.trim(),
+      })
+      if (res) {
+        setM094OpResult(res)
+        setM094Status({
+          type: 'success',
+          message: 'بررسی امکان ارسال گیفت با موفقیت انجام شد.',
+        })
+      } else {
+        setM094Status({ type: 'error', message: 'پاسخ ناموفق در بررسی ارسال گیفت.' })
+      }
+    } catch (err: any) {
+      setM094Status({ type: 'error', message: err?.message || 'خطا در payments.checkCanSendGift' })
+    } finally {
+      setM094LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -26909,6 +27128,286 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => setM093Status(null)}
+                            className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                          >
+                            تلاش مجدد
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Microphase 094: Payments Domain Suite Part 1 (7 RPCs) */}
+                  <div className="pt-4 border-t border-white/10 space-y-4 text-right" dir="rtl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-xs font-bold text-gray-200">
+                          میکروفاز 094: سیستم پرداخت تلگرام، استارز، کد هدیه و اشتراک‌ها (7 RPC)
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        MTProto Layer 232 • Payments
+                      </span>
+                    </div>
+
+                    {/* RPC 1: payments.applyGiftCode */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۱. فعال‌سازی و ریدیم کد هدیه تلگرام (payments.applyGiftCode)</span>
+                        <span className="text-[10px] text-emerald-400 font-mono">Gift Codes & Premium</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m094GiftSlug}
+                          onChange={(e) => setM094GiftSlug(e.target.value)}
+                          placeholder="کد یا اسلاگ هدیه (e.g. gift-xyz123)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM094ApplyGiftCode}
+                          disabled={m094LoadingOp === 'applyGiftCode'}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m094LoadingOp === 'applyGiftCode' ? 'در حال فعال‌سازی...' : 'اعمال کد هدیه'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 2: payments.assignAppStoreTransaction */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۲. ثبت رسید تراکنش App Store اپل (payments.assignAppStoreTransaction)</span>
+                        <span className="text-[10px] text-gray-500 font-mono">Apple In-App Purchase</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m094AppStoreReceipt}
+                          onChange={(e) => setM094AppStoreReceipt(e.target.value)}
+                          placeholder="رسید Base64 خرید اپ استور (Receipt Data)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM094AssignAppStoreTransaction}
+                          disabled={m094LoadingOp === 'assignAppStore'}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/40 text-blue-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m094LoadingOp === 'assignAppStore' ? 'در حال ثبت...' : 'تأیید تراکنش اپل'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 3: payments.assignPlayMarketTransaction */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۳. ثبت رسید تراکنش Google Play Market (payments.assignPlayMarketTransaction)</span>
+                        <span className="text-[10px] text-gray-500 font-mono">Google Play Billing</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m094PlayMarketReceipt}
+                          onChange={(e) => setM094PlayMarketReceipt(e.target.value)}
+                          placeholder="اطلاعات توکن و رسید خرید گوگل پلی"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM094AssignPlayMarketTransaction}
+                          disabled={m094LoadingOp === 'assignPlayMarket'}
+                          className="px-3 py-1.5 rounded-lg bg-teal-600/30 hover:bg-teal-600/50 border border-teal-500/40 text-teal-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m094LoadingOp === 'assignPlayMarket' ? 'در حال ثبت...' : 'تأیید تراکنش گوگل پلی'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 4: payments.botCancelStarsSubscription */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۴. لغو یا احیای اشتراک ستاره ربات (payments.botCancelStarsSubscription)</span>
+                        <span className="text-[10px] text-amber-400 font-mono">Bot Stars Subscription</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه کاربر مشترک (User ID):</label>
+                          <input
+                            type="text"
+                            value={m094BotCancelUserId}
+                            onChange={(e) => setM094BotCancelUserId(e.target.value)}
+                            placeholder="e.g. 123456789"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه شارژ تراکنش (Charge ID):</label>
+                          <input
+                            type="text"
+                            value={m094BotCancelChargeId}
+                            onChange={(e) => setM094BotCancelChargeId(e.target.value)}
+                            placeholder="e.g. ch_star_98765"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={m094BotCancelRestore}
+                            onChange={(e) => setM094BotCancelRestore(e.target.checked)}
+                            className="rounded border-white/20 bg-white/5 text-emerald-500 focus:ring-0"
+                          />
+                          <span>احیا و بازگردانی اشتراک (Restore Subscription)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleM094BotCancelStarsSubscription}
+                          disabled={m094LoadingOp === 'botCancelStarsSubscription'}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m094LoadingOp === 'botCancelStarsSubscription' ? 'در حال اعمال...' : 'اعمال وضعیت اشتراک ربات'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 5: payments.canPurchaseStore */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۵. بررسی امکان خرید از استور (payments.canPurchaseStore)</span>
+                        <span className="text-[10px] text-cyan-400 font-mono">Store Eligibility</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">واحد پولی (Currency):</label>
+                          <input
+                            type="text"
+                            value={m094StoreCurrency}
+                            onChange={(e) => setM094StoreCurrency(e.target.value)}
+                            placeholder="USD / EUR"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">مبلغ به سنت/کوچکترین واحد (Amount):</label>
+                          <input
+                            type="number"
+                            value={m094StoreAmount}
+                            onChange={(e) => setM094StoreAmount(e.target.value)}
+                            placeholder="1000"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleM094CanPurchaseStore}
+                        disabled={m094LoadingOp === 'canPurchaseStore'}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        {m094LoadingOp === 'canPurchaseStore' ? 'در حال بررسی استور...' : 'بررسی دسترسی خرید از استور'}
+                      </button>
+                    </div>
+
+                    {/* RPC 6: payments.changeStarsSubscription */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۶. تغییر وضعیت اشتراک ستاره‌ها (payments.changeStarsSubscription)</span>
+                        <span className="text-[10px] text-purple-400 font-mono">User Stars Subscription</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه کانال/ربات (Peer ID / Username):</label>
+                          <input
+                            type="text"
+                            value={m094SubPeerId}
+                            onChange={(e) => setM094SubPeerId(e.target.value)}
+                            placeholder="@channel or ID"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-400 block mb-1">شناسه اشتراک (Subscription ID):</label>
+                          <input
+                            type="text"
+                            value={m094SubscriptionId}
+                            onChange={(e) => setM094SubscriptionId(e.target.value)}
+                            placeholder="sub_star_12345"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={m094SubCanceled}
+                            onChange={(e) => setM094SubCanceled(e.target.checked)}
+                            className="rounded border-white/20 bg-white/5 text-purple-500 focus:ring-0"
+                          />
+                          <span>لغو اشتراک دوره بعدی (Cancel Auto-Renewal)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleM094ChangeStarsSubscription}
+                          disabled={m094LoadingOp === 'changeStarsSubscription'}
+                          className="px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m094LoadingOp === 'changeStarsSubscription' ? 'در حال اعمال...' : 'ثبت وضعیت اشتراک ستاره‌ها'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* RPC 7: payments.checkCanSendGift */}
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 space-y-2">
+                      <div className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                        <span>۷. بررسی امکان ارسال گیفت تلگرام (payments.checkCanSendGift)</span>
+                        <span className="text-[10px] text-rose-400 font-mono">Telegram Gifts & Collectibles</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={m094GiftId}
+                          onChange={(e) => setM094GiftId(e.target.value)}
+                          placeholder="شناسه عددی گیفت (Gift ID e.g. 523412341)"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono text-left focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleM094CheckCanSendGift}
+                          disabled={m094LoadingOp === 'checkCanSendGift'}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-200 text-xs font-medium cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          {m094LoadingOp === 'checkCanSendGift' ? 'در حال بررسی...' : 'بررسی ارسال گیفت'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Structured Operation Output Box */}
+                    {m094OpResult && (
+                      <div className="bg-black/30 p-2.5 rounded-lg border border-emerald-500/20 text-[11px] font-mono text-emerald-300 text-left overflow-x-auto max-h-36">
+                        <pre>{JSON.stringify(m094OpResult, null, 2)}</pre>
+                      </div>
+                    )}
+
+                    {/* Status Feedback / Error with Retry */}
+                    {m094Status && (
+                      <div
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                          m094Status.type === 'success'
+                            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                            : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                        }`}
+                      >
+                        <span>{m094Status.message}</span>
+                        {m094Status.type === 'error' && (
+                          <button
+                            type="button"
+                            onClick={() => setM094Status(null)}
                             className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                           >
                             تلاش مجدد
