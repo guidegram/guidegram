@@ -9385,6 +9385,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 090 IPC Handlers: Bots Domain Suite Part 3 (7 RPCs)
+  ipcMain.handle('telegram:bots:get-bot-commands-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetBotCommandsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetBotCommandsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:get-bot-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetBotInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetBotInfoRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:get-bot-menu-button-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetBotMenuButtonRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetBotMenuButtonRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:get-bot-recommendations-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetBotRecommendationsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetBotRecommendationsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:get-popular-app-bots-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetPopularAppBotsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetPopularAppBotsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:get-preview-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetPreviewInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetPreviewInfoRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:bots:get-preview-medias-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.botsGetPreviewMediasRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] botsGetPreviewMediasRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

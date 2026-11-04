@@ -2909,6 +2909,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:bots:get-access-settings-raw', { accountId, ...params }),
   botsGetAdminedBotsRaw: (accountId: string): Promise<any> =>
     ipcRenderer.invoke('telegram:bots:get-admined-bots-raw', { accountId }),
+  botsGetBotCommandsRaw: (accountId: string, params?: { scope?: any; langCode?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-bot-commands-raw', { accountId, ...params }),
+  botsGetBotInfoRaw: (accountId: string, params?: { bot?: string | any; langCode?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-bot-info-raw', { accountId, ...params }),
+  botsGetBotMenuButtonRaw: (accountId: string, params: { userId: string | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-bot-menu-button-raw', { accountId, ...params }),
+  botsGetBotRecommendationsRaw: (accountId: string, params: { botId: string | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-bot-recommendations-raw', { accountId, ...params }),
+  botsGetPopularAppBotsRaw: (accountId: string, params?: { offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-popular-app-bots-raw', { accountId, ...params }),
+  botsGetPreviewInfoRaw: (accountId: string, params: { botId: string | any; langCode?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-preview-info-raw', { accountId, ...params }),
+  botsGetPreviewMediasRaw: (accountId: string, params: { botId: string | any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:bots:get-preview-medias-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

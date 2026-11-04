@@ -36,8 +36,17 @@ export class BotsService {
     return { _: 'inputUser', userId: BigInt(userId), accessHash: 0n }
   }
 
-  public async getBotCommands(holder: RpcClientHolder, scope: any = { _: 'botCommandScopeDefault' }, langCode = ''): Promise<any[]> {
+  public async getBotCommands(holder: RpcClientHolder, scopeOrParams?: any, langCodeParam = ''): Promise<any[]> {
     try {
+      let scope: any = { _: 'botCommandScopeDefault' }
+      let langCode = ''
+      if (scopeOrParams && typeof scopeOrParams === 'object' && ('scope' in scopeOrParams || 'langCode' in scopeOrParams)) {
+        scope = scopeOrParams.scope || scope
+        langCode = scopeOrParams.langCode || ''
+      } else if (scopeOrParams) {
+        scope = scopeOrParams
+        langCode = langCodeParam || ''
+      }
       const res = await holder.client.call({
         _: 'bots.getBotCommands',
         scope,
@@ -94,9 +103,10 @@ export class BotsService {
     }
   }
 
-  public async getBotMenuButton(holder: RpcClientHolder, accountId: string, botId: string): Promise<any> {
+  public async getBotMenuButton(holder: RpcClientHolder, accountId: string, paramsOrBotId: { userId: string | any } | string): Promise<any> {
     try {
-      const userId = await this.toInputUser(accountId, botId)
+      const botId = typeof paramsOrBotId === 'object' && paramsOrBotId !== null ? paramsOrBotId.userId : paramsOrBotId
+      const userId = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       return await holder.client.call({
         _: 'bots.getBotMenuButton',
         userId,
@@ -133,9 +143,22 @@ export class BotsService {
     }
   }
 
-  public async getBotInfo(holder: RpcClientHolder, accountId: string, botId?: string, langCode = ''): Promise<any> {
+  public async getBotInfo(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId?: { bot?: string | any; langCode?: string } | string,
+    langCodeParam = ''
+  ): Promise<any> {
     try {
-      const bot = botId ? await this.toInputUser(accountId, botId) : undefined
+      let bot: any
+      let langCode = ''
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        bot = paramsOrBotId.bot ? (typeof paramsOrBotId.bot === 'string' ? await this.toInputUser(accountId, paramsOrBotId.bot) : paramsOrBotId.bot) : undefined
+        langCode = paramsOrBotId.langCode || ''
+      } else if (typeof paramsOrBotId === 'string') {
+        bot = await this.toInputUser(accountId, paramsOrBotId)
+        langCode = langCodeParam || ''
+      }
       return await holder.client.call({
         _: 'bots.getBotInfo',
         bot,
@@ -283,9 +306,14 @@ export class BotsService {
     }
   }
 
-  public async getPreviewMedias(holder: RpcClientHolder, accountId: string, botId: string): Promise<any[]> {
+  public async getPreviewMedias(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any } | string
+  ): Promise<any[]> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      const botId = typeof paramsOrBotId === 'object' && paramsOrBotId !== null ? paramsOrBotId.botId : paramsOrBotId
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const res = await holder.client.call({
         _: 'bots.getPreviewMedias',
         bot,
@@ -297,9 +325,23 @@ export class BotsService {
     }
   }
 
-  public async getPreviewInfo(holder: RpcClientHolder, accountId: string, botId: string, langCode = ''): Promise<any> {
+  public async getPreviewInfo(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any; langCode?: string } | string,
+    langCodeParam?: string
+  ): Promise<any> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      let botId: any
+      let langCode = ''
+      if (typeof paramsOrBotId === 'object' && paramsOrBotId !== null) {
+        botId = paramsOrBotId.botId
+        langCode = paramsOrBotId.langCode || ''
+      } else {
+        botId = paramsOrBotId
+        langCode = langCodeParam || ''
+      }
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       return await holder.client.call({
         _: 'bots.getPreviewInfo',
         bot,
@@ -307,7 +349,7 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] getPreviewInfo error:', err)
-      return null
+      throw err
     }
   }
 
@@ -327,8 +369,21 @@ export class BotsService {
     }
   }
 
-  public async getPopularAppBots(holder: RpcClientHolder, offset = '', limit = 50): Promise<any> {
+  public async getPopularAppBots(
+    holder: RpcClientHolder,
+    paramsOrOffset?: { offset?: string; limit?: number } | string,
+    limitParam?: number
+  ): Promise<any> {
     try {
+      let offset = ''
+      let limit = 50
+      if (typeof paramsOrOffset === 'object' && paramsOrOffset !== null) {
+        offset = paramsOrOffset.offset || ''
+        limit = typeof paramsOrOffset.limit === 'number' ? paramsOrOffset.limit : 50
+      } else if (typeof paramsOrOffset === 'string') {
+        offset = paramsOrOffset
+        limit = typeof limitParam === 'number' ? limitParam : 50
+      }
       return await holder.client.call({
         _: 'bots.getPopularAppBots',
         offset,
@@ -336,18 +391,23 @@ export class BotsService {
       })
     } catch (err) {
       Logger.warn('[BotsService] getPopularAppBots error:', err)
-      return null
+      throw err
     }
   }
 
-  public async getBotRecommendations(holder: RpcClientHolder, accountId: string, botId: string): Promise<any[]> {
+  public async getBotRecommendations(
+    holder: RpcClientHolder,
+    accountId: string,
+    paramsOrBotId: { botId: string | any } | string
+  ): Promise<any[]> {
     try {
-      const bot = await this.toInputUser(accountId, botId)
+      const botId = typeof paramsOrBotId === 'object' && paramsOrBotId !== null ? paramsOrBotId.botId : paramsOrBotId
+      const bot = typeof botId === 'string' ? await this.toInputUser(accountId, botId) : botId
       const res = await holder.client.call({
         _: 'bots.getBotRecommendations',
         bot,
       })
-      if (res && Array.isArray(res.users)) return res.users
+      if (res && Array.isArray((res as any).users)) return (res as any).users
       return Array.isArray(res) ? res : []
     } catch (err) {
       Logger.warn('[BotsService] getBotRecommendations error:', err)

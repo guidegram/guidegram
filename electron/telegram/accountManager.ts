@@ -21278,6 +21278,88 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.botsService.getAdminedBots(holder as any)
   }
+
+  // --- Microphase 090: Bots Domain Suite Part 3 (7 RPCs) ---
+  public async botsGetBotCommandsRaw(
+    accountId: string,
+    params?: {
+      scope?: any
+      langCode?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.botsService.getBotCommands(holder as any, params)
+  }
+
+  public async botsGetBotInfoRaw(
+    accountId: string,
+    params?: {
+      bot?: string | any
+      langCode?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getBotInfo(holder as any, accountId, params)
+  }
+
+  public async botsGetBotMenuButtonRaw(
+    accountId: string,
+    params: {
+      userId: string | any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getBotMenuButton(holder as any, accountId, params)
+  }
+
+  public async botsGetBotRecommendationsRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.botsService.getBotRecommendations(holder as any, accountId, params)
+  }
+
+  public async botsGetPopularAppBotsRaw(
+    accountId: string,
+    params?: {
+      offset?: string
+      limit?: number
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getPopularAppBots(holder as any, params)
+  }
+
+  public async botsGetPreviewInfoRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+      langCode?: string
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.botsService.getPreviewInfo(holder as any, accountId, params)
+  }
+
+  public async botsGetPreviewMediasRaw(
+    accountId: string,
+    params: {
+      botId: string | any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return []
+    return this.botsService.getPreviewMedias(holder as any, accountId, params)
+  }
 }
 
 

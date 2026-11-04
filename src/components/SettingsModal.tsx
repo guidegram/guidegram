@@ -9827,6 +9827,151 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // --- Microphase 090 State: Bots Domain Suite Part 3 (7 RPCs) ---
+  const [m090Status, setM090Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m090LoadingOp, setM090LoadingOp] = useState<string | null>(null)
+  const [m090BotId, setM090BotId] = useState('')
+  const [m090LangCode, setM090LangCode] = useState('')
+  const [m090BotInfo, setM090BotInfo] = useState<any | null>(null)
+  const [m090Commands, setM090Commands] = useState<any[] | null>(null)
+  const [m090MenuButton, setM090MenuButton] = useState<any | null>(null)
+  const [m090Recommendations, setM090Recommendations] = useState<any[] | null>(null)
+  const [m090PopularApps, setM090PopularApps] = useState<any[] | null>(null)
+  const [m090PreviewMedias, setM090PreviewMedias] = useState<any[] | null>(null)
+
+  const handleM090GetBotInfo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetBotInfoRaw || !m090BotId.trim()) return
+    setM090LoadingOp('getBotInfo')
+    setM090Status(null)
+    try {
+      const res = await window.guidegram.botsGetBotInfoRaw(targetId, {
+        bot: m090BotId.trim(),
+        langCode: m090LangCode.trim() || undefined,
+      })
+      setM090BotInfo(res)
+      setM090Status({
+        type: 'success',
+        message: `اطلاعات ربات با موفقیت از سرور تلگرام استعلام شد.`,
+      })
+    } catch (err: any) {
+      setM090Status({ type: 'error', message: err?.message || 'خطا در استعلام اطلاعات ربات (bots.getBotInfo)' })
+    } finally {
+      setM090LoadingOp(null)
+    }
+  }
+
+  const handleM090GetBotCommands = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetBotCommandsRaw) return
+    setM090LoadingOp('getBotCommands')
+    setM090Status(null)
+    try {
+      const res = await window.guidegram.botsGetBotCommandsRaw(targetId, {
+        scope: { _: 'botCommandScopeDefault' },
+        langCode: m090LangCode.trim(),
+      })
+      const list = Array.isArray(res) ? res : []
+      setM090Commands(list)
+      setM090Status({
+        type: 'success',
+        message: `تعداد ${list.length} دستور ربات با موفقیت دریافت شد.`,
+      })
+    } catch (err: any) {
+      setM090Status({ type: 'error', message: err?.message || 'خطا در دریافت دستورات ربات (bots.getBotCommands)' })
+    } finally {
+      setM090LoadingOp(null)
+    }
+  }
+
+  const handleM090GetBotMenuButton = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetBotMenuButtonRaw || !m090BotId.trim()) return
+    setM090LoadingOp('getBotMenuButton')
+    setM090Status(null)
+    try {
+      const res = await window.guidegram.botsGetBotMenuButtonRaw(targetId, {
+        userId: m090BotId.trim(),
+      })
+      setM090MenuButton(res)
+      setM090Status({
+        type: 'success',
+        message: `دکمه منوی ربات استعلام شد: ${res?._ || 'تنظیم نشده'}.`,
+      })
+    } catch (err: any) {
+      setM090Status({ type: 'error', message: err?.message || 'خطا در استعلام دکمه منو (bots.getBotMenuButton)' })
+    } finally {
+      setM090LoadingOp(null)
+    }
+  }
+
+  const handleM090GetBotRecommendations = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetBotRecommendationsRaw || !m090BotId.trim()) return
+    setM090LoadingOp('getBotRecommendations')
+    setM090Status(null)
+    try {
+      const res = await window.guidegram.botsGetBotRecommendationsRaw(targetId, {
+        botId: m090BotId.trim(),
+      })
+      const list = Array.isArray(res) ? res : (res?.users || [])
+      setM090Recommendations(list)
+      setM090Status({
+        type: 'success',
+        message: `تعداد ${list.length} ربات مرتبط و پیشنهادی استعلام شد.`,
+      })
+    } catch (err: any) {
+      setM090Status({ type: 'error', message: err?.message || 'خطا در دریافت ربات‌های پیشنهادی (bots.getBotRecommendations)' })
+    } finally {
+      setM090LoadingOp(null)
+    }
+  }
+
+  const handleM090GetPopularAppBots = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetPopularAppBotsRaw) return
+    setM090LoadingOp('getPopularAppBots')
+    setM090Status(null)
+    try {
+      const res = await window.guidegram.botsGetPopularAppBotsRaw(targetId, {
+        limit: 20,
+      })
+      const list = Array.isArray(res?.users) ? res.users : (Array.isArray(res) ? res : [])
+      setM090PopularApps(list)
+      setM090Status({
+        type: 'success',
+        message: `تعداد ${list.length} برنامه محبوب تلگرام (Popular Mini Apps) بارگذاری شد.`,
+      })
+    } catch (err: any) {
+      setM090Status({ type: 'error', message: err?.message || 'خطا در استعلام برنامه‌های محبوب (bots.getPopularAppBots)' })
+    } finally {
+      setM090LoadingOp(null)
+    }
+  }
+
+  const handleM090GetPreviewMedias = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.botsGetPreviewMediasRaw || !m090BotId.trim()) return
+    setM090LoadingOp('getPreviewMedias')
+    setM090Status(null)
+    try {
+      const res = await window.guidegram.botsGetPreviewMediasRaw(targetId, {
+        botId: m090BotId.trim(),
+      })
+      const list = Array.isArray(res) ? res : []
+      setM090PreviewMedias(list)
+      setM090Status({
+        type: 'success',
+        message: `تعداد ${list.length} رسانه پیش‌نمایش (Preview Medias) استعلام شد.`,
+      })
+    } catch (err: any) {
+      setM090Status({ type: 'error', message: err?.message || 'خطا در استعلام پیش‌نمایش ربات (bots.getPreviewMedias)' })
+    } finally {
+      setM090LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -25026,6 +25171,270 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setM089Status(null)}
+                          className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
+                        >
+                          تلاش مجدد
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Microphase 090 UI Card: Bots Domain Suite Part 3 (7 RPCs) */}
+                <div className="p-4 rounded-2xl bg-dark-800/80 border border-white/10 space-y-4 text-right" dir="rtl">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                      <h4 className="text-sm font-bold text-white">میکروفاز ۰۹۰: دستورات، اطلاعات و برنامه‌های محبوب ربات (Bots Domain Part 3)</h4>
+                    </div>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      MTProto Layer 232 • 7 RPCs
+                    </span>
+                  </div>
+
+                  {/* Operation 1 & 2: bots.getBotInfo & bots.getBotMenuButton */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۱. پروفایل کامل، توضیحات و دکمه منوی ربات (Bot Info & Menu)</span>
+                      <span className="text-[10px] font-mono text-gray-500">bots.getBotInfo • getBotMenuButton</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      استعلام متادیتا، بیوگرافی، توضیحات چندزبانه و دکمه منوی وب‌اپلیکیشن (Mini App Menu Button) مستقیم از تلگرام.
+                    </p>
+                    <form onSubmit={handleM090GetBotInfo} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={m090BotId}
+                          onChange={(e) => setM090BotId(e.target.value)}
+                          placeholder="شناسه یا یوزرنیم ربات (مانند @BotFather)..."
+                          className="flex-1 bg-dark-900 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-gray-200"
+                        />
+                        <input
+                          type="text"
+                          value={m090LangCode}
+                          onChange={(e) => setM090LangCode(e.target.value)}
+                          placeholder="کد زبان (مثلاً fa یا en)..."
+                          className="w-28 bg-dark-900 border border-white/5 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 text-center font-mono"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="submit"
+                          disabled={m090LoadingOp === 'getBotInfo' || !m090BotId.trim()}
+                          className="flex-1 py-1.5 bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/30 text-cyan-200 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                        >
+                          {m090LoadingOp === 'getBotInfo' ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>در حال استعلام...</span>
+                            </>
+                          ) : (
+                            'استعلام اطلاعات ربات'
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleM090GetBotMenuButton}
+                          disabled={m090LoadingOp === 'getBotMenuButton' || !m090BotId.trim()}
+                          className="px-3 py-1.5 bg-dark-800 hover:bg-dark-700 border border-white/10 text-gray-200 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                        >
+                          {m090LoadingOp === 'getBotMenuButton' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'استعلام دکمه منو'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Bot Info Result Display */}
+                    {m090BotInfo && (
+                      <div className="p-3 rounded-lg bg-dark-800/70 border border-cyan-500/20 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between text-[11px] text-gray-400">
+                          <span>نام ربات: <strong className="text-white">{m090BotInfo.name || 'نامشخص'}</strong></span>
+                          <span className="font-mono text-cyan-400">{m090BotInfo._}</span>
+                        </div>
+                        {m090BotInfo.about && (
+                          <div className="text-[11px] text-gray-300">
+                            <span className="text-gray-500">درباره:</span> {m090BotInfo.about}
+                          </div>
+                        )}
+                        {m090BotInfo.description && (
+                          <div className="text-[11px] text-gray-300">
+                            <span className="text-gray-500">توضیحات:</span> {m090BotInfo.description}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {m090MenuButton && (
+                      <div className="p-2.5 rounded-lg bg-dark-800/50 border border-white/5 flex items-center justify-between text-xs">
+                        <div className="text-gray-300">
+                          نوع دکمه منو: <span className="font-mono text-cyan-400">{m090MenuButton._}</span>
+                          {m090MenuButton.text && <span className="mr-2 text-white font-medium">({m090MenuButton.text})</span>}
+                        </div>
+                        {m090MenuButton.url && (
+                          <span className="text-[10px] font-mono text-gray-400 max-w-[200px] truncate">{m090MenuButton.url}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Operation 3 & 4: bots.getBotCommands & bots.getPreviewMedias */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۲. دستورات ربات و پیش‌نمایش رسانه‌ای (Commands & Media)</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleM090GetBotCommands}
+                          disabled={m090LoadingOp === 'getBotCommands'}
+                          className="px-2.5 py-1 bg-primary-600/30 hover:bg-primary-600/50 border border-primary-500/30 text-primary-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m090LoadingOp === 'getBotCommands' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دریافت دستورات'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleM090GetPreviewMedias}
+                          disabled={m090LoadingOp === 'getPreviewMedias' || !m090BotId.trim()}
+                          className="px-2.5 py-1 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/30 text-amber-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m090LoadingOp === 'getPreviewMedias' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'رسانه‌های پیش‌نمایش'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Commands List Display */}
+                    {m090Commands !== null && (
+                      <div className="space-y-1.5 pt-1">
+                        {m090Commands.length === 0 ? (
+                          <div className="p-2.5 rounded-lg bg-dark-800/40 border border-white/5 text-center text-xs text-gray-500">
+                            دستوری برای اسکوپ پیش‌فرض ثبت نشده است (وضعیت صادقانه صفر).
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
+                            {m090Commands.map((cmd: any, idx: number) => (
+                              <div key={idx} className="p-2 rounded-lg bg-dark-800/60 border border-white/5 flex items-center justify-between text-xs">
+                                <span className="font-mono text-cyan-400 font-medium">/{cmd.command}</span>
+                                <span className="text-gray-400 text-[11px] truncate max-w-[140px]">{cmd.description}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Preview Medias List Display */}
+                    {m090PreviewMedias !== null && (
+                      <div className="space-y-1.5 pt-1">
+                        {m090PreviewMedias.length === 0 ? (
+                          <div className="p-2.5 rounded-lg bg-dark-800/40 border border-white/5 text-center text-xs text-gray-500">
+                            هیچ رسانه پیش‌نمایشی برای این ربات ثبت نشده است (وضعیت صادقانه صفر).
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {m090PreviewMedias.map((media: any, idx: number) => (
+                              <div key={idx} className="p-2 rounded-lg bg-dark-800/60 border border-white/5 text-center text-xs">
+                                <div className="font-mono text-amber-400 text-[10px]">{media._}</div>
+                                <div className="text-[10px] text-gray-500 mt-1">مدیا #{idx + 1}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Operation 5 & 6: bots.getPopularAppBots & bots.getBotRecommendations */}
+                  <div className="p-3.5 rounded-xl bg-dark-900/60 border border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-200">۳. برنامه‌های محبوب و ربات‌های پیشنهادی (Popular Apps & Recommendations)</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleM090GetPopularAppBots}
+                          disabled={m090LoadingOp === 'getPopularAppBots'}
+                          className="px-2.5 py-1 bg-violet-600/30 hover:bg-violet-600/50 border border-violet-500/30 text-violet-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m090LoadingOp === 'getPopularAppBots' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'مینی‌اپ‌های محبوب'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleM090GetBotRecommendations}
+                          disabled={m090LoadingOp === 'getBotRecommendations' || !m090BotId.trim()}
+                          className="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/30 text-emerald-200 text-xs rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m090LoadingOp === 'getBotRecommendations' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ربات‌های پیشنهادی'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Popular Apps Grid */}
+                    {m090PopularApps !== null && (
+                      <div className="space-y-1.5 pt-1">
+                        {m090PopularApps.length === 0 ? (
+                          <div className="p-2.5 rounded-lg bg-dark-800/40 border border-white/5 text-center text-xs text-gray-500">
+                            برنامه محبوبی دریافت نشد (وضعیت صادقانه صفر).
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto">
+                            {m090PopularApps.map((app: any, idx: number) => (
+                              <div
+                                key={app.id || idx}
+                                onClick={() => setM090BotId(String(app.id || ''))}
+                                className="p-2.5 rounded-lg bg-dark-800/60 border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer flex items-center justify-between"
+                              >
+                                <div>
+                                  <div className="text-xs font-medium text-white">{app.firstName || app.title || 'برنامه'}</div>
+                                  <div className="text-[11px] font-mono text-violet-400">@{app.username || app.id}</div>
+                                </div>
+                                <span className="text-[10px] text-gray-500">انتخاب</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Recommendations List */}
+                    {m090Recommendations !== null && (
+                      <div className="space-y-1.5 pt-1">
+                        {m090Recommendations.length === 0 ? (
+                          <div className="p-2.5 rounded-lg bg-dark-800/40 border border-white/5 text-center text-xs text-gray-500">
+                            هیچ ربات پیشنهادی برای این ربات یافت نشد (وضعیت صادقانه صفر).
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                            {m090Recommendations.map((bot: any, idx: number) => (
+                              <div
+                                key={bot.id || idx}
+                                onClick={() => setM090BotId(String(bot.id || ''))}
+                                className="p-2 rounded-lg bg-dark-800/60 border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer flex items-center justify-between"
+                              >
+                                <div>
+                                  <div className="text-xs font-medium text-white">{bot.firstName || bot.title || 'ربات'}</div>
+                                  <div className="text-[10px] font-mono text-emerald-400">@{bot.username || bot.id}</div>
+                                </div>
+                                <span className="text-[10px] text-gray-500">انتخاب</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feedback Status / Error / Success / Retry */}
+                  {m090Status && (
+                    <div
+                      className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                        m090Status.type === 'success'
+                          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-200'
+                          : 'bg-rose-950/40 border-rose-500/30 text-rose-200'
+                      }`}
+                    >
+                      <span>{m090Status.message}</span>
+                      {m090Status.type === 'error' && (
+                        <button
+                          type="button"
+                          onClick={() => setM090Status(null)}
                           className="text-[11px] underline text-rose-300 hover:text-rose-100 cursor-pointer"
                         >
                           تلاش مجدد
