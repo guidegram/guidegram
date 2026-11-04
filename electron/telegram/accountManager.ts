@@ -20963,6 +20963,49 @@ export class AccountManager {
     if (!holder?.client) return []
     return this.channelsService.getSendAs(holder as any, accountId, params.peerId)
   }
+
+  // Layer 232 Channels Domain Part 5 (Microphase 083)
+  public async channelsInviteToChannelRaw(accountId: string, params: { channelId: string; userIds: string[] }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.inviteToChannel(holder as any, accountId, params.channelId, params.userIds)
+  }
+
+  public async channelsJoinChannelRaw(accountId: string, params: { channelId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.joinChannel(holder as any, accountId, params.channelId)
+  }
+
+  public async channelsLeaveChannelRaw(accountId: string, params: { channelId: string }): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.channelsService.leaveChannel(holder as any, accountId, params.channelId)
+  }
+
+  public async channelsReadHistoryRaw(accountId: string, params: { channelId: string; maxId: number }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.readHistory(holder as any, accountId, params.channelId, params.maxId)
+  }
+
+  public async channelsReadMessageContentsRaw(accountId: string, params: { channelId: string; id: number[] }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.readMessageContents(holder as any, accountId, params.channelId, params.id)
+  }
+
+  public async channelsReorderUsernamesRaw(accountId: string, params: { channelId: string; order: string[] }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.reorderUsernames(holder as any, accountId, params.channelId, params.order)
+  }
+
+  public async channelsReportAntiSpamFalsePositiveRaw(accountId: string, params: { channelId: string; msgId: number }): Promise<boolean> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return false
+    return this.channelsService.reportAntiSpamFalsePositive(holder as any, accountId, params.channelId, params.msgId)
+  }
 }
 
 

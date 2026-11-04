@@ -8982,6 +8982,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Microphase 083 IPC Handlers (Channels Domain Part 5)
+  ipcMain.handle('telegram:channels:invite-to-channel-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsInviteToChannelRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsInviteToChannelRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:join-channel-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsJoinChannelRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsJoinChannelRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:leave-channel-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsLeaveChannelRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsLeaveChannelRaw error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('telegram:channels:read-history-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsReadHistoryRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsReadHistoryRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:read-message-contents-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsReadMessageContentsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsReadMessageContentsRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:reorder-usernames-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsReorderUsernamesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsReorderUsernamesRaw error:', err)
+      return false
+    }
+  })
+
+  ipcMain.handle('telegram:channels:report-anti-spam-false-positive-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.channelsReportAntiSpamFalsePositiveRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] channelsReportAntiSpamFalsePositiveRaw error:', err)
+      return false
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

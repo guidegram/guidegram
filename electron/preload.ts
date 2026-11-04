@@ -2821,6 +2821,20 @@ const guidegramAPI = {
     ipcRenderer.invoke('telegram:channels:get-participants-raw', { accountId, ...params }),
   channelsGetSendAsRaw: (accountId: string, params: { peerId: string }): Promise<any[]> =>
     ipcRenderer.invoke('telegram:channels:get-send-as-raw', { accountId, ...params }),
+  channelsInviteToChannelRaw: (accountId: string, params: { channelId: string; userIds: string[] }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:invite-to-channel-raw', { accountId, ...params }),
+  channelsJoinChannelRaw: (accountId: string, params: { channelId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:join-channel-raw', { accountId, ...params }),
+  channelsLeaveChannelRaw: (accountId: string, params: { channelId: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:channels:leave-channel-raw', { accountId, ...params }),
+  channelsReadHistoryRaw: (accountId: string, params: { channelId: string; maxId: number }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:read-history-raw', { accountId, ...params }),
+  channelsReadMessageContentsRaw: (accountId: string, params: { channelId: string; id: number[] }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:read-message-contents-raw', { accountId, ...params }),
+  channelsReorderUsernamesRaw: (accountId: string, params: { channelId: string; order: string[] }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:reorder-usernames-raw', { accountId, ...params }),
+  channelsReportAntiSpamFalsePositiveRaw: (accountId: string, params: { channelId: string; msgId: number }): Promise<boolean> =>
+    ipcRenderer.invoke('telegram:channels:report-anti-spam-false-positive-raw', { accountId, ...params }),
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

@@ -8803,6 +8803,187 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  // Microphase 083 State & Handlers (Channels Domain Part 5)
+  const [m083Status, setM083Status] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [m083LoadingOp, setM083LoadingOp] = useState<string | null>(null)
+  const [m083ChannelId, setM083ChannelId] = useState('')
+  const [m083UserIds, setM083UserIds] = useState('')
+  const [m083MaxId, setM083MaxId] = useState('')
+  const [m083MsgIds, setM083MsgIds] = useState('')
+  const [m083UsernamesOrder, setM083UsernamesOrder] = useState('')
+  const [m083AntiSpamMsgId, setM083AntiSpamMsgId] = useState('')
+
+  const handleM083InviteToChannel = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const userIds = m083UserIds.split(',').map((s) => s.trim()).filter(Boolean)
+    if (!targetId || !window.guidegram?.channelsInviteToChannelRaw || !m083ChannelId.trim() || userIds.length === 0) return
+    setM083LoadingOp('inviteToChannel')
+    setM083Status(null)
+    try {
+      await window.guidegram.channelsInviteToChannelRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+        userIds,
+      })
+      setM083Status({
+        type: 'success',
+        message: `دعوت اعضا به کانال انجام شد (${userIds.length} کاربر)`,
+      })
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.inviteToChannel' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
+  const handleM083JoinChannel = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsJoinChannelRaw || !m083ChannelId.trim()) return
+    setM083LoadingOp('joinChannel')
+    setM083Status(null)
+    try {
+      await window.guidegram.channelsJoinChannelRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+      })
+      setM083Status({
+        type: 'success',
+        message: `عضویت در کانال/ابرگروه با موفقیت ثبت شد`,
+      })
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.joinChannel' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
+  const handleM083LeaveChannel = async () => {
+    const targetId = activeAccountId || accounts[0]?.id
+    if (!targetId || !window.guidegram?.channelsLeaveChannelRaw || !m083ChannelId.trim()) return
+    setM083LoadingOp('leaveChannel')
+    setM083Status(null)
+    try {
+      await window.guidegram.channelsLeaveChannelRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+      })
+      setM083Status({
+        type: 'success',
+        message: `خروج از کانال/ابرگروه با موفقیت ثبت گردید`,
+      })
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.leaveChannel' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
+  const handleM083ReadHistory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const maxId = parseInt(m083MaxId.trim(), 10)
+    if (!targetId || !window.guidegram?.channelsReadHistoryRaw || !m083ChannelId.trim() || isNaN(maxId)) return
+    setM083LoadingOp('readHistory')
+    setM083Status(null)
+    try {
+      const ok = await window.guidegram.channelsReadHistoryRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+        maxId,
+      })
+      if (ok) {
+        setM083Status({
+          type: 'success',
+          message: `تاریخچه پیام‌ها تا شناسه ${maxId} خوانده شد`,
+        })
+      } else {
+        setM083Status({ type: 'error', message: 'عدم موفقیت در خواندن تاریخچه' })
+      }
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.readHistory' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
+  const handleM083ReadMessageContents = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const ids = m083MsgIds.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    if (!targetId || !window.guidegram?.channelsReadMessageContentsRaw || !m083ChannelId.trim() || ids.length === 0) return
+    setM083LoadingOp('readMessageContents')
+    setM083Status(null)
+    try {
+      const ok = await window.guidegram.channelsReadMessageContentsRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+        id: ids,
+      })
+      if (ok) {
+        setM083Status({
+          type: 'success',
+          message: `محتوای ${ids.length} پیام به عنوان دیده‌شده علامت‌گذاری شد`,
+        })
+      } else {
+        setM083Status({ type: 'error', message: 'عدم موفقیت در ثبت وضعیت خوانده‌شدن محتوا' })
+      }
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.readMessageContents' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
+  const handleM083ReorderUsernames = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const order = m083UsernamesOrder.split(',').map((s) => s.trim().replace(/^@/, '')).filter(Boolean)
+    if (!targetId || !window.guidegram?.channelsReorderUsernamesRaw || !m083ChannelId.trim() || order.length === 0) return
+    setM083LoadingOp('reorderUsernames')
+    setM083Status(null)
+    try {
+      const ok = await window.guidegram.channelsReorderUsernamesRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+        order,
+      })
+      if (ok) {
+        setM083Status({
+          type: 'success',
+          message: `ترتیب نام‌های کاربری کانال ذخیره شد`,
+        })
+      } else {
+        setM083Status({ type: 'error', message: 'عدم موفقیت در بازچینی یوزرنیم‌ها' })
+      }
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.reorderUsernames' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
+  const handleM083ReportAntiSpamFalsePositive = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetId = activeAccountId || accounts[0]?.id
+    const msgId = parseInt(m083AntiSpamMsgId.trim(), 10)
+    if (!targetId || !window.guidegram?.channelsReportAntiSpamFalsePositiveRaw || !m083ChannelId.trim() || isNaN(msgId)) return
+    setM083LoadingOp('reportAntiSpamFalsePositive')
+    setM083Status(null)
+    try {
+      const ok = await window.guidegram.channelsReportAntiSpamFalsePositiveRaw(targetId, {
+        channelId: m083ChannelId.trim(),
+        msgId,
+      })
+      if (ok) {
+        setM083Status({
+          type: 'success',
+          message: `گزارش تشخیص اشتباه آنتی‌اسپم تلگرام برای پیام ${msgId} ثبت شد`,
+        })
+      } else {
+        setM083Status({ type: 'error', message: 'عدم موفقیت در ثبت گزارش آنتی‌اسپم' })
+      }
+    } catch (err: any) {
+      setM083Status({ type: 'error', message: err?.message || 'خطا در channels.reportAntiSpamFalsePositive' })
+    } finally {
+      setM083LoadingOp(null)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -22542,6 +22723,205 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         {m082LoadingOp === 'getSendAs' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'واکشی هویت‌های Send As'}
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Microphase 083: Channels Domain Suite Part 5 */}
+                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-gray-200">
+                        میکروفاز ۰۸۳: عضویت، خروج، دعوت، خواندن تاریخچه و گزارش آنتی‌اسپم (Channels Part 5)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-cyan-400/80 font-mono px-2 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/20">
+                      لایه ۲۳۲ | دامنه Channels
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    عملیات عضویت/ترک کانال و گروه، دعوت اعضا، خواندن تاریخچه و محتوا، چیدمان یوزرنیم‌ها و گزارش خطای فیلتر آنتی‌اسپم:
+                  </p>
+
+                  {/* 4-State UI: Feedback message */}
+                  <AnimatePresence mode="wait">
+                    {m083Status && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
+                          m083Status.type === 'success'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {m083Status.type === 'success' ? (
+                            <Check className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">{m083Status.message}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setM083Status(null)}
+                          className="text-[10px] opacity-70 hover:opacity-100 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Common Channel ID Field */}
+                  <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5 flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 whitespace-nowrap">شناسه کانال هدف:</span>
+                    <input
+                      type="text"
+                      value={m083ChannelId}
+                      onChange={(e) => setM083ChannelId(e.target.value)}
+                      placeholder="شناسه یا یوزرنیم کانال (مثلاً 123456789 یا @mychannel)..."
+                      className="w-full bg-transparent text-xs text-cyan-300 placeholder-gray-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* 1. channels.joinChannel & leaveChannel */}
+                    <div className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2">
+                      <span className="text-xs text-gray-300 font-medium">۱. عضویت / خروج از کانال</span>
+                      <p className="text-[10px] text-gray-400">عضویت یا ترک مستقیم کانال/سوپرگروه هدف</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleM083JoinChannel}
+                          disabled={m083LoadingOp === 'joinChannel' || !m083ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m083LoadingOp === 'joinChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'عضویت (join)'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleM083LeaveChannel}
+                          disabled={m083LoadingOp === 'leaveChannel' || !m083ChannelId.trim()}
+                          className="flex-1 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          {m083LoadingOp === 'leaveChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ترک (leave)'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. channels.inviteToChannel */}
+                    <form
+                      onSubmit={handleM083InviteToChannel}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۲. دعوت به کانال (inviteToChannel)</span>
+                      <input
+                        type="text"
+                        value={m083UserIds}
+                        onChange={(e) => setM083UserIds(e.target.value)}
+                        placeholder="شناسه‌ها با کاما (مثلاً user1, @user2)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m083LoadingOp === 'inviteToChannel' || !m083ChannelId.trim() || !m083UserIds.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m083LoadingOp === 'inviteToChannel' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دعوت به کانال'}
+                      </button>
+                    </form>
+
+                    {/* 3. channels.readHistory */}
+                    <form
+                      onSubmit={handleM083ReadHistory}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۳. خواندن تاریخچه (readHistory)</span>
+                      <input
+                        type="number"
+                        value={m083MaxId}
+                        onChange={(e) => setM083MaxId(e.target.value)}
+                        placeholder="شناسه آخرین پیام خوانده‌شده (maxId)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m083LoadingOp === 'readHistory' || !m083ChannelId.trim() || !m083MaxId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m083LoadingOp === 'readHistory' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ثبت خوانده‌شدن تاریخچه'}
+                      </button>
+                    </form>
+
+                    {/* 4. channels.readMessageContents */}
+                    <form
+                      onSubmit={handleM083ReadMessageContents}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۴. خواندن محتوای پیام (readMessageContents)</span>
+                      <input
+                        type="text"
+                        value={m083MsgIds}
+                        onChange={(e) => setM083MsgIds(e.target.value)}
+                        placeholder="شناسه‌های پیام با کاما (مثلاً 101, 102)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m083LoadingOp === 'readMessageContents' || !m083ChannelId.trim() || !m083MsgIds.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m083LoadingOp === 'readMessageContents' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'دیده‌شدن مدیا/ویس'}
+                      </button>
+                    </form>
+
+                    {/* 5. channels.reorderUsernames */}
+                    <form
+                      onSubmit={handleM083ReorderUsernames}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۵. چیدمان یوزرنیم‌ها (reorderUsernames)</span>
+                      <input
+                        type="text"
+                        value={m083UsernamesOrder}
+                        onChange={(e) => setM083UsernamesOrder(e.target.value)}
+                        placeholder="یوزرنیم‌ها با کاما (مثلاً name1, name2)..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m083LoadingOp === 'reorderUsernames' || !m083ChannelId.trim() || !m083UsernamesOrder.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m083LoadingOp === 'reorderUsernames' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ذخیره ترتیب یوزرنیم‌ها'}
+                      </button>
+                    </form>
+
+                    {/* 6. channels.reportAntiSpamFalsePositive */}
+                    <form
+                      onSubmit={handleM083ReportAntiSpamFalsePositive}
+                      className="p-3 rounded-xl bg-dark-800/40 border border-white/5 flex flex-col justify-between gap-2"
+                    >
+                      <span className="text-xs text-gray-300 font-medium">۶. گزارش خطای آنتی‌اسپم (AntiSpam False Positive)</span>
+                      <input
+                        type="number"
+                        value={m083AntiSpamMsgId}
+                        onChange={(e) => setM083AntiSpamMsgId(e.target.value)}
+                        placeholder="شناسه پیامی که اشتباه اسپم شد..."
+                        className="w-full bg-dark-900 border border-white/5 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={m083LoadingOp === 'reportAntiSpamFalsePositive' || !m083ChannelId.trim() || !m083AntiSpamMsgId.trim()}
+                        className="w-full py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {m083LoadingOp === 'reportAntiSpamFalsePositive' ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'ارسال گزارش به تلگرام'}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>
