@@ -3474,6 +3474,74 @@ const guidegramAPI = {
   ): Promise<any> =>
     ipcRenderer.invoke('telegram:communities:toggle-peer-link-request-approval-raw', { accountId, ...params }),
 
+  // --- Microphases 131 & 132: Ephemeral Domain Suite Parts 1 & 2 (8 RPCs) ---
+  ephemeralSendMessageRaw: (
+    accountId: string,
+    params: {
+      invertMedia?: boolean
+      welcome?: boolean
+      anchor?: boolean
+      noforwards?: boolean
+      peerId?: string
+      receiverIdId?: string
+      queryId?: bigint | number
+      message?: string
+      entities?: any
+      media?: any
+      replyMarkup?: any
+      richMessage?: any
+      randomId?: bigint | number
+      replyTo?: any
+    }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:send-message-raw', { accountId, ...params }),
+  ephemeralDeleteMessageRaw: (
+    accountId: string,
+    params: { peerId?: string; receiverIdId?: string; id?: number }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:delete-message-raw', { accountId, ...params }),
+  ephemeralReportMessageRaw: (
+    accountId: string,
+    params: { peerId?: string; id?: number; option?: any; message?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:report-message-raw', { accountId, ...params }),
+  ephemeralGetCallbackAnswerRaw: (
+    accountId: string,
+    params: { peerId?: string; id?: number; data?: any }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:get-callback-answer-raw', { accountId, ...params }),
+  ephemeralEditMessageRaw: (
+    accountId: string,
+    params: {
+      invertMedia?: boolean
+      welcome?: boolean
+      peerId?: string
+      receiverIdId?: string
+      id?: number
+      message?: string
+      media?: any
+      entities?: any
+      replyMarkup?: any
+      richMessage?: any
+    }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:edit-message-raw', { accountId, ...params }),
+  ephemeralDeleteWelcomeMessageRaw: (
+    accountId: string,
+    params: { peerId?: string; id?: number }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:delete-welcome-message-raw', { accountId, ...params }),
+  ephemeralDeleteAllWelcomeMessagesRaw: (
+    accountId: string,
+    params: { peerId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:delete-all-welcome-messages-raw', { accountId, ...params }),
+  ephemeralGetWelcomeMessagesRaw: (
+    accountId: string,
+    params: { peerId?: string; hash?: bigint | number }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:ephemeral:get-welcome-messages-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

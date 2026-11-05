@@ -24270,6 +24270,168 @@ export class AccountManager {
       params?.peerId
     )
   }
+
+  // --- Ephemeral Domain Suite Parts 1 & 2 (Microphases 131 & 132 - 8 RPCs) ---
+  public async ephemeralSendMessageRaw(
+    accountId: string,
+    params: {
+      invertMedia?: boolean
+      welcome?: boolean
+      anchor?: boolean
+      noforwards?: boolean
+      peerId?: string
+      receiverIdId?: string
+      queryId?: bigint | number
+      message?: string
+      entities?: any
+      media?: any
+      replyMarkup?: any
+      richMessage?: any
+      randomId?: bigint | number
+      replyTo?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_sendMessage(
+      holder as any,
+      accountId,
+      params?.invertMedia,
+      params?.welcome,
+      params?.anchor,
+      params?.noforwards,
+      params?.peerId,
+      params?.receiverIdId,
+      params?.queryId,
+      params?.message,
+      params?.entities,
+      params?.media,
+      params?.replyMarkup,
+      params?.richMessage,
+      params?.randomId,
+      params?.replyTo
+    )
+  }
+
+  public async ephemeralDeleteMessageRaw(
+    accountId: string,
+    params: { peerId?: string; receiverIdId?: string; id?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_deleteMessage(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.receiverIdId,
+      params?.id
+    )
+  }
+
+  public async ephemeralReportMessageRaw(
+    accountId: string,
+    params: { peerId?: string; id?: number; option?: any; message?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_reportMessage(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.id,
+      params?.option,
+      params?.message
+    )
+  }
+
+  public async ephemeralGetCallbackAnswerRaw(
+    accountId: string,
+    params: { peerId?: string; id?: number; data?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_getCallbackAnswer(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.id,
+      params?.data
+    )
+  }
+
+  public async ephemeralEditMessageRaw(
+    accountId: string,
+    params: {
+      invertMedia?: boolean
+      welcome?: boolean
+      peerId?: string
+      receiverIdId?: string
+      id?: number
+      message?: string
+      media?: any
+      entities?: any
+      replyMarkup?: any
+      richMessage?: any
+    }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_editMessage(
+      holder as any,
+      accountId,
+      params?.invertMedia,
+      params?.welcome,
+      params?.peerId,
+      params?.receiverIdId,
+      params?.id,
+      params?.message,
+      params?.media,
+      params?.entities,
+      params?.replyMarkup,
+      params?.richMessage
+    )
+  }
+
+  public async ephemeralDeleteWelcomeMessageRaw(
+    accountId: string,
+    params: { peerId?: string; id?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_deleteWelcomeMessage(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.id
+    )
+  }
+
+  public async ephemeralDeleteAllWelcomeMessagesRaw(
+    accountId: string,
+    params: { peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_deleteAllWelcomeMessages(
+      holder as any,
+      accountId,
+      params?.peerId
+    )
+  }
+
+  public async ephemeralGetWelcomeMessagesRaw(
+    accountId: string,
+    params: { peerId?: string; hash?: bigint | number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.ephemeral_getWelcomeMessages(
+      holder as any,
+      accountId,
+      params?.peerId,
+      params?.hash
+    )
+  }
 }
 
 

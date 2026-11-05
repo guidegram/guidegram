@@ -4,7 +4,7 @@
   "total_microphases": 137,
   "total_methods": 859,
   "total_namespaces": 28,
-  "overall_coverage_pct": 95.81,
+  "overall_coverage_pct": 96.74,
   "microphases": [
     {
       "id": "microphase_001_core",
@@ -3965,7 +3965,7 @@
       ],
       "method_count": 7,
       "ui_component": "src/components/AutoDeleteModal.tsx",
-      "status": "PENDING",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,
@@ -3990,7 +3990,7 @@
       ],
       "method_count": 1,
       "ui_component": "src/components/AutoDeleteModal.tsx",
-      "status": "PENDING",
+      "status": "DONE",
       "ui_states": {
         "glass_loading": true,
         "honest_empty": true,
@@ -4154,7 +4154,7 @@
       "dark_theme": true
     }
   ],
-  "total_implemented": 823,
-  "last_updated": "2026-11-05T09:38:00.000000+00:00",
-  "completed_microphases": 130
+  "total_implemented": 831,
+  "last_updated": "2026-11-05T09:45:00.000000+00:00",
+  "completed_microphases": 132
 }

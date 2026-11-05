@@ -11608,6 +11608,79 @@ function setupIpcHandlers() {
     }
   })
 
+  // Ephemeral Domain Suite Parts 1 & 2 IPC (Microphases 131 & 132 - 8 RPCs)
+  ipcMain.handle('telegram:ephemeral:send-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralSendMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralSendMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:delete-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralDeleteMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralDeleteMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:report-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralReportMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralReportMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:get-callback-answer-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralGetCallbackAnswerRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralGetCallbackAnswerRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:edit-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralEditMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralEditMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:delete-welcome-message-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralDeleteWelcomeMessageRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralDeleteWelcomeMessageRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:delete-all-welcome-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralDeleteAllWelcomeMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralDeleteAllWelcomeMessagesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:ephemeral:get-welcome-messages-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.ephemeralGetWelcomeMessagesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] ephemeralGetWelcomeMessagesRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
