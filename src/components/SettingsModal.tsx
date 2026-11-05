@@ -216,7 +216,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </motion.div>
 )
 
-type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'smsjobs' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
+type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'smsjobs' | 'aicompose' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -560,12 +560,141 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeAccountId, accounts, smsJobId, smsJobErrorMsg, isPersian, loadSmsStatus])
 
+  // --- Microphase 128: Telegram AI Compose & Tones (aicompose domain suite) ---
+  const [aiTonesList, setAiTonesList] = useState<any[] | null>(null)
+  const [loadingAiTones, setLoadingAiTones] = useState<boolean>(false)
+  const [aiTonesError, setAiTonesError] = useState<string | null>(null)
+  const [aiNewToneTitle, setAiNewToneTitle] = useState<string>('')
+  const [aiNewTonePrompt, setAiNewTonePrompt] = useState<string>('')
+  const [aiCreatingTone, setAiCreatingTone] = useState<boolean>(false)
+  const [selectedAiTone, setSelectedAiTone] = useState<any | null>(null)
+  const [aiToneExample, setAiToneExample] = useState<string | null>(null)
+  const [loadingAiExample, setLoadingAiExample] = useState<boolean>(false)
+  const [aiToneToast, setAiToneToast] = useState<string | null>(null)
+  const [aiSavingDeleting, setAiSavingDeleting] = useState<boolean>(false)
+
+  const loadAiTones = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setLoadingAiTones(true)
+    setAiTonesError(null)
+    try {
+      if ((window as any).guidegram?.aicomposeGetTonesRaw) {
+        const res = await (window as any).guidegram.aicomposeGetTonesRaw(targetAcc, {})
+        const tones = res?.tones || res?.result || (Array.isArray(res) ? res : [])
+        setAiTonesList(tones)
+      }
+    } catch (err: any) {
+      console.warn('[SettingsModal] loadAiTones error:', err)
+      setAiTonesError(err?.message || (isPersian ? 'خطا در دریافت لحن‌های هوش مصنوعی' : 'Failed to load AI tones'))
+    } finally {
+      setLoadingAiTones(false)
+    }
+  }, [activeAccountId, accounts, isPersian])
+
+  const handleCreateAiTone = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !aiNewToneTitle.trim() || !aiNewTonePrompt.trim()) return
+    setAiCreatingTone(true)
+    try {
+      if ((window as any).guidegram?.aicomposeCreateToneRaw) {
+        await (window as any).guidegram.aicomposeCreateToneRaw(targetAcc, {
+          title: aiNewToneTitle.trim(),
+          prompt: aiNewTonePrompt.trim(),
+          displayAuthor: true,
+        })
+        setAiToneToast(isPersian ? 'لحن جدید در سرور تلگرام ایجاد شد' : 'Tone created successfully')
+        setAiNewToneTitle('')
+        setAiNewTonePrompt('')
+        await loadAiTones()
+      }
+    } catch (err: any) {
+      setAiToneToast(err?.message || 'Error creating tone')
+    } finally {
+      setAiCreatingTone(false)
+      setTimeout(() => setAiToneToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, aiNewToneTitle, aiNewTonePrompt, isPersian, loadAiTones])
+
+  const handleGetAiToneExample = useCallback(async (toneObj: any) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !toneObj) return
+    setLoadingAiExample(true)
+    setAiToneExample(null)
+    setSelectedAiTone(toneObj)
+    try {
+      if ((window as any).guidegram?.aicomposeGetToneExampleRaw) {
+        const res = await (window as any).guidegram.aicomposeGetToneExampleRaw(targetAcc, {
+          tone: toneObj,
+          num: 1,
+        })
+        setAiToneExample(res?.text || res?.example || (typeof res === 'string' ? res : JSON.stringify(res, null, 2)))
+      }
+    } catch (err: any) {
+      setAiToneToast(err?.message || 'Error fetching tone example')
+    } finally {
+      setLoadingAiExample(false)
+    }
+  }, [activeAccountId, accounts])
+
+  const handleSaveToggleAiTone = useCallback(async (toneObj: any, unsave: boolean = false) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !toneObj) return
+    setAiSavingDeleting(true)
+    try {
+      if ((window as any).guidegram?.aicomposeSaveToneRaw) {
+        await (window as any).guidegram.aicomposeSaveToneRaw(targetAcc, {
+          tone: toneObj,
+          unsave,
+        })
+        setAiToneToast(
+          unsave
+            ? (isPersian ? 'لحن از لیست حذف شد' : 'Tone unsaved')
+            : (isPersian ? 'لحن در لیست ذخیره‌شده‌ها ذخیره شد' : 'Tone saved')
+        )
+        await loadAiTones()
+      }
+    } catch (err: any) {
+      setAiToneToast(err?.message || 'Error saving tone')
+    } finally {
+      setAiSavingDeleting(false)
+      setTimeout(() => setAiToneToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian, loadAiTones])
+
+  const handleDeleteAiTone = useCallback(async (toneObj: any) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !toneObj) return
+    setAiSavingDeleting(true)
+    try {
+      if ((window as any).guidegram?.aicomposeDeleteToneRaw) {
+        await (window as any).guidegram.aicomposeDeleteToneRaw(targetAcc, {
+          tone: toneObj,
+        })
+        setAiToneToast(isPersian ? 'لحن با موفقیت حذف شد' : 'Tone deleted')
+        if (selectedAiTone?.id === toneObj?.id) {
+          setSelectedAiTone(null)
+          setAiToneExample(null)
+        }
+        await loadAiTones()
+      }
+    } catch (err: any) {
+      setAiToneToast(err?.message || 'Error deleting tone')
+    } finally {
+      setAiSavingDeleting(false)
+      setTimeout(() => setAiToneToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian, loadAiTones, selectedAiTone])
+
   useEffect(() => {
     if (isOpen && activeTab === 'smsjobs') {
       checkSmsEligibility()
       loadSmsStatus()
     }
-  }, [isOpen, activeTab, checkSmsEligibility, loadSmsStatus])
+    if (isOpen && activeTab === 'aicompose') {
+      loadAiTones()
+    }
+  }, [isOpen, activeTab, checkSmsEligibility, loadSmsStatus, loadAiTones])
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -11942,6 +12071,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               { id: 'business' as SettingsTab, label: t('settings.telegram_business'), icon: <Briefcase className="w-4 h-4" /> },
               { id: 'premium' as SettingsTab, label: isPersian ? 'پرمیوم و بوست‌ها' : 'Premium & Boosts', icon: <Star className="w-4 h-4 text-amber-400" /> },
               { id: 'smsjobs' as SettingsTab, label: isPersian ? 'رله پیامک (SMS Jobs)' : 'SMS Relay Jobs', icon: <Radio className="w-4 h-4 text-emerald-400" /> },
+              { id: 'aicompose' as SettingsTab, label: isPersian ? 'لحن و نگارش هوشمند (AI Compose)' : 'AI Compose & Tones', icon: <Sparkles className="w-4 h-4 text-purple-400" /> },
               { id: 'general' as SettingsTab, label: t('settings.general'), icon: <Globe className="w-4 h-4" /> },
               { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
               { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -12921,6 +13051,222 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </button>
                         </div>
                       </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: AI COMPOSE & TONES (Microphase 128 - aicompose domain) */}
+            {activeTab === 'aicompose' && (
+              <div className="space-y-5 animate-in fade-in duration-100">
+                {/* Header Card */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-gray-200">
+                          {isPersian ? 'لحن و نگارش هوشمند تلگرام (AI Compose & Tones)' : 'Telegram AI Compose & Tones'}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {isPersian
+                            ? 'مدیریت لحن‌های هوش مصنوعی (AI Tones)، ساخت و تست نمونه پاسخ و نگارش خودکار لایه ۲۳۲'
+                            : 'Manage AI composition tones, test samples and craft custom communication prompts'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={loadAiTones}
+                      disabled={loadingAiTones}
+                      className="p-1.5 rounded-lg bg-dark-900 border border-white/10 text-gray-300 hover:text-white transition-all disabled:opacity-50"
+                      title={isPersian ? 'بروزرسانی لیست لحن‌ها' : 'Refresh AI Tones'}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingAiTones ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {aiToneToast && (
+                    <div className="mt-2 p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5 shrink-0" />
+                      <span>{aiToneToast}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Create New Tone Card */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'ساخت لحن جدید (Create Custom AI Tone)' : 'Create Custom AI Tone'}
+                    </span>
+                    <span className="text-[10px] text-purple-400 font-mono">aicompose.createTone</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={aiNewToneTitle}
+                      onChange={(e) => setAiNewToneTitle(e.target.value)}
+                      placeholder={isPersian ? 'عنوان لحن (مثلاً: اداری و رسمی، طنزآمیز، خلاصه و تلگرافی)' : 'Tone Title (e.g. Formal, Casual, Concise)'}
+                      className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                    />
+
+                    <textarea
+                      value={aiNewTonePrompt}
+                      onChange={(e) => setAiNewTonePrompt(e.target.value)}
+                      rows={2}
+                      placeholder={isPersian ? 'دستور پرامپت هوش مصنوعی تلگرام (مثلاً: پاسخ‌ها را کوتاه و صریح بنویس)' : 'System prompt instruction for Telegram AI'}
+                      className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none font-mono text-[11px]"
+                    />
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleCreateAiTone}
+                        disabled={aiCreatingTone || !aiNewToneTitle.trim() || !aiNewTonePrompt.trim()}
+                        className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-glow disabled:opacity-50"
+                      >
+                        {aiCreatingTone ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        <span>{isPersian ? 'ثبت و ساخت لحن' : 'Create Tone'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tone Example Output Card */}
+                {selectedAiTone && (
+                  <div className="p-4 rounded-2xl bg-dark-800 border border-purple-500/30 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="font-semibold text-gray-200">
+                          {isPersian ? 'نمونه خروجی لحن:' : 'Sample Tone Output:'} {selectedAiTone.title || selectedAiTone.name || 'Selected Tone'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">aicompose.getToneExample</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-dark-900 border border-white/5 text-xs text-gray-200">
+                      {loadingAiExample ? (
+                        <div className="flex items-center gap-2 text-gray-400 py-2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                          <span>{isPersian ? 'در حال دریافت نمونه نگارش از سرور تلگرام...' : 'Generating sample from Telegram...'}</span>
+                        </div>
+                      ) : (
+                        <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                          {aiToneExample || (isPersian ? 'نمونه‌ای یافت نشد.' : 'No example returned.')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Available Tones List */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-200">
+                        {isPersian ? 'لحن‌های موجود (Available AI Tones)' : 'Available AI Tones'}
+                      </span>
+                      {aiTonesList && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-500/10 text-purple-300">
+                          {aiTonesList.length}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-mono">aicompose.getTones</span>
+                  </div>
+
+                  {loadingAiTones ? (
+                    <div className="p-6 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                      <span>{isPersian ? 'در حال بارگذاری لحن‌های هوش مصنوعی...' : 'Loading AI tones...'}</span>
+                    </div>
+                  ) : aiTonesError ? (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
+                      <span>{aiTonesError}</span>
+                      <button
+                        type="button"
+                        onClick={loadAiTones}
+                        className="px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold"
+                      >
+                        {isPersian ? 'تلاش مجدد' : 'Retry'}
+                      </button>
+                    </div>
+                  ) : !aiTonesList || aiTonesList.length === 0 ? (
+                    <div className="p-6 text-center rounded-xl bg-dark-900/60 border border-white/5 text-gray-400 text-xs space-y-1">
+                      <Sparkles className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                      <div>{isPersian ? 'هیچ لحن هوش مصنوعی هنوز ثبت نشده است' : 'No AI tones registered yet'}</div>
+                      <div className="text-[11px] text-gray-500">
+                        {isPersian ? 'می‌توانید با فرم بالا لحن سفارشی جدیدی ایجاد کنید.' : 'Create a custom tone above to start.'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {aiTonesList.map((tone: any, idx: number) => {
+                        const toneTitle = tone?.title || tone?.name || `Tone #${idx + 1}`
+                        const tonePrompt = tone?.prompt || tone?.description || ''
+                        const isSaved = Boolean(tone?.saved)
+
+                        return (
+                          <div
+                            key={tone?.id || idx}
+                            className="p-3 rounded-xl bg-dark-900 border border-white/5 hover:border-purple-500/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-xs text-gray-200">{toneTitle}</span>
+                                {isSaved && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                                    {isPersian ? 'ذخیره‌شده' : 'Saved'}
+                                  </span>
+                                )}
+                              </div>
+                              {tonePrompt && (
+                                <p className="text-[11px] text-gray-400 line-clamp-1 font-mono">
+                                  {tonePrompt}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleGetAiToneExample(tone)}
+                                disabled={loadingAiExample}
+                                className="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-[11px] font-medium flex items-center gap-1 transition-all"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                <span>{isPersian ? 'نمونه' : 'Sample'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleSaveToggleAiTone(tone, isSaved)}
+                                disabled={aiSavingDeleting}
+                                className="px-2.5 py-1 rounded-lg bg-dark-800 hover:bg-dark-700 text-gray-300 text-[11px] font-medium border border-white/5 transition-all"
+                              >
+                                {isSaved ? (isPersian ? 'حذف ذخیره' : 'Unsave') : (isPersian ? 'ذخیره' : 'Save')}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAiTone(tone)}
+                                disabled={aiSavingDeleting}
+                                className="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all"
+                                title={isPersian ? 'حذف لحن' : 'Delete tone'}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

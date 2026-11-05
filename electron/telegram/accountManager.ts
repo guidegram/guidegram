@@ -24066,6 +24066,83 @@ export class AccountManager {
     }
     return this.systemService.fragment_getCollectibleInfo(holder as any, collectible)
   }
+
+  // --- Aicompose Domain Suite Part 1 (Microphase 128) ---
+  public async aicomposeCreateToneRaw(
+    accountId: string,
+    params: { displayAuthor?: boolean; emojiId?: bigint | number; title?: string; prompt?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_createTone(
+      holder as any,
+      params?.displayAuthor,
+      params?.emojiId,
+      params?.title,
+      params?.prompt
+    )
+  }
+
+  public async aicomposeUpdateToneRaw(
+    accountId: string,
+    params: { tone?: any; displayAuthor?: boolean; emojiId?: bigint | number; title?: string; prompt?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_updateTone(
+      holder as any,
+      params?.tone,
+      params?.displayAuthor,
+      params?.emojiId,
+      params?.title,
+      params?.prompt
+    )
+  }
+
+  public async aicomposeSaveToneRaw(
+    accountId: string,
+    params: { tone?: any; unsave?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_saveTone(holder as any, params?.tone, params?.unsave)
+  }
+
+  public async aicomposeDeleteToneRaw(
+    accountId: string,
+    params: { tone?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_deleteTone(holder as any, params?.tone)
+  }
+
+  public async aicomposeGetToneRaw(
+    accountId: string,
+    params: { tone?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_getTone(holder as any, params?.tone)
+  }
+
+  public async aicomposeGetTonesRaw(
+    accountId: string,
+    params: { hash?: bigint | number } = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_getTones(holder as any, params?.hash)
+  }
+
+  public async aicomposeGetToneExampleRaw(
+    accountId: string,
+    params: { tone?: any; num?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.aicompose_getToneExample(holder as any, params?.tone, params?.num)
+  }
 }
 
 

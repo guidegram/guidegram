@@ -3408,6 +3408,28 @@ const guidegramAPI = {
   ): Promise<any> =>
     ipcRenderer.invoke('telegram:fragment:get-collectible-info-raw', { accountId, ...params }),
 
+  // --- Microphase 128: Aicompose Domain Suite Part 1 ---
+  aicomposeCreateToneRaw: (
+    accountId: string,
+    params: { displayAuthor?: boolean; emojiId?: bigint | number; title?: string; prompt?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:create-tone-raw', { accountId, ...params }),
+  aicomposeUpdateToneRaw: (
+    accountId: string,
+    params: { tone?: any; displayAuthor?: boolean; emojiId?: bigint | number; title?: string; prompt?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:update-tone-raw', { accountId, ...params }),
+  aicomposeSaveToneRaw: (accountId: string, params: { tone?: any; unsave?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:save-tone-raw', { accountId, ...params }),
+  aicomposeDeleteToneRaw: (accountId: string, params: { tone?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:delete-tone-raw', { accountId, ...params }),
+  aicomposeGetToneRaw: (accountId: string, params: { tone?: any }): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:get-tone-raw', { accountId, ...params }),
+  aicomposeGetTonesRaw: (accountId: string, params: { hash?: bigint | number } = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:get-tones-raw', { accountId, ...params }),
+  aicomposeGetToneExampleRaw: (accountId: string, params: { tone?: any; num?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:aicompose:get-tone-example-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

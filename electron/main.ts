@@ -11462,6 +11462,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Aicompose Domain Suite Part 1 IPC (Microphase 128)
+  ipcMain.handle('telegram:aicompose:create-tone-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeCreateToneRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeCreateToneRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:aicompose:update-tone-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeUpdateToneRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeUpdateToneRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:aicompose:save-tone-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeSaveToneRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeSaveToneRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:aicompose:delete-tone-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeDeleteToneRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeDeleteToneRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:aicompose:get-tone-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeGetToneRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeGetToneRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:aicompose:get-tones-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeGetTonesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeGetTonesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:aicompose:get-tone-example-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.aicomposeGetToneExampleRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] aicomposeGetToneExampleRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
