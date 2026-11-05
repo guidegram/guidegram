@@ -589,14 +589,36 @@ export function parseMtprotoReplyMarkup(
             btnRow.push({ text: b.text, type: 'request_location', _: 'keyboardButtonRequestGeoLocation', style: btnStyle, iconCustomEmojiId })
           } else if (b._ === 'keyboardButtonRequestPoll') {
             btnRow.push({ text: b.text, type: 'request_poll', _: 'keyboardButtonRequestPoll', style: btnStyle, iconCustomEmojiId })
-          } else if (b._ === 'keyboardButtonUrl') {
-            btnRow.push({ text: b.text, url: b.url, _: 'keyboardButtonUrl', style: btnStyle, iconCustomEmojiId })
-          } else if (b._ === 'keyboardButtonCallback') {
-            const b64 = Buffer.isBuffer(b.data) ? b.data.toString('base64') : (typeof b.data === 'string' ? b.data : '')
-            if (onCacheCallback && b.data) {
-              onCacheCallback(`${chatId}_${messageId}_${rIdx}_${cIdx}`, Buffer.from(b.data))
+          } else if (b._ === 'keyboardButtonUrl' || b._ === 'keyboardButtonUrlAuth') {
+            btnRow.push({ text: b.text, url: b.url, type: 'url', _: b._, style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonCopy') {
+            btnRow.push({ text: b.text, copyText: b.copyText || b.text, type: 'copy', _: 'keyboardButtonCopy', style: btnStyle, iconCustomEmojiId })
+          } else if (b._ === 'keyboardButtonCallback' || b.data !== undefined) {
+            let buf: Buffer | null = null
+            if (b.data !== undefined && b.data !== null) {
+              if (Buffer.isBuffer(b.data)) {
+                buf = b.data
+              } else if (b.data instanceof Uint8Array || ArrayBuffer.isView(b.data)) {
+                buf = Buffer.from(b.data.buffer, b.data.byteOffset, b.data.byteLength)
+              } else if (typeof b.data === 'string') {
+                try {
+                  buf = Buffer.from(b.data, 'base64')
+                } catch {
+                  buf = Buffer.from(b.data, 'utf-8')
+                }
+              } else {
+                try {
+                  buf = Buffer.from(b.data)
+                } catch {
+                  buf = null
+                }
+              }
             }
-            btnRow.push({ text: b.text, data: b64, _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
+            const b64 = buf ? buf.toString('base64') : (typeof b.data === 'string' ? b.data : '')
+            if (onCacheCallback && buf) {
+              onCacheCallback(`${chatId}_${messageId}_${rIdx}_${cIdx}`, buf)
+            }
+            btnRow.push({ text: b.text, data: b64, type: 'callback', _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
           } else if (b._ === 'keyboardButtonWebView' || b._ === 'keyboardButtonSimpleWebView') {
             btnRow.push({ text: b.text, url: b.url, webAppUrl: b.url, isMiniApp: true, _: b._, style: btnStyle, iconCustomEmojiId })
           } else if (b._ === 'keyboardButtonSwitchInline') {
@@ -618,7 +640,11 @@ export function parseMtprotoReplyMarkup(
               iconCustomEmojiId,
             })
           } else if (b.text) {
-            btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
+            if (rawMarkup._ === 'replyInlineMarkup') {
+              btnRow.push({ text: b.text, type: 'callback', _: 'keyboardButtonCallback', style: btnStyle, iconCustomEmojiId })
+            } else {
+              btnRow.push({ text: b.text, _: b._ || 'keyboardButton', style: btnStyle, iconCustomEmojiId })
+            }
           }
         }
       }
@@ -5101,7 +5127,12 @@ export class AccountManager {
     if (!holder?.client) throw new Error(`Account ${accountId} is not connected.`)
 
     try {
-      const inputPeer = toRawPeer(chatId)
+      let inputPeer: any
+      try {
+        inputPeer = await holder.client.resolvePeer(chatId)
+      } catch (_) {
+        inputPeer = toRawPeer(chatId)
+      }
       let bufferData: Buffer | undefined = undefined
       if (typeof row === 'number' && typeof col === 'number') {
         bufferData = this.botButtonCache.get(`${chatId}_${messageId}_${row}_${col}`)

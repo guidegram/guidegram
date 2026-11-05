@@ -8026,33 +8026,35 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                                         })
                                         return
                                       }
-                                      if (btn.data) {
-                                        setCallingBotBtnId(btnId)
-                                        try {
-                                          const res = await window.guidegram?.sendBotCallbackQuery?.(
-                                            msg.accountId,
-                                            msg.chatId,
-                                            msg.id,
-                                            btn.data,
-                                            rIdx,
-                                            bIdx
-                                          )
-                                          if (res?.alert && res.message) {
-                                            alert(res.message)
-                                          } else if (res?.message) {
-                                            showToast(res.message)
-                                          } else if (res?.url) {
-                                            handleSafeOpenUrl(res.url)
-                                          }
-                                        } catch (cbErr: any) {
-                                          showToast(t('bot.callback_error', { error: cbErr?.message || 'Unknown' }))
-                                        } finally {
-                                          setCallingBotBtnId(null)
-                                        }
+                                      if (btn.type === 'copy' || (btn as any).copyText !== undefined) {
+                                        await copyTextToClipboard((btn as any).copyText || btn.text)
+                                        showToast(t('common.copied') || 'Copied to clipboard')
                                         return
                                       }
-                                      if (btn.text) {
-                                        onSendMessage(btn.text)
+
+                                      // Default for inline keyboard buttons: Bot Callback Query!
+                                      // An inline button under a message bubble MUST NEVER be sent as a user chat message.
+                                      setCallingBotBtnId(btnId)
+                                      try {
+                                        const res = await window.guidegram?.sendBotCallbackQuery?.(
+                                          msg.accountId,
+                                          msg.chatId,
+                                          msg.id,
+                                          btn.data || '',
+                                          rIdx,
+                                          bIdx
+                                        )
+                                        if (res?.alert && res.message) {
+                                          alert(res.message)
+                                        } else if (res?.message) {
+                                          showToast(res.message)
+                                        } else if (res?.url) {
+                                          handleSafeOpenUrl(res.url)
+                                        }
+                                      } catch (cbErr: any) {
+                                        showToast(t('bot.callback_error', { error: cbErr?.message || 'Unknown' }))
+                                      } finally {
+                                        setCallingBotBtnId(null)
                                       }
                                     }}
                                     onContextMenu={async (e) => {
