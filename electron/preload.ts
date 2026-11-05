@@ -3401,6 +3401,13 @@ const guidegramAPI = {
   smsjobsFinishJobRaw: (accountId: string, params: { jobId?: string; error?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:smsjobs:finish-job-raw', { accountId, ...params }),
 
+  // --- Microphase 127: Fragment Domain Suite Part 1 ---
+  fragmentGetCollectibleInfoRaw: (
+    accountId: string,
+    params: { collectible?: any; query?: string; type?: 'username' | 'phone' }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:fragment:get-collectible-info-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

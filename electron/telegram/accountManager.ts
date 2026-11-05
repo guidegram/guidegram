@@ -24050,6 +24050,22 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.smsjobs_finishJob(holder as any, params?.jobId, params?.error)
   }
+
+  public async fragmentGetCollectibleInfoRaw(
+    accountId: string,
+    params: { collectible?: any; query?: string; type?: 'username' | 'phone' }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    let collectible = params?.collectible
+    if (!collectible && params?.query) {
+      collectible =
+        params.type === 'phone'
+          ? { _: 'inputCollectiblePhone', phone: params.query }
+          : { _: 'inputCollectibleUsername', username: params.query.replace(/^@/, '') }
+    }
+    return this.systemService.fragment_getCollectibleInfo(holder as any, collectible)
+  }
 }
 
 

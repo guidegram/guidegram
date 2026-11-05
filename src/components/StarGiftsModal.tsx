@@ -34,6 +34,7 @@ import {
   Send,
   Bell,
   Pin,
+  Loader2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { StarGiftItem } from '../types/telegram'
@@ -63,11 +64,46 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
   initialSelectedGift,
 }) => {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways' | 'checkout_offers' | 'gift_management'>('saved')
+  const [activeTab, setActiveTab] = useState<'saved' | 'catalog' | 'auctions' | 'upgrades' | 'revenue' | 'unique_giveaways' | 'checkout_offers' | 'gift_management' | 'fragment'>('saved')
   const [savedGifts, setSavedGifts] = useState<StarGiftItem[]>([])
   const [catalogGifts, setCatalogGifts] = useState<StarGiftItem[]>([])
   const [loadingSaved, setLoadingSaved] = useState(true)
   const [loadingCatalog, setLoadingCatalog] = useState(false)
+
+  // Microphase 127: Fragment & TON Collectible Info (fragment.getCollectibleInfo)
+  const [fragmentQuery, setFragmentQuery] = useState<string>('')
+  const [fragmentType, setFragmentType] = useState<'username' | 'phone'>('username')
+  const [fragmentResult, setFragmentResult] = useState<any | null>(null)
+  const [loadingFragment, setLoadingFragment] = useState<boolean>(false)
+  const [fragmentError, setFragmentError] = useState<string | null>(null)
+
+  const handleLookupCollectible = async (overrideQuery?: string, overrideType?: 'username' | 'phone') => {
+    const q = (overrideQuery ?? fragmentQuery).trim()
+    const t = overrideType ?? fragmentType
+    if (!accountId || !q) {
+      setFragmentError('لطفاً نام کاربری (Username) یا شماره ناشناس (Anonymous Number) را وارد کنید.')
+      return
+    }
+    setLoadingFragment(true)
+    setFragmentError(null)
+    setFragmentResult(null)
+    try {
+      const res = await (window as any).guidegramAPI?.fragmentGetCollectibleInfoRaw?.(accountId, {
+        query: q,
+        type: t,
+      })
+      if (!res) {
+        setFragmentError('اطلاعاتی برای این دارایی در Fragment یافت نشد.')
+      } else {
+        setFragmentResult(res)
+      }
+    } catch (err: any) {
+      console.warn('[StarGiftsModal] handleLookupCollectible error:', err)
+      setFragmentError(err?.message || 'خطا در استعلام کالکتیبل از Fragment')
+    } finally {
+      setLoadingFragment(false)
+    }
+  }
 
   // Microphase 099: Auctions & Resale States (payments.getStarGiftActiveAuctions & payments.getResaleStarGifts)
   const [activeAuctions, setActiveAuctions] = useState<any[] | null>(null)
@@ -1759,6 +1795,18 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Management & Upgrades (M104)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('fragment')}
+                className={`py-3 font-medium border-b-2 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'fragment'
+                    ? 'border-amber-400 text-neutral-100 font-semibold'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Fragment Collectibles (M127)</span>
               </button>
             </div>
 
@@ -3990,6 +4038,226 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                   </div>
                 </div>
               ) : null}
+
+              {/* Microphase 127: Fragment Collectibles Panel (fragment.getCollectibleInfo) */}
+              {activeTab === 'fragment' ? (
+                <div className="space-y-4 text-xs animate-in fade-in duration-100">
+                  <div className="p-4 rounded-2xl bg-neutral-900/80 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                          <ExternalLink className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-neutral-200">Fragment TON Collectibles Explorer</h4>
+                          <p className="text-[11px] text-neutral-400">
+                            استعلام مالکیت، ارزش و تاریخ خرید نام‌های کاربری و شماره‌های ناشناس از سرور تلگرام و فرگمنت
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-mono">
+                        fragment.getCollectibleInfo
+                      </span>
+                    </div>
+
+                    {/* Mode Selector */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFragmentType('username')
+                          setFragmentResult(null)
+                          setFragmentError(null)
+                        }}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                          fragmentType === 'username'
+                            ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                            : 'bg-neutral-800/40 border-white/5 text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        نام کاربری (Username)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFragmentType('phone')
+                          setFragmentResult(null)
+                          setFragmentError(null)
+                        }}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                          fragmentType === 'phone'
+                            ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                            : 'bg-neutral-800/40 border-white/5 text-neutral-400 hover:text-neutral-200'
+                        }`}
+                      >
+                        شماره ناشناس (Anonymous Number +888)
+                      </button>
+                    </div>
+
+                    {/* Input & Action */}
+                    <div className="flex gap-2 pt-1">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={fragmentQuery}
+                          onChange={(e) => setFragmentQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleLookupCollectible()}
+                          placeholder={
+                            fragmentType === 'username'
+                              ? 'مثال: durov یا @crypto'
+                              : 'مثال: 88801234567 یا +888 0123 4567'
+                          }
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-neutral-100 placeholder-neutral-500 text-xs focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleLookupCollectible()}
+                        disabled={loadingFragment || !fragmentQuery.trim()}
+                        className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5 shadow-sm"
+                      >
+                        {loadingFragment ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                        <span>استعلام</span>
+                      </button>
+                    </div>
+
+                    {/* Quick Test Presets */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-neutral-400">
+                      <span>نمونه‌های آزمایشی:</span>
+                      {fragmentType === 'username' ? (
+                        ['durov', 'news', 'crypto', 'wallet'].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => {
+                              setFragmentQuery(preset)
+                              handleLookupCollectible(preset, 'username')
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors cursor-pointer font-mono"
+                          >
+                            @{preset}
+                          </button>
+                        ))
+                      ) : (
+                        ['88801234567', '88800000001'].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => {
+                              setFragmentQuery(preset)
+                              handleLookupCollectible(preset, 'phone')
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 transition-colors cursor-pointer font-mono"
+                          >
+                            +{preset}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 4-State UI: Glass Loading */}
+                  {loadingFragment && (
+                    <div className="p-8 rounded-2xl bg-neutral-900/60 border border-white/5 flex flex-col items-center justify-center gap-3 text-neutral-400">
+                      <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                      <p className="text-xs">در حال فراخوانی متد fragment.getCollectibleInfo از سرور تلگرام...</p>
+                    </div>
+                  )}
+
+                  {/* 4-State UI: Error with Retry */}
+                  {fragmentError && !loadingFragment && (
+                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                        <span className="text-xs">{fragmentError}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleLookupCollectible()}
+                        className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 text-[11px] font-medium transition-colors cursor-pointer shrink-0"
+                      >
+                        تلاش مجدد
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 4-State UI: Honest Empty State */}
+                  {!loadingFragment && !fragmentResult && !fragmentError && (
+                    <div className="p-8 rounded-2xl bg-neutral-900/40 border border-white/5 flex flex-col items-center justify-center text-center gap-2 text-neutral-400">
+                      <ShieldCheck className="w-8 h-8 text-neutral-500 mb-1" />
+                      <h5 className="font-semibold text-neutral-200 text-xs">آماده استعلام دارایی‌های دیجیتال فرگمنت</h5>
+                      <p className="text-[11px] text-neutral-400 max-w-sm leading-relaxed">
+                        با وارد کردن آیدی یا شماره ناشناس، متد مستقیم <code className="text-cyan-400 font-mono">fragment.getCollectibleInfo</code> اطلاعات مزایده، مبلغ پرداخت‌شده به ارز TON و لینک رسمی را بازخوانی می‌کند.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 4-State UI: Success State */}
+                  {fragmentResult && !loadingFragment && (
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-950/30 via-neutral-900/80 to-neutral-900/80 border border-cyan-500/30 space-y-3 shadow-lg">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span className="font-semibold text-neutral-100">
+                            {fragmentType === 'username' ? `@${fragmentQuery.replace(/^@/, '')}` : fragmentQuery}
+                          </span>
+                        </div>
+                        {fragmentResult.url && (
+                          <a
+                            href={fragmentResult.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-[11px] font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>مشاهده در Fragment</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                          <span className="text-[10px] text-neutral-400">مبلغ خرید (Crypto Amount)</span>
+                          <div className="font-bold text-neutral-100 font-mono flex items-center gap-1">
+                            <span>
+                              {fragmentResult.cryptoAmount !== undefined
+                                ? (Number(fragmentResult.cryptoAmount) / 1e9).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                : fragmentResult.crypto_amount !== undefined
+                                ? (Number(fragmentResult.crypto_amount) / 1e9).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                : 'نامشخص'}
+                            </span>
+                            <span className="text-cyan-400 text-[10px]">
+                              {fragmentResult.cryptoCurrency || fragmentResult.crypto_currency || 'TON'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1">
+                          <span className="text-[10px] text-neutral-400">تاریخ تراکنش (Purchase Date)</span>
+                          <div className="font-medium text-neutral-200 text-[11px]">
+                            {fragmentResult.purchaseDate || fragmentResult.purchase_date
+                              ? new Date((fragmentResult.purchaseDate || fragmentResult.purchase_date) * 1000).toLocaleDateString('fa-IR', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
+                              : 'ثبت نشده'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Raw Details Accordion */}
+                      <div className="p-2.5 rounded-xl bg-black/50 border border-white/5 font-mono text-[10px] text-neutral-400 max-h-36 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(fragmentResult, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {/* Editorial Footer */}
@@ -4009,6 +4277,8 @@ export const StarGiftsModal: React.FC<StarGiftsModalProps> = ({
                     ? 'Telegram MTProto payments.getUniqueStarGift, TransactionsByID, RefBots & Giveaways'
                     : activeTab === 'checkout_offers'
                     ? 'Telegram MTProto payments.saveStarGift, sendStarGiftOffer, payment forms & chat notifs'
+                    : activeTab === 'fragment'
+                    ? 'Telegram MTProto fragment.getCollectibleInfo (TON Collectibles)'
                     : 'Telegram MTProto payments.transferStarGift, collections, price, upgrade & withdrawal'}
                 </span>
               </div>

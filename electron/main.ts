@@ -11452,6 +11452,16 @@ function setupIpcHandlers() {
     }
   })
 
+  // Fragment Domain Suite Part 1 IPC (Microphase 127)
+  ipcMain.handle('telegram:fragment:get-collectible-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.fragmentGetCollectibleInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] fragmentGetCollectibleInfoRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
