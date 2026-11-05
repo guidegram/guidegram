@@ -3227,16 +3227,21 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
           if (onMergeHistoricalMessages) {
             onMergeHistoricalMessages(chunk)
           }
-          setTimeout(() => {
+          let attempts = 0
+          const checkTarget = () => {
             const targetEl = document.getElementById(`msg-${replyId}`)
             if (targetEl) {
               targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
               targetEl.classList.add('reply-highlight')
               setTimeout(() => targetEl.classList.remove('reply-highlight'), 1800)
+            } else if (attempts < 8) {
+              attempts++
+              setTimeout(checkTarget, 80)
             } else {
               showToast(`Original message #${replyId} not in loaded history`)
             }
-          }, 250)
+          }
+          setTimeout(checkTarget, 60)
           return
         }
       } catch (err) {
@@ -6811,68 +6816,83 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
         const currentPinned = pinnedList[activePinnedIdx % pinnedList.length] || pinnedList[0]
         const totalPinned = pinnedList.length
 
+        const snippetText = (() => {
+          if (!currentPinned.text) return `Message #${currentPinned.id}`
+          const singleLine = currentPinned.text.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim()
+          return singleLine || `Message #${currentPinned.id}`
+        })()
+        const isSnippetRtl = isRTL(snippetText)
+
         return (
           <div
-            className="shrink-0 px-4 py-2 bg-dark-850/95 border-b border-white/5 flex items-center justify-between gap-3 z-10 select-none hover:bg-dark-800 transition-colors"
+            onClick={() => {
+              handleScrollToReply(currentPinned.id)
+              if (totalPinned > 1) {
+                setActivePinnedIdx((prev) => (prev + 1) % totalPinned)
+              }
+            }}
+            className="shrink-0 h-[44px] px-3.5 bg-dark-850/95 border-b border-white/5 flex items-center justify-between gap-3 z-10 select-none hover:bg-dark-800/90 transition-colors cursor-pointer group"
           >
-            <div
-              onClick={() => {
-                handleScrollToReply(currentPinned.id)
-                if (totalPinned > 1) {
-                  setActivePinnedIdx((prev) => (prev + 1) % totalPinned)
-                }
-              }}
-              className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
-            >
-              <div className="w-6 h-6 rounded-lg bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+              <div className="w-[3px] h-6 rounded-full bg-accent-cyan shrink-0 group-hover:scale-y-110 transition-transform" />
+              <div className="w-6 h-6 rounded-md bg-accent-cyan/15 text-accent-cyan flex items-center justify-center shrink-0">
                 <Pin className="w-3.5 h-3.5" />
               </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold text-accent-cyan flex items-center gap-2">
+              <div className="min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
+                <div className="text-[11px] font-semibold text-accent-cyan flex items-center gap-1.5 leading-tight truncate">
                   <span>Pinned Message</span>
                   {currentPinned.senderName && (
-                    <span className="text-[10px] text-gray-400 font-normal">
+                    <span className="text-[10px] text-gray-400 font-normal truncate">
                       from {currentPinned.senderName}
                     </span>
                   )}
                   {totalPinned > 1 && (
-                    <span className="text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.2 rounded-md">
-                      {(activePinnedIdx % totalPinned) + 1} of {totalPinned}
+                    <span className="text-[9px] font-mono font-medium text-accent-cyan/90 bg-accent-cyan/10 px-1.5 py-0.2 rounded shrink-0">
+                      {(activePinnedIdx % totalPinned) + 1} / {totalPinned}
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] text-gray-400 truncate max-w-xl">
-                  {currentPinned.text
-                    ? renderFormattedText(currentPinned.text, currentPinned.entities, chat?.accountId)
-                    : `Message #${currentPinned.id} (Click to cycle & jump)`}
+                <div
+                  dir={isSnippetRtl ? 'rtl' : 'ltr'}
+                  className={`text-[11px] text-gray-300/85 truncate block whitespace-nowrap overflow-hidden text-ellipsis leading-tight ${
+                    isSnippetRtl ? 'font-persian text-right' : 'font-latin text-left'
+                  }`}
+                  title={snippetText}
+                >
+                  {snippetText}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
               {totalPinned > 1 && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsPinnedDrawerOpen(true)
-                  }}
-                  className="px-2 py-1 text-[10px] font-semibold text-accent-cyan hover:bg-accent-cyan/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-accent-cyan/20"
+                  onClick={() => setIsPinnedDrawerOpen(true)}
+                  className="px-2 py-1 text-[10px] font-medium text-accent-cyan hover:bg-accent-cyan/15 rounded-md transition-colors cursor-pointer flex items-center gap-1 border border-accent-cyan/20"
                   title="View all pinned messages"
                 >
                   <Layers className="w-3 h-3" />
                   <span>All ({totalPinned})</span>
                 </button>
               )}
-              <ChevronRight
-                onClick={() => {
-                  handleScrollToReply(currentPinned.id)
-                  if (totalPinned > 1) {
-                    setActivePinnedIdx((prev) => (prev + 1) % totalPinned)
-                  }
-                }}
-                className="w-3.5 h-3.5 text-gray-500 hover:text-white cursor-pointer"
-              />
+              {totalPinned > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextIdx = (activePinnedIdx + 1) % totalPinned
+                    setActivePinnedIdx(nextIdx)
+                    const nextPinned = pinnedList[nextIdx]
+                    if (nextPinned) {
+                      handleScrollToReply(nextPinned.id)
+                    }
+                  }}
+                  className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Next pinned message"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         )
