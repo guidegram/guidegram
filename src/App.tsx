@@ -55,6 +55,9 @@ import { splitTelegramMessage } from './utils/telegramMessageSplitter'
 export const isPeerMatch = (a?: string | null, b?: string | null): boolean => {
   if (!a || !b) return false
   if (a === b) return true
+  const aIsNeg = a.startsWith('-')
+  const bIsNeg = b.startsWith('-')
+  if (aIsNeg !== bIsNeg) return false
   const cleanA = a.replace(/^-100/, '').replace(/^-/, '')
   const cleanB = b.replace(/^-100/, '').replace(/^-/, '')
   return cleanA === cleanB
@@ -547,26 +550,22 @@ export const App: React.FC = () => {
         const currentAcc = accounts.find((a) => a.id === accountId)
         const isBotAccount = Boolean(currentAcc?.isBot)
 
-        // MTProto Chat Mute Status:
-        // Ironclad mute guard:
-        // 1. If targetDialog is muted in local state OR payload marks it muted, it is strictly muted.
-        // 2. Channels are muted by default (!targetDialog && isChannel).
-        // 3. Bot accounts (logged in via bot token) are strictly DEFAULT MUTED for all incoming chats/messages
-        //    unless explicitly unmuted by the user (targetDialog?.isMuted === false).
+        // MTProto Chat Mute Status (Official Telegram Specification):
+        // 1. If user explicitly muted/unmuted in their dialog list, respect that decision first.
+        // 2. Otherwise respect payload's MTProto notify settings.
+        // 3. Channels and bot accounts are muted by default.
+        // 4. Private chats (PV) and groups are unmuted by default.
         const payloadMuted = (payload as any)?.chatInfo?.isMuted
         let isChatMuted = false
-        if (targetDialog?.isMuted === true || payloadMuted === true) {
-          isChatMuted = true
-        } else if (targetDialog?.isMuted === false) {
-          isChatMuted = false
-        } else if (payloadMuted === false) {
-          isChatMuted = false
-        } else if (isChannel) {
-          isChatMuted = true
-        }
 
-        if (isBotAccount && targetDialog?.isMuted !== false) {
+        if (targetDialog?.isMuted !== undefined) {
+          isChatMuted = Boolean(targetDialog.isMuted)
+        } else if (payloadMuted !== undefined) {
+          isChatMuted = Boolean(payloadMuted)
+        } else if (isChannel || isBotAccount) {
           isChatMuted = true
+        } else {
+          isChatMuted = false
         }
 
         const currentCfg = configRef.current
@@ -2530,6 +2529,10 @@ export const App: React.FC = () => {
   }
 
   const handleToggleMuteChat = useCallback((accountId: string, chatId: string, nextMuted: boolean) => {
+    // 1. Immediately invoke MTProto backend to sync with Telegram server & update local session cache
+    window.guidegram?.toggleChatNotifications?.(accountId, chatId, nextMuted)
+
+    // 2. Optimistically update local dialogs state
     setDialogsByAccount((prev) => {
       const list = prev[accountId] || []
       return {

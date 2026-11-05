@@ -230,6 +230,17 @@ export class ProgressThrottler {
   }
 }
 
+export function isPeerMatch(a?: string | null, b?: string | null): boolean {
+  if (!a || !b) return false
+  if (a === b) return true
+  const aIsNeg = a.startsWith('-')
+  const bIsNeg = b.startsWith('-')
+  if (aIsNeg !== bIsNeg) return false
+  const cleanA = a.replace(/^-100/, '').replace(/^-/, '')
+  const cleanB = b.replace(/^-100/, '').replace(/^-/, '')
+  return cleanA === cleanB
+}
+
 export function formatEntityName(entity: any, fallback = 'Unknown'): string {
   if (!entity) return fallback
   if (entity.title) return entity.title
@@ -1372,17 +1383,36 @@ export class AccountManager {
     } catch (_) {}
   }
 
+  public setPeerNotify(accountId: string, peerId: string, isMuted: boolean): void {
+    if (!peerId) return
+    const isNeg = peerId.startsWith('-')
+    this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
+    if (isNeg) {
+      const bare = peerId.replace(/^-100/, '').replace(/^-/, '')
+      this.peerNotifySettings.set(`${accountId}_-100${bare}`, { isMuted })
+      this.peerNotifySettings.set(`${accountId}_-${bare}`, { isMuted })
+    }
+  }
+
+  public getPeerNotify(accountId: string, peerId: string): { isMuted: boolean } | undefined {
+    if (!peerId) return undefined
+    let res = this.peerNotifySettings.get(`${accountId}_${peerId}`)
+    if (!res && peerId.startsWith('-')) {
+      const bare = peerId.replace(/^-100/, '').replace(/^-/, '')
+      res =
+        this.peerNotifySettings.get(`${accountId}_-100${bare}`) ||
+        this.peerNotifySettings.get(`${accountId}_-${bare}`)
+    }
+    return res
+  }
+
   public hydrateNotifySettingsFromCache(accountId: string): void {
     try {
       const cached = this.store.loadDialogsCache(accountId)
       if (Array.isArray(cached)) {
         for (const d of cached) {
           if (d.id && typeof d.isMuted === 'boolean') {
-            const cleanId = d.id.replace(/^-100/, '').replace(/^-/, '')
-            this.peerNotifySettings.set(`${accountId}_${d.id}`, { isMuted: d.isMuted })
-            this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted: d.isMuted })
-            this.peerNotifySettings.set(`${accountId}_-100${cleanId}`, { isMuted: d.isMuted })
-            this.peerNotifySettings.set(`${accountId}_-${cleanId}`, { isMuted: d.isMuted })
+            this.setPeerNotify(accountId, d.id, d.isMuted)
           }
         }
       }
@@ -2548,9 +2578,7 @@ export class AccountManager {
           isMuted,
         })
 
-        const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
-        this.peerNotifySettings.set(`${accountId}_${chatId}`, { isMuted })
-        this.peerNotifySettings.set(`${accountId}_${cleanChatId}`, { isMuted })
+        this.setPeerNotify(accountId, chatId, isMuted)
       }
 
       // Asynchronously resolve missing user profile names and avatars for bot dialogs via MTProto
@@ -2807,11 +2835,7 @@ export class AccountManager {
           isMuted = false
         }
 
-        const cleanPeerId = peerId.replace(/^-100/, '').replace(/^-/, '')
-        this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
-        this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted })
-        this.peerNotifySettings.set(`${accountId}_-100${cleanPeerId}`, { isMuted })
-        this.peerNotifySettings.set(`${accountId}_-${cleanPeerId}`, { isMuted })
+        this.setPeerNotify(accountId, peerId, isMuted)
 
         let lastMessageText = ''
         let lastMessageEntities: MessageEntityItem[] | undefined = undefined
@@ -3750,12 +3774,6 @@ export class AccountManager {
           const topRaw = rawMessages[0]
           if (topRaw && topRaw.id) {
             const cached = this.store.loadDialogsCache(accountId) || []
-            const isPeerMatch = (a: string, b: string) => {
-              if (a === b) return true
-              const ca = a.replace(/^-100/, '').replace(/^-/, '')
-              const cb = b.replace(/^-100/, '').replace(/^-/, '')
-              return ca === cb
-            }
             const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
             if (idx >= 0) {
               const topDateMs = topRaw.date ? (typeof topRaw.date.getTime === 'function' ? topRaw.date.getTime() : (topRaw.date < 1e11 ? topRaw.date * 1000 : topRaw.date)) : Date.now()
@@ -7640,17 +7658,13 @@ export class AccountManager {
           silent: mute ? true : false,
         },
       })
-      const cleanPeerId = chatId.replace(/^-100/, '').replace(/^-/, '')
-      this.peerNotifySettings.set(`${accountId}_${chatId}`, { isMuted: mute })
-      this.peerNotifySettings.set(`${accountId}_${cleanPeerId}`, { isMuted: mute })
-      this.peerNotifySettings.set(`${accountId}_-100${cleanPeerId}`, { isMuted: mute })
-      this.peerNotifySettings.set(`${accountId}_-${cleanPeerId}`, { isMuted: mute })
+      this.setPeerNotify(accountId, chatId, mute)
 
       // Persist to disk dialog cache
       try {
         const cached = this.store.loadDialogsCache(accountId)
         if (cached && cached.length > 0) {
-          const next = cached.map((d) => (d.id === chatId || d.id.replace(/^-100/, '').replace(/^-/, '') === cleanPeerId) ? { ...d, isMuted: mute } : d)
+          const next = cached.map((d) => (d.id === chatId || isPeerMatch(d.id, chatId)) ? { ...d, isMuted: mute } : d)
           this.store.saveDialogsCache(accountId, next)
         }
       } catch (_) {}
@@ -7866,12 +7880,6 @@ export class AccountManager {
 
     try {
       const cached = this.store.loadDialogsCache(accountId) || []
-      const isPeerMatch = (a: string, b: string) => {
-        if (a === b) return true
-        const ca = a.replace(/^-100/, '').replace(/^-/, '')
-        const cb = b.replace(/^-100/, '').replace(/^-/, '')
-        return ca === cb
-      }
       const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
       const nowMs = Date.now()
       if (idx >= 0) {
@@ -8637,12 +8645,6 @@ export class AccountManager {
       this.store.recordBotMessage(accountId, chatId, item)
       try {
         const cached = this.store.loadDialogsCache(accountId) || []
-        const isPeerMatch = (a: string, b: string) => {
-          if (a === b) return true
-          const ca = a.replace(/^-100/, '').replace(/^-/, '')
-          const cb = b.replace(/^-100/, '').replace(/^-/, '')
-          return ca === cb
-        }
         const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
         if (idx >= 0) {
           cached[idx] = {
@@ -8751,12 +8753,6 @@ export class AccountManager {
       }
       try {
         const cached = this.store.loadDialogsCache(accountId) || []
-        const isPeerMatch = (a: string, b: string) => {
-          if (a === b) return true
-          const ca = a.replace(/^-100/, '').replace(/^-/, '')
-          const cb = b.replace(/^-100/, '').replace(/^-/, '')
-          return ca === cb
-        }
         const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
         if (idx >= 0) {
           cached[idx] = {
@@ -17787,34 +17783,23 @@ export class AccountManager {
         const isChannelPost = Boolean(msg.isChannelPost || (msg.raw as any)?.post)
         const isOutgoing = Boolean(msg.isOutgoing || (msg.raw as any)?.out || msg.sender?.isSelf)
 
-        const cleanChatId = chatId.replace(/^-100/, '').replace(/^-/, '')
-        let cachedNotify =
-          this.peerNotifySettings.get(`${accountId}_${chatId}`) ||
-          this.peerNotifySettings.get(`${accountId}_${cleanChatId}`) ||
-          this.peerNotifySettings.get(`${accountId}_-100${cleanChatId}`) ||
-          this.peerNotifySettings.get(`${accountId}_-${cleanChatId}`)
+        let cachedNotify = this.getPeerNotify(accountId, chatId)
 
         // If not in RAM map, search persistent dialogs cache
         if (!cachedNotify) {
           try {
             const cachedDialogs = this.store.loadDialogsCache(accountId)
-            const match = cachedDialogs?.find((d) => {
-              if (d.id === chatId) return true
-              const dClean = d.id.replace(/^-100/, '').replace(/^-/, '')
-              return dClean === cleanChatId
-            })
+            const match = cachedDialogs?.find((d) => d.id === chatId || isPeerMatch(d.id, chatId))
             if (match && typeof match.isMuted === 'boolean') {
               cachedNotify = { isMuted: match.isMuted }
-              this.peerNotifySettings.set(`${accountId}_${chatId}`, cachedNotify)
-              this.peerNotifySettings.set(`${accountId}_${cleanChatId}`, cachedNotify)
-              this.peerNotifySettings.set(`${accountId}_-100${cleanChatId}`, cachedNotify)
-              this.peerNotifySettings.set(`${accountId}_-${cleanChatId}`, cachedNotify)
+              this.setPeerNotify(accountId, chatId, match.isMuted)
             }
           } catch (_) {}
         }
 
         const isBotAccount = Boolean(this.clients.get(accountId)?.info?.isBot)
-        let isChatMuted = cachedNotify ? cachedNotify.isMuted : (chat?.chatType === 'channel' || isBotAccount)
+        const isBroadcastChannel = chat?.chatType === 'channel' || (chatId.startsWith('-100') && !chat?.chatType?.includes('group'))
+        let isChatMuted = cachedNotify ? cachedNotify.isMuted : (isBroadcastChannel || isBotAccount)
 
         if ((msg.raw as any)?.notifySettings) {
           const rawNotify = (msg.raw as any).notifySettings
@@ -17900,12 +17885,6 @@ export class AccountManager {
         }
         try {
           const cached = this.store.loadDialogsCache(accountId) || []
-          const isPeerMatch = (a: string, b: string) => {
-            if (a === b) return true
-            const ca = a.replace(/^-100/, '').replace(/^-/, '')
-            const cb = b.replace(/^-100/, '').replace(/^-/, '')
-            return ca === cb
-          }
           const idx = cached.findIndex((d) => d.id === chatId || isPeerMatch(d.id, chatId))
           const contactName = this.getContactName(accountId, chatId)
           const fallbackTitle = contactName || (chat
@@ -18218,10 +18197,7 @@ export class AccountManager {
             } else {
               isMuted = false
             }
-            this.peerNotifySettings.set(`${accountId}_${peerId}`, { isMuted })
-            this.peerNotifySettings.set(`${accountId}_${cleanId}`, { isMuted })
-            this.peerNotifySettings.set(`${accountId}_-100${cleanId}`, { isMuted })
-            this.peerNotifySettings.set(`${accountId}_-${cleanId}`, { isMuted })
+            this.setPeerNotify(accountId, peerId, isMuted)
 
             try {
               const cached = this.store.loadDialogsCache(accountId)
