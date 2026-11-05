@@ -60,8 +60,13 @@ export class SecurityGuardrails {
    */
   public static isSafeUrl(rawUrl: string | null | undefined): boolean {
     if (!rawUrl || typeof rawUrl !== 'string') return false
+    let target = rawUrl.trim()
+    if (target.startsWith('//')) target = `https:${target}`
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(target) && !target.startsWith('mailto:') && !target.startsWith('tel:')) {
+      target = `https://${target}`
+    }
     try {
-      const parsed = new URL(rawUrl)
+      const parsed = new URL(target)
       return parsed.protocol === 'http:' || parsed.protocol === 'https:'
     } catch {
       return false
@@ -168,11 +173,17 @@ export class SecurityGuardrails {
 
     // 1. Intercept window.open / target="_blank"
     webContents.setWindowOpenHandler(({ url }: { url: string }) => {
-      if (this.isSafeUrl(url)) {
-        Logger.info(`[SecurityGuardrails] Opening safe external URL via OS browser: ${url}`)
+      let targetUrl = (url || '').trim()
+      if (targetUrl.startsWith('//')) targetUrl = `https:${targetUrl}`
+      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(targetUrl) && !targetUrl.startsWith('mailto:') && !targetUrl.startsWith('tel:')) {
+        targetUrl = `https://${targetUrl}`
+      }
+
+      if (this.isSafeUrl(targetUrl)) {
+        Logger.info(`[SecurityGuardrails] Opening safe external URL via OS browser: ${targetUrl}`)
         if (shellHandler && shellHandler.openExternal) {
-          shellHandler.openExternal(url).catch((err: any) => {
-            Logger.warn(`[SecurityGuardrails] Failed to open external URL: ${url}`, err)
+          shellHandler.openExternal(targetUrl).catch((err: any) => {
+            Logger.warn(`[SecurityGuardrails] Failed to open external URL: ${targetUrl}`, err)
           })
         }
       } else {

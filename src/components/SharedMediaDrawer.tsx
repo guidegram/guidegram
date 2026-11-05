@@ -21,6 +21,7 @@ import {
 import { useI18n } from '../i18n'
 import type { SharedMediaItem, SharedMediaFilterType, DialogItem } from '../types/telegram'
 import { audioLifecycleGuard } from '../utils/audioLifecycleGuard'
+import { safeOpenExternalUrl } from '../utils/telegramLink'
 
 interface SharedMediaDrawerProps {
   isOpen: boolean
@@ -543,16 +544,18 @@ export const SharedMediaDrawer: React.FC<SharedMediaDrawerProps> = ({
                             )}
                           </button>
                           {item.url && (
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1"
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                safeOpenExternalUrl(item.url)
+                              }}
+                              className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1 cursor-pointer"
                               title={t('shared_media.open_link')}
                             >
                               <ExternalLink className="w-3 h-3" />
                               <span className="text-[9px]">Open</span>
-                            </a>
+                            </button>
                           )}
                         </div>
                       </div>

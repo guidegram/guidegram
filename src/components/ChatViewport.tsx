@@ -139,7 +139,7 @@ import { ReplyKeyboardPanel, ReplyKeyboardToggleButton } from './chat/ReplyKeybo
 import { useI18n } from '../i18n'
 import { copyTextToClipboard, copyImageToClipboard } from '../utils/clipboard'
 import { isRTL, formatFileSize, formatDuration, formatUserStatus } from '../utils/textUtils'
-import { parseTelegramUrl } from '../utils/telegramLink'
+import { parseTelegramUrl, normalizeExternalUrl, safeOpenExternalUrl } from '../utils/telegramLink'
 import { remuxWebmOpusToOgg, isWebmBuffer } from '../utils/webmOpusToOgg'
 import { ThanosDisintegrationOverlay } from './effects/ThanosDisintegrationOverlay'
 import { GroupedMediaAlbum } from './chat/GroupedMediaAlbum'
@@ -3266,7 +3266,8 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
   // Safe link opener respecting internal Telegram routing & suppressLinkWarning (64Gram)
   const handleSafeOpenUrl = (url: string) => {
     if (!url) return
-    const parsed = parseTelegramUrl(url)
+    const normalized = normalizeExternalUrl(url)
+    const parsed = parseTelegramUrl(normalized)
 
     // Intercept Telegram Proxy links (tg://proxy, tg://socks, t.me/proxy, t.me/socks)
     if (
@@ -3274,7 +3275,9 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       url.startsWith('tg://proxy') ||
       url.startsWith('tg://socks') ||
       url.includes('/proxy?') ||
-      url.includes('/socks?')
+      url.includes('/socks?') ||
+      normalized.includes('/proxy?') ||
+      normalized.includes('/socks?')
     ) {
       if (onOpenProxyModal) {
         onOpenProxyModal(url)
@@ -3303,10 +3306,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
       }
     }
 
-    if (suppressLinkWarning || url.startsWith('tg://') || url.includes('t.me/')) {
-      window.guidegram?.openExternal?.(url)
+    if (suppressLinkWarning || url.startsWith('tg://') || normalized.includes('t.me/')) {
+      safeOpenExternalUrl(normalized)
     } else {
-      setPendingExternalUrl(url)
+      setPendingExternalUrl(normalized)
     }
   }
 
@@ -9104,7 +9107,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                         type="button"
                         onClick={() => {
                           setIsAttachMenuOpen(false)
-                          window.guidegram?.openExternal?.('https://telegra.ph')
+                          safeOpenExternalUrl('https://telegra.ph')
                         }}
                         className="flex items-center gap-3 px-3 py-2 rounded-xl text-gray-200 hover:text-white hover:bg-white/10 transition-colors text-left cursor-pointer group"
                       >
@@ -9398,10 +9401,10 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                       isLoading={inlineBotState.isLoading}
                       onSelectResult={handleSelectInlineResult}
                       onSwitchPm={(startParam) => {
-                        window.guidegram?.openExternal?.(`https://t.me/${inlineBotState.botUsername}?start=${startParam}`)
+                        safeOpenExternalUrl(`https://t.me/${inlineBotState.botUsername}?start=${startParam}`)
                       }}
                       onSwitchWebview={(url) => {
-                        window.guidegram?.openExternal?.(url)
+                        safeOpenExternalUrl(url)
                       }}
                     />
                   )}
@@ -10051,7 +10054,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
               {chatDetails?.personalChannelId && (
                 <div
                   onClick={() => {
-                    window.guidegram?.openExternal?.(`https://t.me/c/${chatDetails.personalChannelId}`)
+                    safeOpenExternalUrl(`https://t.me/c/${chatDetails.personalChannelId}`)
                   }}
                   className="p-3.5 rounded-2xl bg-primary-600/10 hover:bg-primary-600/20 border border-primary-500/20 cursor-pointer transition-all group flex items-center justify-between"
                 >
@@ -10142,7 +10145,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     {boostStatus.boostUrl && (
                       <button
                         type="button"
-                        onClick={() => window.guidegram?.openExternal?.(boostStatus.boostUrl!)}
+                        onClick={() => safeOpenExternalUrl(boostStatus.boostUrl!)}
                         className="text-[10px] text-accent-cyan hover:underline cursor-pointer"
                       >
                         Boost Link
@@ -10182,7 +10185,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        window.guidegram?.openExternal?.(`https://t.me/${chatDetails.username}`)
+                        safeOpenExternalUrl(`https://t.me/${chatDetails.username}`)
                       }}
                       className="text-xs font-semibold text-accent-cyan hover:underline cursor-pointer"
                     >
@@ -11615,7 +11618,7 @@ export const ChatViewport: React.FC<ChatViewportProps> = ({
                 onClick={() => {
                   const url = pendingExternalUrl
                   setPendingExternalUrl(null)
-                  window.guidegram?.openExternal?.(url)
+                  if (url) safeOpenExternalUrl(url)
                 }}
                 className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all shadow-glow cursor-pointer"
               >

@@ -2375,13 +2375,68 @@ function setupIpcHandlers() {
     }
   })
 
-  ipcMain.handle('system:open-external', async (_event, { url }) => {
+  ipcMain.handle('system:open-external', async (_event, { url }: { url: string }) => {
+    if (!url || typeof url !== 'string') return
+    let targetUrl = url.trim()
+    if (!targetUrl) return
+
+    // 1. Normalize protocol-relative URLs
+    if (targetUrl.startsWith('//')) {
+      targetUrl = `https:${targetUrl}`
+    }
+
+    // 2. Normalize scheme-less URLs (e.g. google.com, www.site.org, t.me/user)
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(targetUrl) && !targetUrl.startsWith('mailto:') && !targetUrl.startsWith('tel:')) {
+      targetUrl = `https://${targetUrl}`
+    }
+
+    // 3. Security verification: Allow only web and safe standard protocols
     try {
-      if (url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('tg://'))) {
-        await shell.openExternal(url)
+      const parsed = new URL(targetUrl)
+      const allowedProtocols = ['http:', 'https:', 'tg:', 'mailto:', 'tel:']
+      if (!allowedProtocols.includes(parsed.protocol)) {
+        Logger.warn(`[IPC] Blocked unsafe external URL protocol: ${parsed.protocol} for ${targetUrl}`)
+        return
       }
-    } catch (err) {
-      Logger.warn(`[IPC] Failed to open external URL: ${url}`, err)
+    } catch {
+      if (!targetUrl.startsWith('tg://')) {
+        Logger.warn(`[IPC] Malformed external URL format: ${targetUrl}`)
+        return
+      }
+    }
+
+    try {
+      await shell.openExternal(targetUrl)
+    } catch (err: any) {
+      Logger.warn(`[IPC] shell.openExternal failed for ${targetUrl}:`, err?.message || err)
+
+      // Fallback 1: If tg:// protocol is unmapped on the OS, convert to t.me web URL
+      if (targetUrl.startsWith('tg://')) {
+        let webUrl = targetUrl
+          .replace(/^tg:\/\/resolve\?(?:.*&)?domain=([a-zA-Z0-9_]+)(?:&post=([0-9]+))?.*$/, 'https://t.me/$1/$2')
+          .replace(/^tg:\/\/join\?(?:.*&)?invite=([a-zA-Z0-9_-]+).*$/, 'https://t.me/+$1')
+          .replace(/^tg:\/\/proxy\?/, 'https://t.me/proxy?')
+          .replace(/^tg:\/\/socks\?/, 'https://t.me/socks?')
+        if (webUrl.endsWith('/undefined')) webUrl = webUrl.replace('/undefined', '')
+        if (webUrl !== targetUrl && webUrl.startsWith('https://')) {
+          try {
+            await shell.openExternal(webUrl)
+            return
+          } catch (_) {}
+        }
+      }
+
+      // Fallback 2: Windows OS cmd start fallback
+      if (process.platform === 'win32') {
+        try {
+          const { execFile } = await import('child_process')
+          execFile('cmd.exe', ['/c', 'start', '', targetUrl], (cmdErr) => {
+            if (cmdErr) Logger.error(`[IPC] Windows cmd.exe start fallback failed for ${targetUrl}:`, cmdErr)
+          })
+        } catch (fbErr) {
+          Logger.error(`[IPC] Windows start fallback invocation error:`, fbErr)
+        }
+      }
     }
   })
 

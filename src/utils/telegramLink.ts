@@ -174,3 +174,53 @@ export function parseTelegramUrl(rawUrl: string): ParsedTelegramLink {
 
   return { isTelegram: true, type: 'other', rawUrl }
 }
+
+/**
+ * Normalizes an external URL or web candidate, ensuring a valid protocol prefix (https://),
+ * stripping accidental trailing sentence punctuation, and handling protocol-relative URLs.
+ */
+export function normalizeExternalUrl(rawUrl?: string | null): string {
+  if (!rawUrl || typeof rawUrl !== 'string') return ''
+  let url = rawUrl.trim()
+  if (!url) return ''
+
+  // Strip trailing punctuation often attached from sentence ends
+  url = url.replace(/([.,!?;:)>\]]+)$/, '')
+
+  // 1. Protocol-relative URLs (e.g. //example.com)
+  if (url.startsWith('//')) {
+    return `https:${url}`
+  }
+
+  // 2. Already has a valid URI scheme (e.g. http://, https://, tg://, mailto:, tel:)
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url) || url.startsWith('mailto:') || url.startsWith('tel:')) {
+    return url
+  }
+
+  // 3. Fallback: prepend https:// for schema-less web URLs (e.g. google.com, t.me/user)
+  return `https://${url}`
+}
+
+/**
+ * Safely opens any external URL in the user's OS browser via Guidegram IPC,
+ * with graceful fallback to window.open for web/browser runtime.
+ */
+export async function safeOpenExternalUrl(rawUrl?: string | null): Promise<void> {
+  const normalized = normalizeExternalUrl(rawUrl)
+  if (!normalized) return
+
+  try {
+    if (window.guidegram?.openExternal) {
+      await window.guidegram.openExternal(normalized)
+      return
+    }
+  } catch (err) {
+    console.warn('[safeOpenExternalUrl] guidegram.openExternal failed, falling back to window.open:', err)
+  }
+
+  try {
+    window.open(normalized, '_blank', 'noopener,noreferrer')
+  } catch (winErr) {
+    console.error('[safeOpenExternalUrl] window.open fallback failed:', winErr)
+  }
+}

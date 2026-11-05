@@ -14,6 +14,7 @@ import {
   ChevronLeft,
 } from 'lucide-react'
 import { InstantViewArticle, InstantViewBlock, InstantViewRichText } from '../types/telegram'
+import { safeOpenExternalUrl } from '../utils/telegramLink'
 
 export interface InstantViewModalProps {
   isOpen: boolean
@@ -82,13 +83,10 @@ export const InstantViewModal: React.FC<InstantViewModalProps> = ({
 
   const handleOpenUrl = () => {
     if (article?.url) {
-      const targetUrl = article.url.startsWith('http') ? article.url : `https://${article.url}`
       if (onOpenExternal) {
-        onOpenExternal(targetUrl)
-      } else if (window.guidegram?.openExternal) {
-        window.guidegram.openExternal(targetUrl)
+        onOpenExternal(article.url)
       } else {
-        window.open(targetUrl, '_blank', 'noopener,noreferrer')
+        safeOpenExternalUrl(article.url)
       }
     }
   }
@@ -158,7 +156,7 @@ export const InstantViewModal: React.FC<InstantViewModalProps> = ({
                 e.preventDefault()
                 if (token.url) {
                   if (onOpenExternal) onOpenExternal(token.url)
-                  else window.guidegram?.openExternal?.(token.url)
+                  else safeOpenExternalUrl(token.url)
                 }
               }}
               className="text-cyan-400 hover:underline cursor-pointer"

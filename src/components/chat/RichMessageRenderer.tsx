@@ -38,6 +38,7 @@ import {
 } from '../../../electron/telegram/types'
 import { isRTL } from '../../utils/textUtils'
 import { copyTextToClipboard } from '../../utils/clipboard'
+import { safeOpenExternalUrl, normalizeExternalUrl } from '../../utils/telegramLink'
 import { SpoilerNoiseOverlay } from '../effects/SpoilerNoiseOverlay'
 import {
   parseRichMessage,
@@ -427,10 +428,11 @@ export const FormattedTextRenderer: React.FC<FormattedTextProps> = ({
   const handleOpenUrl = (url: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    const normalized = normalizeExternalUrl(url)
     if (onSafeOpenUrl) {
-      onSafeOpenUrl(url)
-    } else if (window.guidegram?.openExternal) {
-      window.guidegram.openExternal(url)
+      onSafeOpenUrl(normalized)
+    } else {
+      safeOpenExternalUrl(normalized)
     }
   }
 
@@ -492,7 +494,8 @@ export const FormattedTextRenderer: React.FC<FormattedTextProps> = ({
             break
           case 'text_url':
           case 'url': {
-            const url = ent.url || seg.text
+            const rawUrl = ent.url || seg.text
+            const url = normalizeExternalUrl(rawUrl)
             node = (
               <a
                 key={wrapKey}
@@ -535,9 +538,7 @@ export const FormattedTextRenderer: React.FC<FormattedTextProps> = ({
                   e.stopPropagation()
                   if (onSelectUserOrChat) onSelectUserOrChat(username)
                   else if (onSafeOpenUrl) onSafeOpenUrl(tMeUrl)
-                  else if (window.guidegram?.openExternal) {
-                    window.guidegram.openExternal(tMeUrl)
-                  }
+                  else safeOpenExternalUrl(tMeUrl)
                 }}
                 className="text-accent-cyan font-semibold hover:underline inline cursor-pointer text-left"
                 title={`View profile @${username}`}
@@ -992,7 +993,7 @@ export const PageBlockEmbedView: React.FC<{
             onClick={() => {
               if (block.url) {
                 if (onSafeOpenUrl) onSafeOpenUrl(block.url)
-                else if (window.guidegram?.openExternal) window.guidegram.openExternal(block.url)
+                else safeOpenExternalUrl(block.url)
               }
             }}
             className="px-2.5 py-1 rounded-lg bg-primary-600/30 hover:bg-primary-600/50 text-primary-300 text-[11px] font-bold transition-all cursor-pointer shrink-0"
