@@ -27,6 +27,12 @@ import {
   ArrowRight,
   Hash,
   ShoppingBag,
+  Cpu,
+  Key,
+  Server,
+  Lock,
+  Layers,
+  Activity,
 } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -54,13 +60,35 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
   onClose,
 }) => {
   const { t, isRTL } = useI18n()
-  const [activeTab, setActiveTab] = useState<'wallet' | 'tonconnect' | 'stars' | 'onramp'>('wallet')
+  const [activeTab, setActiveTab] = useState<'wallet' | 'tonconnect' | 'stars' | 'onramp' | 'protocol'>('wallet')
   const [sessions, setSessions] = useState<TonConnectSessionItem[]>([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(false)
   const [copiedAddress, setCopiedAddress] = useState(false)
   const [newManifestUrl, setNewManifestUrl] = useState('')
   const [isConnectingDapp, setIsConnectingDapp] = useState(false)
   const [showQr, setShowQr] = useState(false)
+
+  // --- Microphases 133-137: Toncenter & Wallet Protocol RPCs (28 Methods) ---
+  const [protocolSubdomain, setProtocolSubdomain] = useState<'toncenter' | 'state' | 'backup' | 'transfers' | 'tonconnect_raw'>('toncenter')
+  const [protocolLoading, setProtocolLoading] = useState(false)
+  const [protocolError, setProtocolError] = useState<string | null>(null)
+  const [protocolSuccess, setProtocolSuccess] = useState<string | null>(null)
+  const [protocolResult, setProtocolResult] = useState<any | null>(null)
+
+  // Inputs
+  const [toncenterMethod, setToncenterMethod] = useState('getWalletInformation')
+  const [toncenterParams, setToncenterParams] = useState('{"address":"EQB..."}')
+  const [targetWalletAddress, setTargetWalletAddress] = useState('')
+  const [txLimit, setTxLimit] = useState('20')
+  const [txMsgHash, setTxMsgHash] = useState('')
+  const [txIdInput, setTxIdInput] = useState('')
+  const [recipientAddress, setRecipientAddress] = useState('')
+  const [transferAmountNano, setTransferAmountNano] = useState('1000000000')
+  const [transferComment, setTransferComment] = useState('')
+  const [backupPassword, setBackupPassword] = useState('')
+  const [tonConnectSessionKey, setTonConnectSessionKey] = useState('')
+  const [tonConnectRequestId, setTonConnectRequestId] = useState('')
+  const [tonConnectResponseData, setTonConnectResponseData] = useState('{"result":"ok"}')
 
   // --- Microphase 098: Onramp, Limits, Quotes, Payment Form, Receipt, Gift Options ---
   const [onrampProviders, setOnrampProviders] = useState<any[]>([])
@@ -215,6 +243,450 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
       setGiftOptionsError(err?.message || 'Failed to load gift code options')
     } finally {
       setIsLoadingGiftOptions(false)
+    }
+  }
+
+  // --- Microphases 133-137 Callback Handlers ---
+  const handleToncenterApiRequest = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    setProtocolResult(null)
+    try {
+      let parsed = {}
+      try { parsed = JSON.parse(toncenterParams || '{}') } catch {}
+      const res = await window.guidegram.toncenterPerformApiRequestRaw(accountId, {
+        method: toncenterMethod,
+        params: parsed,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('Toncenter API query completed.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Toncenter API request failed')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleToncenterStreamingUrl = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.toncenterGetStreamingUrlRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Toncenter streaming URL retrieved.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get Toncenter streaming URL')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetState = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetStateRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Wallet state retrieved.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get wallet state')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetUserAddresses = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetUserAddressesRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('User TON addresses retrieved.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get user addresses')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetProofChallenge = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetProofChallengeRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Proof challenge generated.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get proof challenge')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetBackupHolderDcs = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetBackupHolderDcsRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Backup holder DCs retrieved.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get backup holder DCs')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletFetchEncryptedSecretPhrasePart = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletFetchEncryptedSecretPhrasePartRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Encrypted secret phrase part retrieved.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to fetch encrypted secret phrase part')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletExportSecretPhrase = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletExportSecretPhraseRaw(accountId, {
+        password: backupPassword || undefined,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('Secret phrase exported.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to export secret phrase')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletEnableBackup = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletEnableBackupRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Wallet backup enabled.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to enable backup')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletDisableBackup = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletDisableBackupRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Wallet backup disabled.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to disable backup')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetExistingWaltBalance = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetExistingWaltBalanceRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Vault balance queried.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get existing vault balance')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetGaslessInfo = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetGaslessInfoRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Gasless relayer info loaded.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get gasless info')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetTransactions = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetTransactionsRaw(accountId, {
+        limit: Number(txLimit) || 20,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('Transactions loaded.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get transactions')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetTransactionsByIDs = async () => {
+    if (!accountId || !txIdInput) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const ids = txIdInput.split(',').map((s) => s.trim()).filter(Boolean)
+      const res = await window.guidegram.walletGetTransactionsByIDsRaw(accountId, { ids })
+      setProtocolResult(res)
+      setProtocolSuccess('Transactions queried by ID.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get transactions by ID')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetTransactionsByMsgHash = async () => {
+    if (!accountId || !txMsgHash) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetTransactionsByMsgHashRaw(accountId, { msgHash: txMsgHash })
+      setProtocolResult(res)
+      setProtocolSuccess('Transactions queried by message hash.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get transactions by msg hash')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletGetNfts = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletGetNftsRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('NFT collectibles loaded.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get NFTs')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletSendTransfer = async () => {
+    if (!accountId || !recipientAddress) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletSendTransferRaw(accountId, {
+        toAddress: recipientAddress.trim(),
+        amount: transferAmountNano,
+        comment: transferComment,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('Transfer dispatched.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to dispatch transfer')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletReplaceWallet = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletReplaceWalletRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Wallet replacement executed.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to replace wallet')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleWalletSetCardStickers = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletSetCardStickersRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Card stickers updated.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to set card stickers')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectRegisterKey = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectRegisterKeyRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect key registered.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to register key')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectCreateSession = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectCreateSessionRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect session created.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to create session')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectGetSessions = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectGetSessionsRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect sessions queried.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get sessions')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectGetPending = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectGetPendingRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect pending requests retrieved.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get pending requests')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectClaimRequest = async () => {
+    if (!accountId || !tonConnectRequestId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectClaimRequestRaw(accountId, {
+        requestId: tonConnectRequestId,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect request claimed.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to claim request')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectSubmitResponse = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      let parsed = {}
+      try { parsed = JSON.parse(tonConnectResponseData || '{}') } catch {}
+      const res = await window.guidegram.walletTonConnectSubmitResponseRaw(accountId, {
+        response: parsed,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect response submitted.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to submit response')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectSubmitConnectResult = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectSubmitConnectResultRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect connect result submitted.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to submit connect result')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectNextEventId = async () => {
+    if (!accountId) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectNextEventIdRaw(accountId, {})
+      setProtocolResult(res)
+      setProtocolSuccess('Next event ID allocated.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to get next event ID')
+    } finally {
+      setProtocolLoading(false)
+    }
+  }
+
+  const handleTonConnectCloseSession = async () => {
+    if (!accountId || !tonConnectSessionKey) return
+    setProtocolLoading(true)
+    setProtocolError(null)
+    try {
+      const res = await window.guidegram.walletTonConnectCloseSessionRaw(accountId, {
+        sessionKey: tonConnectSessionKey,
+      })
+      setProtocolResult(res)
+      setProtocolSuccess('TonConnect session closed.')
+    } catch (err: any) {
+      setProtocolError(err?.message || 'Failed to close session')
+    } finally {
+      setProtocolLoading(false)
     }
   }
 
@@ -386,6 +858,21 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
           >
             <CreditCard className="w-3.5 h-3.5" />
             <span>Onramp & Checkout</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('protocol')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'protocol'
+                ? 'border-[#0098ea] text-[#00c2ff]'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span>Protocol RPCs</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0098ea]/20 text-[#00c2ff] font-mono">
+              28 RPCs
+            </span>
           </button>
         </div>
 
@@ -989,6 +1476,490 @@ export const TonWalletModal: React.FC<TonWalletModalProps> = ({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'protocol' && (
+            <div className="space-y-5 animate-in fade-in duration-100">
+              {/* Header & Subdomain Tabs */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                <div>
+                  <h3 className="text-xs font-bold text-white flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-[#00c2ff]" />
+                    <span>Layer 232 Protocol: Toncenter & Wallet Domain Suite</span>
+                  </h3>
+                  <p className="text-[11px] text-gray-400">
+                    Direct low-level MTProto RPC parity (Microphases 133 to 137 — 28 RPCs)
+                  </p>
+                </div>
+              </div>
+
+              {/* Status alerts */}
+              {protocolError && (
+                <div className="p-3 rounded-xl bg-accent-rose/10 border border-accent-rose/20 text-accent-rose text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{protocolError}</span>
+                  </div>
+                  <button type="button" onClick={() => setProtocolError(null)} className="underline text-[10px]">
+                    Dismiss
+                  </button>
+                </div>
+              )}
+              {protocolSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{protocolSuccess}</span>
+                </div>
+              )}
+
+              {/* Sub-navigation tabs */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-dark-850 border border-white/5 overflow-x-auto text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setProtocolSubdomain('toncenter')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    protocolSubdomain === 'toncenter'
+                      ? 'bg-[#0098ea]/20 text-[#00c2ff] border border-[#0098ea]/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Toncenter (2)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProtocolSubdomain('state')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    protocolSubdomain === 'state'
+                      ? 'bg-[#0098ea]/20 text-[#00c2ff] border border-[#0098ea]/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  State & Addresses (3)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProtocolSubdomain('backup')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    protocolSubdomain === 'backup'
+                      ? 'bg-[#0098ea]/20 text-[#00c2ff] border border-[#0098ea]/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Backup & Vault (7)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProtocolSubdomain('transfers')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    protocolSubdomain === 'transfers'
+                      ? 'bg-[#0098ea]/20 text-[#00c2ff] border border-[#0098ea]/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Transfers & NFTs (7)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProtocolSubdomain('tonconnect_raw')}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    protocolSubdomain === 'tonconnect_raw'
+                      ? 'bg-[#0098ea]/20 text-[#00c2ff] border border-[#0098ea]/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  TonConnect Engine (9)
+                </button>
+              </div>
+
+              {/* Subdomain 1: Toncenter (2 RPCs) */}
+              {protocolSubdomain === 'toncenter' && (
+                <div className="p-4 rounded-2xl bg-dark-850 border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Server className="w-4 h-4 text-[#00c2ff]" />
+                    <span className="text-xs font-bold text-white">Toncenter API & Streaming Engine</span>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-gray-400">Method Name</label>
+                    <input
+                      type="text"
+                      value={toncenterMethod}
+                      onChange={(e) => setToncenterMethod(e.target.value)}
+                      placeholder="e.g. getWalletInformation"
+                      className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-[#0098ea]/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-gray-400">Method Parameters (JSON)</label>
+                    <textarea
+                      rows={2}
+                      value={toncenterParams}
+                      onChange={(e) => setToncenterParams(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-[#0098ea]/50 resize-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleToncenterApiRequest}
+                      className="px-4 py-2 rounded-xl bg-[#0098ea] hover:bg-[#0087d1] text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {protocolLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Server className="w-3.5 h-3.5" />}
+                      <span>Perform API Request</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleToncenterStreamingUrl}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Radio className="w-3.5 h-3.5 text-[#00c2ff]" />
+                      <span>Get Streaming URL</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Subdomain 2: State & Addresses (3 RPCs) */}
+              {protocolSubdomain === 'state' && (
+                <div className="p-4 rounded-2xl bg-dark-850 border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white">Wallet Core State & Addresses</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    Query active on-chain registration state, cryptographic proof challenges, and bound user addresses.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetState}
+                      className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {protocolLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5" />}
+                      <span>Get Wallet State</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetUserAddresses}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Get User Addresses</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetProofChallenge}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Generate Proof Challenge</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Subdomain 3: Backup & Vault (7 RPCs) */}
+              {protocolSubdomain === 'backup' && (
+                <div className="p-4 rounded-2xl bg-dark-850 border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-white">Cloud Backup, Vault & Gasless Sponsor</span>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] text-gray-400">Backup Decryption Password (Optional)</label>
+                    <input
+                      type="password"
+                      value={backupPassword}
+                      onChange={(e) => setBackupPassword(e.target.value)}
+                      placeholder="Enter 2FA password if required"
+                      className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletExportSecretPhrase}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>Export Secret Phrase</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletFetchEncryptedSecretPhrasePart}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Fetch Shard Part</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetBackupHolderDcs}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Server className="w-3.5 h-3.5" />
+                      <span>Backup DCs</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletEnableBackup}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Enable Backup</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletDisableBackup}
+                      className="px-3.5 py-1.5 rounded-xl bg-accent-rose/15 hover:bg-accent-rose/25 text-accent-rose text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Disable Backup</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetExistingWaltBalance}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Query Vault Balance</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetGaslessInfo}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#00c2ff]" />
+                      <span>Gasless Relayer Info</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Subdomain 4: Transfers & NFTs (7 RPCs) */}
+              {protocolSubdomain === 'transfers' && (
+                <div className="p-4 rounded-2xl bg-dark-850 border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4 text-[#00c2ff]" />
+                    <span className="text-xs font-bold text-white">Transfers, NFTs & Wallet Lifecycle</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-gray-400">Recipient Address</label>
+                      <input
+                        type="text"
+                        value={recipientAddress}
+                        onChange={(e) => setRecipientAddress(e.target.value)}
+                        placeholder="EQB..."
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-[#0098ea]/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-gray-400">Amount (Nanotons)</label>
+                      <input
+                        type="text"
+                        value={transferAmountNano}
+                        onChange={(e) => setTransferAmountNano(e.target.value)}
+                        placeholder="1000000000 = 1 TON"
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-[#0098ea]/50"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={protocolLoading || !recipientAddress}
+                      onClick={handleWalletSendTransfer}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#0098ea] hover:bg-[#0087d1] text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send Transfer</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetTransactions}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>Get Transactions</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletGetNfts}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Get NFTs</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletReplaceWallet}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Replace Wallet</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleWalletSetCardStickers}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                      <span>Set Card Stickers</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Subdomain 5: TonConnect Protocol Engine (9 RPCs) */}
+              {protocolSubdomain === 'tonconnect_raw' && (
+                <div className="p-4 rounded-2xl bg-dark-850 border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-4 h-4 text-[#00c2ff]" />
+                    <span className="text-xs font-bold text-white">TonConnect Protocol & Dapp Bridge (Layer 232)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-gray-400">Session Key / ID</label>
+                      <input
+                        type="text"
+                        value={tonConnectSessionKey}
+                        onChange={(e) => setTonConnectSessionKey(e.target.value)}
+                        placeholder="Session key..."
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-[#0098ea]/50"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-gray-400">Request ID (for claim)</label>
+                      <input
+                        type="text"
+                        value={tonConnectRequestId}
+                        onChange={(e) => setTonConnectRequestId(e.target.value)}
+                        placeholder="Request ID..."
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-white font-mono focus:outline-none focus:border-[#0098ea]/50"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectGetSessions}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#0098ea]/20 hover:bg-[#0098ea]/30 text-[#00c2ff] text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Radio className="w-3.5 h-3.5" />
+                      <span>Get Sessions</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectGetPending}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Receipt className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Get Pending</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectRegisterKey}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Key className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Register Key</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectCreateSession}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Create Session</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectNextEventId}
+                      className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Hash className="w-3.5 h-3.5" />
+                      <span>Next Event ID</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading || !tonConnectRequestId}
+                      onClick={handleTonConnectClaimRequest}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Claim Request</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectSubmitResponse}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Submit Response</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading}
+                      onClick={handleTonConnectSubmitConnectResult}
+                      className="px-3.5 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Submit Connect Result</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={protocolLoading || !tonConnectSessionKey}
+                      onClick={handleTonConnectCloseSession}
+                      className="px-3.5 py-1.5 rounded-xl bg-accent-rose/15 hover:bg-accent-rose/25 text-accent-rose text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Close Session</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Live MTProto Result Inspector */}
+              {protocolResult && (
+                <div className="p-4 rounded-2xl bg-dark-900 border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] text-gray-400 font-mono">
+                    <span>Live MTProto Response Telemetry</span>
+                    <button
+                      type="button"
+                      onClick={() => setProtocolResult(null)}
+                      className="text-[10px] text-gray-500 hover:text-gray-300"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <pre className="text-[10px] text-[#00c2ff] font-mono overflow-x-auto max-h-36 bg-dark-950 p-2.5 rounded-xl">
+                    {JSON.stringify(protocolResult, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -24432,6 +24432,176 @@ export class AccountManager {
       params?.hash
     )
   }
+
+  // --- Toncenter Domain Suite (Microphase 133 - 2 RPCs) ---
+  public async toncenterPerformApiRequestRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.toncenter_performApiRequest(holder as any, params)
+  }
+
+  public async toncenterGetStreamingUrlRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.toncenter_getStreamingUrl(holder as any, params)
+  }
+
+  // --- Wallet Domain Suite Parts 1-4 (Microphases 134-137 - 26 RPCs) ---
+  public async walletDisableBackupRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_disableBackup(holder as any, params)
+  }
+
+  public async walletEnableBackupRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_enableBackup(holder as any, params)
+  }
+
+  public async walletExportSecretPhraseRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_exportSecretPhrase(holder as any, params)
+  }
+
+  public async walletFetchEncryptedSecretPhrasePartRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_fetchEncryptedSecretPhrasePart(holder as any, params)
+  }
+
+  public async walletGetBackupHolderDcsRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getBackupHolderDcs(holder as any, params)
+  }
+
+  public async walletGetExistingWaltBalanceRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getExistingWaltBalance(holder as any, params)
+  }
+
+  public async walletGetGaslessInfoRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getGaslessInfo(holder as any, params)
+  }
+
+  public async walletGetNftsRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getNfts(holder as any, params)
+  }
+
+  public async walletGetProofChallengeRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getProofChallenge(holder as any, params)
+  }
+
+  public async walletGetStateRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getState(holder as any, params)
+  }
+
+  public async walletGetTransactionsRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getTransactions(holder as any, params)
+  }
+
+  public async walletGetTransactionsByIDsRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getTransactionsByIDs(holder as any, params)
+  }
+
+  public async walletGetTransactionsByMsgHashRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getTransactionsByMsgHash(holder as any, params)
+  }
+
+  public async walletGetUserAddressesRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_getUserAddresses(holder as any, params)
+  }
+
+  public async walletReplaceWalletRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_replaceWallet(holder as any, params)
+  }
+
+  public async walletSendTransferRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_sendTransfer(holder as any, params)
+  }
+
+  public async walletSetCardStickersRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_setCardStickers(holder as any, params)
+  }
+
+  public async walletTonConnectClaimRequestRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectClaimRequest(holder as any, params)
+  }
+
+  public async walletTonConnectCloseSessionRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectCloseSession(holder as any, params)
+  }
+
+  public async walletTonConnectCreateSessionRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectCreateSession(holder as any, params)
+  }
+
+  public async walletTonConnectGetPendingRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectGetPending(holder as any, params)
+  }
+
+  public async walletTonConnectGetSessionsRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectGetSessions(holder as any, params)
+  }
+
+  public async walletTonConnectNextEventIdRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectNextEventId(holder as any, params)
+  }
+
+  public async walletTonConnectRegisterKeyRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectRegisterKey(holder as any, params)
+  }
+
+  public async walletTonConnectSubmitConnectResultRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectSubmitConnectResult(holder as any, params)
+  }
+
+  public async walletTonConnectSubmitResponseRaw(accountId: string, params: any = {}): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.wallet_tonConnectSubmitResponse(holder as any, params)
+  }
 }
 
 

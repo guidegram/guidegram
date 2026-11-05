@@ -3542,6 +3542,66 @@ const guidegramAPI = {
   ): Promise<any> =>
     ipcRenderer.invoke('telegram:ephemeral:get-welcome-messages-raw', { accountId, ...params }),
 
+  // --- Toncenter Domain Suite (Microphase 133 - 2 RPCs) ---
+  toncenterPerformApiRequestRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:toncenter:perform-api-request-raw', { accountId, ...params }),
+  toncenterGetStreamingUrlRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:toncenter:get-streaming-url-raw', { accountId, ...params }),
+
+  // --- Wallet Domain Suite Parts 1-4 (Microphases 134-137 - 26 RPCs) ---
+  walletDisableBackupRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:disable-backup-raw', { accountId, ...params }),
+  walletEnableBackupRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:enable-backup-raw', { accountId, ...params }),
+  walletExportSecretPhraseRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:export-secret-phrase-raw', { accountId, ...params }),
+  walletFetchEncryptedSecretPhrasePartRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:fetch-encrypted-secret-phrase-part-raw', { accountId, ...params }),
+  walletGetBackupHolderDcsRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-backup-holder-dcs-raw', { accountId, ...params }),
+  walletGetExistingWaltBalanceRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-existing-walt-balance-raw', { accountId, ...params }),
+  walletGetGaslessInfoRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-gasless-info-raw', { accountId, ...params }),
+  walletGetNftsRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-nfts-raw', { accountId, ...params }),
+  walletGetProofChallengeRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-proof-challenge-raw', { accountId, ...params }),
+  walletGetStateRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-state-raw', { accountId, ...params }),
+  walletGetTransactionsRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-transactions-raw', { accountId, ...params }),
+  walletGetTransactionsByIDsRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-transactions-by-i-ds-raw', { accountId, ...params }),
+  walletGetTransactionsByMsgHashRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-transactions-by-msg-hash-raw', { accountId, ...params }),
+  walletGetUserAddressesRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:get-user-addresses-raw', { accountId, ...params }),
+  walletReplaceWalletRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:replace-wallet-raw', { accountId, ...params }),
+  walletSendTransferRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:send-transfer-raw', { accountId, ...params }),
+  walletSetCardStickersRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:set-card-stickers-raw', { accountId, ...params }),
+  walletTonConnectClaimRequestRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-claim-request-raw', { accountId, ...params }),
+  walletTonConnectCloseSessionRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-close-session-raw', { accountId, ...params }),
+  walletTonConnectCreateSessionRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-create-session-raw', { accountId, ...params }),
+  walletTonConnectGetPendingRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-get-pending-raw', { accountId, ...params }),
+  walletTonConnectGetSessionsRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-get-sessions-raw', { accountId, ...params }),
+  walletTonConnectNextEventIdRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-next-event-id-raw', { accountId, ...params }),
+  walletTonConnectRegisterKeyRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-register-key-raw', { accountId, ...params }),
+  walletTonConnectSubmitConnectResultRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-submit-connect-result-raw', { accountId, ...params }),
+  walletTonConnectSubmitResponseRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:wallet:ton-connect-submit-response-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

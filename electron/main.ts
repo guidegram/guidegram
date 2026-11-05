@@ -11681,6 +11681,260 @@ function setupIpcHandlers() {
     }
   })
 
+  // --- Toncenter Domain Suite (Microphase 133 - 2 RPCs) ---
+  ipcMain.handle('telegram:toncenter:perform-api-request-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toncenterPerformApiRequestRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toncenterPerformApiRequestRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:toncenter:get-streaming-url-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.toncenterGetStreamingUrlRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] toncenterGetStreamingUrlRaw error:', err)
+      throw err
+    }
+  })
+
+  // --- Wallet Domain Suite Parts 1-4 (Microphases 134-137 - 26 RPCs) ---
+  ipcMain.handle('telegram:wallet:disable-backup-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletDisableBackupRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletDisableBackupRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:enable-backup-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletEnableBackupRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletEnableBackupRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:export-secret-phrase-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletExportSecretPhraseRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletExportSecretPhraseRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:fetch-encrypted-secret-phrase-part-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletFetchEncryptedSecretPhrasePartRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletFetchEncryptedSecretPhrasePartRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-backup-holder-dcs-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetBackupHolderDcsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetBackupHolderDcsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-existing-walt-balance-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetExistingWaltBalanceRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetExistingWaltBalanceRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-gasless-info-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetGaslessInfoRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetGaslessInfoRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-nfts-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetNftsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetNftsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-proof-challenge-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetProofChallengeRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetProofChallengeRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-state-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetStateRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetStateRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-transactions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetTransactionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetTransactionsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-transactions-by-i-ds-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetTransactionsByIDsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetTransactionsByIDsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-transactions-by-msg-hash-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetTransactionsByMsgHashRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetTransactionsByMsgHashRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:get-user-addresses-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletGetUserAddressesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletGetUserAddressesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:replace-wallet-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletReplaceWalletRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletReplaceWalletRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:send-transfer-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletSendTransferRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletSendTransferRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:set-card-stickers-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletSetCardStickersRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletSetCardStickersRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-claim-request-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectClaimRequestRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectClaimRequestRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-close-session-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectCloseSessionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectCloseSessionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-create-session-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectCreateSessionRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectCreateSessionRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-get-pending-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectGetPendingRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectGetPendingRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-get-sessions-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectGetSessionsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectGetSessionsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-next-event-id-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectNextEventIdRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectNextEventIdRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-register-key-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectRegisterKeyRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectRegisterKeyRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-submit-connect-result-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectSubmitConnectResultRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectSubmitConnectResultRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:wallet:ton-connect-submit-response-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.walletTonConnectSubmitResponseRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] walletTonConnectSubmitResponseRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
