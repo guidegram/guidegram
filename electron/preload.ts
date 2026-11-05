@@ -3430,6 +3430,50 @@ const guidegramAPI = {
   aicomposeGetToneExampleRaw: (accountId: string, params: { tone?: any; num?: number }): Promise<any> =>
     ipcRenderer.invoke('telegram:aicompose:get-tone-example-raw', { accountId, ...params }),
 
+  // --- Microphases 129 & 130: Communities Domain Suite Parts 1 & 2 ---
+  communitiesCreateRaw: (
+    accountId: string,
+    params: { hidden?: boolean; title?: string; about?: string; peerId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:create-raw', { accountId, ...params }),
+  communitiesGetJoinedCommunitiesRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:get-joined-communities-raw', { accountId, ...params }),
+  communitiesGetParticipantJoinedChatsRaw: (
+    accountId: string,
+    params: { community?: any; participantId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:get-participant-joined-chats-raw', { accountId, ...params }),
+  communitiesGetPeerLinkRequestsRaw: (
+    accountId: string,
+    params: { community?: any; offset?: string; limit?: number }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:get-peer-link-requests-raw', { accountId, ...params }),
+  communitiesToggleAllPeerLinkRequestApprovalRaw: (
+    accountId: string,
+    params: { reject?: boolean; community?: any }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:toggle-all-peer-link-request-approval-raw', { accountId, ...params }),
+  communitiesToggleCommunityCollapsedInDialogsRaw: (
+    accountId: string,
+    params: { collapsed?: boolean; community?: any }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:toggle-community-collapsed-in-dialogs-raw', { accountId, ...params }),
+  communitiesToggleParticipantBannedRaw: (
+    accountId: string,
+    params: { unban?: boolean; community?: any; participantId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:toggle-participant-banned-raw', { accountId, ...params }),
+  communitiesTogglePeerLinkRaw: (
+    accountId: string,
+    params: { visible?: boolean; hidden?: boolean; deleted?: boolean; community?: any; peerId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:toggle-peer-link-raw', { accountId, ...params }),
+  communitiesTogglePeerLinkRequestApprovalRaw: (
+    accountId: string,
+    params: { reject?: boolean; community?: any; peerId?: string }
+  ): Promise<any> =>
+    ipcRenderer.invoke('telegram:communities:toggle-peer-link-request-approval-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

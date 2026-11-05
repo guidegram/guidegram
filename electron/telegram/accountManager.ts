@@ -24143,6 +24143,133 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.aicompose_getToneExample(holder as any, params?.tone, params?.num)
   }
+
+  // --- Communities Domain Suite Parts 1 & 2 (Microphases 129 & 130 - 9 RPCs) ---
+  public async communitiesCreateRaw(
+    accountId: string,
+    params: { hidden?: boolean; title?: string; about?: string; peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_create(
+      holder as any,
+      accountId,
+      params?.hidden,
+      params?.title,
+      params?.about,
+      params?.peerId
+    )
+  }
+
+  public async communitiesGetJoinedCommunitiesRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_getJoinedCommunities(holder as any, params)
+  }
+
+  public async communitiesGetParticipantJoinedChatsRaw(
+    accountId: string,
+    params: { community?: any; participantId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_getParticipantJoinedChats(
+      holder as any,
+      accountId,
+      params?.community,
+      params?.participantId
+    )
+  }
+
+  public async communitiesGetPeerLinkRequestsRaw(
+    accountId: string,
+    params: { community?: any; offset?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_getPeerLinkRequests(
+      holder as any,
+      params?.community,
+      params?.offset,
+      params?.limit
+    )
+  }
+
+  public async communitiesToggleAllPeerLinkRequestApprovalRaw(
+    accountId: string,
+    params: { reject?: boolean; community?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_toggleAllPeerLinkRequestApproval(
+      holder as any,
+      params?.reject,
+      params?.community
+    )
+  }
+
+  public async communitiesToggleCommunityCollapsedInDialogsRaw(
+    accountId: string,
+    params: { collapsed?: boolean; community?: any }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_toggleCommunityCollapsedInDialogs(
+      holder as any,
+      params?.collapsed,
+      params?.community
+    )
+  }
+
+  public async communitiesToggleParticipantBannedRaw(
+    accountId: string,
+    params: { unban?: boolean; community?: any; participantId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_toggleParticipantBanned(
+      holder as any,
+      accountId,
+      params?.unban,
+      params?.community,
+      params?.participantId
+    )
+  }
+
+  public async communitiesTogglePeerLinkRaw(
+    accountId: string,
+    params: { visible?: boolean; hidden?: boolean; deleted?: boolean; community?: any; peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_togglePeerLink(
+      holder as any,
+      accountId,
+      params?.visible,
+      params?.hidden,
+      params?.deleted,
+      params?.community,
+      params?.peerId
+    )
+  }
+
+  public async communitiesTogglePeerLinkRequestApprovalRaw(
+    accountId: string,
+    params: { reject?: boolean; community?: any; peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.communities_togglePeerLinkRequestApproval(
+      holder as any,
+      accountId,
+      params?.reject,
+      params?.community,
+      params?.peerId
+    )
+  }
 }
 
 

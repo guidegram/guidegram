@@ -216,7 +216,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </motion.div>
 )
 
-type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'smsjobs' | 'aicompose' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
+type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'smsjobs' | 'aicompose' | 'communities' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -686,6 +686,218 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeAccountId, accounts, isPersian, loadAiTones, selectedAiTone])
 
+  // --- Microphases 129 & 130: Telegram Communities & Hubs (communities domain suite) ---
+  const [joinedCommunitiesList, setJoinedCommunitiesList] = useState<any[] | null>(null)
+  const [loadingCommunities, setLoadingCommunities] = useState<boolean>(false)
+  const [communitiesError, setCommunitiesError] = useState<string | null>(null)
+  const [newCommunityTitle, setNewCommunityTitle] = useState<string>('')
+  const [newCommunityAbout, setNewCommunityAbout] = useState<string>('')
+  const [newCommunityHidden, setNewCommunityHidden] = useState<boolean>(false)
+  const [creatingCommunity, setCreatingCommunity] = useState<boolean>(false)
+  const [selectedCommunity, setSelectedCommunity] = useState<any | null>(null)
+  const [communityRequests, setCommunityRequests] = useState<any[] | null>(null)
+  const [loadingCommunityRequests, setLoadingCommunityRequests] = useState<boolean>(false)
+  const [peerLinkPeerId, setPeerLinkPeerId] = useState<string>('')
+  const [targetParticipantId, setTargetParticipantId] = useState<string>('')
+  const [participantJoinedChats, setParticipantJoinedChats] = useState<any[] | null>(null)
+  const [loadingParticipantChats, setLoadingParticipantChats] = useState<boolean>(false)
+  const [communitiesToast, setCommunitiesToast] = useState<string | null>(null)
+  const [actionProcessing, setActionProcessing] = useState<boolean>(false)
+
+  const loadJoinedCommunities = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setLoadingCommunities(true)
+    setCommunitiesError(null)
+    try {
+      if ((window as any).guidegram?.communitiesGetJoinedCommunitiesRaw) {
+        const res = await (window as any).guidegram.communitiesGetJoinedCommunitiesRaw(targetAcc, {})
+        const list = res?.communities || res?.chats || res?.result || (Array.isArray(res) ? res : [])
+        setJoinedCommunitiesList(list)
+      }
+    } catch (err: any) {
+      console.warn('[SettingsModal] loadJoinedCommunities error:', err)
+      setCommunitiesError(err?.message || (isPersian ? 'خطا در بارگذاری جامعه‌ها' : 'Failed to load communities'))
+    } finally {
+      setLoadingCommunities(false)
+    }
+  }, [activeAccountId, accounts, isPersian])
+
+  const handleCreateCommunity = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !newCommunityTitle.trim()) return
+    setCreatingCommunity(true)
+    try {
+      if ((window as any).guidegram?.communitiesCreateRaw) {
+        await (window as any).guidegram.communitiesCreateRaw(targetAcc, {
+          title: newCommunityTitle.trim(),
+          about: newCommunityAbout.trim() || undefined,
+          hidden: newCommunityHidden,
+        })
+        setCommunitiesToast(isPersian ? 'جامعه جدید با موفقیت ایجاد شد' : 'Community created successfully')
+        setNewCommunityTitle('')
+        setNewCommunityAbout('')
+        await loadJoinedCommunities()
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error creating community')
+    } finally {
+      setCreatingCommunity(false)
+      setTimeout(() => setCommunitiesToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, newCommunityTitle, newCommunityAbout, newCommunityHidden, isPersian, loadJoinedCommunities])
+
+  const handleToggleCommunityCollapsed = useCallback(async (communityObj: any, collapsed: boolean) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj) return
+    setActionProcessing(true)
+    try {
+      if ((window as any).guidegram?.communitiesToggleCommunityCollapsedInDialogsRaw) {
+        await (window as any).guidegram.communitiesToggleCommunityCollapsedInDialogsRaw(targetAcc, {
+          community: communityObj,
+          collapsed,
+        })
+        setCommunitiesToast(isPersian ? 'وضعیت جمع‌شدن جامعه تغییر کرد' : 'Collapse status updated')
+        await loadJoinedCommunities()
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error toggling collapsed state')
+    } finally {
+      setActionProcessing(false)
+      setTimeout(() => setCommunitiesToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian, loadJoinedCommunities])
+
+  const handleGetPeerLinkRequests = useCallback(async (communityObj: any) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj) return
+    setSelectedCommunity(communityObj)
+    setLoadingCommunityRequests(true)
+    setCommunityRequests(null)
+    try {
+      if ((window as any).guidegram?.communitiesGetPeerLinkRequestsRaw) {
+        const res = await (window as any).guidegram.communitiesGetPeerLinkRequestsRaw(targetAcc, {
+          community: communityObj,
+          limit: 50,
+        })
+        const reqs = res?.requests || res?.users || (Array.isArray(res) ? res : [])
+        setCommunityRequests(reqs)
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error fetching link requests')
+    } finally {
+      setLoadingCommunityRequests(false)
+    }
+  }, [activeAccountId, accounts])
+
+  const handleTogglePeerLink = useCallback(async (communityObj: any, peerId: string, visible: boolean, hidden?: boolean, deleted?: boolean) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj || !peerId) return
+    setActionProcessing(true)
+    try {
+      if ((window as any).guidegram?.communitiesTogglePeerLinkRaw) {
+        await (window as any).guidegram.communitiesTogglePeerLinkRaw(targetAcc, {
+          community: communityObj,
+          peerId,
+          visible,
+          hidden,
+          deleted,
+        })
+        setCommunitiesToast(isPersian ? 'پیوند گفتگو با جامعه به‌روز شد' : 'Peer link updated')
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error toggling peer link')
+    } finally {
+      setActionProcessing(false)
+      setTimeout(() => setCommunitiesToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian])
+
+  const handleTogglePeerLinkApproval = useCallback(async (communityObj: any, peerId: string, reject: boolean = false) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj || !peerId) return
+    setActionProcessing(true)
+    try {
+      if ((window as any).guidegram?.communitiesTogglePeerLinkRequestApprovalRaw) {
+        await (window as any).guidegram.communitiesTogglePeerLinkRequestApprovalRaw(targetAcc, {
+          community: communityObj,
+          peerId,
+          reject,
+        })
+        setCommunitiesToast(reject ? (isPersian ? 'درخواست اتصال رد شد' : 'Request rejected') : (isPersian ? 'درخواست اتصال تایید شد' : 'Request approved'))
+        await handleGetPeerLinkRequests(communityObj)
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error updating link approval')
+    } finally {
+      setActionProcessing(false)
+      setTimeout(() => setCommunitiesToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian, handleGetPeerLinkRequests])
+
+  const handleToggleAllApprovals = useCallback(async (communityObj: any, reject: boolean = false) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj) return
+    setActionProcessing(true)
+    try {
+      if ((window as any).guidegram?.communitiesToggleAllPeerLinkRequestApprovalRaw) {
+        await (window as any).guidegram.communitiesToggleAllPeerLinkRequestApprovalRaw(targetAcc, {
+          community: communityObj,
+          reject,
+        })
+        setCommunitiesToast(reject ? (isPersian ? 'تمام درخواست‌ها رد شدند' : 'All requests rejected') : (isPersian ? 'تمام درخواست‌ها تایید شدند' : 'All requests approved'))
+        await handleGetPeerLinkRequests(communityObj)
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error updating all link approvals')
+    } finally {
+      setActionProcessing(false)
+      setTimeout(() => setCommunitiesToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian, handleGetPeerLinkRequests])
+
+  const handleGetParticipantJoinedChats = useCallback(async (communityObj: any, participantId: string) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj || !participantId) return
+    setLoadingParticipantChats(true)
+    setParticipantJoinedChats(null)
+    try {
+      if ((window as any).guidegram?.communitiesGetParticipantJoinedChatsRaw) {
+        const res = await (window as any).guidegram.communitiesGetParticipantJoinedChatsRaw(targetAcc, {
+          community: communityObj,
+          participantId,
+        })
+        const chats = res?.chats || res?.result || (Array.isArray(res) ? res : [])
+        setParticipantJoinedChats(chats)
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error fetching participant chats')
+    } finally {
+      setLoadingParticipantChats(false)
+    }
+  }, [activeAccountId, accounts])
+
+  const handleToggleParticipantBanned = useCallback(async (communityObj: any, participantId: string, unban: boolean = false) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !communityObj || !participantId) return
+    setActionProcessing(true)
+    try {
+      if ((window as any).guidegram?.communitiesToggleParticipantBannedRaw) {
+        await (window as any).guidegram.communitiesToggleParticipantBannedRaw(targetAcc, {
+          community: communityObj,
+          participantId,
+          unban,
+        })
+        setCommunitiesToast(unban ? (isPersian ? 'کاربر از بن خارج شد' : 'Participant unbanned') : (isPersian ? 'کاربر در جامعه بن شد' : 'Participant banned'))
+      }
+    } catch (err: any) {
+      setCommunitiesToast(err?.message || 'Error banning/unbanning participant')
+    } finally {
+      setActionProcessing(false)
+      setTimeout(() => setCommunitiesToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian])
+
   useEffect(() => {
     if (isOpen && activeTab === 'smsjobs') {
       checkSmsEligibility()
@@ -694,7 +906,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (isOpen && activeTab === 'aicompose') {
       loadAiTones()
     }
-  }, [isOpen, activeTab, checkSmsEligibility, loadSmsStatus, loadAiTones])
+    if (isOpen && activeTab === 'communities') {
+      loadJoinedCommunities()
+    }
+  }, [isOpen, activeTab, checkSmsEligibility, loadSmsStatus, loadAiTones, loadJoinedCommunities])
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -12072,6 +12287,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               { id: 'premium' as SettingsTab, label: isPersian ? 'پرمیوم و بوست‌ها' : 'Premium & Boosts', icon: <Star className="w-4 h-4 text-amber-400" /> },
               { id: 'smsjobs' as SettingsTab, label: isPersian ? 'رله پیامک (SMS Jobs)' : 'SMS Relay Jobs', icon: <Radio className="w-4 h-4 text-emerald-400" /> },
               { id: 'aicompose' as SettingsTab, label: isPersian ? 'لحن و نگارش هوشمند (AI Compose)' : 'AI Compose & Tones', icon: <Sparkles className="w-4 h-4 text-purple-400" /> },
+              { id: 'communities' as SettingsTab, label: isPersian ? 'جامعه‌ها و هاب‌ها (Communities)' : 'Communities & Hubs', icon: <Users className="w-4 h-4 text-cyan-400" /> },
               { id: 'general' as SettingsTab, label: t('settings.general'), icon: <Globe className="w-4 h-4" /> },
               { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
               { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -13269,6 +13485,372 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: COMMUNITIES & HUBS (Microphases 129 & 130 - communities domain) */}
+            {activeTab === 'communities' && (
+              <div className="space-y-5 animate-in fade-in duration-100">
+                {/* Header Card */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-gray-200">
+                          {isPersian ? 'جامعه‌ها و هاب‌های تلگرام (Communities & Hubs)' : 'Telegram Communities & Hubs'}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {isPersian
+                            ? 'مدیریت هاب‌های گفتگو، لینک کانال‌ها، پیوند پیرها و کنترل عضویت لایه ۲۳۲'
+                            : 'Manage conversation hubs, link channels/peers, handle join requests, and moderate participants'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={loadJoinedCommunities}
+                      disabled={loadingCommunities}
+                      className="p-1.5 rounded-lg bg-dark-900 border border-white/10 text-gray-300 hover:text-white transition-all disabled:opacity-50 cursor-pointer"
+                      title={isPersian ? 'بروزرسانی لیست جامعه‌ها' : 'Refresh Communities'}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingCommunities ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {communitiesToast && (
+                    <div className="mt-2 p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5 shrink-0" />
+                      <span>{communitiesToast}</span>
+                    </div>
+                  )}
+
+                  {communitiesError && (
+                    <div className="mt-2 p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{communitiesError}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 1: Create New Community */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'ساخت جامعه جدید (Create Community Hub)' : 'Create Community Hub'}
+                    </span>
+                    <span className="text-[10px] text-cyan-400 font-mono">communities.create</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={newCommunityTitle}
+                      onChange={(e) => setNewCommunityTitle(e.target.value)}
+                      placeholder={isPersian ? 'نام جامعه (مثلاً: توسعه‌دهندگان، کتاب‌خوانان)' : 'Community Title (e.g. Developers Hub)'}
+                      className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                    />
+
+                    <textarea
+                      value={newCommunityAbout}
+                      onChange={(e) => setNewCommunityAbout(e.target.value)}
+                      rows={2}
+                      placeholder={isPersian ? 'توضیحات و مرام‌نامه جامعه...' : 'Community description / mission...'}
+                      className="w-full bg-dark-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none font-mono text-[11px]"
+                    />
+
+                    <div className="flex items-center justify-between pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-400">
+                        <input
+                          type="checkbox"
+                          checked={newCommunityHidden}
+                          onChange={(e) => setNewCommunityHidden(e.target.checked)}
+                          className="rounded border-white/10 text-cyan-600 focus:ring-0"
+                        />
+                        <span>{isPersian ? 'مخفی در لیست عمومی (Hidden)' : 'Hidden from public directory'}</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleCreateCommunity}
+                        disabled={creatingCommunity || actionProcessing || !newCommunityTitle.trim()}
+                        className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-glow disabled:opacity-50 cursor-pointer"
+                      >
+                        {creatingCommunity ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        <span>{isPersian ? 'ایجاد جامعه' : 'Create Community'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Joined Communities */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-200">
+                        {isPersian ? 'جامعه‌های من (Joined Communities)' : 'Joined Communities'}
+                      </span>
+                      {joinedCommunitiesList && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300">
+                          {joinedCommunitiesList.length}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-mono">communities.getJoinedCommunities</span>
+                  </div>
+
+                  {loadingCommunities ? (
+                    <div className="py-6 flex items-center justify-center gap-2 text-xs text-gray-400">
+                      <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                      <span>{isPersian ? 'در حال دریافت لیست جامعه‌ها...' : 'Loading joined communities...'}</span>
+                    </div>
+                  ) : !joinedCommunitiesList || joinedCommunitiesList.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-dark-900/40 border border-white/5 text-center space-y-1">
+                      <div className="text-xs text-gray-400">
+                        {isPersian ? 'هیچ جامعه‌ای یافت نشد.' : 'No joined communities found.'}
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        {isPersian ? 'با فرم بالا اولین جامعه خود را بسازید.' : 'Create a community above to get started.'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(joinedCommunitiesList || []).map((comm: any, idx: number) => {
+                        const commId = String(comm?.id || comm?.communityId || idx + 1)
+                        const title = comm?.title || comm?.name || `Community #${commId}`
+                        const isSelected = selectedCommunity && (selectedCommunity?.id === comm?.id || selectedCommunity === comm || selectedCommunity === commId)
+                        const isCollapsed = Boolean(comm?.collapsed)
+
+                        return (
+                          <div
+                            key={commId}
+                            className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                              isSelected
+                                ? 'bg-cyan-950/20 border-cyan-500/40 shadow-sm'
+                                : 'bg-dark-900 border-white/5 hover:border-cyan-500/20'
+                            }`}
+                          >
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-xs text-gray-200">{title}</span>
+                                <span className="text-[10px] text-gray-500 font-mono">ID: {commId}</span>
+                              </div>
+                              {comm?.about && (
+                                <p className="text-[11px] text-gray-400 line-clamp-1">{comm.about}</p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCommunityCollapsed(comm, !isCollapsed)}
+                                disabled={actionProcessing}
+                                className="px-2.5 py-1 rounded-lg bg-dark-800 hover:bg-dark-700 text-gray-300 border border-white/10 text-[11px] font-medium transition-all cursor-pointer"
+                                title={isCollapsed ? (isPersian ? 'نمایش در گفتگوها' : 'Expand in Dialogs') : (isPersian ? 'بستن در گفتگوها' : 'Collapse in Dialogs')}
+                              >
+                                {isCollapsed ? (isPersian ? 'بازکردن' : 'Expand') : (isPersian ? 'بستن' : 'Collapse')}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCommunity(comm)
+                                  handleGetPeerLinkRequests(comm)
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-cyan-600 text-white'
+                                    : 'bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30'
+                                }`}
+                              >
+                                <span>{isPersian ? 'مدیریت و لینک‌ها' : 'Manage Links'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 3: Peer Link & Join Requests for Selected Community */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'مدیریت پیوند پیر و کانال (Peer Link & Requests)' : 'Peer Link & Requests'}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      {selectedCommunity ? `Selected: ${selectedCommunity?.title || selectedCommunity?.id || 'Active'}` : 'No community selected'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={peerLinkPeerId}
+                      onChange={(e) => setPeerLinkPeerId(e.target.value)}
+                      placeholder={isPersian ? 'شناسه پیر/کانال (@channel یا ID)...' : 'Peer/Channel ID...'}
+                      className="bg-dark-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePeerLink(selectedCommunity, peerLinkPeerId, true)}
+                        disabled={actionProcessing || !selectedCommunity || !peerLinkPeerId.trim()}
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        {actionProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+                        <span>{isPersian ? 'پیوند پیر' : 'Link Peer'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleGetPeerLinkRequests(selectedCommunity)}
+                        disabled={loadingCommunityRequests || !selectedCommunity}
+                        className="px-2.5 py-1.5 rounded-xl bg-dark-900 hover:bg-dark-700 text-gray-300 border border-white/10 text-xs transition-all disabled:opacity-50 cursor-pointer"
+                        title={isPersian ? 'استعلام درخواست‌های پیوند' : 'Fetch link requests'}
+                      >
+                        <Search className={`w-3.5 h-3.5 ${loadingCommunityRequests ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Pending Link Requests List */}
+                  {communityRequests && communityRequests.length > 0 && (
+                    <div className="pt-2 border-t border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-cyan-300">
+                          {isPersian ? 'درخواست‌های معلق پیوند:' : 'Pending Link Requests:'} ({communityRequests.length})
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAllApprovals(selectedCommunity, false)}
+                            disabled={actionProcessing}
+                            className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold transition-all cursor-pointer"
+                          >
+                            {isPersian ? 'تأیید همه' : 'Approve All'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAllApprovals(selectedCommunity, true)}
+                            disabled={actionProcessing}
+                            className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-[10px] font-semibold transition-all cursor-pointer"
+                          >
+                            {isPersian ? 'رد همه' : 'Reject All'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {communityRequests.map((req: any, idx: number) => {
+                          const reqPeer = req?.peer || req?.peerId || req?.userId || `Peer #${idx + 1}`
+                          const reqPeerStr = typeof reqPeer === 'object' ? String(reqPeer?.userId || reqPeer?.channelId || idx) : String(reqPeer)
+                          return (
+                            <div
+                              key={req?.id || idx}
+                              className="p-2 rounded-lg bg-dark-900 border border-white/5 flex items-center justify-between text-xs"
+                            >
+                              <span className="font-mono text-gray-300 text-[11px]">
+                                {reqPeerStr}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleTogglePeerLinkApproval(selectedCommunity, reqPeerStr, false)}
+                                  disabled={actionProcessing}
+                                  className="p-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 transition-all cursor-pointer"
+                                  title="Approve"
+                                >
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTogglePeerLinkApproval(selectedCommunity, reqPeerStr, true)}
+                                  disabled={actionProcessing}
+                                  className="p-1 rounded bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 transition-all cursor-pointer"
+                                  title="Reject"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 4: Participant Inspection & Moderation */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'بررسی چت‌ها و مدیریت اعضای جامعه (Participant Moderation)' : 'Participant Moderation'}
+                    </span>
+                    <span className="text-[10px] text-cyan-400 font-mono">communities.getParticipantJoinedChats</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      value={targetParticipantId}
+                      onChange={(e) => setTargetParticipantId(e.target.value)}
+                      placeholder={isPersian ? 'شناسه کاربر (User ID)...' : 'Participant User ID...'}
+                      className="bg-dark-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono sm:col-span-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleGetParticipantJoinedChats(selectedCommunity, targetParticipantId)}
+                      disabled={loadingParticipantChats || !selectedCommunity || !targetParticipantId.trim()}
+                      className="px-3 py-1.5 rounded-xl bg-dark-900 hover:bg-dark-700 border border-white/10 text-gray-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      {loadingParticipantChats ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                      <span>{isPersian ? 'استعلام چت‌ها' : 'Inspect Chats'}</span>
+                    </button>
+                  </div>
+
+                  {/* Participant Joined Chats Output */}
+                  {participantJoinedChats && participantJoinedChats.length > 0 && (
+                    <div className="p-2.5 rounded-xl bg-dark-900 border border-white/5 space-y-1.5">
+                      <div className="text-[11px] font-semibold text-gray-300">
+                        {isPersian ? 'چت‌های عضویت‌یافته کاربر در این جامعه:' : 'Chats joined by user in community:'}
+                      </div>
+                      <div className="space-y-1">
+                        {participantJoinedChats.map((chat: any, idx: number) => (
+                          <div key={chat?.id || idx} className="text-[11px] font-mono text-cyan-300 bg-dark-800 p-1.5 rounded">
+                            {chat?.title || chat?.id || JSON.stringify(chat)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ban / Unban Controls */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleParticipantBanned(selectedCommunity, targetParticipantId, true)}
+                      disabled={actionProcessing || !selectedCommunity || !targetParticipantId.trim()}
+                      className="px-3 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>{isPersian ? 'رفع بن کاربر' : 'Unban User'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleParticipantBanned(selectedCommunity, targetParticipantId, false)}
+                      disabled={actionProcessing || !selectedCommunity || !targetParticipantId.trim()}
+                      className="px-3 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>{isPersian ? 'بن کاربر از جامعه' : 'Ban User from Community'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

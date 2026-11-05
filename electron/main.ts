@@ -11526,6 +11526,88 @@ function setupIpcHandlers() {
     }
   })
 
+  // Communities Domain Suite Parts 1 & 2 IPC (Microphases 129 & 130)
+  ipcMain.handle('telegram:communities:create-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesCreateRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesCreateRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:get-joined-communities-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesGetJoinedCommunitiesRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesGetJoinedCommunitiesRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:get-participant-joined-chats-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesGetParticipantJoinedChatsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesGetParticipantJoinedChatsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:get-peer-link-requests-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesGetPeerLinkRequestsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesGetPeerLinkRequestsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:toggle-all-peer-link-request-approval-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesToggleAllPeerLinkRequestApprovalRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesToggleAllPeerLinkRequestApprovalRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:toggle-community-collapsed-in-dialogs-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesToggleCommunityCollapsedInDialogsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesToggleCommunityCollapsedInDialogsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:toggle-participant-banned-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesToggleParticipantBannedRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesToggleParticipantBannedRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:toggle-peer-link-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesTogglePeerLinkRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesTogglePeerLinkRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:communities:toggle-peer-link-request-approval-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.communitiesTogglePeerLinkRequestApprovalRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] communitiesTogglePeerLinkRequestApprovalRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {
