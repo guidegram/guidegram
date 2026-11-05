@@ -23940,6 +23940,52 @@ export class AccountManager {
       params?.order
     )
   }
+
+  // --- Microphase 125: Premium Domain Suite Part 1 ---
+  public async premiumApplyBoostRaw(
+    accountId: string,
+    params: { slots?: number; peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.premium_applyBoost(holder as any, accountId, params?.slots, params?.peerId)
+  }
+
+  public async premiumGetBoostsListRaw(
+    accountId: string,
+    params: { gifts?: boolean; peerId?: string; offset?: string; limit?: number }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.premium_getBoostsList(holder as any, accountId, params?.gifts, params?.peerId, params?.offset, params?.limit)
+  }
+
+  public async premiumGetBoostsStatusRaw(
+    accountId: string,
+    params: { peerId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.premium_getBoostsStatus(holder as any, accountId, params?.peerId)
+  }
+
+  public async premiumGetMyBoostsRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.premium_getMyBoosts(holder as any, params)
+  }
+
+  public async premiumGetUserBoostsRaw(
+    accountId: string,
+    params: { peerId?: string; userIdId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.premium_getUserBoosts(holder as any, accountId, params?.peerId, params?.userIdId)
+  }
 }
 
 

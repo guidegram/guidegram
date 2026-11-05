@@ -3373,6 +3373,18 @@ const guidegramAPI = {
   storiesUpdateAlbumRaw: (accountId: string, params: any): Promise<any> =>
     ipcRenderer.invoke('telegram:stories:update-album-raw', { accountId, ...params }),
 
+  // --- Microphase 125: Premium Domain Suite Part 1 ---
+  premiumApplyBoostRaw: (accountId: string, params: { slots?: number; peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:premium:apply-boost-raw', { accountId, ...params }),
+  premiumGetBoostsListRaw: (accountId: string, params: { gifts?: boolean; peerId?: string; offset?: string; limit?: number }): Promise<any> =>
+    ipcRenderer.invoke('telegram:premium:get-boosts-list-raw', { accountId, ...params }),
+  premiumGetBoostsStatusRaw: (accountId: string, params: { peerId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:premium:get-boosts-status-raw', { accountId, ...params }),
+  premiumGetMyBoostsRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:premium:get-my-boosts-raw', { accountId, ...params }),
+  premiumGetUserBoostsRaw: (accountId: string, params: { peerId?: string; userIdId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:premium:get-user-boosts-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions

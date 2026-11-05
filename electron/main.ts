@@ -11342,6 +11342,52 @@ function setupIpcHandlers() {
     }
   })
 
+  // Premium Domain Suite Part 1 IPC (Microphase 125)
+  ipcMain.handle('telegram:premium:apply-boost-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.premiumApplyBoostRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] premiumApplyBoostRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:premium:get-boosts-list-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.premiumGetBoostsListRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] premiumGetBoostsListRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:premium:get-boosts-status-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.premiumGetBoostsStatusRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] premiumGetBoostsStatusRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:premium:get-my-boosts-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.premiumGetMyBoostsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] premiumGetMyBoostsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:premium:get-user-boosts-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.premiumGetUserBoostsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] premiumGetUserBoostsRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

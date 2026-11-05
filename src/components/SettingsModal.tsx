@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   X,
@@ -213,7 +213,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </motion.div>
 )
 
-type SettingsTab = 'profile' | 'features' | 'business' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
+type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -285,6 +285,119 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isRegisteringPasskey, setIsRegisteringPasskey] = useState<boolean>(false)
   const [isResettingNotifySettings, setIsResettingNotifySettings] = useState<boolean>(false)
   const [isResettingWebAuths, setIsResettingWebAuths] = useState<boolean>(false)
+
+  // --- Microphase 125: Premium Domain Suite Part 1 States & Callbacks ---
+  const [myBoostsData, setMyBoostsData] = useState<any>(null)
+  const [loadingMyBoosts, setLoadingMyBoosts] = useState(false)
+  const [boostTargetPeer, setBoostTargetPeer] = useState('')
+  const [boostSlotsCount, setBoostSlotsCount] = useState('1')
+  const [boostsStatusData, setBoostsStatusData] = useState<any>(null)
+  const [loadingBoostsStatus, setLoadingBoostsStatus] = useState(false)
+  const [applyingBoost, setApplyingBoost] = useState(false)
+  const [boostFeedback, setBoostFeedback] = useState<string | null>(null)
+  const [boostsListData, setBoostsListData] = useState<any>(null)
+  const [loadingBoostsList, setLoadingBoostsList] = useState(false)
+  const [userBoostsTargetUser, setUserBoostsTargetUser] = useState('')
+  const [userBoostsData, setUserBoostsData] = useState<any>(null)
+  const [loadingUserBoosts, setLoadingUserBoosts] = useState(false)
+
+  const loadMyBoosts = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setLoadingMyBoosts(true)
+    try {
+      if ((window as any).guidegram?.premiumGetMyBoostsRaw) {
+        const res = await (window as any).guidegram.premiumGetMyBoostsRaw(targetAcc, {})
+        setMyBoostsData(res)
+      }
+    } catch (_) {
+    } finally {
+      setLoadingMyBoosts(false)
+    }
+  }, [activeAccountId, accounts])
+
+  const handleCheckBoostsStatus = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !boostTargetPeer.trim()) return
+    setLoadingBoostsStatus(true)
+    setBoostFeedback(null)
+    try {
+      if ((window as any).guidegram?.premiumGetBoostsStatusRaw) {
+        const res = await (window as any).guidegram.premiumGetBoostsStatusRaw(targetAcc, {
+          peerId: boostTargetPeer.trim(),
+        })
+        setBoostsStatusData(res)
+      }
+    } catch (err: any) {
+      setBoostFeedback(err?.message || 'Error checking boost status')
+    } finally {
+      setLoadingBoostsStatus(false)
+    }
+  }, [activeAccountId, accounts, boostTargetPeer])
+
+  const handleApplyBoost = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !boostTargetPeer.trim()) return
+    setApplyingBoost(true)
+    setBoostFeedback(null)
+    try {
+      if ((window as any).guidegram?.premiumApplyBoostRaw) {
+        await (window as any).guidegram.premiumApplyBoostRaw(targetAcc, {
+          peerId: boostTargetPeer.trim(),
+          slots: parseInt(boostSlotsCount, 10) || 1,
+        })
+        setBoostFeedback(isPersian ? 'بوست با موفقیت اعمال شد' : 'Boost applied successfully')
+        loadMyBoosts()
+        handleCheckBoostsStatus()
+      }
+    } catch (err: any) {
+      setBoostFeedback(err?.message || 'Failed to apply boost')
+    } finally {
+      setApplyingBoost(false)
+    }
+  }, [activeAccountId, accounts, boostTargetPeer, boostSlotsCount, isPersian, loadMyBoosts, handleCheckBoostsStatus])
+
+  const handleGetBoostsList = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !boostTargetPeer.trim()) return
+    setLoadingBoostsList(true)
+    try {
+      if ((window as any).guidegram?.premiumGetBoostsListRaw) {
+        const res = await (window as any).guidegram.premiumGetBoostsListRaw(targetAcc, {
+          peerId: boostTargetPeer.trim(),
+          limit: 30,
+        })
+        setBoostsListData(res)
+      }
+    } catch (_) {
+    } finally {
+      setLoadingBoostsList(false)
+    }
+  }, [activeAccountId, accounts, boostTargetPeer])
+
+  const handleGetUserBoosts = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !boostTargetPeer.trim() || !userBoostsTargetUser.trim()) return
+    setLoadingUserBoosts(true)
+    try {
+      if ((window as any).guidegram?.premiumGetUserBoostsRaw) {
+        const res = await (window as any).guidegram.premiumGetUserBoostsRaw(targetAcc, {
+          peerId: boostTargetPeer.trim(),
+          userIdId: userBoostsTargetUser.trim(),
+        })
+        setUserBoostsData(res)
+      }
+    } catch (_) {
+    } finally {
+      setLoadingUserBoosts(false)
+    }
+  }, [activeAccountId, accounts, boostTargetPeer, userBoostsTargetUser])
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'premium') {
+      loadMyBoosts()
+    }
+  }, [isOpen, activeTab, loadMyBoosts])
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -11659,6 +11772,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {[
               { id: 'profile' as SettingsTab, label: t('app.my_profile'), icon: <User className="w-4 h-4" /> },
               { id: 'business' as SettingsTab, label: t('settings.telegram_business'), icon: <Briefcase className="w-4 h-4" /> },
+              { id: 'premium' as SettingsTab, label: isPersian ? 'پرمیوم و بوست‌ها' : 'Premium & Boosts', icon: <Star className="w-4 h-4 text-amber-400" /> },
               { id: 'general' as SettingsTab, label: t('settings.general'), icon: <Globe className="w-4 h-4" /> },
               { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
               { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -12132,6 +12246,286 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       ))
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: PREMIUM & BOOSTS (Microphase 125) */}
+            {activeTab === 'premium' && (
+              <div className="space-y-5 animate-in fade-in duration-100">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-5 h-5 text-amber-400" />
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-100">
+                        {isPersian ? 'پرمیوم و مدیریت بوست‌ها' : 'Telegram Premium & Boosts'}
+                      </h3>
+                      <p className="text-[11px] text-gray-400">
+                        {isPersian
+                          ? 'مشاهده وضعیت بوست‌های فعال، اعمال بوست روی کانال‌ها و بررسی بوسترهای پی‌یر (Layer 232)'
+                          : 'Manage active boosts, apply boosts to channels and inspect peer boosters (Layer 232)'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadMyBoosts}
+                    disabled={loadingMyBoosts}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+                    title={isPersian ? 'بروزرسانی وضعیت بوست‌های من' : 'Refresh My Boosts'}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingMyBoosts ? 'animate-spin text-amber-400' : ''}`} />
+                    <span>{isPersian ? 'بروزرسانی' : 'Refresh'}</span>
+                  </button>
+                </div>
+
+                {/* Section 1: My Boosts Status */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-bold text-gray-200">
+                        {isPersian ? 'وضعیت بوست‌های من' : 'My Boosts Status'}
+                      </span>
+                    </div>
+                    {myBoostsData && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-300">
+                        {myBoostsData.myBoosts?.length || 0} {isPersian ? 'بوست فعال' : 'Active Boosts'}
+                      </span>
+                    )}
+                  </div>
+
+                  {loadingMyBoosts ? (
+                    <div className="py-6 flex items-center justify-center gap-2 text-xs text-gray-400">
+                      <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+                      <span>{isPersian ? 'در حال دریافت اطلاعات بوست‌ها...' : 'Loading my boosts...'}</span>
+                    </div>
+                  ) : myBoostsData?.myBoosts && myBoostsData.myBoosts.length > 0 ? (
+                    <div className="space-y-2">
+                      {myBoostsData.myBoosts.map((b: any, idx: number) => (
+                        <div
+                          key={b.id || idx}
+                          className="p-3 rounded-xl bg-dark-900/60 border border-white/5 flex items-center justify-between text-xs"
+                        >
+                          <div>
+                            <div className="font-semibold text-gray-200 flex items-center gap-1.5">
+                              <span>Slot #{b.slot !== undefined ? b.slot : idx + 1}</span>
+                              {b.peer && (
+                                <span className="text-[11px] text-primary-400 font-mono">
+                                  Peer: {typeof b.peer === 'object' ? JSON.stringify(b.peer) : b.peer}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">
+                              {b.expires ? `Expires: ${new Date(b.expires * 1000).toLocaleDateString()}` : 'Active'}
+                            </div>
+                          </div>
+                          {b.multiplier && (
+                            <span className="px-2 py-0.5 rounded bg-primary-500/10 text-primary-300 text-[10px] font-bold">
+                              x{b.multiplier}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-dark-900/40 border border-white/5 text-center text-xs text-gray-400">
+                      {isPersian ? 'هیچ بوست فعالی روی این اکانت ثبت نشده است.' : 'No active boosts applied for this account.'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 2: Channel Boost Status & Apply Boost */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-primary-400" />
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'بررسی و اعمال بوست روی کانال / سوپرگروه' : 'Channel Boost Status & Apply Boost'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[11px] text-gray-400">
+                        {isPersian ? 'آیدی یا یوزرنیم کانال / گروه' : 'Channel/Group Username or ID'}
+                      </label>
+                      <input
+                        type="text"
+                        value={boostTargetPeer}
+                        onChange={(e) => setBoostTargetPeer(e.target.value)}
+                        placeholder="@channel_username or -100..."
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-gray-400">
+                        {isPersian ? 'تعداد اسلات' : 'Slots Count'}
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={boostSlotsCount}
+                        onChange={(e) => setBoostSlotsCount(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-primary-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCheckBoostsStatus}
+                      disabled={loadingBoostsStatus || !boostTargetPeer.trim()}
+                      className="px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Search className={`w-3.5 h-3.5 ${loadingBoostsStatus ? 'animate-spin' : ''}`} />
+                      <span>{isPersian ? 'بررسی وضعیت بوست' : 'Check Status'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleApplyBoost}
+                      disabled={applyingBoost || !boostTargetPeer.trim()}
+                      className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Zap className={`w-3.5 h-3.5 ${applyingBoost ? 'animate-spin' : ''}`} />
+                      <span>{isPersian ? 'اعمال بوست' : 'Apply Boost'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleGetBoostsList}
+                      disabled={loadingBoostsList || !boostTargetPeer.trim()}
+                      className="px-3 py-2 rounded-xl bg-dark-900 hover:bg-dark-700 border border-white/10 text-gray-200 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Users className={`w-3.5 h-3.5 ${loadingBoostsList ? 'animate-spin' : ''}`} />
+                      <span>{isPersian ? 'لیست بوسترها' : 'Boosters List'}</span>
+                    </button>
+                  </div>
+
+                  {boostFeedback && (
+                    <div className="p-2.5 rounded-xl bg-dark-900/60 border border-primary-500/20 text-xs text-gray-300 flex items-center gap-2">
+                      <Info className="w-4 h-4 text-primary-400 shrink-0" />
+                      <span>{boostFeedback}</span>
+                    </div>
+                  )}
+
+                  {/* Channel Boost Status Card */}
+                  {boostsStatusData && (
+                    <div className="p-3.5 rounded-xl bg-dark-900/70 border border-white/10 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-200">
+                          {isPersian ? 'آمار زنده بوست کانال' : 'Channel Boost Telemetry'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-primary-500/20 text-primary-300 font-bold font-mono">
+                          Level {boostsStatusData.level || 0}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px]">
+                        <div className="p-2 rounded-lg bg-dark-800 border border-white/5">
+                          <div className="text-gray-400 text-[10px]">Current Boosts</div>
+                          <div className="font-bold text-amber-300 mt-0.5">{boostsStatusData.boosts || 0}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-dark-800 border border-white/5">
+                          <div className="text-gray-400 text-[10px]">Next Level Target</div>
+                          <div className="font-bold text-gray-200 mt-0.5">{boostsStatusData.currentLevelBoosts || 0}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-dark-800 border border-white/5">
+                          <div className="text-gray-400 text-[10px]">Premium Subscribers</div>
+                          <div className="font-bold text-primary-400 mt-0.5">{boostsStatusData.premiumAudience?.part || 0}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-dark-800 border border-white/5">
+                          <div className="text-gray-400 text-[10px]">Gift Boosts</div>
+                          <div className="font-bold text-emerald-400 mt-0.5">{boostsStatusData.giftBoosts || 0}</div>
+                        </div>
+                      </div>
+                      {boostsStatusData.boostUrl && (
+                        <div className="pt-1 flex items-center justify-between text-[11px]">
+                          <span className="text-gray-400 truncate font-mono">{boostsStatusData.boostUrl}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyTextToClipboard(boostsStatusData.boostUrl)}
+                            className="p-1 hover:text-white text-gray-400 transition-colors"
+                            title="Copy Boost URL"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Boosters List */}
+                  {boostsListData?.boosts && (
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      <div className="text-xs font-bold text-gray-300 flex items-center justify-between">
+                        <span>{isPersian ? 'لیست حامیان و بوسترها' : 'Recent Boosters'}</span>
+                        <span className="text-[10px] font-mono text-gray-500">
+                          {boostsListData.count || boostsListData.boosts.length} total
+                        </span>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                        {boostsListData.boosts.map((b: any, idx: number) => (
+                          <div
+                            key={b.id || idx}
+                            className="p-2 rounded-lg bg-dark-900/50 border border-white/5 flex items-center justify-between text-[11px]"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-primary-600/30 text-primary-300 flex items-center justify-center text-[10px] font-mono">
+                                {idx + 1}
+                              </span>
+                              <span className="text-gray-200 font-mono">User ID: {b.userId || b.id}</span>
+                            </div>
+                            <div className="text-gray-400 text-[10px] font-mono">
+                              {b.date ? new Date(b.date * 1000).toLocaleDateString() : ''}
+                              {b.multiplier ? ` (x${b.multiplier})` : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 3: User Boosts Inspector */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'استعلام بوست‌های اختصاصی یک کاربر (getUserBoosts)' : 'Inspect Specific User Boosts'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={userBoostsTargetUser}
+                      onChange={(e) => setUserBoostsTargetUser(e.target.value)}
+                      placeholder={isPersian ? 'شناسه کاربر (User ID)' : 'Target User ID (e.g. 123456789)'}
+                      className="flex-1 px-3 py-2 rounded-xl bg-dark-900 border border-white/10 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGetUserBoosts}
+                      disabled={loadingUserBoosts || !boostTargetPeer.trim() || !userBoostsTargetUser.trim()}
+                      className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Search className={`w-3.5 h-3.5 ${loadingUserBoosts ? 'animate-spin' : ''}`} />
+                      <span>{isPersian ? 'استعلام' : 'Inspect'}</span>
+                    </button>
+                  </div>
+
+                  {userBoostsData?.boosts && (
+                    <div className="p-3 rounded-xl bg-dark-900/60 border border-white/5 text-xs space-y-1.5">
+                      <div className="font-semibold text-emerald-300">
+                        {userBoostsData.boosts.length} {isPersian ? 'بوست ثبت شده توسط این کاربر' : 'boosts found for this user'}
+                      </div>
+                      <div className="font-mono text-[10px] text-gray-400 max-h-32 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(userBoostsData.boosts, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
