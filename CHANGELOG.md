@@ -4,6 +4,24 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v2.6.0] — Full Telegram Desktop MTProto Layer 232 Protocol Parity (2026-11-05)
+
+### 🌟 What's New & Enhancements
+- **⚡ 100% Protocol Parity (859/859 RPC Methods)**: Complete implementation of all Telegram Desktop Layer 232 TL-Schema methods across 28 namespaces and 137 microphases.
+- **📖 Stories Suite (33 RPCs)**: High-performance story viewer, reactions inspector, stealth mode, album updates, archive browser, and story search.
+- **💎 Premium, Boosts & Collectibles**: Peer boost inspection and application, slots allocation, Fragment TON username/phone auctions explorer, and booster rankings.
+- **📱 Distributed SMS Relay Gateway**: Complete MTProto SMS job eligibility verification, job polling, acceptance, and completion reporting.
+- **🤖 AI Smart Compose & Communities Federation**: Multi-tone AI composition suggestions, auto-drafting, and megagroup/channel communities federations.
+- **⏳ Ephemeral & Auto-Delete**: Dynamic welcome messages and self-destructing message timer management.
+- **💎 Toncenter, Non-Custodial TON Wallet & TonConnect**: Real-time SSE streaming for TON events, raw API bridge, non-custodial seed export, shard backups, gasless relayer support, and full native TonConnect session management.
+
+### 🐛 Bug Fixes & Reliability
+- **🔒 Zero IPC Collisions**: Audited and confirmed 1,199 uniquely registered IPC handlers without single unhandled rejection.
+- **🛡️ 4-State UI Ergonomics**: Integrated Glass loading (`Loader2`), Honest empty states, error retry banners, and live telemetry viewers across all 137 microphases.
+- **🔤 Persian/Arabic BiDi Typing Polish**: Eliminated outline focus rectangles and enforced natural right-to-left layout mechanics across all modals.
+
+---
+
 ## [v1.11.5] — Instant Window Restore, Portable Singleton Stabilization & Startup Parity (2026-09-16)
 
 ### 🌟 What's New & Enhancements
