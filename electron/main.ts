@@ -11388,6 +11388,70 @@ function setupIpcHandlers() {
     }
   })
 
+  // Smsjobs Domain Suite Part 1 IPC (Microphase 126)
+  ipcMain.handle('telegram:smsjobs:is-eligible-to-join-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsIsEligibleToJoinRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsIsEligibleToJoinRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:smsjobs:join-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsJoinRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsJoinRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:smsjobs:leave-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsLeaveRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsLeaveRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:smsjobs:update-settings-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsUpdateSettingsRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsUpdateSettingsRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:smsjobs:get-status-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsGetStatusRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsGetStatusRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:smsjobs:get-sms-job-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsGetSmsJobRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsGetSmsJobRaw error:', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('telegram:smsjobs:finish-job-raw', async (_event, { accountId, ...params }) => {
+    try {
+      return await accountManager.smsjobsFinishJobRaw(accountId, params as any)
+    } catch (err: any) {
+      Logger.warn('[IPC] smsjobsFinishJobRaw error:', err)
+      throw err
+    }
+  })
+
   // Full Profile & Privacy Settings IPC
   ipcMain.handle('telegram:get-my-full-profile', async (_event, { accountId }) => {
     try {

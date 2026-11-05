@@ -23986,6 +23986,70 @@ export class AccountManager {
     if (!holder?.client) return null
     return this.systemService.premium_getUserBoosts(holder as any, accountId, params?.peerId, params?.userIdId)
   }
+
+  // --- Microphase 126: Smsjobs Domain Suite Part 1 ---
+  public async smsjobsIsEligibleToJoinRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_isEligibleToJoin(holder as any, params)
+  }
+
+  public async smsjobsJoinRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_join(holder as any, params)
+  }
+
+  public async smsjobsLeaveRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_leave(holder as any, params)
+  }
+
+  public async smsjobsUpdateSettingsRaw(
+    accountId: string,
+    params: { allowInternational?: boolean }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_updateSettings(holder as any, params?.allowInternational)
+  }
+
+  public async smsjobsGetStatusRaw(
+    accountId: string,
+    params: any = {}
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_getStatus(holder as any, params)
+  }
+
+  public async smsjobsGetSmsJobRaw(
+    accountId: string,
+    params: { jobId?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_getSmsJob(holder as any, params?.jobId)
+  }
+
+  public async smsjobsFinishJobRaw(
+    accountId: string,
+    params: { jobId?: string; error?: string }
+  ): Promise<any> {
+    const holder = this.clients.get(accountId)
+    if (!holder?.client) return null
+    return this.systemService.smsjobs_finishJob(holder as any, params?.jobId, params?.error)
+  }
 }
 
 

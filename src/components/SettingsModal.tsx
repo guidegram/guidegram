@@ -13,6 +13,9 @@ import {
   Terminal,
   ExternalLink,
   RefreshCw,
+  Loader2,
+  CheckCircle2,
+  Play,
   Hash,
   Clock,
   Activity,
@@ -213,7 +216,7 @@ const ToggleItem: React.FC<ToggleItemProps> = ({ title, desc, icon, checked, onC
   </motion.div>
 )
 
-type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
+type SettingsTab = 'profile' | 'features' | 'business' | 'premium' | 'smsjobs' | 'general' | 'notifications' | 'privacy' | 'chat' | 'mcp' | 'advanced'
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -398,6 +401,171 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       loadMyBoosts()
     }
   }, [isOpen, activeTab, loadMyBoosts])
+
+  // --- Microphase 126: Smsjobs Domain Suite Part 1 State & Hooks ---
+  const [smsEligibility, setSmsEligibility] = useState<any>(null)
+  const [loadingEligibility, setLoadingEligibility] = useState(false)
+  const [smsStatus, setSmsStatus] = useState<any>(null)
+  const [loadingSmsStatus, setLoadingSmsStatus] = useState(false)
+  const [smsAllowInternational, setSmsAllowInternational] = useState(false)
+  const [isUpdatingSmsSettings, setIsUpdatingSmsSettings] = useState(false)
+  const [smsJobId, setSmsJobId] = useState('')
+  const [smsJobData, setSmsJobData] = useState<any>(null)
+  const [loadingSmsJob, setLoadingSmsJob] = useState(false)
+  const [smsJobErrorMsg, setSmsJobErrorMsg] = useState('')
+  const [isFinishingJob, setIsFinishingJob] = useState(false)
+  const [isJoiningLeavingSms, setIsJoiningLeavingSms] = useState(false)
+  const [smsFeedbackToast, setSmsFeedbackToast] = useState<string | null>(null)
+
+  const checkSmsEligibility = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setLoadingEligibility(true)
+    try {
+      if ((window as any).guidegram?.smsjobsIsEligibleToJoinRaw) {
+        const res = await (window as any).guidegram.smsjobsIsEligibleToJoinRaw(targetAcc, {})
+        setSmsEligibility(res)
+      }
+    } catch (_) {
+    } finally {
+      setLoadingEligibility(false)
+    }
+  }, [activeAccountId, accounts])
+
+  const loadSmsStatus = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setLoadingSmsStatus(true)
+    try {
+      if ((window as any).guidegram?.smsjobsGetStatusRaw) {
+        const res = await (window as any).guidegram.smsjobsGetStatusRaw(targetAcc, {})
+        setSmsStatus(res)
+        if (res && typeof res.allow_international === 'boolean') {
+          setSmsAllowInternational(res.allow_international)
+        }
+      }
+    } catch (_) {
+    } finally {
+      setLoadingSmsStatus(false)
+    }
+  }, [activeAccountId, accounts])
+
+  const handleJoinSms = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setIsJoiningLeavingSms(true)
+    setSmsFeedbackToast(null)
+    try {
+      if ((window as any).guidegram?.smsjobsJoinRaw) {
+        const ok = await (window as any).guidegram.smsjobsJoinRaw(targetAcc, {})
+        if (ok) {
+          setSmsFeedbackToast(isPersian ? 'با موفقیت به شبکه رله پیامک متصل شدید' : 'Successfully joined SMS Relay Jobs')
+          await loadSmsStatus()
+        } else {
+          setSmsFeedbackToast(isPersian ? 'خطا در پیوستن به شبکه' : 'Failed to join SMS network')
+        }
+      }
+    } catch (err: any) {
+      setSmsFeedbackToast(err?.message || 'Error joining')
+    } finally {
+      setIsJoiningLeavingSms(false)
+      setTimeout(() => setSmsFeedbackToast(null), 3500)
+    }
+  }, [activeAccountId, accounts, isPersian, loadSmsStatus])
+
+  const handleLeaveSms = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setIsJoiningLeavingSms(true)
+    setSmsFeedbackToast(null)
+    try {
+      if ((window as any).guidegram?.smsjobsLeaveRaw) {
+        const ok = await (window as any).guidegram.smsjobsLeaveRaw(targetAcc, {})
+        if (ok) {
+          setSmsFeedbackToast(isPersian ? 'از شبکه رله پیامک خارج شدید' : 'Successfully left SMS Relay Jobs')
+          await loadSmsStatus()
+        } else {
+          setSmsFeedbackToast(isPersian ? 'خطا در خروج از شبکه' : 'Failed to leave SMS network')
+        }
+      }
+    } catch (err: any) {
+      setSmsFeedbackToast(err?.message || 'Error leaving')
+    } finally {
+      setIsJoiningLeavingSms(false)
+      setTimeout(() => setSmsFeedbackToast(null), 3500)
+    }
+  }, [activeAccountId, accounts, isPersian, loadSmsStatus])
+
+  const handleToggleSmsInternational = useCallback(async (val: boolean) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc) return
+    setIsUpdatingSmsSettings(true)
+    try {
+      if ((window as any).guidegram?.smsjobsUpdateSettingsRaw) {
+        const ok = await (window as any).guidegram.smsjobsUpdateSettingsRaw(targetAcc, { allowInternational: val })
+        if (ok) {
+          setSmsAllowInternational(val)
+          setSmsFeedbackToast(isPersian ? 'تنظیمات ارسال بین‌المللی ذخیره شد' : 'International SMS setting updated')
+        }
+      }
+    } catch (err: any) {
+      setSmsFeedbackToast(err?.message || 'Error updating settings')
+    } finally {
+      setIsUpdatingSmsSettings(false)
+      setTimeout(() => setSmsFeedbackToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, isPersian])
+
+  const handleFetchSmsJob = useCallback(async () => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !smsJobId.trim()) return
+    setLoadingSmsJob(true)
+    setSmsJobData(null)
+    try {
+      if ((window as any).guidegram?.smsjobsGetSmsJobRaw) {
+        const res = await (window as any).guidegram.smsjobsGetSmsJobRaw(targetAcc, { jobId: smsJobId.trim() })
+        setSmsJobData(res)
+      }
+    } catch (_) {
+    } finally {
+      setLoadingSmsJob(false)
+    }
+  }, [activeAccountId, accounts, smsJobId])
+
+  const handleFinishSmsJob = useCallback(async (hasError: boolean) => {
+    const targetAcc = activeAccountId || accounts[0]?.id
+    if (!targetAcc || !smsJobId.trim()) return
+    setIsFinishingJob(true)
+    try {
+      if ((window as any).guidegram?.smsjobsFinishJobRaw) {
+        const ok = await (window as any).guidegram.smsjobsFinishJobRaw(targetAcc, {
+          jobId: smsJobId.trim(),
+          error: hasError ? (smsJobErrorMsg.trim() || 'JOB_FAILED') : undefined,
+        })
+        if (ok) {
+          setSmsFeedbackToast(
+            hasError
+              ? (isPersian ? 'گزارش خطای پیامک ثبت شد' : 'Job failure reported')
+              : (isPersian ? 'تکمیل موفقیت‌آمیز پیامک ثبت شد' : 'Job marked as finished')
+          )
+          setSmsJobData(null)
+          await loadSmsStatus()
+        }
+      }
+    } catch (err: any) {
+      setSmsFeedbackToast(err?.message || 'Error finishing job')
+    } finally {
+      setIsFinishingJob(false)
+      setTimeout(() => setSmsFeedbackToast(null), 3000)
+    }
+  }, [activeAccountId, accounts, smsJobId, smsJobErrorMsg, isPersian, loadSmsStatus])
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'smsjobs') {
+      checkSmsEligibility()
+      loadSmsStatus()
+    }
+  }, [isOpen, activeTab, checkSmsEligibility, loadSmsStatus])
 
   const handleUpdateAccountTTL = async (days: number) => {
     if (!targetAccountId || !window.guidegram?.setAccountTTL) return
@@ -11773,6 +11941,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               { id: 'profile' as SettingsTab, label: t('app.my_profile'), icon: <User className="w-4 h-4" /> },
               { id: 'business' as SettingsTab, label: t('settings.telegram_business'), icon: <Briefcase className="w-4 h-4" /> },
               { id: 'premium' as SettingsTab, label: isPersian ? 'پرمیوم و بوست‌ها' : 'Premium & Boosts', icon: <Star className="w-4 h-4 text-amber-400" /> },
+              { id: 'smsjobs' as SettingsTab, label: isPersian ? 'رله پیامک (SMS Jobs)' : 'SMS Relay Jobs', icon: <Radio className="w-4 h-4 text-emerald-400" /> },
               { id: 'general' as SettingsTab, label: t('settings.general'), icon: <Globe className="w-4 h-4" /> },
               { id: 'notifications' as SettingsTab, label: t('settings.notifications'), icon: <Bell className="w-4 h-4" /> },
               { id: 'privacy' as SettingsTab, label: t('settings.privacy'), icon: <ShieldCheck className="w-4 h-4" /> },
@@ -12523,6 +12692,234 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                       <div className="font-mono text-[10px] text-gray-400 max-h-32 overflow-y-auto">
                         <pre className="whitespace-pre-wrap">{JSON.stringify(userBoostsData.boosts, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: SMS RELAY JOBS (Microphase 126) */}
+            {activeTab === 'smsjobs' && (
+              <div className="space-y-5 animate-in fade-in duration-100">
+                {/* Feedback Toast */}
+                {smsFeedbackToast && (
+                  <div className="p-3 rounded-xl bg-primary-950/80 border border-primary-500/40 text-xs text-primary-200 flex items-center justify-between shadow-lg">
+                    <span>{smsFeedbackToast}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSmsFeedbackToast(null)}
+                      className="text-primary-400 hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Section 1: Network Status & Membership */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
+                      <div>
+                        <div className="text-xs font-bold text-gray-200">
+                          {isPersian ? 'شبکه توزیع و رله پیامک تلگرام (Telegram SMS Relay Jobs)' : 'Telegram SMS Relay Jobs Network'}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          {isPersian
+                            ? 'پروتکل رله پیامک احراز هویت تلگرام برای کسب پاداش و ستاره'
+                            : 'Telegram Auth SMS Relay network for earning rewards & stars'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        checkSmsEligibility()
+                        loadSmsStatus()
+                      }}
+                      disabled={loadingEligibility || loadingSmsStatus}
+                      className="p-1.5 rounded-lg bg-dark-900 border border-white/5 text-gray-400 hover:text-white transition-colors"
+                      title={isPersian ? 'بروزرسانی وضعیت' : 'Refresh Status'}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${(loadingEligibility || loadingSmsStatus) ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {/* Eligibility & Current Status Badges */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5">
+                      <div className="text-gray-400 text-[10px]">{isPersian ? 'وضعیت واجد شرایط' : 'Eligibility'}</div>
+                      <div className="font-bold text-xs mt-0.5 text-gray-200 flex items-center gap-1.5">
+                        {loadingEligibility ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                        ) : smsEligibility ? (
+                          <span className="text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> {isPersian ? 'تأیید شده' : 'Eligible'}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> {isPersian ? 'نامشخص / نیاز به بررسی' : 'Unknown / Check'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5">
+                      <div className="text-gray-400 text-[10px]">{isPersian ? 'وضعیت عضویت' : 'Relay Active'}</div>
+                      <div className="font-bold text-xs mt-0.5 text-gray-200">
+                        {loadingSmsStatus ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                        ) : smsStatus?.active ? (
+                          <span className="text-emerald-400 font-semibold">{isPersian ? 'متصل و فعال' : 'Active'}</span>
+                        ) : (
+                          <span className="text-gray-400 font-normal">{isPersian ? 'غیرفعال' : 'Inactive'}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5">
+                      <div className="text-gray-400 text-[10px]">{isPersian ? 'پیامک‌های پردازش‌شده' : 'Sent SMS'}</div>
+                      <div className="font-bold text-xs mt-0.5 text-primary-400 font-mono">
+                        {smsStatus?.sent_sms_count ?? 0}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-dark-900/60 border border-white/5">
+                      <div className="text-gray-400 text-[10px]">{isPersian ? 'پاداش دریافتی' : 'Earned Stars/Ton'}</div>
+                      <div className="font-bold text-xs mt-0.5 text-amber-300 font-mono">
+                        {smsStatus?.rewards ? `${smsStatus.rewards}` : '0'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Join / Leave Controls */}
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleJoinSms}
+                        disabled={isJoiningLeavingSms}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-glow disabled:opacity-50"
+                      >
+                        {isJoiningLeavingSms ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isPersian ? 'پیوستن به شبکه رله (join)' : 'Join Relay Network'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleLeaveSms}
+                        disabled={isJoiningLeavingSms}
+                        className="px-3.5 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+                      >
+                        {isJoiningLeavingSms ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <LogOut className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isPersian ? 'خروج از شبکه (leave)' : 'Leave Network'}</span>
+                      </button>
+                    </div>
+
+                    {/* Toggle International SMS */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={smsAllowInternational}
+                        onChange={(e) => handleToggleSmsInternational(e.target.checked)}
+                        disabled={isUpdatingSmsSettings}
+                        className="w-4 h-4 rounded bg-dark-900 border-white/20 text-primary-500 focus:ring-0 focus:ring-offset-0"
+                      />
+                      <span className="text-xs text-gray-300">
+                        {isPersian ? 'اجازه ارسال به شماره‌های بین‌المللی' : 'Allow International SMS'}
+                      </span>
+                      {isUpdatingSmsSettings && <Loader2 className="w-3 h-3 animate-spin text-primary-400" />}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Section 2: Inspect & Dispatch Job */}
+                <div className="p-4 rounded-2xl bg-dark-800 border border-white/5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-primary-400" />
+                    <span className="text-xs font-bold text-gray-200">
+                      {isPersian ? 'استعلام و تکمیل جاب پیامک (getSmsJob / finishJob)' : 'Inspect & Settle SMS Relay Job'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={smsJobId}
+                      onChange={(e) => setSmsJobId(e.target.value)}
+                      placeholder={isPersian ? 'شناسه جاب (Job ID)...' : 'Job ID...'}
+                      className="flex-1 bg-dark-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-primary-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleFetchSmsJob}
+                      disabled={loadingSmsJob || !smsJobId.trim()}
+                      className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    >
+                      {loadingSmsJob ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                      <span>{isPersian ? 'استعلام جاب' : 'Fetch Job'}</span>
+                    </button>
+                  </div>
+
+                  {/* Job Details Card */}
+                  {smsJobData && (
+                    <div className="p-3 rounded-xl bg-dark-900/70 border border-white/5 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-gray-300">{isPersian ? 'جزئیات جاب پیامک' : 'Job Details'}</span>
+                        <span className="font-mono text-[10px] text-gray-400">ID: {smsJobData.jobId || smsJobId}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2 rounded-lg bg-dark-800 border border-white/5">
+                          <span className="text-gray-400 block text-[10px]">{isPersian ? 'شماره مقصد' : 'Phone Number'}</span>
+                          <span className="font-mono font-bold text-gray-200 mt-0.5 block">{smsJobData.phone || 'N/A'}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-dark-800 border border-white/5">
+                          <span className="text-gray-400 block text-[10px]">{isPersian ? 'متن پیامک' : 'SMS Text'}</span>
+                          <span className="font-mono text-gray-200 mt-0.5 block truncate">{smsJobData.text || 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      {/* Finish Job Controls */}
+                      <div className="pt-2 border-t border-white/5 space-y-2">
+                        <input
+                          type="text"
+                          value={smsJobErrorMsg}
+                          onChange={(e) => setSmsJobErrorMsg(e.target.value)}
+                          placeholder={isPersian ? 'علت خطا (در صورت شکست، اختیاری)' : 'Error reason (if reporting failure)'}
+                          className="w-full bg-dark-800 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none focus:border-rose-500 font-mono text-[11px]"
+                        />
+
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleFinishSmsJob(true)}
+                            disabled={isFinishingJob}
+                            className="px-3 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-50"
+                          >
+                            {isFinishingJob ? <Loader2 className="w-3 h-3 animate-spin" /> : <AlertTriangle className="w-3 h-3" />}
+                            <span>{isPersian ? 'گزارش عدم ارسال' : 'Report Failure'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleFinishSmsJob(false)}
+                            disabled={isFinishingJob}
+                            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 transition-all shadow-glow disabled:opacity-50"
+                          >
+                            {isFinishingJob ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                            <span>{isPersian ? 'ثبت ارسال موفق' : 'Mark Completed'}</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

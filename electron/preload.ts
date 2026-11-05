@@ -3385,6 +3385,22 @@ const guidegramAPI = {
   premiumGetUserBoostsRaw: (accountId: string, params: { peerId?: string; userIdId?: string }): Promise<any> =>
     ipcRenderer.invoke('telegram:premium:get-user-boosts-raw', { accountId, ...params }),
 
+  // --- Microphase 126: Smsjobs Domain Suite Part 1 ---
+  smsjobsIsEligibleToJoinRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:is-eligible-to-join-raw', { accountId, ...params }),
+  smsjobsJoinRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:join-raw', { accountId, ...params }),
+  smsjobsLeaveRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:leave-raw', { accountId, ...params }),
+  smsjobsUpdateSettingsRaw: (accountId: string, params: { allowInternational?: boolean }): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:update-settings-raw', { accountId, ...params }),
+  smsjobsGetStatusRaw: (accountId: string, params: any = {}): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:get-status-raw', { accountId, ...params }),
+  smsjobsGetSmsJobRaw: (accountId: string, params: { jobId?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:get-sms-job-raw', { accountId, ...params }),
+  smsjobsFinishJobRaw: (accountId: string, params: { jobId?: string; error?: string }): Promise<any> =>
+    ipcRenderer.invoke('telegram:smsjobs:finish-job-raw', { accountId, ...params }),
+
   setEmojiStatus: (
     accountId: string,
     options: SetEmojiStatusOptions
