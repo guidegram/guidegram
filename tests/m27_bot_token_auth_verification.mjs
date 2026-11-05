@@ -73,12 +73,13 @@ assert(chatListCode.includes('account.isBot') && chatListCode.includes('BOT'), '
 // 8. Bot Messages & Keyboards Parity Verification
 console.log('\n[SUITE 8] Bot Messages & Keyboards Parity')
 const viewportCode = fs.readFileSync(path.join(process.cwd(), 'src/components/ChatViewport.tsx'), 'utf8')
+const replyKeyboardCode = fs.readFileSync(path.join(process.cwd(), 'src/components/chat/ReplyKeyboardPanel.tsx'), 'utf8')
 assert(accountManagerCode.includes('holder.info?.isBot'), 'accountManager.ts handles bot-specific message fetching')
 assert(accountManagerCode.includes("messages.getMessages"), 'accountManager.ts uses messages.getMessages for bots')
 assert(accountManagerCode.includes('recordDialogLastMessage'), 'accountManager.ts preserves dialog last message')
 assert(accountManagerCode.includes('replyKeyboardMarkup'), 'accountManager.ts parses replyKeyboardMarkup bot menus')
 assert(accountManagerCode.includes('botToken: cleanToken'), 'accountManager.ts persists botToken in startBotAuth')
-assert(viewportCode.includes('onSendMessage(btn.text)'), 'ChatViewport dispatches reply keyboard text buttons')
+assert(replyKeyboardCode.includes('onSendMessage(btn.text)') || viewportCode.includes('onSendMessage(btn.text)'), 'ReplyKeyboardPanel / ChatViewport dispatches reply keyboard text buttons')
 
 console.log('\n====================================================')
 console.log(`Results: ${passed} passed, ${failed} failed`)

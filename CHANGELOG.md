@@ -4,6 +4,16 @@ All notable changes to the Guidegram desktop client are documented in this file.
 
 ---
 
+## [v2.6.1] — Core Chat Parity, Reliable Notifications & System Integration Fixes (2026-11-05)
+
+### 🐛 Bug Fixes & Improvements
+- **🔔 Private Chat & Peer Notification Reliability**: Fixed notification suppression in direct 1-on-1 chats by aligning peer ID sign normalization with internal keys, and wired `toggleChatNotifications` for real-time cloud mute sync.
+- **🤖 Bot Inline Keyboard Callback Handling**: Corrected inline keyboard click routing to trigger MTProto callback queries and copy payloads instead of mistakenly posting button label text into the chat.
+- **🌐 Windows External URL Launching**: Added protocol normalization and layered Windows fallback execution (`shell.openExternal` -> `powershell Start-Process` -> `cmd start`) to ensure links always open in default browser.
+- **📌 Compact Pinned Message Bar**: Redesigned pinned message bar to an ergonomic single-line view with smooth contextual jump navigation.
+
+---
+
 ## [v2.6.0] — Full Telegram Desktop MTProto Layer 232 Protocol Parity (2026-11-05)
 
 ### 🌟 What's New & Enhancements
